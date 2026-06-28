@@ -9,6 +9,7 @@ type ResidentsState = {
   fetch: () => Promise<void>
   add: (r: Omit<Resident, 'id'>) => Promise<void>
   update: (id: string, data: Partial<Resident>) => Promise<void>
+  upsert: (id: string | null, data: Omit<Resident, 'id'>) => Promise<void>
   remove: (id: string) => Promise<void>
 }
 
@@ -37,6 +38,15 @@ export const useResidentsStore = create<ResidentsState>((set, get) => ({
     set({
       residents: get().residents.map((r) => (r.id === id ? updated : r)),
     })
+  },
+
+  // Convenience: if id is null → add, else → full update
+  upsert: async (id, data) => {
+    if (id) {
+      await get().update(id, data)
+    } else {
+      await get().add(data)
+    }
   },
 
   remove: async (id) => {
