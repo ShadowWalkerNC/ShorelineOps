@@ -8,6 +8,9 @@ import rateLimit from 'express-rate-limit'
 import { authRouter } from './routes/auth'
 import { residentsRouter } from './routes/residents'
 import { auditRouter } from './routes/audit'
+import { menuRouter } from './routes/menu'
+import { productionRouter } from './routes/production'
+import { adminRouter } from './routes/admin'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 
@@ -41,9 +44,12 @@ app.use('/api', limiter)
 app.use('/api/auth', authLimiter)
 
 // Routes
-app.use('/api/auth', authRouter)
-app.use('/api/residents', requireAuth, residentsRouter)
-app.use('/api/audit', requireAuth, auditRouter)
+app.use('/api/auth',       authRouter)
+app.use('/api/residents',  requireAuth, residentsRouter)
+app.use('/api/audit',      requireAuth, auditRouter)
+app.use('/api/menu',       requireAuth, menuRouter)
+app.use('/api/production', requireAuth, productionRouter)
+app.use('/api/admin',      requireAuth, adminRouter)
 
 // Health check (unauthenticated — used by Render)
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
