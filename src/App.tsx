@@ -3,6 +3,7 @@ import { useAuth } from './security/AuthContext'
 import RequireAuth from './components/RequireAuth'
 import LoginPage from './features/auth/LoginPage'
 import ResidentsPage from './features/residents/ResidentsPage'
+import ResidentProfilePage from './features/residents/ResidentProfilePage'
 
 const NAV_TABS = [
   { path: '/', label: 'Residents' },
@@ -58,6 +59,7 @@ function AppShell() {
       <main className="flex-1 p-4">
         <Routes>
           <Route path="/" element={<ResidentsPage />} />
+          <Route path="/residents/:id" element={<ResidentProfilePage />} />
         </Routes>
       </main>
     </div>

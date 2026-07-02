@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { Resident } from '@/types'
 
 type Props = {
@@ -44,7 +45,14 @@ export default function ResidentTable({ residents, onEdit, onDelete }: Props) {
               className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
             >
               <td className="px-4 py-3 font-mono text-slate-500">{r.room}</td>
-              <td className="px-4 py-3 font-medium">{r.name}</td>
+              <td className="px-4 py-3 font-medium">
+                <Link
+                  to={`/residents/${r.id}`}
+                  className="text-primary hover:underline"
+                >
+                  {r.name}
+                </Link>
+              </td>
               <td className="px-4 py-3">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[r.status]}`}>
                   {r.status}
