@@ -32,22 +32,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // On mount: attempt silent refresh if a refresh token exists in sessionStorage
+  // On mount: if a refresh token exists, silently refresh the access token
+  // then call /api/auth/me to restore the full user object.
   useEffect(() => {
-    if (tokenManager.hasRefreshToken()) {
-      tokenManager.refresh()
-        .then(() => {
-          // Token refreshed — we need user info; for now mark as needing re-login
-          // TODO: add GET /api/auth/me endpoint to restore full user object
-          setIsLoading(false)
-        })
-        .catch(() => {
-          tokenManager.clear()
-          setIsLoading(false)
-        })
-    } else {
-      setIsLoading(false)
+    async function restoreSession() {
+      if (!tokenManager.hasRefreshToken()) {
+        setIsLoading(false)
+        return
+      }
+      try {
+        await tokenManager.refresh()
+        const { data } = await authApi.me()
+        setUser(data)
+      } catch {
+        tokenManager.clear()
+      } finally {
+        setIsLoading(false)
+      }
     }
+    restoreSession()
   }, [])
 
   const logout = useCallback(async (reason = 'user_initiated') => {
