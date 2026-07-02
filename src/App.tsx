@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import AuthGuard from './features/auth/AuthGuard'
 import LoginPage from './features/auth/LoginPage'
 import ResidentsPage from './features/residents/ResidentsPage'
+import ResidentProfilePage from './features/residents/ResidentProfilePage'
 import MenuPage from './features/menu/MenuPage'
 import ProductionPage from './features/production/ProductionPage'
 import AdminPage from './features/admin/AdminPage'
@@ -15,13 +16,13 @@ const NAV = [
 ]
 
 function Layout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
 
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b px-6 py-3 flex items-center gap-6">
         <span className="text-lg font-bold text-blue-700 tracking-tight">Shoreline</span>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-1">
           {NAV.map(n => (
             <NavLink
               key={n.to}
@@ -48,8 +49,17 @@ function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
           )}
         </div>
+        <div className="flex items-center gap-3 text-sm text-gray-500">
+          <span>{user?.name}</span>
+          <button
+            onClick={() => logout()}
+            className="px-3 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition"
+          >
+            Sign out
+          </button>
+        </div>
       </nav>
-      <main>{children}</main>
+      <main className="p-6">{children}</main>
     </div>
   )
 }
@@ -65,11 +75,12 @@ export default function App() {
             <AuthGuard>
               <Layout>
                 <Routes>
-                  <Route path="/residents"  element={<ResidentsPage />} />
-                  <Route path="/menu"       element={<MenuPage />} />
-                  <Route path="/production" element={<ProductionPage />} />
-                  <Route path="/admin"      element={<AdminPage />} />
-                  <Route path="*"           element={<ResidentsPage />} />
+                  <Route path="/residents"       element={<ResidentsPage />} />
+                  <Route path="/residents/:id"   element={<ResidentProfilePage />} />
+                  <Route path="/menu"            element={<MenuPage />} />
+                  <Route path="/production"      element={<ProductionPage />} />
+                  <Route path="/admin"           element={<AdminPage />} />
+                  <Route path="*"                element={<ResidentsPage />} />
                 </Routes>
               </Layout>
             </AuthGuard>
