@@ -25,7 +25,7 @@ const ResidentSchema = z.object({
   specialInstructions: z.string().default(''),
 })
 
-// Map DB snake_case → frontend camelCase
+/** Map DB snake_case row → frontend camelCase object */
 function toResident(row: any) {
   return {
     id: row.id,
@@ -48,20 +48,44 @@ function toResident(row: any) {
   }
 }
 
-// GET /api/residents
+// ─────────────────────────────────────────────
+// GET /api/residents[?q=<search>]
+// ─────────────────────────────────────────────
 residentsRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM residents ORDER BY name ASC')
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
+
+    let rows: any[]
+    if (q) {
+      const like = `%${q}%`
+      ;({ rows } = await pool.query(
+        `SELECT * FROM residents
+         WHERE  name              ILIKE $1
+            OR  room              ILIKE $1
+            OR  diet_type         ILIKE $1
+            OR  status            ILIKE $1
+            OR  texture           ILIKE $1
+            OR  serving_location  ILIKE $1
+         ORDER BY name ASC`,
+        [like]
+      ))
+    } else {
+      ;({ rows } = await pool.query('SELECT * FROM residents ORDER BY name ASC'))
+    }
+
     await pool.query(
-      `INSERT INTO audit_log (action, user_id, resource_type, outcome)
-       VALUES ('VIEW_RESIDENT', $1, 'resident_list', 'success')`,
-      [req.userId]
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
+       VALUES ('VIEW_RESIDENT', $1, 'resident_list', 'success', $2)`,
+      [req.userId, JSON.stringify({ search: q || null, count: rows.length })]
     )
+
     res.json(rows.map(toResident))
   } catch (err) { next(err) }
 })
 
+// ─────────────────────────────────────────────
 // GET /api/residents/:id
+// ─────────────────────────────────────────────
 residentsRouter.get('/:id', async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM residents WHERE id = $1', [req.params.id])
@@ -75,7 +99,9 @@ residentsRouter.get('/:id', async (req: AuthRequest, res, next) => {
   } catch (err) { next(err) }
 })
 
+// ─────────────────────────────────────────────
 // POST /api/residents
+// ─────────────────────────────────────────────
 residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, next) => {
   try {
     const data = ResidentSchema.parse(req.body)
@@ -86,10 +112,13 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
          table_assignment, likes, dislikes, special_instructions)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       RETURNING *`,
-      [data.name, data.room, data.status, data.dietType, data.texture, data.portionSize,
-       data.ensurePerDay, data.allergies, data.beverages, data.birthdayMonth ?? null,
-       data.birthdayDay ?? null, data.servingLocation, data.tableAssignment,
-       data.likes, data.dislikes, data.specialInstructions]
+      [
+        data.name, data.room, data.status, data.dietType, data.texture,
+        data.portionSize, data.ensurePerDay, data.allergies, data.beverages,
+        data.birthdayMonth ?? null, data.birthdayDay ?? null,
+        data.servingLocation, data.tableAssignment,
+        data.likes, data.dislikes, data.specialInstructions,
+      ]
     )
     await pool.query(
       `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
@@ -100,38 +129,45 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
   } catch (err) { next(err) }
 })
 
+// ─────────────────────────────────────────────
 // PUT /api/residents/:id
+// ─────────────────────────────────────────────
 residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
   try {
     const data = ResidentSchema.partial().parse(req.body)
-    const { rows: existing } = await pool.query('SELECT id FROM residents WHERE id = $1', [req.params.id])
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM residents WHERE id = $1', [req.params.id]
+    )
     if (!existing[0]) return res.status(404).json({ error: 'Resident not found' })
 
     const { rows } = await pool.query(`
       UPDATE residents SET
-        name = COALESCE($1, name),
-        room = COALESCE($2, room),
-        status = COALESCE($3, status),
-        diet_type = COALESCE($4, diet_type),
-        texture = COALESCE($5, texture),
-        portion_size = COALESCE($6, portion_size),
-        ensure_per_day = COALESCE($7, ensure_per_day),
-        allergies = COALESCE($8, allergies),
-        beverages = COALESCE($9, beverages),
-        birthday_month = COALESCE($10, birthday_month),
-        birthday_day = COALESCE($11, birthday_day),
-        serving_location = COALESCE($12, serving_location),
-        table_assignment = COALESCE($13, table_assignment),
-        likes = COALESCE($14, likes),
-        dislikes = COALESCE($15, dislikes),
+        name                 = COALESCE($1,  name),
+        room                 = COALESCE($2,  room),
+        status               = COALESCE($3,  status),
+        diet_type            = COALESCE($4,  diet_type),
+        texture              = COALESCE($5,  texture),
+        portion_size         = COALESCE($6,  portion_size),
+        ensure_per_day       = COALESCE($7,  ensure_per_day),
+        allergies            = COALESCE($8,  allergies),
+        beverages            = COALESCE($9,  beverages),
+        birthday_month       = COALESCE($10, birthday_month),
+        birthday_day         = COALESCE($11, birthday_day),
+        serving_location     = COALESCE($12, serving_location),
+        table_assignment     = COALESCE($13, table_assignment),
+        likes                = COALESCE($14, likes),
+        dislikes             = COALESCE($15, dislikes),
         special_instructions = COALESCE($16, special_instructions),
-        updated_at = NOW()
+        updated_at           = NOW()
       WHERE id = $17
       RETURNING *`,
-      [data.name, data.room, data.status, data.dietType, data.texture, data.portionSize,
-       data.ensurePerDay, data.allergies, data.beverages, data.birthdayMonth,
-       data.birthdayDay, data.servingLocation, data.tableAssignment,
-       data.likes, data.dislikes, data.specialInstructions, req.params.id]
+      [
+        data.name, data.room, data.status, data.dietType, data.texture,
+        data.portionSize, data.ensurePerDay, data.allergies, data.beverages,
+        data.birthdayMonth, data.birthdayDay, data.servingLocation,
+        data.tableAssignment, data.likes, data.dislikes, data.specialInstructions,
+        req.params.id,
+      ]
     )
     await pool.query(
       `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
@@ -142,10 +178,14 @@ residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, 
   } catch (err) { next(err) }
 })
 
-// DELETE /api/residents/:id
+// ─────────────────────────────────────────────
+// DELETE /api/residents/:id  (admin only)
+// ─────────────────────────────────────────────
 residentsRouter.delete('/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT id FROM residents WHERE id = $1', [req.params.id])
+    const { rows } = await pool.query(
+      'SELECT id FROM residents WHERE id = $1', [req.params.id]
+    )
     if (!rows[0]) return res.status(404).json({ error: 'Resident not found' })
     await pool.query('DELETE FROM residents WHERE id = $1', [req.params.id])
     await pool.query(
@@ -153,6 +193,6 @@ residentsRouter.delete('/:id', requireRole('admin'), async (req: AuthRequest, re
        VALUES ('DELETE_RESIDENT', $1, $2, 'resident', 'success')`,
       [req.userId, req.params.id]
     )
-    res.json({ success: true })
+    res.status(204).send()
   } catch (err) { next(err) }
 })
