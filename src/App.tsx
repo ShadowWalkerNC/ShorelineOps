@@ -4,11 +4,11 @@ import RequireAuth from './components/RequireAuth'
 import LoginPage from './features/auth/LoginPage'
 import ResidentsPage from './features/residents/ResidentsPage'
 import ResidentProfilePage from './features/residents/ResidentProfilePage'
+import MenuPage from './features/menu/MenuPage'
 
 const NAV_TABS = [
   { path: '/', label: 'Residents' },
-  // Uncomment as each module is ported:
-  // { path: '/menu', label: 'Menu' },
+  { path: '/menu', label: 'Menu' },
   // { path: '/production', label: 'Production' },
   // { path: '/admin', label: 'Admin' },
   // { path: '/budget', label: 'Budget' },
@@ -44,7 +44,6 @@ function AppShell() {
             </NavLink>
           ))}
         </nav>
-        {/* User info + logout */}
         <div className="flex items-center gap-3 text-sm">
           <span className="opacity-75">{user?.name}</span>
           <button
@@ -60,6 +59,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<ResidentsPage />} />
           <Route path="/residents/:id" element={<ResidentProfilePage />} />
+          <Route path="/menu" element={<MenuPage />} />
         </Routes>
       </main>
     </div>
@@ -69,10 +69,7 @@ function AppShell() {
 export default function App() {
   return (
     <Routes>
-      {/* Public */}
       <Route path="/login" element={<LoginPage />} />
-
-      {/* Protected — everything else */}
       <Route
         path="/*"
         element={
