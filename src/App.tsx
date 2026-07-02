@@ -20,8 +20,17 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b px-6 py-3 flex items-center gap-6">
-        <span className="text-lg font-bold text-blue-700 tracking-tight">Shoreline</span>
+      <nav className="bg-white border-b px-6 py-2 flex items-center gap-6">
+        {/* Logo */}
+        <NavLink to="/" className="shrink-0">
+          <img
+            src="/logo.png"
+            alt="Shoreline"
+            className="h-8 w-auto"
+          />
+        </NavLink>
+
+        {/* Nav links */}
         <div className="flex gap-1 flex-1">
           {NAV.map(n => (
             <NavLink
@@ -49,6 +58,8 @@ function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
           )}
         </div>
+
+        {/* User / sign out */}
         <div className="flex items-center gap-3 text-sm text-gray-500">
           <span>{user?.name}</span>
           <button

@@ -45,11 +45,12 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo / brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-white text-2xl font-bold mb-3 shadow">
-            S
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Shoreline</h1>
-          <p className="text-sm text-gray-500 mt-1">Care Operations Platform</p>
+          <img
+            src="/logo.png"
+            alt="Shoreline"
+            className="h-16 w-auto mx-auto mb-4"
+          />
+          <p className="text-sm text-gray-500">Care Operations Platform</p>
         </div>
 
         {/* Card */}
