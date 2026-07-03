@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
 import LoginPage from './features/auth/LoginPage'
+import DashboardPage from './features/dashboard/DashboardPage'
 import ResidentsPage from './features/residents/ResidentsPage'
 import ResidentProfilePage from './features/residents/ResidentProfilePage'
 import MenuPage from './features/menu/MenuPage'
@@ -21,15 +22,17 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
+      {/* Dashboard is the true home */}
+      <Route path="/" element={<AuthedLayout><DashboardPage /></AuthedLayout>} />
+
       <Route path="/residents" element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
       <Route path="/residents/:id" element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
       <Route path="/menu" element={<AuthedLayout><MenuPage /></AuthedLayout>} />
       <Route path="/production" element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
       <Route path="/admin" element={<AuthedLayout><AdminPage /></AuthedLayout>} />
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/residents" replace />} />
-      <Route path="*" element={<Navigate to="/residents" replace />} />
+      {/* Catch-all → dashboard */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
