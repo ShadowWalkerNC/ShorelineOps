@@ -3,7 +3,7 @@ import { useMenuStore } from '@/state/menuStore'
 import WeekGrid from './components/WeekGrid'
 import ItemLibraryPanel from './components/ItemLibraryPanel'
 import MealSlotEditor from './components/MealSlotEditor'
-import type { DayOfWeek, MealSlot, MealEntry } from '@/types'
+import type { DayOfWeek, MealSlot, MealEntry, MenuItem } from '@/types'
 import { DAYS_OF_WEEK, MEAL_SLOTS, MEAL_SLOT_LABELS } from '@/types/menu'
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
@@ -248,11 +248,9 @@ function InjectMenuStyles() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const DAY_IDX = Object.fromEntries(DAYS_OF_WEEK.map((d, i) => [d, i])) as Record<DayOfWeek, number>
-
-function cellLabel(entry: MealEntry, items: ReturnType<typeof useMenuStore>['items']): string {
+function cellLabel(entry: MealEntry, items: MenuItem[]): string {
   if (entry.label) return entry.label
-  return entry.itemIds.map(id => items.find(i => i.id === id)?.name).filter(Boolean).join(', ')
+  return entry.itemIds.map((id: string) => items.find((i: MenuItem) => i.id === id)?.name).filter(Boolean).join(', ')
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -260,7 +258,7 @@ export default function MenuPage() {
   const {
     weeks, items, selectedWeekId, loading, error,
     fetchWeeks, fetchItems,
-    addWeek, deleteWeek, setActiveWeek, selectWeek,
+    addWeek, updateWeek, deleteWeek, setActiveWeek, selectWeek,
     updateMealEntry, addItem, updateItem, deleteItem,
   } = useMenuStore()
 
@@ -274,7 +272,6 @@ export default function MenuPage() {
   // Mobile: which day is currently shown
   const [dayIdx, setDayIdx] = useState(() => {
     const today = new Date().getDay() // 0=Sun
-    // Map JS Sunday=0 → our DAYS_OF_WEEK index (Mon=0)
     const mapped = today === 0 ? 6 : today - 1
     return Math.min(mapped, DAYS_OF_WEEK.length - 1)
   })
@@ -287,7 +284,7 @@ export default function MenuPage() {
   const selectedWeek = useMemo(() => weeks.find(w => w.id === selectedWeekId) ?? null, [weeks, selectedWeekId])
   const currentDay   = DAYS_OF_WEEK[dayIdx] as DayOfWeek
 
-  // ── Week actions ─────────────────────────────────────────────────────────
+  // ── Week actions ──────────────────────────────────────────────────────────
   const handleAddWeek = useCallback(async () => {
     if (!newWeekName.trim()) return
     setWeekSaving(true)
@@ -301,10 +298,11 @@ export default function MenuPage() {
     if (!src) return
     setWeekSaving(true)
     try {
-      await addWeek(copyName.trim(), src.days)
-      setCopyName(''); setCopyingFrom(null)
+      const newWeek = await addWeek(copyName.trim())
+      await updateWeek(newWeek.id, { days: JSON.parse(JSON.stringify(src.days)) })
+      setCopyName(''); setCopyingFrom(null); setAddingWeek(false)
     } finally { setWeekSaving(false) }
-  }, [copyingFrom, copyName, weeks, addWeek])
+  }, [copyingFrom, copyName, weeks, addWeek, updateWeek])
 
   const handleDeleteWeek = useCallback(async () => {
     if (!selectedWeek) return
@@ -361,7 +359,7 @@ export default function MenuPage() {
               autoFocus
               value={newWeekName}
               onChange={e => setNewWeekName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleAddWeek(); if (e.key === 'Escape') { setAddingWeek(false); setNewWeekName('') } }}
+              onKeyDown={e => { if (e.key === 'Enter') copyingFrom ? handleCopyWeek() : handleAddWeek(); if (e.key === 'Escape') { setAddingWeek(false); setNewWeekName('') } }}
               placeholder="Cycle name e.g. Cycle 1…"
             />
             {weeks.length > 0 && (
@@ -474,7 +472,7 @@ export default function MenuPage() {
           {MEAL_SLOTS.map(slot => {
             const entry = selectedWeek.days[currentDay]?.[slot] ?? { itemIds: [] }
             const label = cellLabel(entry, items)
-            const slotItems = entry.itemIds.map(id => items.find(i => i.id === id)).filter(Boolean)
+            const slotItems = entry.itemIds.map((id: string) => items.find((i: MenuItem) => i.id === id)).filter(Boolean)
             return (
               <div key={slot} className="meal-slot-card">
                 <div className="meal-slot-header">
