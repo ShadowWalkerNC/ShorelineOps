@@ -203,7 +203,7 @@ export default function MenuPage() {
       {showLibrary && (
         <ItemLibraryPanel
           items={items}
-          onAdd={(payload) => { addItem(payload) }}
+          onAdd={async (payload) => { await addItem(payload) }}
           onUpdate={updateItem}
           onDelete={deleteItem}
           onClose={() => setShowLibrary(false)}
