@@ -1,22 +1,24 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useResidentsStore } from '@/state/residentsStore'
-import ResidentTable from './components/ResidentTable'
+import ResidentCardList from './components/ResidentCardList'
 import ResidentFormModal from './components/ResidentFormModal'
 import type { Resident } from '@/types/resident'
 
-function SkeletonRows() {
+// Skeleton card for loading state
+function SkeletonCard() {
   return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <tr key={i} className="animate-pulse border-b border-gray-100">
-          {Array.from({ length: 5 }).map((__, j) => (
-            <td key={j} className="px-4 py-3">
-              <div className="h-4 bg-gray-200 rounded w-3/4" />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+      borderRadius: 'var(--radius-lg)', padding: '14px 16px',
+      display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      <div style={{ width: 48, height: 40, borderRadius: 'var(--radius-md)', background: 'var(--border-color)', flexShrink: 0 }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ height: 14, width: '55%', borderRadius: 6, background: 'var(--border-color)' }} />
+        <div style={{ height: 10, width: '35%', borderRadius: 6, background: 'var(--border-color)', opacity: 0.6 }} />
+      </div>
+    </div>
   )
 }
 
@@ -28,13 +30,11 @@ export default function ResidentsPage() {
   const fetchRef = useRef(fetch)
   fetchRef.current = fetch
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 300)
     return () => clearTimeout(t)
   }, [query])
 
-  // Stable fetch — uses ref so the effect dependency is just debouncedQuery
   useEffect(() => {
     fetchRef.current(debouncedQuery || undefined)
   }, [debouncedQuery])
@@ -50,8 +50,8 @@ export default function ResidentsPage() {
     [editing, upsert]
   )
 
-  const handleEdit     = useCallback((resident: Resident) => setEditing(resident), [])
-  const handleDelete   = useCallback(
+  const handleEdit   = useCallback((r: Resident) => setEditing(r), [])
+  const handleDelete = useCallback(
     async (id: string) => {
       const r = residents.find(x => x.id === id)
       if (!r) return
@@ -61,74 +61,91 @@ export default function ResidentsPage() {
     [residents, remove]
   )
 
+  const activeCount   = residents.filter(r => r.status === 'Active').length
+  const totalCount    = residents.length
+
   return (
-    <div>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4 gap-4">
-        <h1 className="text-xl font-semibold shrink-0">Residents</h1>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+
+      {/* ── Page header ── */}
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.4px', margin: 0 }}>Residents</h1>
+        {!loading && totalCount > 0 && (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+            {totalCount} total &middot; {activeCount} active
+          </p>
+        )}
+      </div>
+
+      {/* ── Toolbar ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
         <input
           type="search"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search by name, room, diet…"
-          className="flex-1 max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm
-                     focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            padding: '11px 14px',
+            background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)', fontSize: 14,
+            color: 'var(--text-primary)', outline: 'none',
+          }}
+          onFocus={e => (e.target.style.borderColor = 'var(--color-primary)')}
+          onBlur={e => (e.target.style.borderColor = 'var(--border-color)')}
         />
         <button
-          className="bg-primary text-white px-4 py-2 rounded text-sm font-medium
-                     hover:bg-primary/90 transition-colors shrink-0"
           onClick={() => setEditing(null)}
+          style={{
+            width: '100%', padding: '12px 0',
+            background: 'var(--color-primary)', color: '#fff',
+            border: 'none', borderRadius: 'var(--radius-lg)',
+            fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.2px',
+          }}
         >
           + Add Resident
         </button>
       </div>
 
-      {/* Error banner */}
+      {/* ── Error banner ── */}
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center justify-between">
+        <div style={{
+          marginBottom: 14, padding: '12px 16px',
+          borderRadius: 'var(--radius-lg)',
+          background: 'var(--color-danger-light)',
+          border: '1px solid rgba(188,106,88,.35)',
+          color: 'var(--color-danger-hover)',
+          fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        }}>
           <span>{error}</span>
           <button
             onClick={() => fetchRef.current(debouncedQuery || undefined)}
-            className="ml-4 text-red-700 underline text-sm hover:no-underline"
-          >
-            Retry
-          </button>
+            style={{ fontWeight: 700, fontSize: 12, background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+          >Retry</button>
         </div>
       )}
 
-      {/* Table */}
+      {/* ── Content ── */}
       {loading && residents.length === 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-              <tr>
-                {['Name', 'Room', 'Status', 'Diet', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody><SkeletonRows /></tbody>
-          </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
-        <ResidentTable residents={residents} onEdit={handleEdit} onDelete={handleDelete} />
+        <ResidentCardList residents={residents} onEdit={handleEdit} onDelete={handleDelete} />
       )}
 
       {loading && residents.length > 0 && (
-        <p className="mt-2 text-xs text-gray-400">Updating…</p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>Updating…</p>
       )}
 
-      {!loading && !error && residents.length === 0 && (
-        <div className="mt-12 text-center text-gray-400">
-          <p className="text-lg font-medium">No residents found</p>
-          {debouncedQuery && (
-            <p className="text-sm mt-1">
-              No results for “{debouncedQuery}” —{' '}
-              <button className="underline hover:no-underline" onClick={() => setQuery('')}>
-                clear search
-              </button>
-            </p>
-          )}
+      {!loading && !error && residents.length === 0 && debouncedQuery && (
+        <div style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>No results for “{debouncedQuery}”</div>
+          <button
+            onClick={() => setQuery('')}
+            style={{ marginTop: 8, fontSize: 13, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+          >Clear search</button>
         </div>
       )}
 
