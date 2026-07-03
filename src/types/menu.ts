@@ -77,7 +77,7 @@ export type MenuWeek = {
 export function emptyDayMenu(): DayMenu {
   return Object.fromEntries(
     MEAL_SLOTS.map((slot) => [slot, { itemIds: [] }])
-  ) as DayMenu
+  ) as unknown as DayMenu
 }
 
 export function emptyWeek(name: string): Omit<MenuWeek, 'id' | 'createdAt' | 'updatedAt'> {
