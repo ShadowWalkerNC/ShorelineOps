@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext'
 
-// ── Clock ────────────────────────────────────────────────────────────────────
 function useClock() {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
@@ -12,7 +11,6 @@ function useClock() {
   return now
 }
 
-// ── Nav config ───────────────────────────────────────────────────────────────
 const NAV_OPERATIONS = [
   {
     label: 'Dashboard',
@@ -81,7 +79,6 @@ const NAV_ADMIN = {
   ),
 }
 
-// ── NavItem ──────────────────────────────────────────────────────────────────
 function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void }) {
   return (
     <NavLink
@@ -110,11 +107,9 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
   )
 }
 
-// ── Inject mobile-first CSS once into <head> ─────────────────────────────────
 const LAYOUT_CSS = `
   :root { --sidebar-width: 260px; }
 
-  /* ── Mobile: sidebar slides in as a drawer ── */
   @media (max-width: 767px) {
     .sidebar-aside {
       position: fixed !important;
@@ -134,30 +129,24 @@ const LAYOUT_CSS = `
     .main-content     { padding: 20px 16px !important; }
   }
 
-  /* ── Tablet: slimmer sidebar ── */
   @media (min-width: 768px) and (max-width: 1023px) {
     :root { --sidebar-width: 220px; }
     .main-content { padding: 28px 20px !important; }
     .header-logo-mobile { display: none !important; }
   }
 
-  /* ── Desktop ── */
   @media (min-width: 1024px) {
     .mobile-menu-btn    { display: none !important; }
     .header-logo-mobile { display: none !important; }
   }
 
-  /* LAN status dot pulse */
   @keyframes dot-pulse {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.35; }
   }
   .status-dot-pulse { animation: dot-pulse 2.2s ease-in-out infinite; }
 
-  /* Lock body scroll when mobile drawer is open */
   body.drawer-open { overflow: hidden !important; }
-
-  /* Remove iOS tap flash */
   * { -webkit-tap-highlight-color: transparent; }
 `
 
@@ -174,7 +163,6 @@ function InjectLayoutStyles() {
   return null
 }
 
-// ── Layout ───────────────────────────────────────────────────────────────────
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -183,7 +171,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.role === 'admin'
 
-  // Lock body scroll when mobile drawer is open
   useEffect(() => {
     document.body.classList.toggle('drawer-open', mobileOpen)
     return () => document.body.classList.remove('drawer-open')
@@ -200,14 +187,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       display: 'flex',
-      height: '100dvh',        // dvh handles mobile browser chrome correctly
+      height: '100dvh',
       width: '100%',
       background: 'var(--bg-app)',
       overflow: 'hidden',
     }}>
       <InjectLayoutStyles />
 
-      {/* ── Mobile backdrop ──────────────────────────────────────────── */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
@@ -220,7 +206,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* ── Sidebar ──────────────────────────────────────────────────── */}
+      {/* ── Sidebar ── */}
       <aside
         className={`sidebar-aside${mobileOpen ? ' open' : ''}`}
         style={{
@@ -234,11 +220,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           zIndex: 200,
           overflowY: 'auto',
           overflowX: 'hidden',
-          // desktop transition only (mobile handled by CSS class)
           transition: 'width 0.2s ease',
         }}
       >
-        {/* ── Logo: uses your real /logo.png ───────────────────────── */}
+        {/* Logo block — square S icon */}
         <div style={{
           padding: '20px 20px 18px',
           borderBottom: '1px solid var(--border-color)',
@@ -246,8 +231,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           flexShrink: 0,
         }}>
           <img
-            src="/logo.png"
-            alt="Shoreline logo"
+            src="/icon-192.png"
+            alt="Shoreline"
             style={{
               width: 36, height: 36,
               objectFit: 'contain',
@@ -270,7 +255,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* ── LAN status bar ───────────────────────────────────────── */}
+        {/* LAN status bar */}
         <div style={{
           padding: '7px 20px',
           borderBottom: '1px solid var(--border-color)',
@@ -287,7 +272,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           LAN Server Mode — data synced across all devices
         </div>
 
-        {/* ── Nav links ────────────────────────────────────────────── */}
+        {/* Nav links */}
         <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '8px 16px 4px' }}>Operations</div>
           {NAV_OPERATIONS.map(item => (
@@ -301,7 +286,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* ── Sidebar footer ───────────────────────────────────────── */}
+        {/* Sidebar footer */}
         <div style={{
           padding: '16px',
           borderTop: '1px solid var(--border-color)',
@@ -337,10 +322,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* ── Main content area ────────────────────────────────────────── */}
+      {/* ── Main content area ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh', overflowY: 'auto' }}>
 
-        {/* ── Sticky header ────────────────────────────────────────── */}
+        {/* Sticky header */}
         <header style={{
           height: 58,
           padding: '0 16px',
@@ -356,13 +341,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           flexShrink: 0,
         }}>
 
-          {/* Hamburger — CSS shows this on mobile only */}
+          {/* Hamburger */}
           <button
             className="mobile-menu-btn"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation menu"
             style={{
-              display: 'none',          // overridden to flex by CSS on mobile
+              display: 'none',
               alignItems: 'center', justifyContent: 'center',
               width: 40, height: 40,
               background: 'transparent',
@@ -377,13 +362,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
 
-          {/* Logo shown in header on mobile (sidebar is hidden) */}
+          {/* Square S icon — shown in mobile header when sidebar is hidden */}
           <img
-            src="/logo.png"
+            src="/icon-192.png"
             alt="Shoreline"
             className="header-logo-mobile"
             style={{
-              display: 'none',          // overridden by CSS on mobile
+              display: 'none',
               width: 28, height: 28,
               objectFit: 'contain',
               borderRadius: 6,
@@ -406,7 +391,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
-          {/* Search bar — hidden on mobile */}
+          {/* Search bar */}
           <div
             className="header-search"
             style={{
@@ -423,7 +408,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Search residents...</span>
           </div>
 
-          {/* Active role pill */}
+          {/* Role pill */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 6,
             fontSize: 11, color: 'var(--text-secondary)',
@@ -442,7 +427,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* ── Page content ─────────────────────────────────────────── */}
+        {/* Page content */}
         <main className="main-content" style={{ padding: '32px 24px', flex: 1 }}>
           {children}
         </main>

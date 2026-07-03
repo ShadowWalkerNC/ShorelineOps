@@ -13,40 +13,68 @@ h1, h2, h3, h4, .logo-text h1, .metric-value {
 }
 
 :root {
-  --bg-app: #f8fafc;
-  --bg-sidebar: #f1f5f9;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f8fafc;
-  --bg-input: #ffffff;
-  --border-color: #e2e8f0;
-  --border-focus: #33597a;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --color-primary: #33597a;
-  --color-primary-hover: #26435c;
-  --color-primary-light: #e9eff5;
-  --color-success: #688c75;
-  --color-success-hover: #52705d;
-  --color-success-light: #f2f6f3;
-  --color-warning: #cc9c6c;
-  --color-warning-hover: #b38559;
-  --color-warning-light: #fbf6f0;
-  --color-danger: #bd6e5c;
-  --color-danger-hover: #a35a49;
-  --color-danger-light: #faf1ef;
-  --color-info: #7EBEC5;
-  --color-info-hover: #63a6ad;
-  --color-info-light: #f0f7f8;
-  --color-purple: #8d809c;
-  --color-purple-light: #f4f2f6;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* ── Backgrounds ── */
+  --bg-app:          #f5f7fa;
+  --bg-sidebar:      #eef1f6;
+  --bg-card:         #ffffff;
+  --bg-card-hover:   #f8fafc;
+  --bg-input:        #ffffff;
+
+  /* ── Borders ── */
+  --border-color:    #dde3ec;
+  --border-focus:    #2b5278;
+
+  /* ── Text ── */
+  --text-primary:    #0d1b2a;
+  --text-secondary:  #435263;
+  --text-muted:      #7589a0;
+
+  /* ── Primary — Shoreline deep navy ── */
+  --color-primary:        #2b5278;
+  --color-primary-hover:  #1e3d5c;
+  --color-primary-light:  #e6edf5;
+
+  /* ── Teal accent — pulled from logo wave ── */
+  --color-teal:           #3a9da8;
+  --color-teal-hover:     #2d8491;
+  --color-teal-light:     #e8f5f6;
+
+  /* ── Success / green ── */
+  --color-success:        #5a8c6d;
+  --color-success-hover:  #437056;
+  --color-success-light:  #eef5f1;
+
+  /* ── Warning / amber ── */
+  --color-warning:        #c99258;
+  --color-warning-hover:  #ae7d44;
+  --color-warning-light:  #faf4ec;
+
+  /* ── Danger / terracotta ── */
+  --color-danger:         #bc6a58;
+  --color-danger-hover:   #a35646;
+  --color-danger-light:   #faf0ee;
+
+  /* ── Info — uses teal ── */
+  --color-info:           var(--color-teal);
+  --color-info-hover:     var(--color-teal-hover);
+  --color-info-light:     var(--color-teal-light);
+
+  /* ── Purple / lavender ── */
+  --color-purple:         #8978a4;
+  --color-purple-light:   #f2f0f7;
+
+  /* ── Radii ── */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+
+  /* ── Sidebar ── */
   --sidebar-width: 270px;
-  --shadow-sm: 0 2px 8px rgba(51,89,122,0.05);
-  --shadow-md: 0 4px 16px rgba(51,89,122,0.08);
-  --shadow-lg: 0 10px 30px rgba(51,89,122,0.12);
+
+  /* ── Shadows — tinted with navy ── */
+  --shadow-sm: 0 2px 8px  rgba(27,53,84,0.06);
+  --shadow-md: 0 4px 16px rgba(27,53,84,0.10);
+  --shadow-lg: 0 10px 30px rgba(27,53,84,0.14);
 }
 
 body {
@@ -109,6 +137,8 @@ body {
 }
 .btn-primary   { background: var(--color-primary);  color: #fff; }
 .btn-primary:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-md); }
+.btn-teal      { background: var(--color-teal); color: #fff; }
+.btn-teal:hover { background: var(--color-teal-hover); box-shadow: var(--shadow-md); }
 .btn-success   { background: var(--color-success);  color: #fff; }
 .btn-success:hover { background: var(--color-success-hover); }
 .btn-warning   { background: var(--color-warning);  color: #2e3538; }
@@ -118,7 +148,7 @@ body {
 .btn-outline   { background: transparent; border-color: var(--border-color); color: var(--text-secondary); }
 .btn-outline:hover { background: var(--bg-card-hover); color: var(--text-primary); border-color: var(--text-secondary); }
 
-/* ── Admin subtabs pill row ── */
+/* ── Admin subtabs ── */
 .admin-subtabs {
   display: flex;
   flex-wrap: wrap;
@@ -140,7 +170,7 @@ body {
 .admin-subtab-btn:hover { background: var(--color-primary-light); color: var(--color-primary); border-color: var(--color-primary); }
 .admin-subtab-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); box-shadow: var(--shadow-sm); }
 
-/* ── Recipe / menu-item card ── */
+/* ── Recipe card ── */
 .recipe-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -149,20 +179,21 @@ body {
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.recipe-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--color-primary); }
+.recipe-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--color-teal); }
 .recipe-card-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; font-family: 'Outfit', sans-serif; }
 .recipe-card-meta  { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
 .recipe-card-ingr  { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
 
 /* ── Allergen / diet badge ── */
 .badge-diet    { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
-.tag-gluten    { background: var(--color-purple-light); color: var(--color-purple); border: 1px solid rgba(141,128,156,.25); }
-.tag-dairy     { background: var(--color-warning-light); color: var(--color-warning-hover); border: 1px solid rgba(204,156,108,.25); }
-.tag-diabetic  { background: var(--color-warning-light); color: var(--color-warning-hover); border: 1px solid rgba(204,156,108,.25); }
-.tag-ensure    { background: var(--color-success-light); color: var(--color-success-hover); border: 1px solid rgba(104,140,117,.25); }
-.tag-custom    { background: var(--color-primary-light); color: var(--color-primary); border: 1px solid rgba(51,89,122,.2); }
+.tag-gluten    { background: var(--color-purple-light); color: var(--color-purple); border: 1px solid rgba(137,120,164,.25); }
+.tag-dairy     { background: var(--color-warning-light); color: var(--color-warning-hover); border: 1px solid rgba(201,146,88,.25); }
+.tag-diabetic  { background: var(--color-warning-light); color: var(--color-warning-hover); border: 1px solid rgba(201,146,88,.25); }
+.tag-ensure    { background: var(--color-success-light); color: var(--color-success-hover); border: 1px solid rgba(90,140,109,.25); }
+.tag-custom    { background: var(--color-primary-light); color: var(--color-primary); border: 1px solid rgba(43,82,120,.2); }
+.tag-teal      { background: var(--color-teal-light); color: var(--color-teal-hover); border: 1px solid rgba(58,157,168,.25); }
 
-/* ── Menu category tabs ── */
+/* ── Menu tabs ── */
 .menu-tabs {
   display: flex;
   gap: 4px;
@@ -186,7 +217,7 @@ body {
   transition: color 0.2s ease;
 }
 .menu-tab-btn:hover { color: var(--text-primary); }
-.menu-tab-btn.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); font-weight: 700; }
+.menu-tab-btn.active { color: var(--color-teal); border-bottom: 2px solid var(--color-teal); font-weight: 700; }
 
 /* ── Recipe grid ── */
 .recipe-grid {
