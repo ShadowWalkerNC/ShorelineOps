@@ -1,14 +1,19 @@
+/**
+ * Production store — DEMO MODE
+ * All data lives in memory. Changes persist for the session but reset on reload.
+ */
 import { create } from 'zustand'
-import { productionApi } from '../api/production'
 import type { ProductionSheet, ProductionRow } from '../types/production'
 import type { DayOfWeek, MealSlot } from '../types/menu'
+import { SEED_PRODUCTION_SHEETS, uid, now } from '@/demo/seed'
+
+let _sheets: ProductionSheet[] = JSON.parse(JSON.stringify(SEED_PRODUCTION_SHEETS))
 
 interface ProductionState {
   sheets: ProductionSheet[]
   activeSheet: ProductionSheet | null
   loading: boolean
   error: string | null
-
   fetchSheets: (weekId?: string) => Promise<void>
   loadSheet: (weekId: string, day: DayOfWeek, slot: MealSlot) => Promise<void>
   updateRow: (sheetId: string, menuItemId: string, patch: Partial<ProductionRow>) => Promise<void>
@@ -25,48 +30,36 @@ export const useProductionStore = create<ProductionState>((set, get) => ({
 
   fetchSheets: async (weekId) => {
     set({ loading: true, error: null })
-    try {
-      const sheets = await productionApi.getSheets(weekId)
-      set({ sheets, loading: false })
-    } catch (e: any) {
-      set({ loading: false, error: e?.message ?? 'Failed to load sheets' })
-    }
+    await new Promise(r => setTimeout(r, 150))
+    const results = weekId ? _sheets.filter(s => s.menuWeekId === weekId) : [..._sheets]
+    set({ sheets: results, loading: false })
   },
 
   loadSheet: async (weekId, day, slot) => {
     set({ loading: true, error: null })
-    try {
-      const sheet = await productionApi.getSheet(weekId, day, slot)
-      set({ activeSheet: sheet, loading: false })
-    } catch (e: any) {
-      set({ loading: false, error: e?.message ?? 'Failed to load sheet' })
-    }
+    await new Promise(r => setTimeout(r, 100))
+    const sheet = _sheets.find(s => s.menuWeekId === weekId && s.day === day && s.slot === slot) ?? null
+    set({ activeSheet: sheet, loading: false })
   },
 
   updateRow: async (sheetId, menuItemId, patch) => {
-    const { activeSheet } = get()
-    if (!activeSheet || activeSheet.id !== sheetId) return
-    const rows = activeSheet.rows.map(r =>
-      r.menuItemId === menuItemId ? { ...r, ...patch } : r
-    )
-    const updated = { ...activeSheet, rows }
-    set({ activeSheet: updated })
-    try {
-      const saved = await productionApi.updateSheet(sheetId, { rows })
-      set({ activeSheet: saved })
-    } catch (e: any) {
-      set({ error: e?.message ?? 'Failed to save row' })
-    }
+    _sheets = _sheets.map(s => {
+      if (s.id !== sheetId) return s
+      const rows = s.rows.map(r => r.menuItemId === menuItemId ? { ...r, ...patch } : r)
+      return { ...s, rows, updatedAt: now() }
+    })
+    const updated = _sheets.find(s => s.id === sheetId) ?? null
+    set({ sheets: [..._sheets], activeSheet: updated })
   },
 
   signOff: async (sheetId, staffName) => {
     set({ loading: true, error: null })
-    try {
-      const sheet = await productionApi.signOff(sheetId, staffName)
-      set({ activeSheet: sheet, loading: false })
-    } catch (e: any) {
-      set({ loading: false, error: e?.message ?? 'Sign-off failed' })
-    }
+    await new Promise(r => setTimeout(r, 200))
+    _sheets = _sheets.map(s =>
+      s.id === sheetId ? { ...s, signedOffBy: staffName, signedOffAt: now(), updatedAt: now() } : s
+    )
+    const updated = _sheets.find(s => s.id === sheetId) ?? null
+    set({ sheets: [..._sheets], activeSheet: updated, loading: false })
   },
 
   setActiveSheet: (sheet) => set({ activeSheet: sheet }),

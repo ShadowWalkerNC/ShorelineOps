@@ -1,16 +1,21 @@
+/**
+ * Residents store — DEMO MODE
+ * All data lives in memory. Changes persist for the session but reset on reload.
+ */
 import { create } from 'zustand'
 import type { Resident } from '@/types'
-import { residentsApi } from '@/api/residents'
+import { SEED_RESIDENTS, uid, now } from '@/demo/seed'
+
+// Deep-clone seed so we mutate our own copy
+let _residents: Resident[] = JSON.parse(JSON.stringify(SEED_RESIDENTS))
 
 type ResidentsState = {
   residents: Resident[]
   loading: boolean
   error: string | null
-  /** Fetch all residents, optionally filtered by a search string (server-side). */
   fetch: (search?: string) => Promise<void>
   add: (data: Omit<Resident, 'id'>) => Promise<void>
   update: (id: string, data: Partial<Resident>) => Promise<void>
-  /** If id is null → create, else → update. */
   upsert: (id: string | null, data: Omit<Resident, 'id'>) => Promise<void>
   remove: (id: string) => Promise<void>
 }
@@ -22,40 +27,32 @@ export const useResidentsStore = create<ResidentsState>((set, get) => ({
 
   fetch: async (search) => {
     set({ loading: true, error: null })
-    try {
-      const residents = await residentsApi.getAll(search)
-      set({ residents, loading: false })
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.error ??
-        e?.message ??
-        'Failed to load residents.'
-      set({ error: msg, loading: false })
-    }
+    await new Promise(r => setTimeout(r, 150))
+    const q = search?.toLowerCase() ?? ''
+    const results = q
+      ? _residents.filter(r => r.name.toLowerCase().includes(q) || r.room.includes(q))
+      : [..._residents]
+    set({ residents: results, loading: false })
   },
 
   add: async (data) => {
-    const resident = await residentsApi.create(data)
-    set({ residents: [...get().residents, resident] })
+    const resident: Resident = { ...data, id: uid() }
+    _residents = [..._residents, resident]
+    set({ residents: [..._residents] })
   },
 
   update: async (id, data) => {
-    const updated = await residentsApi.update(id, data)
-    set({
-      residents: get().residents.map((r) => (r.id === id ? updated : r)),
-    })
+    _residents = _residents.map(r => r.id === id ? { ...r, ...data } : r)
+    set({ residents: [..._residents] })
   },
 
   upsert: async (id, data) => {
-    if (id) {
-      await get().update(id, data)
-    } else {
-      await get().add(data)
-    }
+    if (id) await get().update(id, data)
+    else    await get().add(data)
   },
 
   remove: async (id) => {
-    await residentsApi.delete(id)
-    set({ residents: get().residents.filter((r) => r.id !== id) })
+    _residents = _residents.filter(r => r.id !== id)
+    set({ residents: [..._residents] })
   },
 }))

@@ -1,35 +1,28 @@
+/**
+ * Menu store — DEMO MODE
+ * All data lives in memory. Changes persist for the session but reset on reload.
+ */
 import { create } from 'zustand'
 import type { MenuWeek, MenuItem, DayOfWeek, MealSlot, MealEntry } from '@/types'
-import { menuApi } from '@/api/menu'
+import { SEED_MENU_WEEKS, SEED_MENU_ITEMS, uid, now } from '@/demo/seed'
+
+let _weeks: MenuWeek[] = JSON.parse(JSON.stringify(SEED_MENU_WEEKS))
+let _items: MenuItem[] = JSON.parse(JSON.stringify(SEED_MENU_ITEMS))
 
 type MenuState = {
   weeks: MenuWeek[]
   items: MenuItem[]
-  /** ID of whichever week is currently selected in the UI */
   selectedWeekId: string | null
   loading: boolean
   error: string | null
-
-  // ── Fetches ──────────────────────────────────────────────────────────────
   fetchWeeks: () => Promise<void>
   fetchItems: () => Promise<void>
-
-  // ── Week actions ─────────────────────────────────────────────────────────
   addWeek: (name: string) => Promise<MenuWeek>
   updateWeek: (id: string, payload: Partial<MenuWeek>) => Promise<void>
   deleteWeek: (id: string) => Promise<void>
   setActiveWeek: (id: string) => Promise<void>
   selectWeek: (id: string | null) => void
-
-  // ── Day / slot editing ───────────────────────────────────────────────────
-  updateMealEntry: (
-    weekId: string,
-    day: DayOfWeek,
-    slot: MealSlot,
-    entry: Partial<MealEntry>
-  ) => Promise<void>
-
-  // ── Item actions ─────────────────────────────────────────────────────────
+  updateMealEntry: (weekId: string, day: DayOfWeek, slot: MealSlot, entry: Partial<MealEntry>) => Promise<void>
   addItem: (payload: Omit<MenuItem, 'id'>) => Promise<MenuItem>
   updateItem: (id: string, payload: Partial<MenuItem>) => Promise<void>
   deleteItem: (id: string) => Promise<void>
@@ -44,95 +37,87 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   fetchWeeks: async () => {
     set({ loading: true, error: null })
-    try {
-      const weeks = await menuApi.getWeeks()
-      const active = weeks.find((w) => w.active)
-      set({
-        weeks,
-        loading: false,
-        selectedWeekId: get().selectedWeekId ?? active?.id ?? weeks[0]?.id ?? null,
-      })
-    } catch (e: any) {
-      set({ error: e?.message ?? 'Failed to load menu.', loading: false })
-    }
+    await new Promise(r => setTimeout(r, 150))
+    const active = _weeks.find(w => w.active)
+    set({
+      weeks: [..._weeks],
+      loading: false,
+      selectedWeekId: get().selectedWeekId ?? active?.id ?? _weeks[0]?.id ?? null,
+    })
   },
 
   fetchItems: async () => {
-    try {
-      const items = await menuApi.getItems()
-      set({ items })
-    } catch (e: any) {
-      set({ error: e?.message ?? 'Failed to load menu items.' })
-    }
+    await new Promise(r => setTimeout(r, 100))
+    set({ items: [..._items] })
   },
 
   addWeek: async (name) => {
-    const week = await menuApi.createWeek({
-      name,
-      active: false,
-      days: {} as any, // server fills with empty template
-    })
-    set({ weeks: [...get().weeks, week], selectedWeekId: week.id })
+    const week: MenuWeek = {
+      id: uid(), name, active: false,
+      createdAt: now(), updatedAt: now(),
+      days: {
+        Sunday: emptyDay(), Monday: emptyDay(), Tuesday: emptyDay(),
+        Wednesday: emptyDay(), Thursday: emptyDay(), Friday: emptyDay(), Saturday: emptyDay(),
+      },
+    }
+    _weeks = [..._weeks, week]
+    set({ weeks: [..._weeks], selectedWeekId: week.id })
     return week
   },
 
   updateWeek: async (id, payload) => {
-    const updated = await menuApi.updateWeek(id, payload)
-    set({ weeks: get().weeks.map((w) => (w.id === id ? updated : w)) })
+    _weeks = _weeks.map(w => w.id === id ? { ...w, ...payload, updatedAt: now() } : w)
+    set({ weeks: [..._weeks] })
   },
 
   deleteWeek: async (id) => {
-    await menuApi.deleteWeek(id)
-    const remaining = get().weeks.filter((w) => w.id !== id)
-    set({
-      weeks: remaining,
-      selectedWeekId:
-        get().selectedWeekId === id ? (remaining[0]?.id ?? null) : get().selectedWeekId,
-    })
+    _weeks = _weeks.filter(w => w.id !== id)
+    const sel = get().selectedWeekId === id ? (_weeks[0]?.id ?? null) : get().selectedWeekId
+    set({ weeks: [..._weeks], selectedWeekId: sel })
   },
 
   setActiveWeek: async (id) => {
-    const updated = await menuApi.setActiveWeek(id)
-    // Mark the newly-active week; clear active flag on all others
-    set({
-      weeks: get().weeks.map((w) =>
-        w.id === id ? updated : { ...w, active: false }
-      ),
-    })
+    _weeks = _weeks.map(w => ({ ...w, active: w.id === id }))
+    set({ weeks: [..._weeks] })
   },
 
   selectWeek: (id) => set({ selectedWeekId: id }),
 
   updateMealEntry: async (weekId, day, slot, entry) => {
-    const week = get().weeks.find((w) => w.id === weekId)
-    if (!week) return
-    const updated: MenuWeek = {
-      ...week,
-      days: {
-        ...week.days,
-        [day]: {
-          ...week.days[day],
-          [slot]: { ...week.days[day][slot], ...entry },
-        },
-      },
-    }
-    await menuApi.updateWeek(weekId, { days: updated.days })
-    set({ weeks: get().weeks.map((w) => (w.id === weekId ? updated : w)) })
+    _weeks = _weeks.map(w => {
+      if (w.id !== weekId) return w
+      return {
+        ...w, updatedAt: now(),
+        days: { ...w.days, [day]: { ...w.days[day], [slot]: { ...w.days[day][slot], ...entry } } },
+      }
+    })
+    set({ weeks: [..._weeks] })
   },
 
   addItem: async (payload) => {
-    const item = await menuApi.createItem(payload)
-    set({ items: [...get().items, item] })
+    const item: MenuItem = { ...payload, id: uid() }
+    _items = [..._items, item]
+    set({ items: [..._items] })
     return item
   },
 
   updateItem: async (id, payload) => {
-    const updated = await menuApi.updateItem(id, payload)
-    set({ items: get().items.map((i) => (i.id === id ? updated : i)) })
+    _items = _items.map(i => i.id === id ? { ...i, ...payload } : i)
+    set({ items: [..._items] })
   },
 
   deleteItem: async (id) => {
-    await menuApi.deleteItem(id)
-    set({ items: get().items.filter((i) => i.id !== id) })
+    _items = _items.filter(i => i.id !== id)
+    set({ items: [..._items] })
   },
 }))
+
+function emptyDay() {
+  return {
+    breakfast:      { itemIds: [] },
+    morningSnack:   { itemIds: [] },
+    lunch:          { itemIds: [] },
+    afternoonSnack: { itemIds: [] },
+    dinner:         { itemIds: [] },
+  }
+}

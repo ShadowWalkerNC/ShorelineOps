@@ -1,6 +1,12 @@
+/**
+ * Recipes store — DEMO MODE
+ * All data lives in memory. Changes persist for the session but reset on reload.
+ */
 import { create } from 'zustand'
 import type { Recipe } from '@/types/recipe'
-import { recipesApi } from '@/api/recipes'
+import { SEED_RECIPES, uid, now } from '@/demo/seed'
+
+let _recipes: Recipe[] = JSON.parse(JSON.stringify(SEED_RECIPES))
 
 type RecipesState = {
   recipes: Recipe[]
@@ -19,26 +25,23 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
 
   fetch: async () => {
     set({ loading: true, error: null })
-    try {
-      const recipes = await recipesApi.getAll()
-      set({ recipes, loading: false })
-    } catch (e: any) {
-      set({ error: e?.response?.data?.error ?? e?.message ?? 'Failed to load recipes.', loading: false })
-    }
+    await new Promise(r => setTimeout(r, 150))
+    set({ recipes: [..._recipes], loading: false })
   },
 
   add: async (data) => {
-    const recipe = await recipesApi.create(data)
-    set({ recipes: [...get().recipes, recipe] })
+    const recipe: Recipe = { ...data, id: uid(), createdAt: now(), updatedAt: now() }
+    _recipes = [..._recipes, recipe]
+    set({ recipes: [..._recipes] })
   },
 
   update: async (id, data) => {
-    const updated = await recipesApi.update(id, data)
-    set({ recipes: get().recipes.map(r => r.id === id ? updated : r) })
+    _recipes = _recipes.map(r => r.id === id ? { ...r, ...data, updatedAt: now() } : r)
+    set({ recipes: [..._recipes] })
   },
 
   remove: async (id) => {
-    await recipesApi.delete(id)
-    set({ recipes: get().recipes.filter(r => r.id !== id) })
+    _recipes = _recipes.filter(r => r.id !== id)
+    set({ recipes: [..._recipes] })
   },
 }))
