@@ -4,10 +4,11 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.1px;
 }
 
-h1, h2, h3, h4, .logo-text {
+h1, h2, h3, h4, .logo-text h1, .metric-value {
   font-family: 'Outfit', sans-serif;
 }
 
@@ -15,6 +16,8 @@ h1, h2, h3, h4, .logo-text {
   --bg-app: #f8fafc;
   --bg-sidebar: #f1f5f9;
   --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-input: #ffffff;
   --border-color: #e2e8f0;
   --border-focus: #33597a;
   --text-primary: #0f172a;
@@ -24,15 +27,26 @@ h1, h2, h3, h4, .logo-text {
   --color-primary-hover: #26435c;
   --color-primary-light: #e9eff5;
   --color-success: #688c75;
-  --color-danger: #bd6e5c;
+  --color-success-hover: #52705d;
+  --color-success-light: #f2f6f3;
   --color-warning: #cc9c6c;
+  --color-warning-hover: #b38559;
+  --color-warning-light: #fbf6f0;
+  --color-danger: #bd6e5c;
+  --color-danger-hover: #a35a49;
+  --color-danger-light: #faf1ef;
+  --color-info: #7EBEC5;
+  --color-info-hover: #63a6ad;
+  --color-info-light: #f0f7f8;
+  --color-purple: #8d809c;
+  --color-purple-light: #f4f2f6;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
   --sidebar-width: 270px;
   --shadow-sm: 0 2px 8px rgba(51,89,122,0.05);
   --shadow-md: 0 4px 16px rgba(51,89,122,0.08);
   --shadow-lg: 0 10px 30px rgba(51,89,122,0.12);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
 }
 
 body {
@@ -52,3 +66,147 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Fade-in animation ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.35s ease; }
+
+/* ── Status dot pulse ── */
+@keyframes dotPulse {
+  0%   { opacity: 0.5; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+.status-dot-pulse { animation: dotPulse 2.5s infinite; }
+
+/* ── Shared card ── */
+.sl-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  outline: none;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.btn-primary   { background: var(--color-primary);  color: #fff; }
+.btn-primary:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-md); }
+.btn-success   { background: var(--color-success);  color: #fff; }
+.btn-success:hover { background: var(--color-success-hover); }
+.btn-warning   { background: var(--color-warning);  color: #2e3538; }
+.btn-warning:hover { background: var(--color-warning-hover); }
+.btn-danger    { background: var(--color-danger);   color: #fff; }
+.btn-danger:hover  { background: var(--color-danger-hover); }
+.btn-outline   { background: transparent; border-color: var(--border-color); color: var(--text-secondary); }
+.btn-outline:hover { background: var(--bg-card-hover); color: var(--text-primary); border-color: var(--text-secondary); }
+
+/* ── Admin subtabs pill row ── */
+.admin-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.admin-subtab-btn {
+  padding: 10px 18px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+.admin-subtab-btn:hover { background: var(--color-primary-light); color: var(--color-primary); border-color: var(--color-primary); }
+.admin-subtab-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); box-shadow: var(--shadow-sm); }
+
+/* ── Recipe / menu-item card ── */
+.recipe-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.recipe-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--color-primary); }
+.recipe-card-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; font-family: 'Outfit', sans-serif; }
+.recipe-card-meta  { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.recipe-card-ingr  { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── Allergen / diet badge ── */
+.badge-diet    { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
+.tag-gluten    { background: var(--color-purple-light); color: var(--color-purple); border: 1px solid rgba(141,128,156,.25); }
+.tag-dairy     { background: var(--color-warning-light); color: var(--color-warning-hover); border: 1px solid rgba(204,156,108,.25); }
+.tag-diabetic  { background: var(--color-warning-light); color: var(--color-warning-hover); border: 1px solid rgba(204,156,108,.25); }
+.tag-ensure    { background: var(--color-success-light); color: var(--color-success-hover); border: 1px solid rgba(104,140,117,.25); }
+.tag-custom    { background: var(--color-primary-light); color: var(--color-primary); border: 1px solid rgba(51,89,122,.2); }
+
+/* ── Menu category tabs ── */
+.menu-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.menu-tab-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  white-space: nowrap;
+  min-height: 40px;
+  transition: color 0.2s ease;
+}
+.menu-tab-btn:hover { color: var(--text-primary); }
+.menu-tab-btn.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); font-weight: 700; }
+
+/* ── Recipe grid ── */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ── Section header ── */
+.section-header { margin-bottom: 24px; }
+.section-header h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; color: var(--text-primary); }
+.section-header p  { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+/* ── Mobile nav btn ── */
+@media (max-width: 768px) {
+  .mobile-menu-btn { display: flex !important; }
+}
+
+/* ── Print ── */
+@media print {
+  #root .sidebar-aside, #root header { display: none !important; }
+  #root main { padding: 0 !important; }
+}
