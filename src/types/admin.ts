@@ -24,6 +24,8 @@ export interface AuditLogEntry {
   details?: Record<string, unknown>
 }
 
+export type KitchenServiceMode = 'dining-room' | 'room-service-only' | 'hybrid'
+
 export interface SystemSettings {
   facilityName: string
   timezone: string
@@ -31,4 +33,5 @@ export interface SystemSettings {
   mfaRequired: boolean
   allowReadonlyExport: boolean
   maintenanceMode: boolean
+  kitchenServiceMode: KitchenServiceMode
 }
