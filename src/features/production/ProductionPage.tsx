@@ -6,14 +6,13 @@ import type { Resident }     from '@/types/resident'
 import type { DayOfWeek }    from '@/types/menu'
 
 // ── Constants ──────────────────────────────────────────────────────────────────────────
-type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists' | 'inventory'
+type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists'
 
 const SERVICE_TABS: { id: ServiceTab; label: string; icon: string }[] = [
   { id: 'worksheet',       label: 'Worksheet',    icon: '📋' },
   { id: 'traytickets',     label: 'Tray Tickets', icon: '🍽️' },
   { id: 'preplist',        label: 'Prep List',    icon: '👨‍🍳' },
   { id: 'shiftchecklists', label: 'Shift Checks', icon: '✅' },
-  { id: 'inventory',       label: 'Inventory',    icon: '📦' },
 ]
 
 const DAYS: DayOfWeek[] = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -27,7 +26,7 @@ const BUFFER = 5 // extra portions always added to each option
 // ── Types ───────────────────────────────────────────────────────────────────────────
 type MealSlotKey = 'breakfast' | 'lunch' | 'dinner'
 
-/** What admin typed in for one resident’s meal choice */
+/** What admin typed in for one resident's meal choice */
 type ResidentOrder = {
   residentId: string
   /** 'opt1' | 'opt2' | '' (not yet entered) */
@@ -162,7 +161,7 @@ function WorksheetTab() {
     return { opt1, opt2, none }
   }
 
-  // For breakfast there’s no choice — all residents counted
+  // For breakfast there's no choice — all residents counted
   const breakdownAll = useMemo(() => buildBreakdown(activeResidents), [activeResidents])
 
   // Derive option names for lunch + dinner from menu
@@ -302,7 +301,7 @@ function WorksheetTab() {
         />
         {!lunchNoOrders && lunchTally.none.length > 0 && (
           <div className="sl-alert sl-alert-warning">
-            <b>{lunchTally.none.length}</b> residents have no lunch order entered: 
+            <b>{lunchTally.none.length}</b> residents have no lunch order entered: 
             {lunchTally.none.map(r => r.name).join(', ')}
           </div>
         )}
@@ -347,7 +346,7 @@ function WorksheetTab() {
         />
         {!dinnerNoOrders && dinnerTally.none.length > 0 && (
           <div className="sl-alert sl-alert-warning">
-            <b>{dinnerTally.none.length}</b> residents have no dinner order entered: 
+            <b>{dinnerTally.none.length}</b> residents have no dinner order entered: 
             {dinnerTally.none.map(r => r.name).join(', ')}
           </div>
         )}
@@ -475,7 +474,7 @@ function OrderEntry({
 const TH: React.CSSProperties = { padding:'8px 12px', textAlign:'left', fontSize:'var(--text-xs)', fontWeight:'var(--weight-bold)', textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--text-muted)', whiteSpace:'nowrap' }
 const TD: React.CSSProperties = { padding:'8px 12px', color:'var(--text-secondary)', verticalAlign:'middle' }
 
-// One option’s result card with dietary breakdown + recipe link
+// One option's result card with dietary breakdown + recipe link
 function OptionResult({
   slot, opt, label, dessert, residents, isSplit, total, recipes, expandedRecipe, setExpandedRecipe,
 }: {
@@ -551,7 +550,7 @@ function OptionResult({
                 <ul style={{ listStyle:'disc', paddingLeft:20, margin:'0 0 16px' }}>
                   {matched.ingredients.map((ing, i) => (
                     <li key={i} style={{ fontSize:'var(--text-sm)', color:'var(--text-primary)', marginBottom:4 }}>
-                      <b>{scaleQty(ing.qty)}</b> {ing.item}
+                      <b>{scaleQty(ing.qty)}</b> {ing.item}
                     </li>
                   ))}
                 </ul>
@@ -921,53 +920,6 @@ function ShiftChecklistsTab() {
   )
 }
 
-// ── Dietary Inventory ──────────────────────────────────────────────────────────────────
-type InventoryItem = { id: string; item: string; qty: number; unit: string; min: number }
-function InventoryTab() {
-  const [items, setItems] = useState<InventoryItem[]>([
-    { id:'1', item:'Ensure Original (vanilla)', qty:24, unit:'cans',    min:12 },
-    { id:'2', item:'Ensure Plus (chocolate)',   qty: 6, unit:'cans',    min:12 },
-    { id:'3', item:'Thickener (Simply Thick)',  qty: 2, unit:'bottles', min: 3 },
-    { id:'4', item:'Gluten-Free bread',         qty: 1, unit:'loaves',  min: 2 },
-    { id:'5', item:'Lactose-Free milk',         qty:12, unit:'cartons', min: 6 },
-    { id:'6', item:'Sugar-Free syrup',          qty: 3, unit:'bottles', min: 2 },
-  ])
-  const [editing, setEditing] = useState<string|null>(null)
-  const [tempQty, setTempQty] = useState(0)
-  function saveEdit(id: string) { setItems(p => p.map(i => i.id===id?{...i,qty:tempQty}:i)); setEditing(null) }
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-3)' }}>
-      <p style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>Items highlighted in amber are below minimum par levels.</p>
-      {items.map(item => {
-        const low = item.qty < item.min
-        return (
-          <div key={item.id} style={{ background:low?'#fffbeb':'var(--bg-card)', border:`1px solid ${low?'#fbbf24':'var(--border-color)'}`, borderRadius:'var(--radius-md)', padding:'12px 16px', display:'flex', alignItems:'center', gap:'var(--space-3)', flexWrap:'wrap' }}>
-            <div style={{ flex:1, minWidth:180 }}>
-              <div style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)' }}>{item.item}</div>
-              <div className="sl-eyebrow" style={{ marginTop:2 }}>Min Par: {item.min} {item.unit}</div>
-            </div>
-            {editing === item.id ? (
-              <div style={{ display:'flex', gap:'var(--space-2)', alignItems:'center' }}>
-                <input type="number" value={tempQty} onChange={e => setTempQty(+e.target.value)} className="sl-input" style={{ width:70 }} />
-                <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>{item.unit}</span>
-                <button onClick={() => saveEdit(item.id)} className="btn btn-primary btn-sm">Save</button>
-                <button onClick={() => setEditing(null)} className="btn btn-outline btn-sm">Cancel</button>
-              </div>
-            ) : (
-              <div style={{ display:'flex', gap:'var(--space-3)', alignItems:'center' }}>
-                <span style={{ fontSize:'var(--text-2xl)', fontWeight:'var(--weight-black)', color:low?'#d97706':'var(--text-primary)', fontFamily:'var(--font-display)' }}>{item.qty}</span>
-                <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>{item.unit}</span>
-                {low && <span className="sl-badge" style={{ background:'#fef3c7', color:'#d97706', border:'1px solid #fbbf24' }}>LOW</span>}
-                <button onClick={() => { setEditing(item.id); setTempQty(item.qty) }} className="btn btn-outline btn-sm">Edit</button>
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 // ── Main Page ───────────────────────────────────────────────────────────────────────────
 export default function ProductionPage() {
   const [activeTab, setActiveTab] = useState<ServiceTab>('worksheet')
@@ -981,7 +933,7 @@ export default function ProductionPage() {
     <div className="sl-page fade-in">
       <div className="sl-page-header">
         <h1 className="sl-page-title">Production &amp; Service</h1>
-        <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, checklists, and dietary inventory.</p>
+        <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, and shift checklists.</p>
       </div>
 
       <div className="sl-pills" style={{ marginBottom:'var(--space-6)' }}>
@@ -998,7 +950,6 @@ export default function ProductionPage() {
         {activeTab === 'traytickets'     && <TrayTicketsTab />}
         {activeTab === 'preplist'        && <CulinaryPrepTab />}
         {activeTab === 'shiftchecklists' && <ShiftChecklistsTab />}
-        {activeTab === 'inventory'       && <InventoryTab />}
       </div>
     </div>
   )
