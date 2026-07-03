@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMenuStore } from '../../state/menuStore'
 import { useProductionStore } from '../../state/productionStore'
 import { MEAL_SLOTS, MEAL_SLOT_LABELS, DAYS_OF_WEEK } from '../../types/menu'
@@ -13,7 +13,8 @@ const DAY_ABBREV: Record<DayOfWeek, string> = {
 }
 
 export default function ProductionPage() {
-  const { activeWeek, fetchWeeks } = useMenuStore()
+  const { weeks, selectedWeekId, fetchWeeks } = useMenuStore()
+  const activeWeek = weeks.find(w => w.active) ?? weeks.find(w => w.id === selectedWeekId) ?? null
   const { activeSheet, loading, loadSheet, signOff } = useProductionStore()
 
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>('Monday')

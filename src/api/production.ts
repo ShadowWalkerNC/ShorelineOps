@@ -1,4 +1,4 @@
-import api from './client'
+import { api } from './client'
 import type { ProductionSheet } from '../types/production'
 import type { DayOfWeek, MealSlot } from '../types/menu'
 
