@@ -26,18 +26,15 @@ const DAY_INDEX: Record<DayOfWeek, number> = {
 
 const BUFFER = 5
 
-// Proteins that should trigger a freezer pull (keyword match)
 const PROTEIN_KEYWORDS = [
   'chicken','salmon','beef','pork','turkey','tilapia','cod','shrimp','steak',
   'roast','loin','chop','fillet','filet','fish','ham','sausage','meatball',
 ]
-
 function isProtein(name: string) {
-  const lower = name.toLowerCase()
-  return PROTEIN_KEYWORDS.some(k => lower.includes(k))
+  return PROTEIN_KEYWORDS.some(k => name.toLowerCase().includes(k))
 }
 
-// ── Types ───────────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────────────
 type ResidentOrder = {
   residentId: string
   lunchChoice:  'opt1' | 'opt2' | ''
@@ -82,10 +79,10 @@ function buildBreakdown(residents: Resident[]): DietBreakdown {
 type PrepTask = {
   id: string
   task: string
-  detail: string        // qty / instructions
+  detail: string
   meal: 'prep' | 'breakfast' | 'lunch' | 'dinner'
   type: 'freezer-pull' | 'prep' | 'manual'
-  dueDate: string       // ISO date string — when it needs to be done BY
+  dueDate: string
   done: boolean
   qty?: number
   unit?: string
@@ -93,15 +90,13 @@ type PrepTask = {
 
 // ── Shared helpers ───────────────────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2,10) }
-
 function addDays(isoDate: string, n: number): string {
   const d = new Date(isoDate)
   d.setDate(d.getDate() + n)
   return d.toISOString().slice(0,10)
 }
-
 function dateLabel(iso: string): string {
-  const d = new Date(iso + 'T12:00:00') // noon avoids DST edge
+  const d = new Date(iso + 'T12:00:00')
   return d.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' })
 }
 
@@ -133,7 +128,7 @@ function BreakdownTable({ title, rows }: { title: string; rows: [string, number]
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// PRODUCTION WORKSHEET TAB
+// WORKSHEET TAB
 // ────────────────────────────────────────────────────────────────────────────
 function WorksheetTab() {
   const { residents }    = useResidentsStore()
@@ -144,9 +139,9 @@ function WorksheetTab() {
   const tmrIndex = (today + 1) % 7
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DAYS[tmrIndex])
 
-  const activeWeek     = weeks.find(w => w.active) ?? weeks[0] ?? null
-  const dayMenu        = activeWeek?.days?.[selectedDay]
-  const itemName       = (id: string) => items.find(i => i.id === id)?.name ?? id
+  const activeWeek      = weeks.find(w => w.active) ?? weeks[0] ?? null
+  const dayMenu         = activeWeek?.days?.[selectedDay]
+  const itemName        = (id: string) => items.find(i => i.id === id)?.name ?? id
   const activeResidents = useMemo(() => residents.filter(r => r.status === 'Active'), [residents])
   const total           = activeResidents.length
 
@@ -183,63 +178,57 @@ function WorksheetTab() {
     return { opt1, opt2, none }
   }
 
-  const breakdownAll = useMemo(() => buildBreakdown(activeResidents), [activeResidents])
-
-  function optionLabel(slot: 'lunch' | 'dinner', opt: 1 | 2) {
-    if (!dayMenu) return `Option ${opt}`
-    const meatIds  = dayMenu[`${slot}Opt${opt}Meat`   as keyof typeof dayMenu]?.itemIds ?? []
-    const vegIds   = dayMenu[`${slot}Opt${opt}Veggie` as keyof typeof dayMenu]?.itemIds ?? []
-    const starIds  = dayMenu[`${slot}Opt${opt}Starch` as keyof typeof dayMenu]?.itemIds ?? []
-    const parts = [...meatIds.map(itemName), ...vegIds.map(itemName), ...starIds.map(itemName)]
-    return parts.length ? parts.join(' / ') : `Option ${opt}`
-  }
-
-  function dessertLabel(slot: 'lunch' | 'dinner') {
-    const ids = dayMenu?.[`${slot}Dessert` as keyof typeof dayMenu]?.itemIds ?? []
-    return ids.map(itemName).join(', ') || '—'
-  }
-
+  const breakdownAll   = useMemo(() => buildBreakdown(activeResidents), [activeResidents])
   const lunchTally     = tallyOrders('lunchChoice')
   const dinnerTally    = tallyOrders('dinnerChoice')
   const lunchNoOrders  = lunchTally.opt1.length === 0 && lunchTally.opt2.length === 0
   const dinnerNoOrders = dinnerTally.opt1.length === 0 && dinnerTally.opt2.length === 0
   const [expandedRecipe, setExpandedRecipe] = useState<string | null>(null)
 
+  function optionLabel(slot: 'lunch' | 'dinner', opt: 1 | 2) {
+    if (!dayMenu) return `Option ${opt}`
+    const meatIds = dayMenu[`${slot}Opt${opt}Meat`   as keyof typeof dayMenu]?.itemIds ?? []
+    const vegIds  = dayMenu[`${slot}Opt${opt}Veggie` as keyof typeof dayMenu]?.itemIds ?? []
+    const starIds = dayMenu[`${slot}Opt${opt}Starch` as keyof typeof dayMenu]?.itemIds ?? []
+    const parts   = [...meatIds.map(itemName), ...vegIds.map(itemName), ...starIds.map(itemName)]
+    return parts.length ? parts.join(' / ') : `Option ${opt}`
+  }
+  function dessertLabel(slot: 'lunch' | 'dinner') {
+    return (dayMenu?.[`${slot}Dessert` as keyof typeof dayMenu]?.itemIds ?? []).map(itemName).join(', ') || '—'
+  }
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-6)' }}>
       <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
         <div className="sl-eyebrow">Planning For</div>
         <div className="sl-pills">
-          {DAYS.map(d => (
-            <button key={d} onClick={() => setSelectedDay(d)} className={selectedDay === d ? 'sl-pill active' : 'sl-pill'}>{DAY_LABELS[d]}</button>
-          ))}
+          {DAYS.map(d => <button key={d} onClick={() => setSelectedDay(d)} className={selectedDay===d?'sl-pill active':'sl-pill'}>{DAY_LABELS[d]}</button>)}
         </div>
         {activeWeek
           ? <p style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>Active menu: <b>{activeWeek.name}</b></p>
-          : <div className="sl-alert sl-alert-warning">No active menu week found. Set a menu week as active in the Menu page.</div>
-        }
+          : <div className="sl-alert sl-alert-warning">No active menu week. Set one in the Menu page.</div>}
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))', gap:'var(--space-3)' }}>
-        <StatCard label="Census"       value={total}                        color="var(--color-primary)" />
-        <StatCard label="Dining Room"  value={breakdownAll.diningRoom}      color="#059669" />
-        <StatCard label="Room Service" value={breakdownAll.room}            color="#d97706" />
-        <StatCard label="Asst. Living" value={breakdownAll.assistedLiving}  color="#7c3aed" />
-        <StatCard label="Memory Care"  value={breakdownAll.memoryCare}      color="#dc2626" />
-        <StatCard label="Ensure"       value={breakdownAll.ensure}          color="#0891b2" />
+        <StatCard label="Census"       value={total}                       color="var(--color-primary)" />
+        <StatCard label="Dining Room"  value={breakdownAll.diningRoom}     color="#059669" />
+        <StatCard label="Room Service" value={breakdownAll.room}           color="#d97706" />
+        <StatCard label="Asst. Living" value={breakdownAll.assistedLiving} color="#7c3aed" />
+        <StatCard label="Memory Care"  value={breakdownAll.memoryCare}     color="#dc2626" />
+        <StatCard label="Ensure"       value={breakdownAll.ensure}         color="#0891b2" />
       </div>
 
       <MealSection title="Breakfast" color="#f59e0b">
-        <BreakdownTable title="Diet &amp; Texture" rows={[
-          ['Diabetic', breakdownAll.diabetic],['Cardiac', breakdownAll.cardiac],
-          ['Renal', breakdownAll.renal],['Low Na', breakdownAll.lowSodium],
-          ['Mech Soft', breakdownAll.mechSoft],['Cut-Up', breakdownAll.cutUp],
-          ['Minced', breakdownAll.minced],['Puréed', breakdownAll.pureed],
+        <BreakdownTable title="Diet & Texture" rows={[
+          ['Diabetic',breakdownAll.diabetic],['Cardiac',breakdownAll.cardiac],
+          ['Renal',breakdownAll.renal],['Low Na',breakdownAll.lowSodium],
+          ['Mech Soft',breakdownAll.mechSoft],['Cut-Up',breakdownAll.cutUp],
+          ['Minced',breakdownAll.minced],['Puréed',breakdownAll.pureed],
         ]} />
         <BreakdownTable title="Allergens" rows={[
-          ['Gluten-Free', breakdownAll.glutenFree],['Dairy-Free', breakdownAll.dairyFree],['Nut-Free', breakdownAll.nutFree],
+          ['Gluten-Free',breakdownAll.glutenFree],['Dairy-Free',breakdownAll.dairyFree],['Nut-Free',breakdownAll.nutFree],
         ]} />
-        <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', padding:'10px 14px', marginTop:'var(--space-2)' }}>
+        <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', padding:'10px 14px' }}>
           <div className="sl-eyebrow" style={{ marginBottom:4 }}>Menu</div>
           <div style={{ fontSize:'var(--text-sm)', color:'var(--text-primary)' }}>
             {(dayMenu?.breakfast?.itemIds ?? []).map(itemName).join(' · ') || '— No menu set —'}
@@ -249,49 +238,19 @@ function WorksheetTab() {
       </MealSection>
 
       <MealSection title="Lunch" color="#10b981">
-        {lunchNoOrders && (
-          <div className="sl-alert sl-alert-info" style={{ marginBottom:'var(--space-3)' }}>
-            No orders entered — showing <b>50/50 split + {BUFFER} buffer</b> per option.
-          </div>
-        )}
-        <OrderEntry meal="lunchChoice" residents={activeResidents} orders={orders}
-          opt1Label={optionLabel('lunch',1)} opt2Label={optionLabel('lunch',2)} onChange={setChoice} />
-        <OptionResult slot="lunch" opt={1} label={optionLabel('lunch',1)} dessert={dessertLabel('lunch')}
-          residents={lunchNoOrders ? activeResidents.slice(0,Math.round(total/2)) : lunchTally.opt1}
-          isSplit={lunchNoOrders} total={total} recipes={recipes}
-          expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
-        <OptionResult slot="lunch" opt={2} label={optionLabel('lunch',2)} dessert={dessertLabel('lunch')}
-          residents={lunchNoOrders ? activeResidents.slice(Math.round(total/2)) : lunchTally.opt2}
-          isSplit={lunchNoOrders} total={total} recipes={recipes}
-          expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
-        {!lunchNoOrders && lunchTally.none.length > 0 && (
-          <div className="sl-alert sl-alert-warning">
-            <b>{lunchTally.none.length}</b> residents missing lunch order: {lunchTally.none.map(r => r.name).join(', ')}
-          </div>
-        )}
+        {lunchNoOrders && <div className="sl-alert sl-alert-info" style={{ marginBottom:'var(--space-3)' }}>No orders entered — showing <b>50/50 split + {BUFFER} buffer</b> per option.</div>}
+        <OrderEntry meal="lunchChoice" residents={activeResidents} orders={orders} opt1Label={optionLabel('lunch',1)} opt2Label={optionLabel('lunch',2)} onChange={setChoice} />
+        <OptionResult slot="lunch" opt={1} label={optionLabel('lunch',1)} dessert={dessertLabel('lunch')} residents={lunchNoOrders?activeResidents.slice(0,Math.round(total/2)):lunchTally.opt1} isSplit={lunchNoOrders} total={total} recipes={recipes} expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
+        <OptionResult slot="lunch" opt={2} label={optionLabel('lunch',2)} dessert={dessertLabel('lunch')} residents={lunchNoOrders?activeResidents.slice(Math.round(total/2)):lunchTally.opt2} isSplit={lunchNoOrders} total={total} recipes={recipes} expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
+        {!lunchNoOrders && lunchTally.none.length > 0 && <div className="sl-alert sl-alert-warning"><b>{lunchTally.none.length}</b> residents missing lunch order: {lunchTally.none.map(r=>r.name).join(', ')}</div>}
       </MealSection>
 
       <MealSection title="Dinner" color="#6366f1">
-        {dinnerNoOrders && (
-          <div className="sl-alert sl-alert-info" style={{ marginBottom:'var(--space-3)' }}>
-            No orders entered — showing <b>50/50 split + {BUFFER} buffer</b> per option.
-          </div>
-        )}
-        <OrderEntry meal="dinnerChoice" residents={activeResidents} orders={orders}
-          opt1Label={optionLabel('dinner',1)} opt2Label={optionLabel('dinner',2)} onChange={setChoice} />
-        <OptionResult slot="dinner" opt={1} label={optionLabel('dinner',1)} dessert={dessertLabel('dinner')}
-          residents={dinnerNoOrders ? activeResidents.slice(0,Math.round(total/2)) : dinnerTally.opt1}
-          isSplit={dinnerNoOrders} total={total} recipes={recipes}
-          expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
-        <OptionResult slot="dinner" opt={2} label={optionLabel('dinner',2)} dessert={dessertLabel('dinner')}
-          residents={dinnerNoOrders ? activeResidents.slice(Math.round(total/2)) : dinnerTally.opt2}
-          isSplit={dinnerNoOrders} total={total} recipes={recipes}
-          expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
-        {!dinnerNoOrders && dinnerTally.none.length > 0 && (
-          <div className="sl-alert sl-alert-warning">
-            <b>{dinnerTally.none.length}</b> residents missing dinner order: {dinnerTally.none.map(r => r.name).join(', ')}
-          </div>
-        )}
+        {dinnerNoOrders && <div className="sl-alert sl-alert-info" style={{ marginBottom:'var(--space-3)' }}>No orders entered — showing <b>50/50 split + {BUFFER} buffer</b> per option.</div>}
+        <OrderEntry meal="dinnerChoice" residents={activeResidents} orders={orders} opt1Label={optionLabel('dinner',1)} opt2Label={optionLabel('dinner',2)} onChange={setChoice} />
+        <OptionResult slot="dinner" opt={1} label={optionLabel('dinner',1)} dessert={dessertLabel('dinner')} residents={dinnerNoOrders?activeResidents.slice(0,Math.round(total/2)):dinnerTally.opt1} isSplit={dinnerNoOrders} total={total} recipes={recipes} expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
+        <OptionResult slot="dinner" opt={2} label={optionLabel('dinner',2)} dessert={dessertLabel('dinner')} residents={dinnerNoOrders?activeResidents.slice(Math.round(total/2)):dinnerTally.opt2} isSplit={dinnerNoOrders} total={total} recipes={recipes} expandedRecipe={expandedRecipe} setExpandedRecipe={setExpandedRecipe} />
+        {!dinnerNoOrders && dinnerTally.none.length > 0 && <div className="sl-alert sl-alert-warning"><b>{dinnerTally.none.length}</b> residents missing dinner order: {dinnerTally.none.map(r=>r.name).join(', ')}</div>}
       </MealSection>
 
       <div style={{ display:'flex', justifyContent:'flex-end' }}>
@@ -305,15 +264,11 @@ function MealSection({ title, color, children }: { title: string; color: string;
   const [open, setOpen] = useState(true)
   return (
     <div style={{ border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', overflow:'hidden', boxShadow:'var(--shadow-sm)' }}>
-      <button onClick={() => setOpen(v => !v)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:`${color}14`, border:'none', borderBottom:`2px solid ${color}`, padding:'var(--space-3) var(--space-4)', cursor:'pointer' }}>
+      <button onClick={() => setOpen(v=>!v)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:`${color}14`, border:'none', borderBottom:`2px solid ${color}`, padding:'var(--space-3) var(--space-4)', cursor:'pointer' }}>
         <span style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-black)', fontFamily:'var(--font-display)', color, textTransform:'uppercase', letterSpacing:'1px' }}>{title} Service</span>
-        <span style={{ color, fontSize:18 }}>{open ? '▾' : '▸'}</span>
+        <span style={{ color, fontSize:18 }}>{open?'▾':'▸'}</span>
       </button>
-      {open && (
-        <div style={{ background:'var(--bg-card)', padding:'var(--space-5)', display:'flex', flexDirection:'column', gap:'var(--space-4)' }}>
-          {children}
-        </div>
-      )}
+      {open && <div style={{ background:'var(--bg-card)', padding:'var(--space-5)', display:'flex', flexDirection:'column', gap:'var(--space-4)' }}>{children}</div>}
     </div>
   )
 }
@@ -323,43 +278,42 @@ function PrepCount({ label, count, note }: { label: string; count: number; note?
     <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)', background:'var(--color-primary)', borderRadius:'var(--radius-md)', padding:'10px 18px', marginTop:'var(--space-2)' }}>
       <span style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)', color:'rgba(255,255,255,0.8)', textTransform:'uppercase', letterSpacing:'0.5px' }}>{label}</span>
       <span style={{ fontSize:'var(--text-3xl)', fontWeight:'var(--weight-black)', fontFamily:'var(--font-display)', color:'white', lineHeight:1 }}>{count}</span>
-      <span style={{ fontSize:'var(--text-xs)', color:'rgba(255,255,255,0.7)' }}>portions{note ? ` (${note})` : ''}</span>
+      <span style={{ fontSize:'var(--text-xs)', color:'rgba(255,255,255,0.7)' }}>portions{note?` (${note})`:''}</span>
     </div>
   )
 }
+
+const TH: React.CSSProperties = { padding:'8px 12px', textAlign:'left', fontSize:'var(--text-xs)', fontWeight:'var(--weight-bold)', textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--text-muted)', whiteSpace:'nowrap' }
+const TD: React.CSSProperties = { padding:'8px 12px', color:'var(--text-secondary)', verticalAlign:'middle' }
 
 function OrderEntry({ meal, residents, orders, opt1Label, opt2Label, onChange }: {
   meal: 'lunchChoice' | 'dinnerChoice'
   residents: Resident[]
   orders: Record<string, ResidentOrder>
-  opt1Label: string
-  opt2Label: string
-  onChange: (id: string, meal: 'lunchChoice' | 'dinnerChoice', val: 'opt1' | 'opt2' | '') => void
+  opt1Label: string; opt2Label: string
+  onChange: (id: string, meal: 'lunchChoice'|'dinnerChoice', val: 'opt1'|'opt2'|'') => void
 }) {
   const [open, setOpen] = useState(false)
-  const filled = residents.filter(r => (orders[r.id]?.[meal] ?? '') !== '').length
+  const filled = residents.filter(r => (orders[r.id]?.[meal]??'') !== '').length
   return (
     <div style={{ border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', overflow:'hidden' }}>
-      <button onClick={() => setOpen(v => !v)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'var(--bg-app)', border:'none', borderBottom:open?'1px solid var(--border-color)':'none', padding:'var(--space-3) var(--space-4)', cursor:'pointer' }}>
+      <button onClick={() => setOpen(v=>!v)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'var(--bg-app)', border:'none', borderBottom:open?'1px solid var(--border-color)':'none', padding:'var(--space-3) var(--space-4)', cursor:'pointer' }}>
         <span style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)', color:'var(--text-primary)' }}>
-          ✏️ Enter Orders
-          {filled > 0 && <span style={{ marginLeft:8, color:'var(--color-primary)' }}>({filled}/{residents.length} entered)</span>}
+          ✏️ Enter Orders{filled>0&&<span style={{ marginLeft:8, color:'var(--color-primary)' }}>({filled}/{residents.length} entered)</span>}
         </span>
-        <span style={{ color:'var(--text-muted)', fontSize:14 }}>{open ? 'hide ▾' : 'show ▸'}</span>
+        <span style={{ color:'var(--text-muted)', fontSize:14 }}>{open?'hide ▾':'show ▸'}</span>
       </button>
       {open && (
         <div style={{ maxHeight:360, overflowY:'auto', background:'var(--bg-card)' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'var(--text-sm)' }}>
             <thead>
               <tr style={{ background:'var(--bg-app)', position:'sticky', top:0 }}>
-                <th style={TH}>Resident</th><th style={TH}>Room</th>
-                <th style={TH}>Location</th><th style={TH}>Diet / Texture</th>
-                <th style={{ ...TH, minWidth:200 }}>Choice</th>
+                <th style={TH}>Resident</th><th style={TH}>Room</th><th style={TH}>Location</th><th style={TH}>Diet / Texture</th><th style={{ ...TH, minWidth:200 }}>Choice</th>
               </tr>
             </thead>
             <tbody>
-              {residents.map((r, i) => {
-                const choice = orders[r.id]?.[meal] ?? ''
+              {residents.map((r,i) => {
+                const choice = orders[r.id]?.[meal]??''
                 return (
                   <tr key={r.id} style={{ background:i%2===0?'var(--bg-card)':'var(--bg-app)', borderBottom:'1px solid var(--border-color)' }}>
                     <td style={TD}>{r.name}</td>
@@ -367,13 +321,13 @@ function OrderEntry({ meal, residents, orders, opt1Label, opt2Label, onChange }:
                     <td style={TD}>{r.servingLocation}</td>
                     <td style={TD}>
                       <span style={{ color:'var(--text-primary)' }}>{r.dietType}</span>
-                      {r.texture !== 'Regular' && <span style={{ color:'var(--text-muted)', marginLeft:4 }}>/ {r.texture}</span>}
-                      {r.allergies.length > 0 && <span style={{ color:'#dc2626', marginLeft:4 }}>⚠ {r.allergies.join(',')}</span>}
+                      {r.texture!=='Regular'&&<span style={{ color:'var(--text-muted)', marginLeft:4 }}>/ {r.texture}</span>}
+                      {r.allergies.length>0&&<span style={{ color:'#dc2626', marginLeft:4 }}>⚠ {r.allergies.join(',')}</span>}
                     </td>
                     <td style={TD}>
                       <div style={{ display:'flex', gap:'var(--space-2)' }}>
-                        <button onClick={() => onChange(r.id,meal,choice==='opt1'?'':'opt1')} className={choice==='opt1'?'btn btn-primary btn-sm':'btn btn-outline btn-sm'} title={opt1Label} style={{ flex:1, maxWidth:90, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Opt 1</button>
-                        <button onClick={() => onChange(r.id,meal,choice==='opt2'?'':'opt2')} className={choice==='opt2'?'btn btn-primary btn-sm':'btn btn-outline btn-sm'} title={opt2Label} style={{ flex:1, maxWidth:90, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Opt 2</button>
+                        <button onClick={()=>onChange(r.id,meal,choice==='opt1'?'':'opt1')} className={choice==='opt1'?'btn btn-primary btn-sm':'btn btn-outline btn-sm'} style={{ flex:1, maxWidth:90, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Opt 1</button>
+                        <button onClick={()=>onChange(r.id,meal,choice==='opt2'?'':'opt2')} className={choice==='opt2'?'btn btn-primary btn-sm':'btn btn-outline btn-sm'} style={{ flex:1, maxWidth:90, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Opt 2</button>
                       </div>
                     </td>
                   </tr>
@@ -386,67 +340,53 @@ function OrderEntry({ meal, residents, orders, opt1Label, opt2Label, onChange }:
     </div>
   )
 }
-const TH: React.CSSProperties = { padding:'8px 12px', textAlign:'left', fontSize:'var(--text-xs)', fontWeight:'var(--weight-bold)', textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--text-muted)', whiteSpace:'nowrap' }
-const TD: React.CSSProperties = { padding:'8px 12px', color:'var(--text-secondary)', verticalAlign:'middle' }
 
 function OptionResult({ slot, opt, label, dessert, residents, isSplit, total, recipes, expandedRecipe, setExpandedRecipe }: {
-  slot: 'lunch' | 'dinner'; opt: 1 | 2; label: string; dessert: string
-  residents: Resident[]; isSplit: boolean; total: number
-  recipes: import('@/types/recipe').Recipe[]
-  expandedRecipe: string | null; setExpandedRecipe: (id: string | null) => void
+  slot:'lunch'|'dinner'; opt:1|2; label:string; dessert:string
+  residents:Resident[]; isSplit:boolean; total:number
+  recipes:import('@/types/recipe').Recipe[]
+  expandedRecipe:string|null; setExpandedRecipe:(id:string|null)=>void
 }) {
   const bd      = buildBreakdown(residents)
-  const prepQty = (isSplit ? Math.round(total/2) : residents.length) + BUFFER
-  const words   = label.toLowerCase().split(/[\s/,&]+/).filter(w => w.length > 3)
-  const matched = recipes.find(rec => words.some(w => rec.name.toLowerCase().includes(w))) ?? null
-  const ratio   = matched ? (prepQty / (matched.baseServings || 1)) : 1
-  function scaleQty(raw: string): string {
-    const m = raw.match(/^([\d./]+)(.*)/)
-    if (!m) return raw
+  const prepQty = (isSplit?Math.round(total/2):residents.length)+BUFFER
+  const words   = label.toLowerCase().split(/[\s/,&]+/).filter(w=>w.length>3)
+  const matched = recipes.find(rec=>words.some(w=>rec.name.toLowerCase().includes(w)))??null
+  const ratio   = matched?(prepQty/(matched.baseServings||1)):1
+  function scaleQty(raw:string):string {
+    const m=raw.match(/^([\d./]+)(.*)/)
+    if(!m) return raw
     // eslint-disable-next-line no-eval
-    const scaled = +(eval(m[1]) * ratio).toFixed(2)
-    return `${scaled}${m[2]}`
+    return `${+(eval(m[1])*ratio).toFixed(2)}${m[2]}`
   }
-  const isExpanded = expandedRecipe === `${slot}-${opt}`
+  const isExpanded = expandedRecipe===`${slot}-${opt}`
   return (
     <div style={{ border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', overflow:'hidden' }}>
       <div style={{ background:'var(--bg-app)', padding:'var(--space-3) var(--space-4)', borderBottom:'1px solid var(--border-color)', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'var(--space-2)' }}>
         <div>
           <div style={{ fontSize:'var(--text-xs)', fontWeight:'var(--weight-bold)', textTransform:'uppercase', letterSpacing:'0.5px', color:'var(--color-primary)', marginBottom:2 }}>Option {opt}</div>
           <div style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)' }}>{label}</div>
-          {dessert !== '—' && <div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)', marginTop:2 }}>Dessert: {dessert}</div>}
-          {isSplit && <div style={{ fontSize:'var(--text-xs)', color:'#d97706', marginTop:2 }}>⚠ Estimated — no orders entered</div>}
+          {dessert!=='—'&&<div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)', marginTop:2 }}>Dessert: {dessert}</div>}
+          {isSplit&&<div style={{ fontSize:'var(--text-xs)', color:'#d97706', marginTop:2 }}>⚠ Estimated — no orders entered</div>}
         </div>
         <PrepCount label="Prep" count={prepQty} note={`${isSplit?Math.round(total/2):residents.length} ordered + ${BUFFER} buffer`} />
       </div>
       <div style={{ padding:'var(--space-4)', display:'flex', flexDirection:'column', gap:'var(--space-3)' }}>
-        <BreakdownTable title="Diet &amp; Texture" rows={[
-          ['Diabetic',bd.diabetic],['Cardiac',bd.cardiac],['Renal',bd.renal],
-          ['Low Na',bd.lowSodium],['Mech Soft',bd.mechSoft],
-          ['Cut-Up',bd.cutUp],['Minced',bd.minced],['Puréed',bd.pureed],
-        ]} />
-        <BreakdownTable title="Allergens" rows={[
-          ['Gluten-Free',bd.glutenFree],['Dairy-Free',bd.dairyFree],['Nut-Free',bd.nutFree],
-        ]} />
-        <BreakdownTable title="Location" rows={[
-          ['Dining Room',bd.diningRoom],['Room Service',bd.room],
-          ['Asst. Living',bd.assistedLiving],['Memory Care',bd.memoryCare],
-        ]} />
-        {matched && (
+        <BreakdownTable title="Diet & Texture" rows={[['Diabetic',bd.diabetic],['Cardiac',bd.cardiac],['Renal',bd.renal],['Low Na',bd.lowSodium],['Mech Soft',bd.mechSoft],['Cut-Up',bd.cutUp],['Minced',bd.minced],['Puréed',bd.pureed]]} />
+        <BreakdownTable title="Allergens" rows={[['Gluten-Free',bd.glutenFree],['Dairy-Free',bd.dairyFree],['Nut-Free',bd.nutFree]]} />
+        <BreakdownTable title="Location" rows={[['Dining Room',bd.diningRoom],['Room Service',bd.room],['Asst. Living',bd.assistedLiving],['Memory Care',bd.memoryCare]]} />
+        {matched&&(
           <div style={{ borderTop:'1px dashed var(--border-color)', paddingTop:'var(--space-3)' }}>
-            <button onClick={() => setExpandedRecipe(isExpanded?null:`${slot}-${opt}`)} className="btn btn-outline btn-sm" style={{ marginBottom:isExpanded?'var(--space-3)':0 }}>
+            <button onClick={()=>setExpandedRecipe(isExpanded?null:`${slot}-${opt}`)} className="btn btn-outline btn-sm" style={{ marginBottom:isExpanded?'var(--space-3)':0 }}>
               📖 {isExpanded?'Hide':'Show'} Recipe: <b style={{ marginLeft:4 }}>{matched.name}</b>
               <span style={{ marginLeft:8, fontSize:'var(--text-xs)', color:'var(--color-primary)' }}>scaled to {prepQty} portions</span>
             </button>
-            {isExpanded && (
+            {isExpanded&&(
               <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', padding:'var(--space-4)' }}>
                 <div className="sl-eyebrow" style={{ color:'var(--color-primary)', marginBottom:'var(--space-2)' }}>Ingredients (scaled to {prepQty} servings)</div>
                 <ul style={{ listStyle:'disc', paddingLeft:20, margin:'0 0 16px' }}>
-                  {matched.ingredients.map((ing, i) => (
-                    <li key={i} style={{ fontSize:'var(--text-sm)', color:'var(--text-primary)', marginBottom:4 }}><b>{scaleQty(ing.qty)}</b> {ing.item}</li>
-                  ))}
+                  {matched.ingredients.map((ing,i)=>(<li key={i} style={{ fontSize:'var(--text-sm)', color:'var(--text-primary)', marginBottom:4 }}><b>{scaleQty(ing.qty)}</b> {ing.item}</li>))}
                 </ul>
-                {matched.notes && <div className="sl-alert sl-alert-info" style={{ fontSize:'var(--text-sm)' }}><b>Notes:</b> {matched.notes}</div>}
+                {matched.notes&&<div className="sl-alert sl-alert-info" style={{ fontSize:'var(--text-sm)' }}><b>Notes:</b> {matched.notes}</div>}
               </div>
             )}
           </div>
@@ -457,90 +397,69 @@ function OptionResult({ slot, opt, label, dessert, residents, isSplit, total, re
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// TRAY TICKETS TAB  (fixed: room service residents now included)
+// TRAY TICKETS TAB
 // ────────────────────────────────────────────────────────────────────────────
 type TrayTicket = {
-  id: string; residentId: string; residentName: string; room: string
-  meal: 'Breakfast' | 'Lunch' | 'Dinner'
-  entree: string; sides: string; dessert: string; beverages: string; notes: string
-  dietType: string; texture: string; allergies: string[]
-  portionSize: string; servingLocation: string; tableAssignment: string
+  id:string; residentId:string; residentName:string; room:string
+  meal:'Breakfast'|'Lunch'|'Dinner'
+  entree:string; sides:string; dessert:string; beverages:string; notes:string
+  dietType:string; texture:string; allergies:string[]
+  portionSize:string; servingLocation:string; tableAssignment:string
 }
 
 function TrayTicketsTab() {
   const { residents }    = useResidentsStore()
   const { weeks, items } = useMenuStore()
-  const activeWeek       = weeks.find(w => w.active) ?? weeks[0] ?? null
-  // ALL active residents — no filter by location (fixes room service ticket creation)
-  const activeResidents  = residents.filter(r => r.status === 'Active')
+  const activeWeek       = weeks.find(w=>w.active)??weeks[0]??null
+  const activeResidents  = residents.filter(r=>r.status==='Active')
 
   const [search,   setSearch]   = useState('')
   const [tickets,  setTickets]  = useState<TrayTicket[]>([])
   const [mealPick, setMealPick] = useState<'Breakfast'|'Lunch'|'Dinner'>('Lunch')
   const [dayPick,  setDayPick]  = useState<DayOfWeek>(DAYS[(new Date().getDay()+1)%7])
-  // Quick-generate all room-service tickets at once
-  const [showBulk, setShowBulk] = useState(false)
 
-  const itemName = (id: string) => items.find(i => i.id === id)?.name ?? id
+  const itemName = (id:string) => items.find(i=>i.id===id)?.name??id
+  const q        = search.toLowerCase().trim()
+  const suggestions = q.length>=1 ? activeResidents.filter(r=>r.name.toLowerCase().includes(q)||r.room.includes(q)).slice(0,8) : []
 
-  const q = search.toLowerCase().trim()
-  const suggestions = q.length >= 1
-    ? activeResidents.filter(r => r.name.toLowerCase().includes(q) || r.room.includes(q)).slice(0,8)
-    : []
-
-  function buildTicket(r: Resident): TrayTicket {
+  function buildTicket(r:Resident):TrayTicket {
     const dayMenu = activeWeek?.days?.[dayPick]
     const slot    = mealPick.toLowerCase() as 'breakfast'|'lunch'|'dinner'
-    let entree = '', sides = '', dessert = ''
+    let entree='', sides='', dessert=''
     if (dayMenu) {
-      if (slot === 'breakfast') {
-        const ids = dayMenu.breakfast?.itemIds ?? []
-        entree = ids.slice(0,2).map(itemName).join(', ')
-        sides  = ids.slice(2).map(itemName).join(', ')
+      if (slot==='breakfast') {
+        const ids=dayMenu.breakfast?.itemIds??[]
+        entree=ids.slice(0,2).map(itemName).join(', ')
+        sides=ids.slice(2).map(itemName).join(', ')
       } else {
-        const meat   = dayMenu[`${slot}Opt1Meat`   as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ') ?? ''
-        const veg    = dayMenu[`${slot}Opt1Veggie` as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ') ?? ''
-        const starch = dayMenu[`${slot}Opt1Starch` as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ') ?? ''
-        entree  = meat
-        sides   = [veg,starch].filter(Boolean).join(', ')
-        dessert = dayMenu[`${slot}Dessert` as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ') ?? ''
+        const meat  =dayMenu[`${slot}Opt1Meat`   as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ')??''
+        const veg   =dayMenu[`${slot}Opt1Veggie` as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ')??''
+        const starch=dayMenu[`${slot}Opt1Starch` as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ')??''
+        entree=meat; sides=[veg,starch].filter(Boolean).join(', ')
+        dessert=dayMenu[`${slot}Dessert` as keyof typeof dayMenu]?.itemIds?.map(itemName).join(', ')??''
       }
     }
-    return {
-      id: uid(), residentId:r.id, residentName:r.name, room:r.room, meal:mealPick,
-      entree, sides, dessert, beverages:r.beverages.join(', '),
-      notes:r.specialInstructions??'',
-      dietType:r.dietType, texture:r.texture, allergies:r.allergies,
-      portionSize:r.portionSize, servingLocation:r.servingLocation, tableAssignment:r.tableAssignment??'',
-    }
+    return { id:uid(), residentId:r.id, residentName:r.name, room:r.room, meal:mealPick, entree, sides, dessert, beverages:r.beverages.join(', '), notes:r.specialInstructions??'', dietType:r.dietType, texture:r.texture, allergies:r.allergies, portionSize:r.portionSize, servingLocation:r.servingLocation, tableAssignment:r.tableAssignment??'' }
   }
 
-  function addTicket(r: Resident) {
+  function addTicket(r:Resident) {
     setSearch('')
-    if (tickets.find(t => t.residentId===r.id && t.meal===mealPick)) return
-    setTickets(prev => [...prev, buildTicket(r)])
+    if(tickets.find(t=>t.residentId===r.id&&t.meal===mealPick)) return
+    setTickets(prev=>[...prev,buildTicket(r)])
   }
 
-  // Generate all room-service tickets at once
   function generateRoomService() {
-    const roomRes = activeResidents.filter(r =>
-      r.servingLocation === 'Room' || r.servingLocation === 'Assisted Living' || r.servingLocation === 'Memory Care'
-    )
-    const newTickets = roomRes
-      .filter(r => !tickets.find(t => t.residentId===r.id && t.meal===mealPick))
-      .map(buildTicket)
-    setTickets(prev => [...prev, ...newTickets])
-    setShowBulk(false)
+    const roomRes=activeResidents.filter(r=>r.servingLocation==='Room'||r.servingLocation==='Assisted Living'||r.servingLocation==='Memory Care')
+    const newT=roomRes.filter(r=>!tickets.find(t=>t.residentId===r.id&&t.meal===mealPick)).map(buildTicket)
+    setTickets(prev=>[...prev,...newT])
   }
 
-  function removeTicket(id: string) { setTickets(prev => prev.filter(t => t.id !== id)) }
-  function updateField(id: string, field: keyof TrayTicket, val: string) {
-    setTickets(prev => prev.map(t => t.id===id ? {...t,[field]:val} : t))
+  function removeTicket(id:string) { setTickets(prev=>prev.filter(t=>t.id!==id)) }
+  function updateField(id:string,field:keyof TrayTicket,val:string) {
+    setTickets(prev=>prev.map(t=>t.id===id?{...t,[field]:val}:t))
   }
 
-  const roomServiceCount = activeResidents.filter(r =>
-    r.servingLocation==='Room'||r.servingLocation==='Assisted Living'||r.servingLocation==='Memory Care'
-  ).length
+  const roomServiceCount=activeResidents.filter(r=>r.servingLocation==='Room'||r.servingLocation==='Assisted Living'||r.servingLocation==='Memory Care').length
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
@@ -549,25 +468,25 @@ function TrayTicketsTab() {
           <div style={{ flex:'0 0 auto' }}>
             <label>Meal</label>
             <div style={{ display:'flex', gap:'var(--space-2)' }}>
-              {(['Breakfast','Lunch','Dinner'] as const).map(m => (
-                <button key={m} onClick={() => setMealPick(m)} className={mealPick===m?'btn btn-primary btn-sm':'btn btn-outline btn-sm'}>{m}</button>
+              {(['Breakfast','Lunch','Dinner'] as const).map(m=>(
+                <button key={m} onClick={()=>setMealPick(m)} className={mealPick===m?'btn btn-primary btn-sm':'btn btn-outline btn-sm'}>{m}</button>
               ))}
             </div>
           </div>
           <div style={{ flex:'1 1 200px' }}>
             <label>Day</label>
-            <select className="sl-select" value={dayPick} onChange={e => setDayPick(e.target.value as DayOfWeek)}>
-              {DAYS.map(d => <option key={d} value={d}>{DAY_LABELS[d]}</option>)}
+            <select className="sl-select" value={dayPick} onChange={e=>setDayPick(e.target.value as DayOfWeek)}>
+              {DAYS.map(d=><option key={d} value={d}>{DAY_LABELS[d]}</option>)}
             </select>
           </div>
         </div>
         <div style={{ position:'relative' }}>
-          <label>Add Resident (search by name or room #)</label>
-          <input className="sl-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Type name or room number…" autoComplete="off" />
-          {suggestions.length > 0 && (
+          <label>Add Resident (name or room #)</label>
+          <input className="sl-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Type name or room…" autoComplete="off" />
+          {suggestions.length>0&&(
             <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', zIndex:50, boxShadow:'var(--shadow-md)', overflow:'hidden' }}>
-              {suggestions.map(r => (
-                <button key={r.id} onClick={() => addTicket(r)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'none', border:'none', borderBottom:'1px solid var(--border-color)', padding:'10px 14px', cursor:'pointer', textAlign:'left' }}>
+              {suggestions.map(r=>(
+                <button key={r.id} onClick={()=>addTicket(r)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'none', border:'none', borderBottom:'1px solid var(--border-color)', padding:'10px 14px', cursor:'pointer', textAlign:'left' }}>
                   <span style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)' }}>{r.name}</span>
                   <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>Rm {r.room} · {r.servingLocation} · {r.dietType}{r.allergies.length>0?' · ⚠ '+r.allergies.join(', '):''}</span>
                 </button>
@@ -575,70 +494,62 @@ function TrayTicketsTab() {
             </div>
           )}
         </div>
-        {/* Bulk room-service button */}
-        {roomServiceCount > 0 && (
+        {roomServiceCount>0&&(
           <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)', paddingTop:'var(--space-2)', borderTop:'1px dashed var(--border-color)' }}>
-            <span style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>
-              <b>{roomServiceCount}</b> residents need room / care-unit delivery for {mealPick}.
-            </span>
-            <button onClick={generateRoomService} className="btn btn-outline btn-sm" style={{ whiteSpace:'nowrap' }}>
-              🛌 Generate All Room Service Tickets
-            </button>
+            <span style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}><b>{roomServiceCount}</b> residents need delivery for {mealPick}.</span>
+            <button onClick={generateRoomService} className="btn btn-outline btn-sm" style={{ whiteSpace:'nowrap' }}>🛌 Generate All Room Service Tickets</button>
           </div>
         )}
       </div>
 
-      {tickets.length === 0 && (
+      {tickets.length===0&&(
         <div className="sl-empty">
           <div style={{ fontSize:36, marginBottom:'var(--space-3)' }}>🍽️</div>
           <div className="sl-empty-title">No tray tickets yet.</div>
-          <div className="sl-empty-subtitle">Search a resident above, or use "Generate All Room Service Tickets" to create delivery tickets for every room/care-unit resident at once.</div>
+          <div className="sl-empty-subtitle">Search a resident above, or use "Generate All Room Service Tickets" to create delivery tickets in one click.</div>
         </div>
       )}
 
-      {tickets.length > 0 && (
+      {tickets.length>0&&(
         <div style={{ display:'flex', justifyContent:'flex-end', gap:'var(--space-2)' }}>
-          <button onClick={() => setTickets([])} className="btn btn-outline btn-sm">Clear All</button>
-          <button onClick={() => window.print()} className="btn btn-primary btn-sm">🖸 Print Tickets</button>
+          <button onClick={()=>setTickets([])} className="btn btn-outline btn-sm">Clear All</button>
+          <button onClick={()=>window.print()} className="btn btn-primary btn-sm">🖸 Print Tickets</button>
         </div>
       )}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'var(--space-4)' }}>
-        {tickets.map(t => <TrayTicketCard key={t.id} ticket={t} onRemove={() => removeTicket(t.id)} onUpdate={updateField} />)}
+        {tickets.map(t=><TrayTicketCard key={t.id} ticket={t} onRemove={()=>removeTicket(t.id)} onUpdate={updateField} />)}
       </div>
     </div>
   )
 }
 
-function TrayTicketCard({ ticket:t, onRemove, onUpdate }: {
-  ticket: TrayTicket; onRemove: () => void
-  onUpdate: (id: string, field: keyof TrayTicket, val: string) => void
-}) {
-  const locationColor = t.servingLocation === 'Room' ? '#d97706' : t.servingLocation === 'Memory Care' ? '#dc2626' : t.servingLocation === 'Assisted Living' ? '#7c3aed' : '#059669'
+function TrayTicketCard({ ticket:t, onRemove, onUpdate }: { ticket:TrayTicket; onRemove:()=>void; onUpdate:(id:string,field:keyof TrayTicket,val:string)=>void }) {
+  const lc=t.servingLocation==='Room'?'#d97706':t.servingLocation==='Memory Care'?'#dc2626':t.servingLocation==='Assisted Living'?'#7c3aed':'#059669'
   return (
-    <div style={{ background:'var(--bg-card)', border:`2px solid ${locationColor}44`, borderRadius:'var(--radius-lg)', padding:'var(--space-4)', boxShadow:'var(--shadow-sm)', display:'flex', flexDirection:'column', gap:'var(--space-3)' }}>
+    <div style={{ background:'var(--bg-card)', border:`2px solid ${lc}44`, borderRadius:'var(--radius-lg)', padding:'var(--space-4)', boxShadow:'var(--shadow-sm)', display:'flex', flexDirection:'column', gap:'var(--space-3)' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
           <div style={{ fontSize:'var(--text-lg)', fontWeight:'var(--weight-black)', color:'var(--text-primary)', fontFamily:'var(--font-display)' }}>{t.residentName}</div>
-          <div className="sl-eyebrow" style={{ marginTop:2 }}>Room {t.room} · {t.tableAssignment?`Table ${t.tableAssignment} · `:''}{t.servingLocation}</div>
+          <div className="sl-eyebrow" style={{ marginTop:2 }}>Room {t.room}{t.tableAssignment?` · Table ${t.tableAssignment}`:''} · {t.servingLocation}</div>
         </div>
         <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'var(--space-1)' }}>
           <span className="sl-badge sl-badge-primary">{t.meal}</span>
-          <span style={{ fontSize:11, fontWeight:700, color:locationColor, background:`${locationColor}22`, border:`1px solid ${locationColor}55`, borderRadius:20, padding:'2px 8px' }}>{t.servingLocation}</span>
+          <span style={{ fontSize:11, fontWeight:700, color:lc, background:`${lc}22`, border:`1px solid ${lc}55`, borderRadius:20, padding:'2px 8px' }}>{t.servingLocation}</span>
         </div>
       </div>
       <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', padding:'10px 12px', display:'flex', flexDirection:'column', gap:'var(--space-1)' }}>
-        <span style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>Diet: <b style={{ color:'var(--text-primary)' }}>{t.dietType}</b> · Texture: <b style={{ color:'var(--text-primary)' }}>{t.texture}</b> · Portion: <b>{t.portionSize}</b></span>
-        {t.allergies.length > 0 && <span style={{ fontSize:'var(--text-sm)', color:'#dc2626', fontWeight:'var(--weight-bold)' }}>⚠ Allergies: {t.allergies.join(', ')}</span>}
+        <span style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>Diet: <b style={{ color:'var(--text-primary)' }}>{t.dietType}</b> · Texture: <b>{t.texture}</b> · Portion: <b>{t.portionSize}</b></span>
+        {t.allergies.length>0&&<span style={{ fontSize:'var(--text-sm)', color:'#dc2626', fontWeight:'var(--weight-bold)' }}>⚠ Allergies: {t.allergies.join(', ')}</span>}
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
-        {[['entree',"Entrée"],['sides','Sides'],['dessert','Dessert'],['beverages','Beverages'],['notes','Special Instructions']].map(([field,lbl]) => (
-          (field !== 'dessert' || t.dessert) ? (
-            <div key={field}>
+        {([['entree','Entrée'],['sides','Sides'],['dessert','Dessert'],['beverages','Beverages'],['notes','Special Instructions']] as [keyof TrayTicket,string][]).map(([field,lbl])=>(
+          (field!=='dessert'||t.dessert)?(
+            <div key={field as string}>
               <label style={{ fontSize:'var(--text-xs)' }}>{lbl}</label>
-              <input className="sl-input" value={(t as any)[field]} onChange={e => onUpdate(t.id,field as keyof TrayTicket,e.target.value)} />
+              <input className="sl-input" value={t[field] as string} onChange={e=>onUpdate(t.id,field,e.target.value)} />
             </div>
-          ) : null
+          ):null
         ))}
       </div>
       <button onClick={onRemove} className="btn btn-ghost btn-sm" style={{ color:'var(--color-danger)', alignSelf:'flex-end', marginTop:'auto' }}>Remove</button>
@@ -647,175 +558,108 @@ function TrayTicketCard({ ticket:t, onRemove, onUpdate }: {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// CULINARY PREP LIST  —  auto-generated from menu + active resident census
+// CULINARY PREP LIST — auto-generated from menu + resident census
 // ────────────────────────────────────────────────────────────────────────────
 function CulinaryPrepTab() {
   const { residents }    = useResidentsStore()
   const { weeks, items } = useMenuStore()
 
-  const activeResidents = useMemo(() => residents.filter(r => r.status === 'Active'), [residents])
+  const activeResidents = useMemo(()=>residents.filter(r=>r.status==='Active'),[residents])
   const total           = activeResidents.length
-  const activeWeek      = weeks.find(w => w.active) ?? weeks[0] ?? null
+  const activeWeek      = weeks.find(w=>w.active)??weeks[0]??null
 
-  // The day the food will be SERVED (we are prepping 1-2 days before)
   const todayIdx = new Date().getDay()
-  const [serveDay, setServeDay] = useState<DayOfWeek>(DAYS[(todayIdx + 2) % 7]) // default: 2 days out
-  const [freezerLeadDays, setFreezerLeadDays] = useState(2) // how many days before serve to pull from freezer
+  const [serveDay,        setServeDay]        = useState<DayOfWeek>(DAYS[(todayIdx+2)%7])
+  const [freezerLeadDays, setFreezerLeadDays] = useState(2)
 
-  const itemName = (id: string) => items.find(i => i.id === id)?.name ?? id
+  const itemName = (id:string) => items.find(i=>i.id===id)?.name??id
   const dayMenu  = activeWeek?.days?.[serveDay]
 
-  // ─ Compute serve date from serveDay in current week ─
-  const todayDate = new Date()
-  todayDate.setHours(0,0,0,0)
-  function serveDateISO(): string {
-    const servIdx = DAY_INDEX[serveDay]
-    const diff    = (servIdx - todayIdx + 7) % 7
-    const d = new Date(todayDate)
-    d.setDate(d.getDate() + diff)
+  const todayDate = new Date(); todayDate.setHours(0,0,0,0)
+  function serveDateISO():string {
+    const servIdx=DAY_INDEX[serveDay]
+    const diff=(servIdx-todayIdx+7)%7
+    const d=new Date(todayDate); d.setDate(d.getDate()+diff)
     return d.toISOString().slice(0,10)
   }
 
-  // ─ Build auto tasks from menu ─
-  const autoTasks = useMemo((): PrepTask[] => {
-    if (!dayMenu || !activeWeek) return []
-    const tasks: PrepTask[] = []
-    const serveISO  = serveDateISO()
-    const prepISO   = addDays(serveISO, -1)  // prep tasks due the day before serving
-    const freezeISO = addDays(serveISO, -freezerLeadDays)
+  const autoTasks = useMemo(():PrepTask[] => {
+    if(!dayMenu||!activeWeek) return []
+    const tasks:PrepTask[]=[]
+    const serveISO =serveDateISO()
+    const prepISO  =addDays(serveISO,-1)
+    const freezeISO=addDays(serveISO,-freezerLeadDays)
+    const seen=new Set<string>()
 
-    // Helper: add a prep+freezer task for a named item
-    const seen = new Set<string>()
-    function addItem(name: string, meal: PrepTask['meal'], qty: number) {
-      if (!name || seen.has(name)) return
+    function addItem(name:string, meal:PrepTask['meal'], qty:number) {
+      if(!name||seen.has(name)) return
       seen.add(name)
-
-      // Freezer pull if it's a protein
-      if (isProtein(name)) {
-        tasks.push({
-          id: uid(), type:'freezer-pull',
-          task: `❄️ Freezer Pull — ${name}`,
-          detail: `Pull ${qty} portions from freezer to refrigerator by ${dateLabel(freezeISO)} (${freezerLeadDays} days before service). Verify thaw by service day.`,
-          meal: 'prep',
-          dueDate: freezeISO,
-          done: false, qty, unit:'portions',
-        })
+      if(isProtein(name)) {
+        tasks.push({ id:uid(), type:'freezer-pull', task:`❄️ Freezer Pull — ${name}`, detail:`Pull ${qty} portions from freezer to refrigerator by ${dateLabel(freezeISO)} (${freezerLeadDays} days before service). Verify thaw by service day.`, meal:'prep', dueDate:freezeISO, done:false, qty, unit:'portions' })
       }
-
-      // General prep task
-      tasks.push({
-        id: uid(), type:'prep',
-        task: `Prep — ${name}`,
-        detail: `Prepare ${qty} portions for ${serveDay} ${meal} service.`,
-        meal,
-        dueDate: prepISO,
-        done: false, qty, unit:'portions',
-      })
+      tasks.push({ id:uid(), type:'prep', task:`Prep — ${name}`, detail:`Prepare ${qty} portions for ${serveDay} ${meal} service.`, meal, dueDate:prepISO, done:false, qty, unit:'portions' })
     }
 
-    const half = Math.round(total / 2)
-
-    // Breakfast (all residents)
-    const bfIds = dayMenu.breakfast?.itemIds ?? []
-    bfIds.forEach(id => addItem(itemName(id), 'breakfast', total + BUFFER))
-
-    // Lunch opt1 + opt2 (50/50 default)
-    const lMeat1  = dayMenu.lunchOpt1Meat?.itemIds   ?? []
-    const lVeg1   = dayMenu.lunchOpt1Veggie?.itemIds ?? []
-    const lStar1  = dayMenu.lunchOpt1Starch?.itemIds ?? []
-    const lMeat2  = dayMenu.lunchOpt2Meat?.itemIds   ?? []
-    const lVeg2   = dayMenu.lunchOpt2Veggie?.itemIds ?? []
-    const lStar2  = dayMenu.lunchOpt2Starch?.itemIds ?? []
-    ;[...lMeat1,...lVeg1,...lStar1].forEach(id => addItem(itemName(id),'lunch', half + BUFFER))
-    ;[...lMeat2,...lVeg2,...lStar2].forEach(id => addItem(itemName(id),'lunch', (total - half) + BUFFER))
-    const lDes = dayMenu.lunchDessert?.itemIds ?? []
-    lDes.forEach(id => addItem(itemName(id),'lunch', total + BUFFER))
-
-    // Dinner opt1 + opt2 (50/50 default)
-    const dMeat1  = dayMenu.dinnerOpt1Meat?.itemIds   ?? []
-    const dVeg1   = dayMenu.dinnerOpt1Veggie?.itemIds ?? []
-    const dStar1  = dayMenu.dinnerOpt1Starch?.itemIds ?? []
-    const dMeat2  = dayMenu.dinnerOpt2Meat?.itemIds   ?? []
-    const dVeg2   = dayMenu.dinnerOpt2Veggie?.itemIds ?? []
-    const dStar2  = dayMenu.dinnerOpt2Starch?.itemIds ?? []
-    ;[...dMeat1,...dVeg1,...dStar1].forEach(id => addItem(itemName(id),'dinner', half + BUFFER))
-    ;[...dMeat2,...dVeg2,...dStar2].forEach(id => addItem(itemName(id),'dinner', (total - half) + BUFFER))
-    const dDes = dayMenu.dinnerDessert?.itemIds ?? []
-    dDes.forEach(id => addItem(itemName(id),'dinner', total + BUFFER))
-
+    const half=Math.round(total/2)
+    ;(dayMenu.breakfast?.itemIds??[]).forEach(id=>addItem(itemName(id),'breakfast',total+BUFFER))
+    ;[...(dayMenu.lunchOpt1Meat?.itemIds??[]),(dayMenu.lunchOpt1Veggie?.itemIds??[]),(dayMenu.lunchOpt1Starch?.itemIds??[])].flat().forEach(id=>addItem(itemName(id),'lunch',half+BUFFER))
+    ;[...(dayMenu.lunchOpt2Meat?.itemIds??[]),(dayMenu.lunchOpt2Veggie?.itemIds??[]),(dayMenu.lunchOpt2Starch?.itemIds??[])].flat().forEach(id=>addItem(itemName(id),'lunch',(total-half)+BUFFER))
+    ;(dayMenu.lunchDessert?.itemIds??[]).forEach(id=>addItem(itemName(id),'lunch',total+BUFFER))
+    ;[...(dayMenu.dinnerOpt1Meat?.itemIds??[]),(dayMenu.dinnerOpt1Veggie?.itemIds??[]),(dayMenu.dinnerOpt1Starch?.itemIds??[])].flat().forEach(id=>addItem(itemName(id),'dinner',half+BUFFER))
+    ;[...(dayMenu.dinnerOpt2Meat?.itemIds??[]),(dayMenu.dinnerOpt2Veggie?.itemIds??[]),(dayMenu.dinnerOpt2Starch?.itemIds??[])].flat().forEach(id=>addItem(itemName(id),'dinner',(total-half)+BUFFER))
+    ;(dayMenu.dinnerDessert?.itemIds??[]).forEach(id=>addItem(itemName(id),'dinner',total+BUFFER))
     return tasks
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayMenu, activeWeek, total, freezerLeadDays, serveDay, items])
+  },[dayMenu,activeWeek,total,freezerLeadDays,serveDay,items])
 
-  // Manual tasks layer on top of auto tasks
-  const [manualTasks, setManualTasks] = useState<PrepTask[]>([])
-  const [newTask,     setNewTask]     = useState('')
-  const [newDetail,  setNewDetail]   = useState('')
-  const [newMeal,    setNewMeal]     = useState<PrepTask['meal']>('prep')
-  const [newDue,     setNewDue]      = useState(new Date().toISOString().slice(0,10))
+  const [manualTasks,setManualTasks]=useState<PrepTask[]>([])
+  const [newTask,   setNewTask]    =useState('')
+  const [newDetail, setNewDetail]  =useState('')
+  const [newMeal,   setNewMeal]    =useState<PrepTask['meal']>('prep')
+  const [newDue,    setNewDue]     =useState(new Date().toISOString().slice(0,10))
+  const [doneIds,   setDoneIds]    =useState<Set<string>>(new Set())
 
-  // Combined check state: tracks done IDs across both auto + manual
-  const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
-  function toggleDone(id: string) {
-    setDoneIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
-  }
-
+  function toggleDone(id:string) { setDoneIds(prev=>{ const s=new Set(prev); s.has(id)?s.delete(id):s.add(id); return s }) }
   function addManual() {
-    if (!newTask.trim()) return
-    const serveISO = serveDateISO()
-    setManualTasks(p => [...p, {
-      id: uid(), type:'manual', task:newTask.trim(), detail:newDetail.trim(),
-      meal:newMeal, dueDate:newDue || addDays(serveISO,-1), done:false,
-    }])
-    setNewTask(''); setNewDetail(''); setNewDue(addDays(serveDateISO(),-1))
+    if(!newTask.trim()) return
+    setManualTasks(p=>[...p,{ id:uid(), type:'manual', task:newTask.trim(), detail:newDetail.trim(), meal:newMeal, dueDate:newDue||addDays(serveDateISO(),-1), done:false }])
+    setNewTask(''); setNewDetail('')
   }
+  function removeManual(id:string) { setManualTasks(p=>p.filter(t=>t.id!==id)) }
 
-  function removeManual(id: string) { setManualTasks(p => p.filter(t => t.id !== id)) }
+  const allTasks=useMemo(()=>[
+    ...autoTasks.map(t=>({...t,done:doneIds.has(t.id)})),
+    ...manualTasks.map(t=>({...t,done:doneIds.has(t.id)})),
+  ],[autoTasks,manualTasks,doneIds])
 
-  const allTasks = useMemo(() => [
-    ...autoTasks.map(t => ({ ...t, done: doneIds.has(t.id) })),
-    ...manualTasks.map(t => ({ ...t, done: doneIds.has(t.id) })),
-  ], [autoTasks, manualTasks, doneIds])
+  const byDate=useMemo(()=>{
+    const map:Record<string,PrepTask[]>={}
+    allTasks.forEach(t=>{ ;(map[t.dueDate]??=[]).push(t) })
+    return Object.entries(map).sort(([a],[b])=>a.localeCompare(b))
+  },[allTasks])
 
-  // Group by due date then meal
-  const byDate = useMemo(() => {
-    const map: Record<string, PrepTask[]> = {}
-    allTasks.forEach(t => {
-      ;(map[t.dueDate] ??= []).push(t)
-    })
-    return Object.entries(map).sort(([a],[b]) => a.localeCompare(b))
-  }, [allTasks])
+  const totalDone=allTasks.filter(t=>t.done).length
+  const serveISO =serveDateISO()
 
-  const totalDone = allTasks.filter(t => t.done).length
-  const serveISO  = serveDateISO()
-  const noMenu    = !dayMenu
-  const noActive  = total === 0
-
-  const typeStyle: Record<PrepTask['type'], { bg:string; border:string; badge:string; badgeText:string }> = {
-    'freezer-pull': { bg:'#eff6ff', border:'#93c5fd', badge:'#1d4ed8', badgeText:'#fff' },
-    'prep':         { bg:'var(--bg-card)', border:'var(--border-color)', badge:'#059669', badgeText:'#fff' },
-    'manual':       { bg:'var(--bg-card)', border:'var(--border-color)', badge:'#7c3aed', badgeText:'#fff' },
+  const typeStyle:Record<PrepTask['type'],{bg:string;border:string;badge:string;badgeText:string}>={
+    'freezer-pull':{bg:'#eff6ff',border:'#93c5fd',badge:'#1d4ed8',badgeText:'#fff'},
+    'prep'        :{bg:'var(--bg-card)',border:'var(--border-color)',badge:'#059669',badgeText:'#fff'},
+    'manual'      :{bg:'var(--bg-card)',border:'var(--border-color)',badge:'#7c3aed',badgeText:'#fff'},
   }
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
-
-      {/* ─ Header / controls ─ */}
       <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)', display:'flex', flexWrap:'wrap', gap:'var(--space-4)', alignItems:'flex-end' }}>
         <div style={{ flex:'1 1 200px' }}>
           <div className="sl-eyebrow" style={{ marginBottom:'var(--space-1)' }}>Service Day (prepping for)</div>
           <div className="sl-pills" style={{ flexWrap:'wrap' }}>
-            {DAYS.map(d => (
-              <button key={d} onClick={() => setServeDay(d)} className={serveDay===d?'sl-pill active':'sl-pill'} style={{ fontSize:12 }}>{d.slice(0,3)}</button>
-            ))}
+            {DAYS.map(d=>(<button key={d} onClick={()=>setServeDay(d)} className={serveDay===d?'sl-pill active':'sl-pill'} style={{ fontSize:12 }}>{d.slice(0,3)}</button>))}
           </div>
-          <div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)', marginTop:'var(--space-1)' }}>
-            Service date: <b>{dateLabel(serveISO)}</b>
-          </div>
+          <div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)', marginTop:'var(--space-1)' }}>Service date: <b>{dateLabel(serveISO)}</b></div>
         </div>
         <div style={{ flex:'0 1 160px' }}>
-          <div className="sl-eyebrow" style={{ marginBottom:'var(--space-1)' }}>Freezer Pull Lead (days)</div>
-          <select className="sl-select" value={freezerLeadDays} onChange={e => setFreezerLeadDays(+e.target.value)}>
+          <div className="sl-eyebrow" style={{ marginBottom:'var(--space-1)' }}>Freezer Pull Lead</div>
+          <select className="sl-select" value={freezerLeadDays} onChange={e=>setFreezerLeadDays(+e.target.value)}>
             <option value={1}>1 day before</option>
             <option value={2}>2 days before</option>
             <option value={3}>3 days before</option>
@@ -835,19 +679,11 @@ function CulinaryPrepTab() {
         </div>
       </div>
 
-      {/* ─ Alerts ─ */}
-      {!activeWeek && (
-        <div className="sl-alert sl-alert-warning">⚠ No active menu week set. Go to <b>Weekly Menu Planner</b> and mark a week as active to auto-generate prep tasks.</div>
-      )}
-      {activeWeek && noMenu && (
-        <div className="sl-alert sl-alert-warning">⚠ No menu items set for <b>{serveDay}</b> in the active menu week. Add menu items to generate prep tasks automatically.</div>
-      )}
-      {noActive && (
-        <div className="sl-alert sl-alert-warning">⚠ No active residents found. Add residents to calculate portion counts.</div>
-      )}
+      {!activeWeek&&<div className="sl-alert sl-alert-warning">⚠ No active menu week. Go to Menu Planner and mark a week as active.</div>}
+      {activeWeek&&!dayMenu&&<div className="sl-alert sl-alert-warning">⚠ No menu set for <b>{serveDay}</b> in the active week. Add menu items to auto-generate prep tasks.</div>}
+      {total===0&&<div className="sl-alert sl-alert-warning">⚠ No active residents found. Add residents to calculate portions.</div>}
 
-      {/* ─ Progress bar ─ */}
-      {allTasks.length > 0 && (
+      {allTasks.length>0&&(
         <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)' }}>
           <div style={{ flex:1, height:10, background:'var(--bg-app)', borderRadius:5, overflow:'hidden', border:'1px solid var(--border-color)' }}>
             <div style={{ height:'100%', width:`${allTasks.length?(totalDone/allTasks.length)*100:0}%`, background:totalDone===allTasks.length?'#22c55e':'var(--color-primary)', borderRadius:5, transition:'width 0.3s ease' }} />
@@ -856,41 +692,34 @@ function CulinaryPrepTab() {
         </div>
       )}
 
-      {/* ─ Task cards grouped by due date ─ */}
-      {byDate.map(([date, tasks]) => (
+      {byDate.map(([date,tasks])=>(
         <div key={date}>
           <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)', marginBottom:'var(--space-2)' }}>
-            <div style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-black)', color:'var(--color-primary)', fontFamily:'var(--font-display)', textTransform:'uppercase', letterSpacing:'0.5px' }}>
-              Due by: {dateLabel(date)}
-            </div>
+            <div style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-black)', color:'var(--color-primary)', fontFamily:'var(--font-display)', textTransform:'uppercase', letterSpacing:'0.5px' }}>Due by: {dateLabel(date)}</div>
             <div style={{ flex:1, height:1, background:'var(--border-color)' }} />
             <span style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)' }}>{tasks.length} task{tasks.length!==1?'s':''}</span>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
-            {tasks.map(task => {
-              const s      = typeStyle[task.type]
-              const isDone = task.done
+            {tasks.map(task=>{
+              const s=typeStyle[task.type]; const isDone=task.done
               return (
-                <div key={task.id} onClick={() => toggleDone(task.id)} style={{ background:isDone?'#f0fdf4':s.bg, border:`1px solid ${isDone?'#86efac':s.border}`, borderRadius:'var(--radius-md)', padding:'12px 16px', display:'flex', alignItems:'flex-start', gap:'var(--space-3)', cursor:'pointer', opacity:isDone?0.6:1, transition:'all 0.15s' }}>
-                  {/* Checkbox */}
+                <div key={task.id} onClick={()=>toggleDone(task.id)} style={{ background:isDone?'#f0fdf4':s.bg, border:`1px solid ${isDone?'#86efac':s.border}`, borderRadius:'var(--radius-md)', padding:'12px 16px', display:'flex', alignItems:'flex-start', gap:'var(--space-3)', cursor:'pointer', opacity:isDone?0.6:1, transition:'all 0.15s' }}>
                   <div style={{ width:22, height:22, borderRadius:'50%', flexShrink:0, border:`2px solid ${isDone?'#22c55e':'var(--border-color)'}`, background:isDone?'#22c55e':'transparent', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:13, fontWeight:700, marginTop:1 }}>{isDone?'✓':''}</div>
                   <div style={{ flex:1 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'var(--space-2)', flexWrap:'wrap', marginBottom:4 }}>
                       <span style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)', textDecoration:isDone?'line-through':'none' }}>{task.task}</span>
-                      {/* Type badge */}
                       <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:s.badge, color:s.badgeText, textTransform:'uppercase', letterSpacing:'0.5px', flexShrink:0 }}>
-                        {task.type === 'freezer-pull' ? '❄️ Freezer Pull' : task.type === 'prep' ? '👨‍🍳 Prep' : '✏️ Manual'}
+                        {task.type==='freezer-pull'?'❄️ Freezer Pull':task.type==='prep'?'👨‍🍳 Prep':'✏️ Manual'}
                       </span>
-                      {/* Meal badge */}
                       <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:'var(--bg-app)', color:'var(--text-secondary)', border:'1px solid var(--border-color)', textTransform:'uppercase', letterSpacing:'0.5px', flexShrink:0 }}>
-                        {task.meal === 'prep' ? 'All Meals' : task.meal}
+                        {task.meal==='prep'?'All Meals':task.meal}
                       </span>
-                      {task.qty && <span style={{ fontSize:'var(--text-xs)', color:'var(--color-primary)', fontWeight:'var(--weight-bold)' }}>{task.qty} {task.unit}</span>}
+                      {task.qty&&<span style={{ fontSize:'var(--text-xs)', color:'var(--color-primary)', fontWeight:'var(--weight-bold)' }}>{task.qty} {task.unit}</span>}
                     </div>
-                    {task.detail && <div style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)', lineHeight:1.5 }}>{task.detail}</div>}
+                    {task.detail&&<div style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)', lineHeight:1.5 }}>{task.detail}</div>}
                   </div>
-                  {task.type === 'manual' && (
-                    <button onClick={e => { e.stopPropagation(); removeManual(task.id) }} style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:16, padding:'0 4px', flexShrink:0 }}>×</button>
+                  {task.type==='manual'&&(
+                    <button onClick={e=>{e.stopPropagation();removeManual(task.id)}} style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:16, padding:'0 4px', flexShrink:0 }}>×</button>
                   )}
                 </div>
               )
@@ -899,59 +728,47 @@ function CulinaryPrepTab() {
         </div>
       ))}
 
-      {allTasks.length === 0 && activeWeek && !noMenu && (
+      {allTasks.length===0&&activeWeek&&dayMenu&&(
         <div className="sl-empty">
           <div style={{ fontSize:36, marginBottom:'var(--space-3)' }}>👨‍🍳</div>
           <div className="sl-empty-title">No prep tasks yet.</div>
-          <div className="sl-empty-subtitle">Select a service day above to auto-generate tasks from the menu, or add manual tasks below.</div>
+          <div className="sl-empty-subtitle">Select a service day to auto-generate tasks, or add manual tasks below.</div>
         </div>
       )}
 
-      {/* ─ Add manual task ─ */}
       <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)' }}>
         <div className="sl-section-title" style={{ color:'var(--color-primary)', marginBottom:'var(--space-3)' }}>+ Add Manual Task</div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:'var(--space-3)', alignItems:'flex-end' }}>
-          <div style={{ flex:'2 1 200px' }}>
-            <label>Task</label>
-            <input className="sl-input" value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="e.g. Prep dessert garnishes" />
-          </div>
-          <div style={{ flex:'2 1 200px' }}>
-            <label>Detail / Instructions</label>
-            <input className="sl-input" value={newDetail} onChange={e => setNewDetail(e.target.value)} placeholder="Optional detail…" />
-          </div>
-          <div style={{ flex:'0 1 130px' }}>
-            <label>Meal</label>
-            <select className="sl-select" value={newMeal} onChange={e => setNewMeal(e.target.value as PrepTask['meal'])}>
+          <div style={{ flex:'2 1 200px' }}><label>Task</label><input className="sl-input" value={newTask} onChange={e=>setNewTask(e.target.value)} placeholder="e.g. Prep garnishes" /></div>
+          <div style={{ flex:'2 1 200px' }}><label>Detail</label><input className="sl-input" value={newDetail} onChange={e=>setNewDetail(e.target.value)} placeholder="Optional…" /></div>
+          <div style={{ flex:'0 1 130px' }}><label>Meal</label>
+            <select className="sl-select" value={newMeal} onChange={e=>setNewMeal(e.target.value as PrepTask['meal'])}>
               <option value="prep">All Meals</option>
               <option value="breakfast">Breakfast</option>
               <option value="lunch">Lunch</option>
               <option value="dinner">Dinner</option>
             </select>
           </div>
-          <div style={{ flex:'0 1 140px' }}>
-            <label>Due Date</label>
-            <input type="date" className="sl-input" value={newDue} onChange={e => setNewDue(e.target.value)} />
-          </div>
+          <div style={{ flex:'0 1 140px' }}><label>Due Date</label><input type="date" className="sl-input" value={newDue} onChange={e=>setNewDue(e.target.value)} /></div>
           <button onClick={addManual} className="btn btn-primary" style={{ flexShrink:0, alignSelf:'flex-end' }}>+ Add</button>
         </div>
       </div>
-
       <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        <button onClick={() => window.print()} className="btn btn-outline">🖸 Print Prep List</button>
+        <button onClick={()=>window.print()} className="btn btn-outline">🖸 Print Prep List</button>
       </div>
     </div>
   )
 }
 
-// ── Shift Checklists ──────────────────────────────────────────────────────────────────
+// ── Shift Checklists ─────────────────────────────────────────────────────────────────
 type ShiftType = 'morning' | 'midday' | 'evening'
-const SHIFT_TASKS: Record<ShiftType, string[]> = {
+const SHIFT_TASKS: Record<ShiftType,string[]> = {
   morning: ['Set up breakfast service line','Check fridge & freezer temps (log)','Prep juice, coffee, and milk station','Pull & thaw next-day proteins','Stock condiment carts'],
   midday:  ['Clear breakfast, reset dining room','Set up lunch service line','Deliver room-service trays','Check Ensure fridge stock','Restock paper goods'],
   evening: ['Set up dinner service line','Label and date all stored items','Sanitize prep surfaces & equipment','Complete temperature logs','Secure walk-in cooler & freezer'],
 }
 
-function CheckRow({ done, onChange, children }: { done: boolean; onChange: () => void; children: React.ReactNode }) {
+function CheckRow({ done, onChange, children }: { done:boolean; onChange:()=>void; children:React.ReactNode }) {
   return (
     <div onClick={onChange} style={{ background:done?'#f0fdf4':'var(--bg-card)', border:`1px solid ${done?'#86efac':'var(--border-color)'}`, borderRadius:'var(--radius-md)', padding:'12px 16px', display:'flex', alignItems:'center', gap:'var(--space-3)', cursor:'pointer', transition:'all 0.15s' }}>
       <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, border:`2px solid ${done?'#22c55e':'var(--border-color)'}`, background:done?'#22c55e':'transparent', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:12, fontWeight:700 }}>{done?'✓':''}</div>
@@ -961,16 +778,16 @@ function CheckRow({ done, onChange, children }: { done: boolean; onChange: () =>
 }
 
 function ShiftChecklistsTab() {
-  const [shift,   setShift]   = useState<ShiftType>('morning')
-  const [checked, setChecked] = useState<Set<string>>(new Set())
-  function toggle(t: string) { setChecked(p => { const s=new Set(p); s.has(t)?s.delete(t):s.add(t); return s }) }
-  const tasks = SHIFT_TASKS[shift]
-  const done  = tasks.filter(t => checked.has(`${shift}:${t}`)).length
+  const [shift,setShift]=useState<ShiftType>('morning')
+  const [checked,setChecked]=useState<Set<string>>(new Set())
+  function toggle(t:string){setChecked(p=>{const s=new Set(p);s.has(t)?s.delete(t):s.add(t);return s})}
+  const tasks=SHIFT_TASKS[shift]
+  const done=tasks.filter(t=>checked.has(`${shift}:${t}`)).length
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
       <div className="sl-pills">
-        {(['morning','midday','evening'] as ShiftType[]).map(s => (
-          <button key={s} onClick={() => setShift(s)} className={shift===s?'sl-pill active':'sl-pill'} style={{ textTransform:'capitalize' }}>{s} Shift</button>
+        {(['morning','midday','evening'] as ShiftType[]).map(s=>(
+          <button key={s} onClick={()=>setShift(s)} className={shift===s?'sl-pill active':'sl-pill'} style={{ textTransform:'capitalize' }}>{s} Shift</button>
         ))}
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)' }}>
@@ -980,10 +797,10 @@ function ShiftChecklistsTab() {
         <span style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)', color:'var(--text-secondary)', whiteSpace:'nowrap' }}>{done}/{tasks.length} done</span>
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
-        {tasks.map(task => {
-          const key=`${shift}:${task}`, isDone=checked.has(key)
+        {tasks.map(task=>{
+          const key=`${shift}:${task}`,isDone=checked.has(key)
           return (
-            <CheckRow key={key} done={isDone} onChange={() => toggle(key)}>
+            <CheckRow key={key} done={isDone} onChange={()=>toggle(key)}>
               <span style={{ fontSize:'var(--text-base)', color:'var(--text-primary)', fontWeight:'var(--weight-medium)', textDecoration:isDone?'line-through':'none', opacity:isDone?0.6:1 }}>{task}</span>
             </CheckRow>
           )
@@ -993,6 +810,36 @@ function ShiftChecklistsTab() {
   )
 }
 
-// ── Main Page ───────────────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────────────
 export default function ProductionPage() {
-  const [activeTab, setActi
+  const [activeTab,    setActiveTab]    = useState<ServiceTab>('worksheet')
+  const { fetch: fetchResidents }       = useResidentsStore()
+  const { fetchWeeks, fetchItems }      = useMenuStore()
+  const { fetch: fetchRecipes }         = useRecipesStore()
+
+  useEffect(() => { fetchResidents(); fetchWeeks(); fetchItems(); fetchRecipes() }, []) // eslint-disable-line
+
+  return (
+    <div className="sl-page fade-in">
+      <div className="sl-page-header">
+        <h1 className="sl-page-title">Production &amp; Service</h1>
+        <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, and shift checklists.</p>
+      </div>
+
+      <div className="sl-pills" style={{ marginBottom:'var(--space-6)' }}>
+        {SERVICE_TABS.map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)} className={activeTab===t.id?'sl-pill active':'sl-pill'}>
+            <span style={{ marginRight:'var(--space-1)' }}>{t.icon}</span>{t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-6)', boxShadow:'var(--shadow-sm)' }}>
+        {activeTab==='worksheet'       && <WorksheetTab />}
+        {activeTab==='traytickets'     && <TrayTicketsTab />}
+        {activeTab==='preplist'        && <CulinaryPrepTab />}
+        {activeTab==='shiftchecklists' && <ShiftChecklistsTab />}
+      </div>
+    </div>
+  )
+}
