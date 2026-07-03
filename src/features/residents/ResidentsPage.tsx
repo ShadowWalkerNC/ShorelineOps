@@ -1,10 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useResidentsStore } from '@/state/residentsStore'
 import ResidentTable from './components/ResidentTable'
 import ResidentFormModal from './components/ResidentFormModal'
 import type { Resident } from '@/types/resident'
 
-/** Skeleton row shown while the first fetch is in-flight. */
 function SkeletonRows() {
   return (
     <>
@@ -24,22 +23,22 @@ function SkeletonRows() {
 export default function ResidentsPage() {
   const { residents, loading, error, fetch, upsert, remove } = useResidentsStore()
 
-  // Search
-  const [query, setQuery] = useState('')
+  const [query, setQuery]               = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const fetchRef = useRef(fetch)
+  fetchRef.current = fetch
 
-  // Debounce search — wait 300 ms after the user stops typing
+  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 300)
     return () => clearTimeout(t)
   }, [query])
 
-  // Re-fetch whenever the debounced query changes
+  // Stable fetch — uses ref so the effect dependency is just debouncedQuery
   useEffect(() => {
-    fetch(debouncedQuery || undefined)
+    fetchRef.current(debouncedQuery || undefined)
   }, [debouncedQuery])
 
-  // Modal state: undefined = closed, null = add mode, Resident = edit mode
   const [editing, setEditing] = useState<Resident | null | undefined>(undefined)
   const isModalOpen = editing !== undefined
 
@@ -51,13 +50,10 @@ export default function ResidentsPage() {
     [editing, upsert]
   )
 
-  const handleEdit = useCallback((resident: Resident) => {
-    setEditing(resident)
-  }, [])
-
-  const handleDelete = useCallback(
+  const handleEdit     = useCallback((resident: Resident) => setEditing(resident), [])
+  const handleDelete   = useCallback(
     async (id: string) => {
-      const r = residents.find((x) => x.id === id)
+      const r = residents.find(x => x.id === id)
       if (!r) return
       if (!window.confirm(`Delete resident record for ${r.name}? This cannot be undone.`)) return
       await remove(id)
@@ -70,16 +66,14 @@ export default function ResidentsPage() {
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-4 gap-4">
         <h1 className="text-xl font-semibold shrink-0">Residents</h1>
-
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={e => setQuery(e.target.value)}
           placeholder="Search by name, room, diet…"
           className="flex-1 max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm
                      focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
-
         <button
           className="bg-primary text-white px-4 py-2 rounded text-sm font-medium
                      hover:bg-primary/90 transition-colors shrink-0"
@@ -94,7 +88,7 @@ export default function ResidentsPage() {
         <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center justify-between">
           <span>{error}</span>
           <button
-            onClick={() => fetch(debouncedQuery || undefined)}
+            onClick={() => fetchRef.current(debouncedQuery || undefined)}
             className="ml-4 text-red-700 underline text-sm hover:no-underline"
           >
             Retry
@@ -102,46 +96,35 @@ export default function ResidentsPage() {
         </div>
       )}
 
-      {/* Table — skeleton on first load, real data after */}
+      {/* Table */}
       {loading && residents.length === 0 ? (
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
               <tr>
-                {['Name', 'Room', 'Status', 'Diet', 'Actions'].map((h) => (
+                {['Name', 'Room', 'Status', 'Diet', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              <SkeletonRows />
-            </tbody>
+            <tbody><SkeletonRows /></tbody>
           </table>
         </div>
       ) : (
-        <ResidentTable
-          residents={residents}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <ResidentTable residents={residents} onEdit={handleEdit} onDelete={handleDelete} />
       )}
 
-      {/* Subtle loading indicator on subsequent fetches (search) */}
       {loading && residents.length > 0 && (
         <p className="mt-2 text-xs text-gray-400">Updating…</p>
       )}
 
-      {/* Empty state */}
       {!loading && !error && residents.length === 0 && (
         <div className="mt-12 text-center text-gray-400">
           <p className="text-lg font-medium">No residents found</p>
           {debouncedQuery && (
             <p className="text-sm mt-1">
               No results for “{debouncedQuery}” —{' '}
-              <button
-                className="underline hover:no-underline"
-                onClick={() => setQuery('')}
-              >
+              <button className="underline hover:no-underline" onClick={() => setQuery('')}>
                 clear search
               </button>
             </p>

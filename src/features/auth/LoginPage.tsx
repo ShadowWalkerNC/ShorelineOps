@@ -3,8 +3,7 @@
  * Shows demo credentials on screen so reviewers can log in immediately.
  * Remove the demo hint panel before going to production.
  */
-import { useEffect } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
 
@@ -16,15 +15,16 @@ const DEMO_ACCOUNTS = [
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
 
-  // Once auth state confirms user is logged in, redirect away from login
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/residents'
+  // Redirect to Dashboard (/) after successful login, or back to the page
+  // they were trying to reach before being sent to /login
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true })
   }, [isAuthenticated, navigate, from])
@@ -35,7 +35,6 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      // navigation is handled by the useEffect above once isAuthenticated flips
     } catch {
       setError('Invalid email or password. Use the demo credentials below.')
       setLoading(false)
@@ -77,17 +76,13 @@ export default function LoginPage() {
           padding: 32,
           animation: 'fadeIn 0.3s ease',
         }}>
-          {/* Logo — fills card width */}
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <img
               src="/logo.png"
               alt="Shoreline"
               style={{
-                width: '100%',
-                maxWidth: 280,
-                height: 'auto',
-                objectFit: 'contain',
-                display: 'block',
+                width: '100%', maxWidth: 280, height: 'auto',
+                objectFit: 'contain', display: 'block',
                 margin: '0 auto 14px',
               }}
             />
@@ -104,7 +99,6 @@ export default function LoginPage() {
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 required autoComplete="email" style={inp} />
             </div>
-
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)}
@@ -132,7 +126,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* ── Demo credentials panel ── remove before production ── */}
+        {/* Demo credentials panel — remove before production */}
         <div style={{
           background: 'rgba(255,255,255,0.04)',
           border: '1px dashed rgba(255,255,255,0.15)',
