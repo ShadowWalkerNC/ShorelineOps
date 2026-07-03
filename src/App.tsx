@@ -7,6 +7,7 @@ import ResidentProfilePage from './features/residents/ResidentProfilePage'
 import MenuPage from './features/menu/MenuPage'
 import ProductionPage from './features/production/ProductionPage'
 import AdminPage from './features/admin/AdminPage'
+import RecipeBookPage from './features/recipes/RecipeBookPage'
 import Layout from './components/Layout'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
@@ -22,16 +23,14 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Dashboard is the true home */}
       <Route path="/" element={<AuthedLayout><DashboardPage /></AuthedLayout>} />
-
       <Route path="/residents" element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
       <Route path="/residents/:id" element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
       <Route path="/menu" element={<AuthedLayout><MenuPage /></AuthedLayout>} />
       <Route path="/production" element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
+      <Route path="/recipes" element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
       <Route path="/admin" element={<AuthedLayout><AdminPage /></AuthedLayout>} />
 
-      {/* Catch-all → dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
