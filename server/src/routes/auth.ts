@@ -10,7 +10,7 @@ import type { AuthRequest } from '../middleware/requireAuth'
 export const authRouter = Router()
 
 const JWT_SECRET = process.env.JWT_SECRET!
-const JWT_EXPIRES = process.env.JWT_EXPIRES_IN ?? '15m'
+const JWT_EXPIRES = (process.env.JWT_EXPIRES_IN ?? '15m') as any
 const REFRESH_EXPIRES_DAYS = 7
 
 function makeTokens(userId: string) {
