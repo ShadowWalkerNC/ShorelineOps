@@ -70,21 +70,19 @@ export default function LoginPage() {
           padding: 32,
           animation: 'fadeIn 0.3s ease',
         }}>
-          {/* Logo — uses the real /logo.png from public/ */}
+          {/* Logo — full size, centered, no redundant wordmark */}
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 8 }}>
-              <img
-                src="/logo.png"
-                alt="Shoreline logo"
-                style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 10 }}
-              />
-              <span style={{
-                fontSize: 28, fontWeight: 700,
-                fontFamily: 'Outfit, sans-serif',
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.5px',
-              }}>Shoreline</span>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Shoreline"
+              style={{
+                width: 120, height: 120,
+                objectFit: 'contain',
+                borderRadius: 20,
+                display: 'block',
+                margin: '0 auto 12px',
+              }}
+            />
             <div style={{
               fontSize: 11, color: 'var(--text-muted)',
               fontWeight: 600, letterSpacing: '0.5px',
