@@ -70,17 +70,18 @@ export default function LoginPage() {
           padding: 32,
           animation: 'fadeIn 0.3s ease',
         }}>
-          {/* Logo — full size, centered, no redundant wordmark */}
+          {/* Logo — fills card width */}
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <img
               src="/logo.png"
               alt="Shoreline"
               style={{
-                width: 120, height: 120,
+                width: '100%',
+                maxWidth: 280,
+                height: 'auto',
                 objectFit: 'contain',
-                borderRadius: 20,
                 display: 'block',
-                margin: '0 auto 12px',
+                margin: '0 auto 14px',
               }}
             />
             <div style={{
