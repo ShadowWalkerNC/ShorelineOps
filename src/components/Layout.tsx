@@ -39,7 +39,6 @@ const NAV_ADMIN = {
   icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
 }
 
-// ── Desktop sidebar NavItem ──────────────────────────────────────────────────
 function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void }) {
   return (
     <NavLink
@@ -66,18 +65,14 @@ const LAYOUT_CSS = `
 
   /* ====== MOBILE (<768px) ====== */
   @media (max-width: 767px) {
-    /* Hide desktop sidebar entirely */
     .sidebar-aside { display: none !important; }
-
-    /* Show mobile header */
     .mobile-header { display: flex !important; }
-
-    /* Push main content below mobile header */
     .desktop-header { display: none !important; }
-    .main-scroll    { padding-top: 0 !important; }
-    .main-content   { padding: 16px 14px 24px !important; }
 
-    /* Mobile nav sheet drops from top */
+    /* Offset content below the fixed mobile header */
+    .main-scroll { padding-top: var(--mobile-header) !important; }
+    .main-content { padding: 16px 14px 24px !important; }
+
     .mobile-nav-sheet {
       position: fixed;
       top: var(--mobile-header);
@@ -114,7 +109,6 @@ const LAYOUT_CSS = `
     .mobile-nav-sheet { display: none !important; }
   }
 
-  /* Shared */
   @keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
   .status-dot-pulse { animation: dot-pulse 2.2s ease-in-out infinite; }
   body.nav-open { overflow: hidden !important; }
@@ -142,7 +136,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(false)
   const isAdmin = user?.role === 'admin'
 
-  // Close nav on route change
   useEffect(() => { setNavOpen(false) }, [location.pathname])
 
   useEffect(() => {
@@ -167,7 +160,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div style={{ display: 'flex', height: '100dvh', width: '100%', background: 'var(--bg-app)', overflow: 'hidden' }}>
       <InjectLayoutStyles />
 
-      {/* ── Mobile overlay (tap outside to close) ── */}
       {navOpen && (
         <div
           onClick={() => setNavOpen(false)}
@@ -179,7 +171,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <header
         className="mobile-header"
         style={{
-          display: 'none', // shown by CSS on mobile
+          display: 'none',
           position: 'fixed', top: 0, left: 0, right: 0,
           height: 'var(--mobile-header)',
           background: 'var(--bg-card)',
@@ -191,7 +183,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           boxShadow: 'var(--shadow-sm)',
         }}
       >
-        {/* Hamburger */}
         <button
           onClick={() => setNavOpen(v => !v)}
           aria-label="Toggle navigation"
@@ -212,16 +203,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           }
         </button>
 
-        {/* Square S icon */}
         <img src="/icon-192.png" alt="Shoreline" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
 
-        {/* App name */}
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Shoreline</div>
           <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>iMPAC Operations</div>
         </div>
 
-        {/* User initial avatar */}
         {user && (
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
@@ -235,9 +223,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
       </header>
 
-      {/* ====== MOBILE NAV SHEET (drops from top) ====== */}
+      {/* ====== MOBILE NAV SHEET ====== */}
       <div className={`mobile-nav-sheet${navOpen ? ' open' : ''}`}>
-        {/* User info row */}
         {user && (
           <div style={{
             padding: '14px 16px',
@@ -261,7 +248,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Nav items */}
         <div style={{ padding: '8px 10px' }}>
           {allNavItems.map(item => (
             <NavLink
@@ -286,7 +272,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </div>
 
-        {/* Logout + time */}
         <div style={{ padding: '12px 16px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <button
             onClick={handleLogout}
@@ -321,7 +306,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           overflowY: 'auto', overflowX: 'hidden',
         }}
       >
-        {/* Logo */}
         <div style={{ padding: '20px 20px 18px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <img src="/icon-192.png" alt="Shoreline" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
           <div>
@@ -330,13 +314,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* LAN status */}
         <div style={{ padding: '7px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'var(--color-primary-light)', flexShrink: 0 }}>
           <div className="status-dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }} />
           LAN Server Mode — data synced across all devices
         </div>
 
-        {/* Nav */}
         <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '8px 16px 4px' }}>Operations</div>
           {NAV_OPERATIONS.map(item => <NavItem key={item.to} {...item} />)}
@@ -348,7 +330,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* Footer */}
         <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
           <button
             onClick={handleLogout}
@@ -371,8 +352,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         style={{
           flex: 1, display: 'flex', flexDirection: 'column',
           minWidth: 0, height: '100dvh', overflowY: 'auto',
-          // On mobile, push content below fixed header
-          paddingTop: 'var(--mobile-header)',
         }}
       >
         {/* Desktop sticky header */}
