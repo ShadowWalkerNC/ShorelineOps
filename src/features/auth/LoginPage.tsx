@@ -1,127 +1,131 @@
-import { useState, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
-import { sanitizeInput, isSafeInput } from '../../security/sanitize'
 
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const from = (location.state as any)?.from?.pathname ?? '/'
-
-  const emailRef = useRef<HTMLInputElement>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-
-    const safeEmail = sanitizeInput(email)
-    const safePassword = sanitizeInput(password)
-
-    if (!isSafeInput(safeEmail) || !isSafeInput(safePassword)) {
-      setError('Invalid characters detected.')
-      return
-    }
-
+    setError('')
     setLoading(true)
     try {
-      await login(safeEmail, safePassword)
-      navigate(from, { replace: true })
-    } catch (err: any) {
-      const msg = err?.response?.data?.error ?? 'Login failed. Please try again.'
-      setError(msg)
-      emailRef.current?.focus()
+      await login(email, password)
+      navigate('/residents')
+    } catch {
+      setError('Invalid email or password')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo / brand */}
-        <div className="text-center mb-8">
-          <img
-            src="/logo.png"
-            alt="Shoreline"
-            className="h-16 w-auto mx-auto mb-4"
-          />
-          <p className="text-sm text-gray-500">Care Operations Platform</p>
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(30,35,38,0.97)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+      zIndex: 10000,
+    }}>
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-lg)',
+        padding: 32,
+        width: '100%',
+        maxWidth: 400,
+        animation: 'fadeIn 0.3s ease',
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2">
+              <path d="M2 20 Q6 12 12 12 Q18 12 22 20" />
+              <path d="M12 12 V4" />
+              <circle cx="12" cy="4" r="2" />
+            </svg>
+            <span style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Outfit, sans-serif', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>Shoreline</span>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Operations Platform</div>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-6">Sign in to your account</h2>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              style={{
+                width: '100%', padding: '10px 12px',
+                background: 'var(--bg-app)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 16, color: 'var(--text-primary)',
+                outline: 'none', minHeight: 44,
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              style={{
+                width: '100%', padding: '10px 12px',
+                background: 'var(--bg-app)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 16, color: 'var(--text-primary)',
+                outline: 'none', minHeight: 44,
+              }}
+            />
+          </div>
 
           {error && (
-            <div
-              role="alert"
-              className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
-            >
+            <div style={{ background: '#faf1ef', border: '1px solid rgba(189,110,92,0.25)', color: '#a35a49', padding: '10px 12px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500, marginBottom: 16 }}>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </label>
-              <input
-                ref={emailRef}
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                           disabled:bg-gray-100"
-                disabled={loading}
-                placeholder="you@shoreline.app"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                           disabled:bg-gray-100"
-                disabled={loading}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="w-full py-2.5 px-4 bg-primary text-white text-sm font-semibold rounded-lg
-                         hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary
-                         focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
-                         transition-colors"
-            >
-              {loading ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
-        </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Protected health information. Authorized users only.
-        </p>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%', padding: '12px',
+              background: loading ? 'var(--text-muted)' : 'var(--color-primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 14, fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              minHeight: 44,
+              transition: 'background 0.2s ease',
+            }}
+          >
+            {loading ? 'Signing in...' : 'Sign in'}
+          </button>
+        </form>
       </div>
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   )
 }
