@@ -1,5 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
-import AuthGuard from './features/auth/AuthGuard'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import RequireAuth from './components/RequireAuth'
 import LoginPage from './features/auth/LoginPage'
 import ResidentsPage from './features/residents/ResidentsPage'
 import ResidentProfilePage from './features/residents/ResidentProfilePage'
@@ -8,27 +8,28 @@ import ProductionPage from './features/production/ProductionPage'
 import AdminPage from './features/admin/AdminPage'
 import Layout from './components/Layout'
 
+function AuthedLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireAuth>
+      <Layout>{children}</Layout>
+    </RequireAuth>
+  )
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/*"
-        element={
-          <AuthGuard>
-            <Layout>
-              <Routes>
-                <Route path="/residents"     element={<ResidentsPage />} />
-                <Route path="/residents/:id" element={<ResidentProfilePage />} />
-                <Route path="/menu"          element={<MenuPage />} />
-                <Route path="/production"    element={<ProductionPage />} />
-                <Route path="/admin"         element={<AdminPage />} />
-                <Route path="*"              element={<ResidentsPage />} />
-              </Routes>
-            </Layout>
-          </AuthGuard>
-        }
-      />
+
+      <Route path="/residents" element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
+      <Route path="/residents/:id" element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
+      <Route path="/menu" element={<AuthedLayout><MenuPage /></AuthedLayout>} />
+      <Route path="/production" element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
+      <Route path="/admin" element={<AuthedLayout><AdminPage /></AuthedLayout>} />
+
+      {/* Default redirect */}
+      <Route path="/" element={<Navigate to="/residents" replace />} />
+      <Route path="*" element={<Navigate to="/residents" replace />} />
     </Routes>
   )
 }
