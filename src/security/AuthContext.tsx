@@ -1,12 +1,16 @@
 /**
- * Auth context — wired to the real backend.
- * Stores user in React state; tokens managed by tokenManager.
+ * ============================================================
+ * AUTH CONTEXT — DEMO MODE
+ * ============================================================
+ * This file uses hardcoded local credentials so the app works
+ * as a fully self-contained demo with NO backend required.
+ *
+ * ⚠️  DEMO ONLY — Do NOT use in production.
+ *     See DEMO.md for the full guide on replacing this with
+ *     real Supabase authentication.
+ * ============================================================
  */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { auditLog } from './auditLog'
-import { useSessionTimeout } from './useSessionTimeout'
-import { tokenManager } from './tokenManager'
-import { authApi } from '../api/auth'
 
 export type UserRole = 'admin' | 'staff' | 'readonly'
 
@@ -26,51 +30,73 @@ interface AuthContextValue {
   logout: (reason?: string) => Promise<void>
 }
 
+// ── Demo credential store ─────────────────────────────────────────────────────
+// Three accounts cover all three role levels for demo/review purposes.
+// Replace this entire block with Supabase auth in production (see DEMO.md).
+const DEMO_USERS: (AuthUser & { password: string })[] = [
+  {
+    id: 'demo-admin-1',
+    name: 'Admin User',
+    email: 'admin@shoreline.demo',
+    password: 'Admin1234!',
+    role: 'admin',
+    mfaVerified: true,
+  },
+  {
+    id: 'demo-staff-1',
+    name: 'Staff User',
+    email: 'staff@shoreline.demo',
+    password: 'Staff1234!',
+    role: 'staff',
+    mfaVerified: true,
+  },
+  {
+    id: 'demo-readonly-1',
+    name: 'Read-Only User',
+    email: 'readonly@shoreline.demo',
+    password: 'Readonly1234!',
+    role: 'readonly',
+    mfaVerified: true,
+  },
+]
+
+const SESSION_KEY = 'shoreline_demo_user'
+
+// ── Context ───────────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // On mount: if a refresh token exists, silently refresh the access token
-  // then call /api/auth/me to restore the full user object.
+  // Restore session from sessionStorage on mount
   useEffect(() => {
-    async function restoreSession() {
-      if (!tokenManager.hasRefreshToken()) {
-        setIsLoading(false)
-        return
-      }
-      try {
-        await tokenManager.refresh()
-        const { data } = await authApi.me()
-        setUser(data)
-      } catch {
-        tokenManager.clear()
-      } finally {
-        setIsLoading(false)
-      }
+    try {
+      const stored = sessionStorage.getItem(SESSION_KEY)
+      if (stored) setUser(JSON.parse(stored))
+    } catch {
+      // ignore bad stored value
+    } finally {
+      setIsLoading(false)
     }
-    restoreSession()
   }, [])
-
-  const logout = useCallback(async (reason = 'user_initiated') => {
-    const rt = sessionStorage.getItem('_rt')
-    if (rt) {
-      try { await authApi.logout(rt) } catch { /* ignore */ }
-    }
-    tokenManager.clear()
-    auditLog('LOGOUT', { userId: user?.id, outcome: 'success', details: { reason } })
-    setUser(null)
-  }, [user])
 
   const login = useCallback(async (email: string, password: string) => {
-    const { data } = await authApi.login(email, password)
-    tokenManager.set(data.accessToken, data.refreshToken)
-    auditLog('LOGIN', { userId: data.user.id, outcome: 'success' })
-    setUser(data.user)
+    // Simulate a brief network delay so the UX feels natural
+    await new Promise(r => setTimeout(r, 400))
+    const match = DEMO_USERS.find(
+      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    )
+    if (!match) throw new Error('Invalid email or password')
+    const { password: _pw, ...authUser } = match
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
+    setUser(authUser)
   }, [])
 
-  useSessionTimeout(() => logout('session_timeout'), user?.id)
+  const logout = useCallback(async (_reason = 'user_initiated') => {
+    sessionStorage.removeItem(SESSION_KEY)
+    setUser(null)
+  }, [])
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
@@ -97,11 +123,6 @@ export function RequireRole({
   const { user } = useAuth()
   const roleRank: Record<UserRole, number> = { readonly: 0, staff: 1, admin: 2 }
   if (!user || roleRank[user.role] < roleRank[role]) {
-    auditLog('ACCESS_DENIED', {
-      userId: user?.id,
-      outcome: 'failure',
-      details: { requiredRole: role, userRole: user?.role },
-    })
     return <div className="p-4 text-red-600">Access denied.</div>
   }
   return <>{children}</>
