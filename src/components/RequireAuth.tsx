@@ -9,15 +9,25 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   const { isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
 
+  // Wait for session restore before making any auth decision
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">
+      <div style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 14,
+        background: 'var(--bg-app)',
+      }}>
         Loading…
       </div>
     )
   }
 
   if (!isAuthenticated) {
+    // Pass current location so LoginPage can redirect back after login
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

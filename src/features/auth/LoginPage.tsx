@@ -3,8 +3,9 @@
  * Shows demo credentials on screen so reviewers can log in immediately.
  * Remove the demo hint panel before going to production.
  */
+import { useEffect } from 'react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
 
 const DEMO_ACCOUNTS = [
@@ -14,12 +15,19 @@ const DEMO_ACCOUNTS = [
 ]
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
+
+  // Once auth state confirms user is logged in, redirect away from login
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/residents'
+  useEffect(() => {
+    if (isAuthenticated) navigate(from, { replace: true })
+  }, [isAuthenticated, navigate, from])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -27,10 +35,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/residents')
+      // navigation is handled by the useEffect above once isAuthenticated flips
     } catch {
       setError('Invalid email or password. Use the demo credentials below.')
-    } finally {
       setLoading(false)
     }
   }
