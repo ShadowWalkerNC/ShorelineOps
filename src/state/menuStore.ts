@@ -1,9 +1,9 @@
 /**
  * Menu store — DEMO MODE
- * All data lives in memory. Changes persist for the session but reset on reload.
  */
 import { create } from 'zustand'
 import type { MenuWeek, MenuItem, DayOfWeek, MealSlot, MealEntry } from '@/types'
+import { MEAL_SLOTS } from '@/types/menu'
 import { SEED_MENU_WEEKS, SEED_MENU_ITEMS, uid, now } from '@/demo/seed'
 
 let _weeks: MenuWeek[] = JSON.parse(JSON.stringify(SEED_MENU_WEEKS))
@@ -55,10 +55,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const week: MenuWeek = {
       id: uid(), name, active: false,
       createdAt: now(), updatedAt: now(),
-      days: {
-        Sunday: emptyDay(), Monday: emptyDay(), Tuesday: emptyDay(),
-        Wednesday: emptyDay(), Thursday: emptyDay(), Friday: emptyDay(), Saturday: emptyDay(),
-      },
+      days: Object.fromEntries(
+        ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(day => [
+          day,
+          Object.fromEntries(MEAL_SLOTS.map(slot => [slot, { itemIds: [] }]))
+        ])
+      ) as MenuWeek['days'],
     }
     _weeks = [..._weeks, week]
     set({ weeks: [..._weeks], selectedWeekId: week.id })
@@ -111,13 +113,3 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ items: [..._items] })
   },
 }))
-
-function emptyDay() {
-  return {
-    breakfast:      { itemIds: [] },
-    morningSnack:   { itemIds: [] },
-    lunch:          { itemIds: [] },
-    afternoonSnack: { itemIds: [] },
-    dinner:         { itemIds: [] },
-  }
-}

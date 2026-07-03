@@ -1,83 +1,143 @@
-// ── Meal slot labels ─────────────────────────────────────────────────────────
-export type MealSlot = 'breakfast' | 'morningSnack' | 'lunch' | 'afternoonSnack' | 'dinner'
+// ── Meal slots ───────────────────────────────────────────────────────────────────
+export type MealSlot =
+  | 'breakfast'
+  | 'lunchOpt1Meat' | 'lunchOpt1Veggie' | 'lunchOpt1Starch'
+  | 'lunchOpt2Meat' | 'lunchOpt2Veggie' | 'lunchOpt2Starch'
+  | 'lunchDessert'
+  | 'dinnerOpt1Meat' | 'dinnerOpt1Veggie' | 'dinnerOpt1Starch'
+  | 'dinnerOpt2Meat' | 'dinnerOpt2Veggie' | 'dinnerOpt2Starch'
+  | 'dinnerDessert'
 
 export const MEAL_SLOTS: MealSlot[] = [
   'breakfast',
-  'morningSnack',
-  'lunch',
-  'afternoonSnack',
-  'dinner',
+  'lunchOpt1Meat', 'lunchOpt1Veggie', 'lunchOpt1Starch',
+  'lunchOpt2Meat', 'lunchOpt2Veggie', 'lunchOpt2Starch',
+  'lunchDessert',
+  'dinnerOpt1Meat', 'dinnerOpt1Veggie', 'dinnerOpt1Starch',
+  'dinnerOpt2Meat', 'dinnerOpt2Veggie', 'dinnerOpt2Starch',
+  'dinnerDessert',
 ]
 
 export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
-  breakfast: 'Breakfast',
-  morningSnack: 'Morning Snack',
-  lunch: 'Lunch',
-  afternoonSnack: 'Afternoon Snack',
-  dinner: 'Dinner',
+  breakfast:       'Breakfast',
+  lunchOpt1Meat:   'Meat',
+  lunchOpt1Veggie: 'Veggie',
+  lunchOpt1Starch: 'Starch',
+  lunchOpt2Meat:   'Meat',
+  lunchOpt2Veggie: 'Veggie',
+  lunchOpt2Starch: 'Starch',
+  lunchDessert:    'Dessert',
+  dinnerOpt1Meat:   'Meat',
+  dinnerOpt1Veggie: 'Veggie',
+  dinnerOpt1Starch: 'Starch',
+  dinnerOpt2Meat:   'Meat',
+  dinnerOpt2Veggie: 'Veggie',
+  dinnerOpt2Starch: 'Starch',
+  dinnerDessert:    'Dessert',
 }
 
-// ── Days ──────────────────────────────────────────────────────────────────────
+// Groups used by the UI to render structured meal cards
+export type MealGroup = {
+  id: string
+  label: string             // e.g. "Lunch"
+  options?: {               // undefined = single-option meal (breakfast)
+    label: string           // e.g. "Option 1"
+    slots: { slot: MealSlot; label: string }[]
+  }[]
+  singleSlot?: MealSlot     // used when no options (breakfast)
+  dessertSlot?: MealSlot
+}
+
+export const MEAL_GROUPS: MealGroup[] = [
+  {
+    id: 'breakfast',
+    label: 'Breakfast',
+    singleSlot: 'breakfast',
+  },
+  {
+    id: 'lunch',
+    label: 'Lunch',
+    options: [
+      {
+        label: 'Option 1',
+        slots: [
+          { slot: 'lunchOpt1Meat',   label: 'Meat' },
+          { slot: 'lunchOpt1Veggie', label: 'Veggie' },
+          { slot: 'lunchOpt1Starch', label: 'Starch' },
+        ],
+      },
+      {
+        label: 'Option 2',
+        slots: [
+          { slot: 'lunchOpt2Meat',   label: 'Meat' },
+          { slot: 'lunchOpt2Veggie', label: 'Veggie' },
+          { slot: 'lunchOpt2Starch', label: 'Starch' },
+        ],
+      },
+    ],
+    dessertSlot: 'lunchDessert',
+  },
+  {
+    id: 'dinner',
+    label: 'Dinner',
+    options: [
+      {
+        label: 'Option 1',
+        slots: [
+          { slot: 'dinnerOpt1Meat',   label: 'Meat' },
+          { slot: 'dinnerOpt1Veggie', label: 'Veggie' },
+          { slot: 'dinnerOpt1Starch', label: 'Starch' },
+        ],
+      },
+      {
+        label: 'Option 2',
+        slots: [
+          { slot: 'dinnerOpt2Meat',   label: 'Meat' },
+          { slot: 'dinnerOpt2Veggie', label: 'Veggie' },
+          { slot: 'dinnerOpt2Starch', label: 'Starch' },
+        ],
+      },
+    ],
+    dessertSlot: 'dinnerDessert',
+  },
+]
+
+// ── Days ────────────────────────────────────────────────────────────────────────
 export const DAYS_OF_WEEK = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 ] as const
 export type DayOfWeek = (typeof DAYS_OF_WEEK)[number]
 
-// ── Core data types ───────────────────────────────────────────────────────────
-
-/**
- * A single item (dish) that can appear in a meal slot.
- * Items can be reused across days/weeks.
- */
+// ── Core data types ────────────────────────────────────────────────────────────
 export type MenuItem = {
   id: string
   name: string
-  /** Optional plain-text notes (e.g. "Contains nuts", "Puréed option available") */
   notes?: string
-  /** Whether this item has an available texture-modified version */
   textureModified: boolean
 }
 
-/**
- * One meal slot on one day: an ordered list of menu item IDs.
- * We store IDs so items can be looked up from the items map.
- */
 export type MealEntry = {
   itemIds: string[]
-  /** Free-text override label shown instead of item names when set */
   label?: string
 }
 
-/** All meal slots for one day */
 export type DayMenu = Record<MealSlot, MealEntry>
 
-/**
- * A named weekly cycle menu (e.g. "Week A", "Summer Menu").
- * days is keyed by DayOfWeek.
- */
 export type MenuWeek = {
   id: string
   name: string
-  /** ISO date string of the first day this week cycle was active */
   effectiveFrom?: string
   days: Record<DayOfWeek, DayMenu>
-  /** True = this is the currently active cycle */
   active: boolean
   createdAt: string
   updatedAt: string
 }
 
-// ── Helper: build an empty week ───────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 export function emptyDayMenu(): DayMenu {
   return Object.fromEntries(
-    MEAL_SLOTS.map((slot) => [slot, { itemIds: [] }])
-  ) as unknown as DayMenu
+    MEAL_SLOTS.map(slot => [slot, { itemIds: [] }])
+  ) as DayMenu
 }
 
 export function emptyWeek(name: string): Omit<MenuWeek, 'id' | 'createdAt' | 'updatedAt'> {
@@ -85,7 +145,7 @@ export function emptyWeek(name: string): Omit<MenuWeek, 'id' | 'createdAt' | 'up
     name,
     active: false,
     days: Object.fromEntries(
-      DAYS_OF_WEEK.map((day) => [day, emptyDayMenu()])
+      DAYS_OF_WEEK.map(day => [day, emptyDayMenu()])
     ) as Record<DayOfWeek, DayMenu>,
   }
 }
