@@ -13,6 +13,7 @@ import { productionRouter } from './routes/production'
 import { adminRouter } from './routes/admin'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
+import { runMigrations } from './db/migrate'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -26,16 +27,16 @@ app.use(cors({
 }))
 app.use(express.json({ limit: '1mb' }))
 
-// Rate limiting — HIPAA / SOC 2 require brute-force protection
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
 })
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, // Strict limit on auth endpoints
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
 })
@@ -51,14 +52,22 @@ app.use('/api/menu',       requireAuth, menuRouter)
 app.use('/api/production', requireAuth, productionRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
 
-// Health check (unauthenticated — used by Render)
+// Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
 
 // Global error handler
 app.use(errorHandler)
 
-app.listen(PORT, () => {
-  console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
-})
+// Run migrations then start server
+runMigrations()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
+    })
+  })
+  .catch((err) => {
+    console.error('[Shoreline API] Migration failed, aborting startup:', err)
+    process.exit(1)
+  })
 
 export default app
