@@ -1,4 +1,4 @@
-// ── Meal slots ───────────────────────────────────────────────────────────────────
+// ── Meal slots ───────────────────────────────────────────────────────────────
 export type MealSlot =
   | 'breakfast'
   | 'lunchOpt1Meat' | 'lunchOpt1Veggie' | 'lunchOpt1Starch'
@@ -19,14 +19,14 @@ export const MEAL_SLOTS: MealSlot[] = [
 ]
 
 export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
-  breakfast:       'Breakfast',
-  lunchOpt1Meat:   'Meat',
-  lunchOpt1Veggie: 'Veggie',
-  lunchOpt1Starch: 'Starch',
-  lunchOpt2Meat:   'Meat',
-  lunchOpt2Veggie: 'Veggie',
-  lunchOpt2Starch: 'Starch',
-  lunchDessert:    'Dessert',
+  breakfast:        'Breakfast',
+  lunchOpt1Meat:    'Meat',
+  lunchOpt1Veggie:  'Veggie',
+  lunchOpt1Starch:  'Starch',
+  lunchOpt2Meat:    'Meat',
+  lunchOpt2Veggie:  'Veggie',
+  lunchOpt2Starch:  'Starch',
+  lunchDessert:     'Dessert',
   dinnerOpt1Meat:   'Meat',
   dinnerOpt1Veggie: 'Veggie',
   dinnerOpt1Starch: 'Starch',
@@ -39,12 +39,12 @@ export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
 // Groups used by the UI to render structured meal cards
 export type MealGroup = {
   id: string
-  label: string             // e.g. "Lunch"
-  options?: {               // undefined = single-option meal (breakfast)
-    label: string           // e.g. "Option 1"
+  label: string
+  options?: {
+    label: string
     slots: { slot: MealSlot; label: string }[]
   }[]
-  singleSlot?: MealSlot     // used when no options (breakfast)
+  singleSlot?: MealSlot
   dessertSlot?: MealSlot
 }
 
@@ -102,13 +102,13 @@ export const MEAL_GROUPS: MealGroup[] = [
   },
 ]
 
-// ── Days ────────────────────────────────────────────────────────────────────────
+// ── Days ──────────────────────────────────────────────────────────────────────
 export const DAYS_OF_WEEK = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 ] as const
 export type DayOfWeek = (typeof DAYS_OF_WEEK)[number]
 
-// ── Core data types ────────────────────────────────────────────────────────────
+// ── Core data types ───────────────────────────────────────────────────────────
 export type MenuItem = {
   id: string
   name: string
@@ -137,7 +137,7 @@ export type MenuWeek = {
 export function emptyDayMenu(): DayMenu {
   return Object.fromEntries(
     MEAL_SLOTS.map(slot => [slot, { itemIds: [] }])
-  ) as DayMenu
+  ) as unknown as DayMenu
 }
 
 export function emptyWeek(name: string): Omit<MenuWeek, 'id' | 'createdAt' | 'updatedAt'> {
@@ -146,6 +146,6 @@ export function emptyWeek(name: string): Omit<MenuWeek, 'id' | 'createdAt' | 'up
     active: false,
     days: Object.fromEntries(
       DAYS_OF_WEEK.map(day => [day, emptyDayMenu()])
-    ) as Record<DayOfWeek, DayMenu>,
+    ) as unknown as Record<DayOfWeek, DayMenu>,
   }
 }

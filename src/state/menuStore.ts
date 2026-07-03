@@ -3,7 +3,7 @@
  */
 import { create } from 'zustand'
 import type { MenuWeek, MenuItem, DayOfWeek, MealSlot, MealEntry } from '@/types'
-import { MEAL_SLOTS } from '@/types/menu'
+import { MEAL_SLOTS, DAYS_OF_WEEK } from '@/types/menu'
 import { SEED_MENU_WEEKS, SEED_MENU_ITEMS, uid, now } from '@/demo/seed'
 
 let _weeks: MenuWeek[] = JSON.parse(JSON.stringify(SEED_MENU_WEEKS))
@@ -56,11 +56,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       id: uid(), name, active: false,
       createdAt: now(), updatedAt: now(),
       days: Object.fromEntries(
-        ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(day => [
+        DAYS_OF_WEEK.map(day => [
           day,
-          Object.fromEntries(MEAL_SLOTS.map(slot => [slot, { itemIds: [] }]))
+          Object.fromEntries(MEAL_SLOTS.map(slot => [slot, { itemIds: [] }])) as unknown as Record<MealSlot, MealEntry>,
         ])
-      ) as MenuWeek['days'],
+      ) as unknown as MenuWeek['days'],
     }
     _weeks = [..._weeks, week]
     set({ weeks: [..._weeks], selectedWeekId: week.id })
