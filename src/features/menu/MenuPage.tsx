@@ -4,7 +4,7 @@ import { useRecipesStore } from '@/state/recipesStore'
 import WeekGrid from './components/WeekGrid'
 import ItemLibraryPanel from './components/ItemLibraryPanel'
 import DayEditorModal from './components/DayEditorModal'
-import type { DayOfWeek, MealSlot, MealEntry } from '@/types'
+import type { DayOfWeek, MealSlot, MealEntry, MenuItem } from '@/types'
 import { DAYS_OF_WEEK, MEAL_GROUPS, MEAL_SLOTS } from '@/types/menu'
 import type { Recipe } from '@/types/recipe'
 
@@ -70,6 +70,13 @@ const MENU_CSS = `
   }
   .meal-dessert-value:active { background:var(--color-primary-light); }
 
+  /* Dietary tag badges on meal cards */
+  .meal-diet-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+  .meal-diet-badge {
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px;
+    background:var(--color-danger-light); color:var(--color-danger-hover);
+  }
+
   .menu-mobile { display:block; }
   .menu-desktop { display:none; }
   @media (min-width:768px) { .menu-mobile { display:none; } .menu-desktop { display:block; } }
@@ -105,14 +112,14 @@ const MENU_CSS = `
   .recipe-notes-box { background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px 14px; font-size:13px; color:var(--text-secondary); line-height:1.6; margin-top:8px; }
   .recipe-allergen-tag { display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700; background:var(--color-danger-light); color:var(--color-danger-hover); margin-right:6px; margin-bottom:4px; }
   .recipe-no-link { font-size:14px; color:var(--text-muted); font-style:italic; padding:12px 0; }
-  .recipe-open-full-btn {
+  .recipe-close-btn {
     display:block; width:100%; text-align:center; margin-top:20px;
     padding:12px; border-radius:var(--radius-md); font-size:14px; font-weight:700;
     background:var(--color-primary-light); color:var(--color-primary);
     border:1px solid rgba(0,120,200,0.2); cursor:pointer; font-family:'Outfit',sans-serif;
     transition:background 0.15s ease;
   }
-  .recipe-open-full-btn:active { background:var(--color-primary); color:#fff; }
+  .recipe-close-btn:active { background:var(--color-primary); color:#fff; }
 `
 
 function InjectMenuStyles() {
@@ -127,12 +134,26 @@ function InjectMenuStyles() {
 }
 
 // ── Recipe Drawer ─────────────────────────────────────────────────────────────
-function RecipeDrawer({ itemName, recipe, onClose }: { itemName: string; recipe: Recipe | null; onClose: () => void }) {
-  // Close on backdrop click
+function RecipeDrawer({
+  menuItem,
+  recipe,
+  onClose,
+}: {
+  menuItem: MenuItem
+  recipe: Recipe | null
+  onClose: () => void
+}) {
   return (
     <div className="recipe-drawer-overlay" onClick={onClose}>
       <div className="recipe-drawer" onClick={e => e.stopPropagation()}>
         <div className="recipe-drawer-handle" />
+
+        {/* Item dietary tags shown at top of drawer for quick reference */}
+        {menuItem.dietaryTags && menuItem.dietaryTags.length > 0 && (
+          <div className="meal-diet-tags" style={{ marginBottom: 10 }}>
+            {menuItem.dietaryTags.map(t => <span key={t} className="meal-diet-badge">{t}</span>)}
+          </div>
+        )}
 
         {recipe ? (
           <>
@@ -161,7 +182,7 @@ function RecipeDrawer({ itemName, recipe, onClose }: { itemName: string; recipe:
             {recipe.steps.length > 0 && (
               <>
                 <div className="recipe-drawer-section">Instructions</div>
-                {recipe.steps.map((s) => (
+                {recipe.steps.map(s => (
                   <div key={s.step} className="recipe-step-row">
                     <span className="recipe-step-num">{s.step}.</span>
                     <span className="recipe-step-text">{s.instruction}</span>
@@ -177,15 +198,15 @@ function RecipeDrawer({ itemName, recipe, onClose }: { itemName: string; recipe:
               </>
             )}
 
-            <button className="recipe-open-full-btn" onClick={onClose}>
-              Close
-            </button>
+            <button className="recipe-close-btn" onClick={onClose}>Close</button>
           </>
         ) : (
           <>
-            <div className="recipe-drawer-title">{itemName}</div>
-            <div className="recipe-no-link">No recipe linked to this item yet. You can attach one from the Item Library.</div>
-            <button className="recipe-open-full-btn" onClick={onClose}>Close</button>
+            <div className="recipe-drawer-title">{menuItem.name}</div>
+            <div className="recipe-no-link">
+              No recipe linked to this item yet. Open the Item Library, edit this item, and pick a recipe from the dropdown.
+            </div>
+            <button className="recipe-close-btn" onClick={onClose}>Close</button>
           </>
         )}
       </div>
@@ -193,10 +214,15 @@ function RecipeDrawer({ itemName, recipe, onClose }: { itemName: string; recipe:
   )
 }
 
-// ── Helper ───────────────────────────────────────────────────────────────────
-function entryLabel(entry: MealEntry, items: { id: string; name: string }[]): string {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function entryLabel(entry: MealEntry, items: MenuItem[]): string {
   if (entry.label) return entry.label
   return entry.itemIds.map(id => items.find(i => i.id === id)?.name).filter(Boolean).join(', ')
+}
+
+/** Returns all MenuItem objects referenced by an entry */
+function entryItems(entry: MealEntry, items: MenuItem[]): MenuItem[] {
+  return entry.itemIds.map(id => items.find(i => i.id === id)).filter(Boolean) as MenuItem[]
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -223,26 +249,40 @@ export default function MenuPage() {
   })
   const [editDay, setEditDay] = useState<DayOfWeek | null>(null)
 
-  // Recipe drawer state
-  const [drawerItem, setDrawerItem] = useState<{ name: string; recipe: Recipe | null } | null>(null)
+  // Recipe drawer: holds the MenuItem that was tapped
+  const [drawerMenuItem, setDrawerMenuItem] = useState<MenuItem | null>(null)
 
   useEffect(() => { fetchWeeks(); fetchItems(); fetchRecipes() }, []) // eslint-disable-line
 
   const selectedWeek = useMemo(() => weeks.find(w => w.id === selectedWeekId) ?? null, [weeks, selectedWeekId])
   const currentDay   = DAYS_OF_WEEK[dayIdx] as DayOfWeek
 
-  // Look up recipe by item name (case-insensitive match on recipe.name)
-  const findRecipeForItem = useCallback((itemName: string): Recipe | null => {
-    if (!itemName) return null
-    const lower = itemName.toLowerCase()
-    return recipes.find(r => r.name.toLowerCase() === lower) ?? null
-  }, [recipes])
+  // Build a fast recipeId → Recipe map
+  const recipeById = useMemo(() =>
+    new Map(recipes.map(r => [r.id, r])),
+  [recipes])
 
-  const handleItemTap = useCallback((itemName: string) => {
-    if (!itemName) return
-    const recipe = findRecipeForItem(itemName)
-    setDrawerItem({ name: itemName, recipe })
-  }, [findRecipeForItem])
+  /**
+   * Resolve the Recipe for a MenuItem using recipeId (exact, stable).
+   * Returns null if no recipeId is set or the recipe isn’t found.
+   */
+  const recipeForItem = useCallback((item: MenuItem): Recipe | null => {
+    if (!item.recipeId) return null
+    return recipeById.get(item.recipeId) ?? null
+  }, [recipeById])
+
+  /**
+   * Open the drawer for the first MenuItem in an entry that either
+   * has a recipe link or, if none do, just the first item.
+   */
+  const handleItemTap = useCallback((menuItemObj: MenuItem) => {
+    setDrawerMenuItem(menuItemObj)
+  }, [])
+
+  const drawerRecipe = useMemo(
+    () => drawerMenuItem ? recipeForItem(drawerMenuItem) : null,
+    [drawerMenuItem, recipeForItem]
+  )
 
   const handleAddWeek = useCallback(async () => {
     if (!newWeekName.trim()) return
@@ -283,6 +323,52 @@ export default function MenuPage() {
       )
     )
   }, [selectedWeekId, updateMealEntry])
+
+  // ── Render helpers for meal slot rows ───────────────────────────────────────
+  function SlotValue({ entry, emptyText }: { entry: MealEntry; emptyText: string }) {
+    const slotItems = entryItems(entry, items)
+    const label = entryLabel(entry, items)
+
+    if (!label) {
+      return <span className="meal-slot-value meal-slot-empty-text">{emptyText}</span>
+    }
+
+    // If entry has exactly one item with a recipe link, tap opens the drawer
+    // If multiple items, show each as a tappable segment
+    if (slotItems.length > 0) {
+      return (
+        <span className="meal-slot-value" style={{ display:'flex', flexWrap:'wrap', gap:4, cursor:'default' }}>
+          {slotItems.map((mi, idx) => {
+            const hasRecipe = !!mi.recipeId
+            return (
+              <span key={mi.id}>
+                <span
+                  className={hasRecipe ? 'meal-slot-has-recipe' : ''}
+                  style={{ cursor: hasRecipe ? 'pointer' : 'default' }}
+                  onClick={() => handleItemTap(mi)}
+                >{mi.name}</span>
+                {/* Show dietary tags inline below name */}
+                {mi.dietaryTags && mi.dietaryTags.length > 0 && (
+                  <span className="meal-diet-tags" style={{ display:'inline-flex', marginLeft:6 }}>
+                    {mi.dietaryTags.map(t => <span key={t} className="meal-diet-badge">{t}</span>)}
+                  </span>
+                )}
+                {idx < slotItems.length - 1 && <span style={{ color:'var(--text-muted)' }}>,&nbsp;</span>}
+              </span>
+            )
+          })}
+        </span>
+      )
+    }
+
+    // Fallback: label-only entry (no itemIds), still tappable to show "no recipe" state
+    return (
+      <span className="meal-slot-value" onClick={() => {
+        // Construct a minimal pseudo-item so the drawer can show a helpful message
+        setDrawerMenuItem({ id: '', name: label, textureModified: false })
+      }}>{label}</span>
+    )
+  }
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -328,7 +414,7 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* Actions row — no emoji icons, plain text labels */}
+      {/* Actions row */}
       {selectedWeek && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18, alignItems: 'center' }}>
           {!selectedWeek.active && <button onClick={handleSetActive} style={{ padding: '8px 14px', background: 'var(--color-success-light)', color: 'var(--color-success-hover)', border: '1px solid rgba(74,163,104,.3)', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Set as Live</button>}
@@ -353,18 +439,15 @@ export default function MenuPage() {
       {/* ══ MOBILE ══ */}
       {selectedWeek && (
         <div className="menu-mobile">
-          {/* Day nav */}
           <div className="menu-day-nav">
             <button className="menu-day-arrow" onClick={() => setDayIdx(i => Math.max(0,i-1))} disabled={dayIdx===0} style={{ opacity: dayIdx===0 ? 0.3:1 }}>‹</button>
             <div className="menu-day-label">{currentDay}<span>Cycle: {selectedWeek.name}{selectedWeek.active ? ' · Live':''}</span></div>
             <button className="menu-day-arrow" onClick={() => setDayIdx(i => Math.min(DAYS_OF_WEEK.length-1,i+1))} disabled={dayIdx===DAYS_OF_WEEK.length-1} style={{ opacity: dayIdx===DAYS_OF_WEEK.length-1 ? 0.3:1 }}>›</button>
           </div>
-          {/* Day dots */}
           <div style={{ display:'flex', justifyContent:'center', gap:5, marginBottom:16 }}>
             {DAYS_OF_WEEK.map((d,i) => <button key={d} onClick={() => setDayIdx(i)} style={{ width:i===dayIdx?20:7, height:7, borderRadius:4, background:i===dayIdx?'var(--color-primary)':'var(--border-color)', border:'none', cursor:'pointer', padding:0, transition:'all 0.2s ease' }} />)}
           </div>
 
-          {/* Meal group cards */}
           {MEAL_GROUPS.map(group => (
             <div key={group.id} className="meal-group-card">
               <div className="meal-group-header">
@@ -372,39 +455,27 @@ export default function MenuPage() {
                 <button className="meal-group-edit-btn" onClick={() => setEditDay(currentDay)}>Edit</button>
               </div>
 
-              {/* Breakfast — single slot */}
               {group.singleSlot && (() => {
                 const entry = selectedWeek.days[currentDay]?.[group.singleSlot] ?? { itemIds: [] }
-                const text = entryLabel(entry, items)
-                const hasRecipe = text ? !!findRecipeForItem(text) : false
                 return (
                   <div className="meal-option-block">
                     <div className="meal-slot-row">
-                      <span
-                        className={`meal-slot-value${!text?' meal-slot-empty-text':''}${hasRecipe?' meal-slot-has-recipe':''}`}
-                        onClick={() => text && handleItemTap(text)}
-                      >{text || 'Nothing planned'}</span>
+                      <SlotValue entry={entry} emptyText="Nothing planned" />
                     </div>
                   </div>
                 )
               })()}
 
-              {/* Lunch / Dinner — two options */}
               {group.options?.map(opt => (
                 <div key={opt.label} className="meal-option-block">
                   <div className="meal-option-label">{opt.label}</div>
                   <div className="meal-option-grid">
                     {opt.slots.map(({ slot, label }) => {
                       const entry = selectedWeek.days[currentDay]?.[slot] ?? { itemIds: [] }
-                      const text = entryLabel(entry, items)
-                      const hasRecipe = text ? !!findRecipeForItem(text) : false
                       return (
                         <div key={slot} className="meal-slot-row">
                           <span className="meal-slot-tag">{label}</span>
-                          <span
-                            className={`meal-slot-value${!text?' meal-slot-empty-text':''}${hasRecipe?' meal-slot-has-recipe':''}`}
-                            onClick={() => text && handleItemTap(text)}
-                          >{text || '—'}</span>
+                          <SlotValue entry={entry} emptyText="—" />
                         </div>
                       )
                     })}
@@ -412,17 +483,12 @@ export default function MenuPage() {
                 </div>
               ))}
 
-              {/* Dessert */}
               {group.dessertSlot && (() => {
                 const entry = selectedWeek.days[currentDay]?.[group.dessertSlot] ?? { itemIds: [] }
-                const text = entryLabel(entry, items)
                 return (
                   <div className="meal-dessert-block">
                     <span className="meal-dessert-label">Dessert</span>
-                    <span
-                      className={`meal-dessert-value${!text?' meal-slot-empty-text':''}`}
-                      onClick={() => text && handleItemTap(text)}
-                    >{text || 'None planned'}</span>
+                    <SlotValue entry={entry} emptyText="None planned" />
                   </div>
                 )
               })()}
@@ -434,11 +500,7 @@ export default function MenuPage() {
       {/* ══ DESKTOP ══ */}
       {selectedWeek && (
         <div className="menu-desktop">
-          <WeekGrid
-            week={selectedWeek}
-            items={items}
-            onEditDay={(day) => setEditDay(day)}
-          />
+          <WeekGrid week={selectedWeek} items={items} onEditDay={day => setEditDay(day)} />
         </div>
       )}
 
@@ -453,7 +515,7 @@ export default function MenuPage() {
             ) as Record<MealSlot, MealEntry>
           }
           allItems={items}
-          onSave={(updates) => handleSaveDay(editDay, updates)}
+          onSave={updates => handleSaveDay(editDay, updates)}
           onClose={() => setEditDay(null)}
         />
       )}
@@ -469,11 +531,11 @@ export default function MenuPage() {
       )}
 
       {/* Recipe drawer */}
-      {drawerItem && (
+      {drawerMenuItem && (
         <RecipeDrawer
-          itemName={drawerItem.name}
-          recipe={drawerItem.recipe}
-          onClose={() => setDrawerItem(null)}
+          menuItem={drawerMenuItem}
+          recipe={drawerRecipe}
+          onClose={() => setDrawerMenuItem(null)}
         />
       )}
     </div>
