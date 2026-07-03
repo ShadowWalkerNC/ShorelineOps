@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { Routes, Route, NavLink } from 'react-router-dom'
 import AuthGuard from './features/auth/AuthGuard'
 import LoginPage from './features/auth/LoginPage'
 import ResidentsPage from './features/residents/ResidentsPage'
@@ -77,27 +77,25 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/*"
-          element={
-            <AuthGuard>
-              <Layout>
-                <Routes>
-                  <Route path="/residents"       element={<ResidentsPage />} />
-                  <Route path="/residents/:id"   element={<ResidentProfilePage />} />
-                  <Route path="/menu"            element={<MenuPage />} />
-                  <Route path="/production"      element={<ProductionPage />} />
-                  <Route path="/admin"           element={<AdminPage />} />
-                  <Route path="*"                element={<ResidentsPage />} />
-                </Routes>
-              </Layout>
-            </AuthGuard>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/*"
+        element={
+          <AuthGuard>
+            <Layout>
+              <Routes>
+                <Route path="/residents"       element={<ResidentsPage />} />
+                <Route path="/residents/:id"   element={<ResidentProfilePage />} />
+                <Route path="/menu"            element={<MenuPage />} />
+                <Route path="/production"      element={<ProductionPage />} />
+                <Route path="/admin"           element={<AdminPage />} />
+                <Route path="*"                element={<ResidentsPage />} />
+              </Routes>
+            </Layout>
+          </AuthGuard>
+        }
+      />
+    </Routes>
   )
 }
