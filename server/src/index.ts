@@ -14,6 +14,7 @@ import { adminRouter } from './routes/admin'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 import { runMigrations } from './db/migrate'
+import { runSeed } from './db/seed'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -58,15 +59,16 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOS
 // Global error handler
 app.use(errorHandler)
 
-// Run migrations then start server
+// Migrate → seed → start
 runMigrations()
+  .then(() => runSeed())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
     })
   })
   .catch((err) => {
-    console.error('[Shoreline API] Migration failed, aborting startup:', err)
+    console.error('[Shoreline API] Startup failed:', err)
     process.exit(1)
   })
 

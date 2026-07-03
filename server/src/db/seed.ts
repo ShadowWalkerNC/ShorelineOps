@@ -1,10 +1,3 @@
-/**
- * Development seed — creates one admin user + realistic residents.
- * Run: npx tsx src/db/seed.ts
- *
- * WARNING: Do NOT run against production.
- */
-import 'dotenv/config'
 import bcrypt from 'bcryptjs'
 import { pool } from './pool'
 
@@ -22,26 +15,32 @@ const RESIDENTS = [
   { name: 'Walter Kim', room: '108', status: 'LOA', diet_type: 'Regular', texture: 'Regular', portion_size: 'Regular', ensure_per_day: 0, allergies: [], beverages: ['Tea'], birthday_month: 'December', birthday_day: 25, serving_location: 'Dining Room', table_assignment: 'Table 4', likes: 'Korean food, chess', dislikes: 'American fast food', special_instructions: '' },
 ]
 
-async function seed() {
-  console.log('🌱 Seeding database...')
+export async function runSeed() {
+  const { rows } = await pool.query('SELECT COUNT(*) FROM users')
+  if (parseInt(rows[0].count) > 0) {
+    console.log('[seed] Users already exist — skipping seed')
+    return
+  }
+
+  console.log('[seed] Empty database detected — seeding...')
 
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 12)
-  await pool.query(`
-    INSERT INTO users (name, email, password, role)
-    VALUES ('Admin User', $1, $2, 'admin')
-    ON CONFLICT (email) DO NOTHING`,
+  await pool.query(
+    `INSERT INTO users (name, email, password, role)
+     VALUES ('Admin User', $1, $2, 'admin')
+     ON CONFLICT (email) DO NOTHING`,
     [ADMIN_EMAIL, hash]
   )
-  console.log(`  ✓ Admin user: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
+  console.log(`[seed] Admin created: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
 
   for (const r of RESIDENTS) {
-    await pool.query(`
-      INSERT INTO residents
+    await pool.query(
+      `INSERT INTO residents
         (name, room, status, diet_type, texture, portion_size, ensure_per_day,
          allergies, beverages, birthday_month, birthday_day, serving_location,
          table_assignment, likes, dislikes, special_instructions)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-      ON CONFLICT DO NOTHING`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       ON CONFLICT DO NOTHING`,
       [
         r.name, r.room, r.status, r.diet_type, r.texture, r.portion_size,
         r.ensure_per_day, r.allergies, r.beverages, r.birthday_month,
@@ -50,10 +49,15 @@ async function seed() {
       ]
     )
   }
-  console.log(`  ✓ ${RESIDENTS.length} residents inserted`)
-
-  await pool.end()
-  console.log('✅ Seed complete')
+  console.log(`[seed] ${RESIDENTS.length} residents inserted`)
+  console.log('[seed] Done.')
 }
 
-seed().catch((e) => { console.error(e); process.exit(1) })
+// Allow running directly: npx tsx src/db/seed.ts
+if (require.main === module) {
+  import('dotenv/config').then(() =>
+    runSeed()
+      .then(() => pool.end())
+      .catch((e) => { console.error(e); process.exit(1) })
+  )
+}
