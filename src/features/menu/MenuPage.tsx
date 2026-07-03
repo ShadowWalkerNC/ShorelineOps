@@ -2,11 +2,11 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useMenuStore } from '@/state/menuStore'
 import WeekGrid from './components/WeekGrid'
 import ItemLibraryPanel from './components/ItemLibraryPanel'
-import MealSlotEditor from './components/MealSlotEditor'
-import type { DayOfWeek, MealSlot, MealEntry, MenuItem } from '@/types'
-import { DAYS_OF_WEEK, MEAL_GROUPS } from '@/types/menu'
+import DayEditorModal from './components/DayEditorModal'
+import type { DayOfWeek, MealSlot, MealEntry } from '@/types'
+import { DAYS_OF_WEEK, MEAL_GROUPS, MEAL_SLOTS } from '@/types/menu'
 
-// ── CSS ───────────────────────────────────────────────────────────────────────
+// ── CSS ──────────────────────────────────────────────────────────────────────
 const MENU_CSS = `
   .menu-cycle-pills { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
   .menu-cycle-pills::-webkit-scrollbar { display:none; }
@@ -32,8 +32,15 @@ const MENU_CSS = `
 
   /* Meal group card */
   .meal-group-card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); overflow:hidden; margin-bottom:14px; }
-  .meal-group-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--color-primary-light); border-bottom:1px solid var(--border-color); }
-  .meal-group-title { font-size:14px; font-weight:800; color:var(--text-primary); font-family:'Outfit',sans-serif; text-transform:uppercase; letter-spacing:0.5px; }
+  .meal-group-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--color-primary-light); border-bottom:1px solid var(--border-color); }
+  .meal-group-title { font-size:13px; font-weight:800; color:var(--text-primary); font-family:'Outfit',sans-serif; text-transform:uppercase; letter-spacing:0.5px; }
+  .meal-group-edit-btn {
+    padding:4px 12px; border-radius:12px; font-size:11px; font-weight:700;
+    background:var(--bg-card); border:1px solid var(--border-color);
+    color:var(--text-secondary); cursor:pointer; font-family:'Outfit',sans-serif;
+    transition:all 0.15s ease;
+  }
+  .meal-group-edit-btn:active { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
 
   /* Option block inside a meal card */
   .meal-option-block { padding:12px 16px; border-bottom:1px solid var(--border-color); }
@@ -44,12 +51,6 @@ const MENU_CSS = `
   .meal-slot-tag { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-muted); min-width:40px; flex-shrink:0; }
   .meal-slot-value { flex:1; font-size:13px; font-weight:600; color:var(--text-primary); }
   .meal-slot-empty-text { color:var(--text-muted); font-style:italic; font-weight:400; font-size:12px; }
-  .meal-slot-edit-inline {
-    padding:3px 9px; background:var(--bg-app); border:1px solid var(--border-color);
-    border-radius:10px; font-size:10px; font-weight:700; cursor:pointer; color:var(--text-secondary);
-    font-family:'Outfit',sans-serif; transition:all 0.15s; flex-shrink:0;
-  }
-  .meal-slot-edit-inline:active { background:var(--color-primary-light); color:var(--color-primary); }
 
   /* Dessert row */
   .meal-dessert-block { padding:10px 16px; background:var(--bg-app); border-top:1px dashed var(--border-color); display:flex; align-items:center; gap:8px; }
@@ -59,13 +60,6 @@ const MENU_CSS = `
   .menu-mobile { display:block; }
   .menu-desktop { display:none; }
   @media (min-width:768px) { .menu-mobile { display:none; } .menu-desktop { display:block; } }
-
-  .menu-modal-overlay { position:fixed; inset:0; z-index:500; background:rgba(13,27,42,0.5); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:16px; }
-  .menu-modal-box { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 20px 60px rgba(13,27,42,0.3); width:100%; max-width:480px; max-height:90dvh; overflow-y:auto; padding:20px; }
-  .menu-modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border-color); }
-  .menu-modal-title { font-size:15px; font-weight:800; color:var(--text-primary); font-family:'Outfit',sans-serif; }
-  .menu-modal-close { width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; color:var(--text-muted); font-size:16px; transition:all 0.15s; }
-  .menu-modal-close:hover { color:var(--color-danger-hover); border-color:var(--color-danger-hover); }
 
   .menu-inline-form { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; padding:12px 14px; background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-lg); }
   .menu-inline-form input { flex:1; min-width:120px; padding:8px 12px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:13px; color:var(--text-primary); outline:none; }
@@ -84,18 +78,19 @@ function InjectMenuStyles() {
 }
 
 // ── Helper ───────────────────────────────────────────────────────────────────
-function entryLabel(entry: MealEntry, items: MenuItem[]): string {
+function entryLabel(entry: MealEntry, items: { id: string; name: string }[]): string {
   if (entry.label) return entry.label
-  return entry.itemIds.map((id: string) => items.find((i: MenuItem) => i.id === id)?.name).filter(Boolean).join(', ')
+  return entry.itemIds.map(id => items.find(i => i.id === id)?.name).filter(Boolean).join(', ')
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function MenuPage() {
   const {
     weeks, items, selectedWeekId, loading, error,
     fetchWeeks, fetchItems,
     addWeek, updateWeek, deleteWeek, setActiveWeek, selectWeek,
-    updateMealEntry, addItem, updateItem, deleteItem,
+    updateMealEntry,
+    addItem, updateItem, deleteItem,
   } = useMenuStore()
 
   const [showLibrary, setShowLibrary] = useState(false)
@@ -105,9 +100,11 @@ export default function MenuPage() {
   const [copyingFrom, setCopyingFrom] = useState<string | null>(null)
   const [copyName,    setCopyName]    = useState('')
   const [dayIdx,      setDayIdx]      = useState(() => {
-    const t = new Date().getDay(); return Math.min(t === 0 ? 6 : t - 1, DAYS_OF_WEEK.length - 1)
+    const t = new Date().getDay()
+    return Math.min(t === 0 ? 6 : t - 1, DAYS_OF_WEEK.length - 1)
   })
-  const [editSlot, setEditSlot] = useState<{ day: DayOfWeek; slot: MealSlot; label: string } | null>(null)
+  // editDay = which day is open in the full-day editor
+  const [editDay, setEditDay] = useState<DayOfWeek | null>(null)
 
   useEffect(() => { fetchWeeks(); fetchItems() }, []) // eslint-disable-line
 
@@ -133,17 +130,27 @@ export default function MenuPage() {
     } finally { setWeekSaving(false) }
   }, [copyingFrom, copyName, weeks, addWeek, updateWeek])
 
-  const handleDeleteWeek  = useCallback(async () => {
+  const handleDeleteWeek = useCallback(async () => {
     if (!selectedWeek || !window.confirm(`Delete "${selectedWeek.name}"? This cannot be undone.`)) return
     await deleteWeek(selectedWeek.id)
   }, [selectedWeek, deleteWeek])
 
-  const handleSetActive   = useCallback(async () => { if (selectedWeek) await setActiveWeek(selectedWeek.id) }, [selectedWeek, setActiveWeek])
+  const handleSetActive = useCallback(async () => {
+    if (selectedWeek) await setActiveWeek(selectedWeek.id)
+  }, [selectedWeek, setActiveWeek])
 
-  const handleUpdateSlot  = useCallback(
-    (day: DayOfWeek, slot: MealSlot, entry: Partial<MealEntry>) => updateMealEntry(selectedWeekId!, day, slot, entry),
-    [selectedWeekId, updateMealEntry]
-  )
+  // Save all slots for a day at once
+  const handleSaveDay = useCallback(async (
+    day: DayOfWeek,
+    updates: Partial<Record<MealSlot, Partial<MealEntry>>>
+  ) => {
+    if (!selectedWeekId) return
+    await Promise.all(
+      (Object.entries(updates) as [MealSlot, Partial<MealEntry>][]).map(([slot, entry]) =>
+        updateMealEntry(selectedWeekId, day, slot, entry)
+      )
+    )
+  }, [selectedWeekId, updateMealEntry])
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -225,11 +232,12 @@ export default function MenuPage() {
             {DAYS_OF_WEEK.map((d,i) => <button key={d} onClick={() => setDayIdx(i)} style={{ width:i===dayIdx?20:7, height:7, borderRadius:4, background:i===dayIdx?'var(--color-primary)':'var(--border-color)', border:'none', cursor:'pointer', padding:0, transition:'all 0.2s ease' }} />)}
           </div>
 
-          {/* Meal group cards */}
+          {/* Meal group cards — read-only view, Edit button per card */}
           {MEAL_GROUPS.map(group => (
             <div key={group.id} className="meal-group-card">
               <div className="meal-group-header">
                 <span className="meal-group-title">{group.label}</span>
+                <button className="meal-group-edit-btn" onClick={() => setEditDay(currentDay)}>Edit</button>
               </div>
 
               {/* Breakfast — single slot */}
@@ -240,7 +248,6 @@ export default function MenuPage() {
                   <div className="meal-option-block">
                     <div className="meal-slot-row">
                       <span className={`meal-slot-value${!text?' meal-slot-empty-text':''}`}>{text || 'Nothing planned'}</span>
-                      <button className="meal-slot-edit-inline" onClick={() => setEditSlot({ day: currentDay, slot: group.singleSlot!, label: `${group.label}` })}>✏️ Edit</button>
                     </div>
                   </div>
                 )
@@ -258,7 +265,6 @@ export default function MenuPage() {
                         <div key={slot} className="meal-slot-row">
                           <span className="meal-slot-tag">{label}</span>
                           <span className={`meal-slot-value${!text?' meal-slot-empty-text':''}`}>{text || '—'}</span>
-                          <button className="meal-slot-edit-inline" onClick={() => setEditSlot({ day: currentDay, slot, label: `${group.label} ${opt.label} — ${label}` })}>✏️</button>
                         </div>
                       )
                     })}
@@ -274,7 +280,6 @@ export default function MenuPage() {
                   <div className="meal-dessert-block">
                     <span className="meal-dessert-label">🍰 Dessert</span>
                     <span className={`meal-dessert-value${!text?' meal-slot-empty-text':''}`}>{text || 'None planned'}</span>
-                    <button className="meal-slot-edit-inline" onClick={() => setEditSlot({ day: currentDay, slot: group.dessertSlot!, label: `${group.label} — Dessert` })}>✏️</button>
                   </div>
                 )
               })()}
@@ -284,27 +289,42 @@ export default function MenuPage() {
       )}
 
       {/* ══ DESKTOP ══ */}
-      {selectedWeek && <div className="menu-desktop"><WeekGrid week={selectedWeek} items={items} onUpdateSlot={handleUpdateSlot} /></div>}
+      {selectedWeek && (
+        <div className="menu-desktop">
+          <WeekGrid
+            week={selectedWeek}
+            items={items}
+            onEditDay={(day) => setEditDay(day)}
+          />
+        </div>
+      )}
 
-      {/* Mobile edit modal */}
-      {editSlot && selectedWeek && (() => {
-        const entry = selectedWeek.days[editSlot.day]?.[editSlot.slot] ?? { itemIds: [] }
-        return (
-          <div className="menu-modal-overlay" onClick={e => { if (e.target===e.currentTarget) setEditSlot(null) }}>
-            <div className="menu-modal-box">
-              <div className="menu-modal-header">
-                <span className="menu-modal-title">{editSlot.label}</span>
-                <button className="menu-modal-close" onClick={() => setEditSlot(null)}>✕</button>
-              </div>
-              <MealSlotEditor entry={entry} allItems={items}
-                onSave={async e => { await handleUpdateSlot(editSlot.day, editSlot.slot, e); setEditSlot(null) }}
-                onClose={() => setEditSlot(null)} />
-            </div>
-          </div>
-        )
-      })()}
+      {/* Full-day editor modal */}
+      {editDay && selectedWeek && (
+        <DayEditorModal
+          day={editDay}
+          weekName={selectedWeek.name}
+          dayMenu={
+            // Ensure all slots present even if seed is sparse
+            Object.fromEntries(
+              MEAL_SLOTS.map(slot => [slot, selectedWeek.days[editDay]?.[slot] ?? { itemIds: [] }])
+            ) as Record<MealSlot, MealEntry>
+          }
+          allItems={items}
+          onSave={(updates) => handleSaveDay(editDay, updates)}
+          onClose={() => setEditDay(null)}
+        />
+      )}
 
-      {showLibrary && <ItemLibraryPanel items={items} onAdd={async p => { await addItem(p) }} onUpdate={updateItem} onDelete={deleteItem} onClose={() => setShowLibrary(false)} />}
+      {showLibrary && (
+        <ItemLibraryPanel
+          items={items}
+          onAdd={async p => { await addItem(p) }}
+          onUpdate={updateItem}
+          onDelete={deleteItem}
+          onClose={() => setShowLibrary(false)}
+        />
+      )}
     </div>
   )
 }
