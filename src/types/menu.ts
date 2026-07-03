@@ -108,12 +108,35 @@ export const DAYS_OF_WEEK = [
 ] as const
 export type DayOfWeek = (typeof DAYS_OF_WEEK)[number]
 
+// ── Meal category for item library filtering ──────────────────────────────────
+export const ITEM_MEAL_CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'All'] as const
+export type ItemMealCategory = typeof ITEM_MEAL_CATEGORIES[number]
+
+// ── Dietary tags ──────────────────────────────────────────────────────────────
+export const DIETARY_TAGS = [
+  'Gluten-Free',
+  'Dairy-Free',
+  'Nut-Free',
+  'Egg-Free',
+  'Vegan',
+  'Vegetarian',
+  'Low-Sodium',
+  'Diabetic-Friendly',
+] as const
+export type DietaryTag = typeof DIETARY_TAGS[number]
+
 // ── Core data types ───────────────────────────────────────────────────────────
 export type MenuItem = {
   id: string
   name: string
   notes?: string
   textureModified: boolean
+  /** Which meal service this item belongs to (used for library tab filtering) */
+  mealCategory?: ItemMealCategory
+  /** Dietary tags for quick-glance allergen / diet info */
+  dietaryTags?: DietaryTag[]
+  /** Optional link to a Recipe by ID for the inline recipe drawer */
+  recipeId?: string
 }
 
 export type MealEntry = {
