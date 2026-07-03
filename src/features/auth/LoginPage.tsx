@@ -70,17 +70,26 @@ export default function LoginPage() {
           padding: 32,
           animation: 'fadeIn 0.3s ease',
         }}>
-          {/* Logo */}
+          {/* Logo — uses the real /logo.png from public/ */}
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2">
-                <path d="M2 20 Q6 12 12 12 Q18 12 22 20" />
-                <path d="M12 12 V4" />
-                <circle cx="12" cy="4" r="2" />
-              </svg>
-              <span style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Outfit, sans-serif', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>Shoreline</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 8 }}>
+              <img
+                src="/logo.png"
+                alt="Shoreline logo"
+                style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 10 }}
+              />
+              <span style={{
+                fontSize: 28, fontWeight: 700,
+                fontFamily: 'Outfit, sans-serif',
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.5px',
+              }}>Shoreline</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Operations Platform</div>
+            <div style={{
+              fontSize: 11, color: 'var(--text-muted)',
+              fontWeight: 600, letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+            }}>Operations Platform</div>
           </div>
 
           <form onSubmit={handleSubmit}>
