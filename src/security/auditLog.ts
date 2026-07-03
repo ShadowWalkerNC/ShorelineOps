@@ -9,6 +9,7 @@
 export type AuditAction =
   | 'VIEW_RESIDENT'
   | 'EDIT_RESIDENT'
+  | 'RESIDENT_UPDATE'
   | 'CREATE_RESIDENT'
   | 'DELETE_RESIDENT'
   | 'LOGIN'
