@@ -52,7 +52,8 @@ const NAV_OPERATIONS = [
     to: '/recipes',
     icon: (
       <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
       </svg>
     ),
   },
@@ -61,8 +62,9 @@ const NAV_OPERATIONS = [
     to: '/production',
     icon: (
       <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <rect x="2" y="3" width="20" height="14" rx="2"/>
-        <path d="M8 21h8M12 17v4"/>
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="1"/>
+        <path d="M9 12h6M9 16h4"/>
       </svg>
     ),
   },
@@ -77,17 +79,6 @@ const NAV_ADMIN = {
       <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
     </svg>
   ),
-}
-
-// ── Shoreline logo icon ──────────────────────────────────────────────────────
-function ShorelineIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2">
-      <path d="M2 20h20" strokeLinecap="round"/>
-      <path d="M5 20 Q8 14 12 14 Q16 14 19 20" strokeLinecap="round" fill="none"/>
-      <path d="M8 20 Q10 10 12 10 Q14 10 16 20" strokeLinecap="round" fill="none"/>
-    </svg>
-  )
 }
 
 // ── NavItem ──────────────────────────────────────────────────────────────────
@@ -107,16 +98,80 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
         fontSize: 14,
         fontWeight: isActive ? 600 : 500,
         color: isActive ? 'var(--color-primary)' : 'var(--text-secondary)',
-        background: isActive ? 'var(--bg-card)' : 'transparent',
+        background: isActive ? 'var(--color-primary-light)' : 'transparent',
         boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
         transition: 'all 0.2s ease',
         minHeight: 44,
       })}
     >
       {icon}
-      {label}
+      <span style={{ flex: 1, lineHeight: 1.3 }}>{label}</span>
     </NavLink>
   )
+}
+
+// ── Inject mobile-first CSS once into <head> ─────────────────────────────────
+const LAYOUT_CSS = `
+  :root { --sidebar-width: 260px; }
+
+  /* ── Mobile: sidebar slides in as a drawer ── */
+  @media (max-width: 767px) {
+    .sidebar-aside {
+      position: fixed !important;
+      top: 0; left: 0; bottom: 0;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1) !important;
+      z-index: 200 !important;
+      box-shadow: none;
+    }
+    .sidebar-aside.open {
+      transform: translateX(0) !important;
+      box-shadow: 6px 0 40px rgba(0,0,0,0.28) !important;
+    }
+    .mobile-menu-btn  { display: flex !important; }
+    .header-search    { display: none !important; }
+    .header-logo-mobile { display: block !important; }
+    .main-content     { padding: 20px 16px !important; }
+  }
+
+  /* ── Tablet: slimmer sidebar ── */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    :root { --sidebar-width: 220px; }
+    .main-content { padding: 28px 20px !important; }
+    .header-logo-mobile { display: none !important; }
+  }
+
+  /* ── Desktop ── */
+  @media (min-width: 1024px) {
+    .mobile-menu-btn    { display: none !important; }
+    .header-logo-mobile { display: none !important; }
+  }
+
+  /* LAN status dot pulse */
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+  }
+  .status-dot-pulse { animation: dot-pulse 2.2s ease-in-out infinite; }
+
+  /* Lock body scroll when mobile drawer is open */
+  body.drawer-open { overflow: hidden !important; }
+
+  /* Remove iOS tap flash */
+  * { -webkit-tap-highlight-color: transparent; }
+`
+
+function InjectLayoutStyles() {
+  useEffect(() => {
+    const id = 'shoreline-layout-css'
+    if (!document.getElementById(id)) {
+      const el = document.createElement('style')
+      el.id = id
+      el.textContent = LAYOUT_CSS
+      document.head.appendChild(el)
+    }
+  }, [])
+  return null
 }
 
 // ── Layout ───────────────────────────────────────────────────────────────────
@@ -128,6 +183,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.role === 'admin'
 
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    document.body.classList.toggle('drawer-open', mobileOpen)
+    return () => document.body.classList.remove('drawer-open')
+  }, [mobileOpen])
+
   async function handleLogout() {
     await logout()
     navigate('/login')
@@ -137,25 +198,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', background: 'var(--bg-app)', overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex',
+      height: '100dvh',        // dvh handles mobile browser chrome correctly
+      width: '100%',
+      background: 'var(--bg-app)',
+      overflow: 'hidden',
+    }}>
+      <InjectLayoutStyles />
 
-      {/* Mobile backdrop */}
+      {/* ── Mobile backdrop ──────────────────────────────────────────── */}
       {mobileOpen && (
         <div
-          className="sidebar-backdrop"
           onClick={() => setMobileOpen(false)}
           style={{
             position: 'fixed', inset: 0,
-            background: 'rgba(15,23,42,0.45)',
-            backdropFilter: 'blur(2px)',
-            zIndex: 99,
+            background: 'rgba(15,23,42,0.55)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 199,
           }}
         />
       )}
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ──────────────────────────────────────────────────── */}
       <aside
-        className="sidebar-aside"
+        className={`sidebar-aside${mobileOpen ? ' open' : ''}`}
         style={{
           width: 'var(--sidebar-width)',
           flexShrink: 0,
@@ -163,36 +230,69 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
-          height: '100vh',
-          boxShadow: 'var(--shadow-sm)',
-          zIndex: 100,
-          transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+          height: '100dvh',
+          zIndex: 200,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // desktop transition only (mobile handled by CSS class)
+          transition: 'width 0.2s ease',
         }}
       >
-        {/* Logo */}
-        <div style={{ padding: '28px 24px', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <ShorelineIcon />
-            <div className="logo-text">
-              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.5px', lineHeight: 1.1 }}>Shoreline</div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.5px' }}>iMPAC OPERATIONS</div>
-            </div>
+        {/* ── Logo: uses your real /logo.png ───────────────────────── */}
+        <div style={{
+          padding: '20px 20px 18px',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex', alignItems: 'center', gap: 12,
+          flexShrink: 0,
+        }}>
+          <img
+            src="/logo.png"
+            alt="Shoreline logo"
+            style={{
+              width: 36, height: 36,
+              objectFit: 'contain',
+              borderRadius: 8,
+              flexShrink: 0,
+            }}
+          />
+          <div>
+            <div style={{
+              fontSize: 18, fontWeight: 800,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.4px', lineHeight: 1.15,
+              fontFamily: 'Outfit, sans-serif',
+            }}>Shoreline</div>
+            <div style={{
+              fontSize: 9, color: 'var(--text-muted)',
+              fontWeight: 700, letterSpacing: '0.6px',
+              textTransform: 'uppercase',
+            }}>iMPAC Operations</div>
           </div>
         </div>
 
-        {/* Status dot */}
-        <div style={{ padding: '8px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'rgba(255,255,255,0.25)' }}>
-          <div className="status-dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)' }} />
+        {/* ── LAN status bar ───────────────────────────────────────── */}
+        <div style={{
+          padding: '7px 20px',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          fontSize: 11, fontWeight: 500,
+          color: 'var(--color-primary)',
+          background: 'var(--color-primary-light)',
+          flexShrink: 0,
+        }}>
+          <div
+            className="status-dot-pulse"
+            style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }}
+          />
           LAN Server Mode — data synced across all devices
         </div>
 
-        {/* Nav */}
-        <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '10px 16px 4px' }}>Operations</div>
+        {/* ── Nav links ────────────────────────────────────────────── */}
+        <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '8px 16px 4px' }}>Operations</div>
           {NAV_OPERATIONS.map(item => (
             <NavItem key={item.to} {...item} onClick={() => setMobileOpen(false)} />
           ))}
-
           {isAdmin && (
             <>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '14px 16px 4px' }}>Administration</div>
@@ -201,23 +301,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: 20, borderTop: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.15)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* ── Sidebar footer ───────────────────────────────────────── */}
+        <div style={{
+          padding: '16px',
+          borderTop: '1px solid var(--border-color)',
+          display: 'flex', flexDirection: 'column', gap: 10,
+          flexShrink: 0,
+        }}>
           <button
             onClick={handleLogout}
             style={{
               width: '100%',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: 10,
+              padding: '10px 0',
               background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
               color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: 12,
-              fontWeight: 500,
+              cursor: 'pointer', fontSize: 12, fontWeight: 600,
               minHeight: 44,
-              transition: 'all 0.2s ease',
             }}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -227,45 +329,47 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </svg>
             Logout
           </button>
-          {/* Clock */}
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Current Time</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>{timeStr}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', marginTop: 2 }}>{timeStr}</div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{dateStr}</div>
           </div>
         </div>
       </aside>
 
-      {/* ── Main ────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflowY: 'auto' }}>
-        {/* Header */}
+      {/* ── Main content area ────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh', overflowY: 'auto' }}>
+
+        {/* ── Sticky header ────────────────────────────────────────── */}
         <header style={{
-          height: 70,
-          padding: '0 24px',
+          height: 58,
+          padding: '0 16px',
           borderBottom: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          gap: 10,
           background: 'var(--bg-card)',
           position: 'sticky',
           top: 0,
           zIndex: 90,
           boxShadow: 'var(--shadow-sm)',
+          flexShrink: 0,
         }}>
-          {/* Mobile hamburger */}
+
+          {/* Hamburger — CSS shows this on mobile only */}
           <button
-            onClick={() => setMobileOpen(true)}
             className="mobile-menu-btn"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation menu"
             style={{
-              display: 'none',
+              display: 'none',          // overridden to flex by CSS on mobile
               alignItems: 'center', justifyContent: 'center',
-              width: 44, height: 44,
+              width: 40, height: 40,
               background: 'transparent',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
               color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              flexShrink: 0,
+              cursor: 'pointer', flexShrink: 0,
             }}
           >
             <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -273,33 +377,73 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
 
+          {/* Logo shown in header on mobile (sidebar is hidden) */}
+          <img
+            src="/logo.png"
+            alt="Shoreline"
+            className="header-logo-mobile"
+            style={{
+              display: 'none',          // overridden by CSS on mobile
+              width: 28, height: 28,
+              objectFit: 'contain',
+              borderRadius: 6,
+              flexShrink: 0,
+            }}
+          />
+
           {/* User pill */}
           {user && (
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', background: 'var(--color-primary-light)', border: '1px solid var(--color-primary)', padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700,
+              color: 'var(--color-primary)',
+              background: 'var(--color-primary-light)',
+              border: '1px solid var(--color-primary)',
+              padding: '3px 10px', borderRadius: 20,
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
               {user.name.toUpperCase()}
               {isAdmin && <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4 }}>(Admin)</span>}
             </div>
           )}
 
-          {/* Search */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '8px 16px', flex: 1, maxWidth: 420 }}>
-            <svg width="14" height="14" fill="none" stroke="var(--text-muted)" strokeWidth="2" viewBox="0 0 24 24">
+          {/* Search bar — hidden on mobile */}
+          <div
+            className="header-search"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'var(--bg-app)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '7px 14px', flex: 1, maxWidth: 400,
+            }}
+          >
+            <svg width="13" height="13" fill="none" stroke="var(--text-muted)" strokeWidth="2" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Search residents...</span>
           </div>
 
-          {/* Active Role pill */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>
-            <span style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 10, letterSpacing: '0.5px', color: 'var(--text-muted)' }}>Active Role:</span>
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '4px 10px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+          {/* Active role pill */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 11, color: 'var(--text-secondary)',
+            flexShrink: 0, marginLeft: 'auto',
+          }}>
+            <span style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 9, letterSpacing: '0.5px', color: 'var(--text-muted)' }}>Role:</span>
+            <div style={{
+              background: 'var(--bg-app)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '3px 8px', fontSize: 12, fontWeight: 600,
+              color: 'var(--text-primary)',
+            }}>
               {isAdmin ? 'Supervisor' : 'Staff'}
             </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main style={{ padding: '40px 24px', flex: 1 }}>
+        {/* ── Page content ─────────────────────────────────────────── */}
+        <main className="main-content" style={{ padding: '32px 24px', flex: 1 }}>
           {children}
         </main>
       </div>
