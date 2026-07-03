@@ -2,118 +2,126 @@ import { useEffect, useState } from 'react'
 import { useMenuStore } from '../../state/menuStore'
 import { useResidentsStore } from '../../state/residentsStore'
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-type MealSlot = 'breakfast' | 'lunch' | 'dinner'
+// ── Types ───────────────────────────────────────────────────────────────────────────
+type MealSlot   = 'breakfast' | 'lunch' | 'dinner'
 type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'ensure' | 'shiftchecklists' | 'inventory'
 
-const SERVICE_TABS: { id: ServiceTab; label: string }[] = [
-  { id: 'worksheet',       label: 'Production Worksheet & Census Tallies' },
-  { id: 'traytickets',     label: 'Tray Tickets & Diet Spreadsheets' },
-  { id: 'preplist',        label: 'Culinary Prep List' },
-  { id: 'ensure',          label: 'Ensure Checklist' },
-  { id: 'shiftchecklists', label: 'Shift Checklists' },
-  { id: 'inventory',       label: 'Dietary Inventory' },
+const SERVICE_TABS: { id: ServiceTab; label: string; icon: string }[] = [
+  { id: 'worksheet',       label: 'Worksheet',      icon: '📋' },
+  { id: 'traytickets',     label: 'Tray Tickets',   icon: '🍽️' },
+  { id: 'preplist',        label: 'Prep List',      icon: '👨‍🍳' },
+  { id: 'ensure',          label: 'Ensure',         icon: '🥛' },
+  { id: 'shiftchecklists', label: 'Shift Checks',   icon: '✅' },
+  { id: 'inventory',       label: 'Inventory',      icon: '📦' },
 ]
 
-const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner']
-const MEAL_LABELS: Record<MealSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' }
+const MEAL_SLOTS:  MealSlot[]                   = ['breakfast', 'lunch', 'dinner']
+const MEAL_LABELS: Record<MealSlot, string>     = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' }
 
-// ── Tally helper ───────────────────────────────────────────────────────────────
+// ── Tally helper ────────────────────────────────────────────────────────────────────
 type DietTally = {
   diabetic: number; cutUp: number; minced: number; pureed: number
   glutenFree: number; nutFree: number; dairyFree: number; ensure: number
 }
-
 function emptyTally(): DietTally {
-  return { diabetic: 0, cutUp: 0, minced: 0, pureed: 0, glutenFree: 0, nutFree: 0, dairyFree: 0, ensure: 0 }
+  return { diabetic:0, cutUp:0, minced:0, pureed:0, glutenFree:0, nutFree:0, dairyFree:0, ensure:0 }
 }
 
 function TallyBadges({ t }: { t: DietTally }) {
   const items: [string, number][] = [
-    ['Diabetic', t.diabetic],
-    ['Cut-Up', t.cutUp],
-    ['Minced', t.minced],
-    ['Puréed', t.pureed],
-    ['Gluten-Free', t.glutenFree],
-    ['Nut-Free', t.nutFree],
-    ['Dairy-Free', t.dairyFree],
-    ['Ensure', t.ensure],
+    ['Diabetic', t.diabetic], ['Cut-Up', t.cutUp], ['Minced', t.minced],
+    ['Puréed', t.pureed], ['Gluten-Free', t.glutenFree],
+    ['Nut-Free', t.nutFree], ['Dairy-Free', t.dairyFree], ['Ensure', t.ensure],
   ]
   return (
-    <div style={{
-      background: 'var(--bg-app)', border: '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-md)', padding: '12px 16px',
-      display: 'flex', flexWrap: 'wrap', gap: '10px 24px',
-    }}>
+    <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', padding:'12px 16px', display:'flex', flexWrap:'wrap', gap:'10px 24px' }}>
       {items.map(([label, val]) => (
-        <span key={label} style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          {label}: <b style={{ color: 'var(--text-primary)' }}>{val}</b>
+        <span key={label} style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>
+          {label}: <b style={{ color:'var(--text-primary)' }}>{val}</b>
         </span>
       ))}
     </div>
   )
 }
 
-// ── Production Worksheet ───────────────────────────────────────────────────────
+// ── Stat Card ──────────────────────────────────────────────────────────────────────
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="sl-stat-card">
+      <div className="sl-eyebrow" style={{ marginBottom:'var(--space-1)' }}>{label}</div>
+      <div style={{ fontSize:'var(--text-4xl)', fontWeight:'var(--weight-black)', fontFamily:'var(--font-display)', color, lineHeight:1 }}>{value}</div>
+    </div>
+  )
+}
+
+// ── Check Row (shared by Ensure + Shift Checklists) ──────────────────────────────────
+function CheckRow({ done, onChange, children }: { done: boolean; onChange: () => void; children: React.ReactNode }) {
+  return (
+    <div onClick={onChange} style={{
+      background: done ? 'var(--color-success-light, #f0fdf4)' : 'var(--bg-card)',
+      border: `1px solid ${done ? '#86efac' : 'var(--border-color)'}`,
+      borderRadius:'var(--radius-md)', padding:'12px 16px',
+      display:'flex', alignItems:'center', gap:'var(--space-3)', cursor:'pointer',
+      transition:'all 0.15s',
+    }}>
+      <div style={{
+        width:20, height:20, borderRadius:'50%', flexShrink:0,
+        border:`2px solid ${done ? '#22c55e' : 'var(--border-color)'}`,
+        background: done ? '#22c55e' : 'transparent',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        color:'white', fontSize:12, fontWeight:700,
+      }}>{done ? '✓' : ''}</div>
+      <div style={{ flex:1 }}>{children}</div>
+    </div>
+  )
+}
+
+// ── Production Worksheet ───────────────────────────────────────────────────────────
 function WorksheetTab() {
   const { residents } = useResidentsStore()
-  const { weeks } = useMenuStore()
-  const activeWeek = weeks.find(w => w.active) ?? weeks[0] ?? null
+  const { weeks }     = useMenuStore()
+  const activeWeek    = weeks.find(w => w.active) ?? weeks[0] ?? null
 
-  // Build tally from actual Resident fields
   const tally = emptyTally()
   residents.forEach(r => {
-    if (r.dietType === 'Diabetic')                           tally.diabetic++
-    if (r.texture === 'Cut-Up')                             tally.cutUp++
+    if (r.dietType === 'Diabetic')                                tally.diabetic++
+    if (r.texture === 'Cut-Up')                                   tally.cutUp++
     if (r.texture === 'Minced' || r.texture === 'Minced & Moist') tally.minced++
-    if (r.texture === 'Pureed')                             tally.pureed++
-    if (r.allergies.includes('Gluten'))                     tally.glutenFree++
-    if (r.allergies.includes('Nuts'))                       tally.nutFree++
-    if (r.allergies.includes('Dairy'))                      tally.dairyFree++
-    if (r.ensurePerDay > 0)                                 tally.ensure++
+    if (r.texture === 'Pureed')                                   tally.pureed++
+    if (r.allergies.includes('Gluten'))                           tally.glutenFree++
+    if (r.allergies.includes('Nuts'))                             tally.nutFree++
+    if (r.allergies.includes('Dairy'))                            tally.dairyFree++
+    if (r.ensurePerDay > 0)                                       tally.ensure++
   })
 
-  const activeResidents = residents.filter(r => r.status === 'Active')
-  const total       = activeResidents.length
-  const diningRoom  = activeResidents.filter(r => r.servingLocation === 'Dining Room').length
-  const roomService = activeResidents.filter(r => r.servingLocation === 'Room').length
+  const active      = residents.filter(r => r.status === 'Active')
+  const total       = active.length
+  const diningRoom  = active.filter(r => r.servingLocation === 'Dining Room').length
+  const roomService = active.filter(r => r.servingLocation === 'Room').length
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Census summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px,1fr))', gap: 12 }}>
-        {[
-          { label: 'Total Census', value: total,       color: 'var(--color-primary)' },
-          { label: 'Dining Room',  value: diningRoom,  color: '#059669' },
-          { label: 'Room Service', value: roomService, color: '#d97706' },
-          { label: 'Ensure',       value: tally.ensure,color: '#7c3aed' },
-        ].map(c => (
-          <div key={c.label} style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-md)', padding: '14px 16px', boxShadow: 'var(--shadow-sm)',
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: 4 }}>{c.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: c.color, fontFamily: 'Outfit, sans-serif' }}>{c.value}</div>
-          </div>
-        ))}
+    <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-6)' }}>
+      {/* Census stat cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:'var(--space-3)' }}>
+        <StatCard label="Total Census" value={total}        color="var(--color-primary)" />
+        <StatCard label="Dining Room"  value={diningRoom}  color="#059669" />
+        <StatCard label="Room Service" value={roomService} color="#d97706" />
+        <StatCard label="Ensure"       value={tally.ensure} color="#7c3aed" />
       </div>
 
-      {/* Per-meal section */}
+      {/* Per-meal sections */}
       {MEAL_SLOTS.map(slot => (
-        <div key={slot} style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-lg)', padding: 20, boxShadow: 'var(--shadow-sm)',
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-primary)', marginBottom: 12 }}>
+        <div key={slot} style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-5)', boxShadow:'var(--shadow-sm)' }}>
+          <div className="sl-section-title" style={{ color:'var(--color-primary)', marginBottom:'var(--space-3)' }}>
             {MEAL_LABELS[slot]} Service
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'var(--space-3)', marginBottom:'var(--space-4)' }}>
             {(['Option A', 'Option B'] as const).map((opt, oi) => (
-              <div key={opt} style={{ background: 'var(--bg-app)', borderRadius: 'var(--radius-md)', padding: '10px 14px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>
-                  {opt} <span style={{ fontWeight: 400 }}>(Planned: {oi === 0 ? total : 0} portions)</span>
+              <div key={opt} style={{ background:'var(--bg-app)', borderRadius:'var(--radius-md)', padding:'10px 14px', border:'1px solid var(--border-color)' }}>
+                <div style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)', color:'var(--text-muted)', marginBottom:2 }}>
+                  {opt} <span style={{ fontWeight:400 }}>(Planned: {oi === 0 ? total : 0} portions)</span>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>
                   {activeWeek
                     ? (slot === 'breakfast' ? 'Omelet / Toast' : slot === 'lunch' ? 'Soup / Sandwich' : 'Entrée / Side')
                     : '— / — / —'}
@@ -125,66 +133,54 @@ function WorksheetTab() {
         </div>
       ))}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={() => window.print()} style={{
-          background: 'var(--color-primary)', color: 'white', border: 'none',
-          borderRadius: 'var(--radius-md)', padding: '9px 22px',
-          fontWeight: 700, fontSize: 14, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>🖨 Print Worksheet</button>
+      <div style={{ display:'flex', justifyContent:'flex-end' }}>
+        <button onClick={() => window.print()} className="btn btn-primary">
+          🖸 Print Worksheet
+        </button>
       </div>
     </div>
   )
 }
 
-// ── Tray Tickets ───────────────────────────────────────────────────────────────
+// ── Tray Tickets ─────────────────────────────────────────────────────────────────────
 function TrayTicketsTab() {
   const { residents } = useResidentsStore()
-  // Use correct field names: status 'Active', servingLocation 'Room'
   const roomResidents = residents.filter(r => r.servingLocation === 'Room' && r.status === 'Active')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-4)' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'var(--space-3)' }}>
+        <p style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>
           Room-service tray tickets for <b>{roomResidents.length}</b> residents.
         </p>
-        <button onClick={() => window.print()} style={{
-          background: 'var(--color-primary)', color: 'white', border: 'none',
-          borderRadius: 'var(--radius-md)', padding: '8px 18px',
-          fontWeight: 700, fontSize: 13, cursor: 'pointer',
-        }}>🖨 Print All Tray Tickets</button>
+        <button onClick={() => window.print()} className="btn btn-primary btn-sm">
+          🖸 Print All Tray Tickets
+        </button>
       </div>
 
       {roomResidents.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>🍽️</div>
-          <p style={{ fontSize: 14 }}>No room-service residents found.</p>
+        <div className="sl-empty">
+          <div style={{ fontSize:36, marginBottom:'var(--space-3)' }}>🍽️</div>
+          <div className="sl-empty-title">No room-service residents found.</div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))', gap: 14 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'var(--space-4)' }}>
         {roomResidents.map(r => (
-          <div key={r.id} style={{
-            background: 'var(--bg-card)', border: '2px solid var(--border-color)',
-            borderRadius: 'var(--radius-lg)', padding: 16, boxShadow: 'var(--shadow-sm)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+          <div key={r.id} style={{ background:'var(--bg-card)', border:'2px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)', boxShadow:'var(--shadow-sm)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'var(--space-3)' }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>{r.name}</div>
-                {/* tableAssignment replaces tableNumber; portionSize replaces portion */}
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Room {r.room} · Table {r.tableAssignment || '—'}</div>
+                <div style={{ fontSize:'var(--text-lg)', fontWeight:'var(--weight-black)', color:'var(--text-primary)', fontFamily:'var(--font-display)' }}>{r.name}</div>
+                <div className="sl-eyebrow" style={{ marginTop:2 }}>Room {r.room} · Table {r.tableAssignment || '—'}</div>
               </div>
-              <div style={{ fontSize: 11, fontWeight: 700, background: 'var(--color-primary-light)', color: 'var(--color-primary)', padding: '2px 8px', borderRadius: 10 }}>
-                {r.portionSize}
-              </div>
+              <span className="sl-badge sl-badge-primary">{r.portionSize}</span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)', display:'flex', flexDirection:'column', gap:'var(--space-1)' }}>
               <span>Diet: <b>{r.dietType}</b></span>
               <span>Texture: <b>{r.texture}</b></span>
-              {r.allergies.length > 0 && <span style={{ color: '#dc2626' }}>⚠ Allergies: {r.allergies.join(', ')}</span>}
+              {r.allergies.length > 0 && <span style={{ color:'#dc2626', fontWeight:'var(--weight-semi)' }}>⚠ Allergies: {r.allergies.join(', ')}</span>}
               {r.beverages.length > 0 && <span>Beverages: {r.beverages.join(', ')}</span>}
-              {r.specialInstructions && <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{r.specialInstructions}</span>}
+              {r.specialInstructions && <span style={{ color:'var(--text-muted)', fontStyle:'italic' }}>{r.specialInstructions}</span>}
             </div>
           </div>
         ))}
@@ -193,69 +189,71 @@ function TrayTicketsTab() {
   )
 }
 
-// ── Culinary Prep List ─────────────────────────────────────────────────────────
+// ── Culinary Prep List ─────────────────────────────────────────────────────────────────
 type PrepItem = { id: string; task: string; assignedTo: string; meal: MealSlot; done: boolean }
 
 function CulinaryPrepTab() {
   const [items, setItems] = useState<PrepItem[]>([
-    { id: '1', task: 'Thaw proteins for dinner service', assignedTo: 'Kitchen Staff', meal: 'breakfast', done: false },
-    { id: '2', task: 'Prep soup base',                  assignedTo: 'Cook',          meal: 'lunch',     done: false },
-    { id: '3', task: 'Slice vegetables',                assignedTo: 'Kitchen Staff', meal: 'lunch',     done: false },
-    { id: '4', task: 'Set up dessert station',          assignedTo: 'Cook',          meal: 'dinner',    done: false },
+    { id:'1', task:'Thaw proteins for dinner service', assignedTo:'Kitchen Staff', meal:'breakfast', done:false },
+    { id:'2', task:'Prep soup base',                  assignedTo:'Cook',          meal:'lunch',     done:false },
+    { id:'3', task:'Slice vegetables',                assignedTo:'Kitchen Staff', meal:'lunch',     done:false },
+    { id:'4', task:'Set up dessert station',          assignedTo:'Cook',          meal:'dinner',    done:false },
   ])
-  const [newTask, setNewTask]       = useState('')
-  const [newAssignee, setNewAssignee] = useState('')
-  const [newMeal, setNewMeal]       = useState<MealSlot>('breakfast')
+  const [newTask,    setNewTask]    = useState('')
+  const [newAssignee,setNewAssignee]= useState('')
+  const [newMeal,    setNewMeal]    = useState<MealSlot>('breakfast')
 
-  function toggle(id: string) { setItems(prev => prev.map(i => i.id === id ? { ...i, done: !i.done } : i)) }
-  function remove(id: string) { setItems(prev => prev.filter(i => i.id !== id)) }
+  function toggle(id: string) { setItems(p => p.map(i => i.id === id ? { ...i, done:!i.done } : i)) }
+  function remove(id: string) { setItems(p => p.filter(i => i.id !== id)) }
   function add() {
     if (!newTask.trim()) return
-    setItems(prev => [...prev, { id: Date.now().toString(), task: newTask.trim(), assignedTo: newAssignee || 'Unassigned', meal: newMeal, done: false }])
+    setItems(p => [...p, { id:Date.now().toString(), task:newTask.trim(), assignedTo:newAssignee||'Unassigned', meal:newMeal, done:false }])
     setNewTask(''); setNewAssignee('')
   }
 
-  const inp = { padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' as const }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-        <div style={{ flex: '2 1 200px' }}>
-          <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Task</label>
-          <input style={inp} value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="e.g. Prep salad bar" />
+    <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
+      {/* Add form */}
+      <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)', display:'flex', flexWrap:'wrap', gap:'var(--space-3)', alignItems:'flex-end' }}>
+        <div style={{ flex:'2 1 200px' }}>
+          <label>Task</label>
+          <input className="sl-input" value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="e.g. Prep salad bar" />
         </div>
-        <div style={{ flex: '1 1 140px' }}>
-          <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Assigned To</label>
-          <input style={inp} value={newAssignee} onChange={e => setNewAssignee(e.target.value)} placeholder="Staff name" />
+        <div style={{ flex:'1 1 140px' }}>
+          <label>Assigned To</label>
+          <input className="sl-input" value={newAssignee} onChange={e => setNewAssignee(e.target.value)} placeholder="Staff name" />
         </div>
-        <div style={{ flex: '1 1 120px' }}>
-          <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Meal</label>
-          <select style={inp} value={newMeal} onChange={e => setNewMeal(e.target.value as MealSlot)}>
+        <div style={{ flex:'1 1 120px' }}>
+          <label>Meal</label>
+          <select className="sl-select" value={newMeal} onChange={e => setNewMeal(e.target.value as MealSlot)}>
             {MEAL_SLOTS.map(s => <option key={s} value={s}>{MEAL_LABELS[s]}</option>)}
           </select>
         </div>
-        <button onClick={add} style={{ background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', padding: '9px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer', flexShrink: 0, alignSelf: 'flex-end' }}>+ Add</button>
+        <button onClick={add} className="btn btn-primary" style={{ flexShrink:0, alignSelf:'flex-end' }}>+ Add</button>
       </div>
 
+      {/* Per-meal groups */}
       {MEAL_SLOTS.map(slot => {
         const slotItems = items.filter(i => i.meal === slot)
         if (!slotItems.length) return null
         return (
           <div key={slot}>
-            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-primary)', marginBottom: 8 }}>{MEAL_LABELS[slot]}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="sl-section-title" style={{ color:'var(--color-primary)', marginBottom:'var(--space-2)' }}>{MEAL_LABELS[slot]}</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
               {slotItems.map(item => (
                 <div key={item.id} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--radius-md)', padding: '10px 14px',
-                  display: 'flex', alignItems: 'center', gap: 12, opacity: item.done ? 0.5 : 1,
+                  background:'var(--bg-card)', border:'1px solid var(--border-color)',
+                  borderRadius:'var(--radius-md)', padding:'10px 14px',
+                  display:'flex', alignItems:'center', gap:'var(--space-3)',
+                  opacity: item.done ? 0.5 : 1,
                 }}>
-                  <input type="checkbox" checked={item.done} onChange={() => toggle(item.id)} style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--color-primary)' }} />
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', textDecoration: item.done ? 'line-through' : 'none' }}>{item.task}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>— {item.assignedTo}</span>
+                  <input type="checkbox" checked={item.done} onChange={() => toggle(item.id)}
+                    style={{ width:16, height:16, cursor:'pointer', accentColor:'var(--color-primary)' }} />
+                  <div style={{ flex:1 }}>
+                    <span style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-medium)', color:'var(--text-primary)', textDecoration: item.done ? 'line-through' : 'none' }}>{item.task}</span>
+                    <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)', marginLeft:'var(--space-2)' }}>— {item.assignedTo}</span>
                   </div>
-                  <button onClick={() => remove(item.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>×</button>
+                  <button onClick={() => remove(item.id)} style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:16, padding:'0 4px' }}>×</button>
                 </div>
               ))}
             </div>
@@ -266,67 +264,48 @@ function CulinaryPrepTab() {
   )
 }
 
-// ── Ensure Checklist ───────────────────────────────────────────────────────────
+// ── Ensure Checklist ───────────────────────────────────────────────────────────────────
 function EnsureTab() {
-  const { residents } = useResidentsStore()
-  // ensurePerDay > 0 replaces supplement === 'Ensure'
+  const { residents }   = useResidentsStore()
   const ensureResidents = residents.filter(r => r.ensurePerDay > 0 && r.status === 'Active')
   const [checked, setChecked] = useState<Set<string>>(new Set())
 
   function toggle(id: string) {
-    setChecked(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+    setChecked(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s })
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-4)' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'var(--space-3)' }}>
+        <p style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>
           <b>{checked.size}</b> of <b>{ensureResidents.length}</b> Ensure supplements delivered today.
         </p>
-        <button onClick={() => setChecked(new Set(ensureResidents.map(r => r.id)))} style={{
-          background: 'var(--color-primary)', color: 'white', border: 'none',
-          borderRadius: 'var(--radius-md)', padding: '7px 16px',
-          fontWeight: 700, fontSize: 13, cursor: 'pointer',
-        }}>Mark All Delivered</button>
+        <button onClick={() => setChecked(new Set(ensureResidents.map(r => r.id)))} className="btn btn-primary btn-sm">
+          Mark All Delivered
+        </button>
       </div>
 
       {ensureResidents.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
-          <p style={{ fontSize: 14 }}>No residents currently on Ensure supplements.</p>
+        <div className="sl-empty">
+          <div style={{ fontSize:36, marginBottom:'var(--space-3)' }}>✅</div>
+          <div className="sl-empty-title">No residents currently on Ensure supplements.</div>
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
         {ensureResidents.map(r => (
-          <div key={r.id} onClick={() => toggle(r.id)} style={{
-            background: checked.has(r.id) ? '#f0fdf4' : 'var(--bg-card)',
-            border: `1px solid ${checked.has(r.id) ? '#86efac' : 'var(--border-color)'}`,
-            borderRadius: 'var(--radius-md)', padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}>
-            <div style={{
-              width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-              border: `2px solid ${checked.has(r.id) ? '#22c55e' : 'var(--border-color)'}`,
-              background: checked.has(r.id) ? '#22c55e' : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontSize: 12, fontWeight: 700,
-            }}>{checked.has(r.id) ? '✓' : ''}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{r.name}</div>
-              {/* ensurePerDay replaces ensureCans */}
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Room {r.room} · {r.ensurePerDay} can{r.ensurePerDay !== 1 ? 's' : ''} / day</div>
-            </div>
-            {checked.has(r.id) && <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Delivered</span>}
-          </div>
+          <CheckRow key={r.id} done={checked.has(r.id)} onChange={() => toggle(r.id)}>
+            <div style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)' }}>{r.name}</div>
+            <div className="sl-eyebrow" style={{ marginTop:2 }}>Room {r.room} · {r.ensurePerDay} can{r.ensurePerDay !== 1 ? 's' : ''} / day</div>
+            {checked.has(r.id) && <span style={{ fontSize:'var(--text-xs)', fontWeight:'var(--weight-bold)', color:'#16a34a' }}>Delivered</span>}
+          </CheckRow>
         ))}
       </div>
     </div>
   )
 }
 
-// ── Shift Checklists ───────────────────────────────────────────────────────────
+// ── Shift Checklists ─────────────────────────────────────────────────────────────────
 type ShiftType = 'morning' | 'midday' | 'evening'
 const SHIFT_TASKS: Record<ShiftType, string[]> = {
   morning: [
@@ -353,57 +332,48 @@ const SHIFT_TASKS: Record<ShiftType, string[]> = {
 }
 
 function ShiftChecklistsTab() {
-  const [shift, setShift] = useState<ShiftType>('morning')
+  const [shift,   setShift]   = useState<ShiftType>('morning')
   const [checked, setChecked] = useState<Set<string>>(new Set())
 
   function toggle(task: string) {
-    setChecked(prev => { const s = new Set(prev); s.has(task) ? s.delete(task) : s.add(task); return s })
+    setChecked(p => { const s = new Set(p); s.has(task) ? s.delete(task) : s.add(task); return s })
   }
 
   const tasks = SHIFT_TASKS[shift]
   const done  = tasks.filter(t => checked.has(`${shift}:${t}`)).length
+  const pct   = Math.round((done / tasks.length) * 100)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
+      {/* Shift selector — global sl-pills */}
+      <div className="sl-pills">
         {(['morning', 'midday', 'evening'] as ShiftType[]).map(s => (
-          <button key={s} onClick={() => setShift(s)} style={{
-            background: shift === s ? 'var(--color-primary)' : 'var(--bg-card)',
-            color: shift === s ? 'white' : 'var(--text-secondary)',
-            border: `1px solid ${shift === s ? 'var(--color-primary)' : 'var(--border-color)'}`,
-            borderRadius: 'var(--radius-md)', padding: '8px 18px',
-            fontWeight: 700, fontSize: 13, cursor: 'pointer', textTransform: 'capitalize',
-          }}>{s} Shift</button>
+          <button key={s} onClick={() => setShift(s)}
+            className={shift === s ? 'sl-pill active' : 'sl-pill'}
+            style={{ textTransform:'capitalize' }}
+          >{s} Shift</button>
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ flex: 1, height: 8, background: 'var(--bg-app)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-          <div style={{ height: '100%', width: `${(done / tasks.length) * 100}%`, background: done === tasks.length ? '#22c55e' : 'var(--color-primary)', borderRadius: 4, transition: 'width 0.3s ease' }} />
+      {/* Progress bar */}
+      <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)' }}>
+        <div style={{ flex:1, height:8, background:'var(--bg-app)', borderRadius:4, overflow:'hidden', border:'1px solid var(--border-color)' }}>
+          <div style={{ height:'100%', width:`${pct}%`, background: done === tasks.length ? '#22c55e' : 'var(--color-primary)', borderRadius:4, transition:'width 0.3s ease' }} />
         </div>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{done}/{tasks.length} done</span>
+        <span style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)', color:'var(--text-secondary)', whiteSpace:'nowrap' }}>{done}/{tasks.length} done</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Task list */}
+      <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
         {tasks.map(task => {
           const key   = `${shift}:${task}`
           const isDone = checked.has(key)
           return (
-            <div key={key} onClick={() => toggle(key)} style={{
-              background: isDone ? '#f0fdf4' : 'var(--bg-card)',
-              border: `1px solid ${isDone ? '#86efac' : 'var(--border-color)'}`,
-              borderRadius: 'var(--radius-md)', padding: '12px 16px',
-              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-            }}>
-              <div style={{
-                width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                border: `2px solid ${isDone ? '#22c55e' : 'var(--border-color)'}`,
-                background: isDone ? '#22c55e' : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 12, fontWeight: 700,
-              }}>{isDone ? '✓' : ''}</div>
-              <span style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500, textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.6 : 1 }}>{task}</span>
-            </div>
+            <CheckRow key={key} done={isDone} onChange={() => toggle(key)}>
+              <span style={{ fontSize:'var(--text-base)', color:'var(--text-primary)', fontWeight:'var(--weight-medium)', textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.6 : 1 }}>
+                {task}
+              </span>
+            </CheckRow>
           )
         })}
       </div>
@@ -411,56 +381,57 @@ function ShiftChecklistsTab() {
   )
 }
 
-// ── Dietary Inventory ──────────────────────────────────────────────────────────
+// ── Dietary Inventory ──────────────────────────────────────────────────────────────────
 type InventoryItem = { id: string; item: string; qty: number; unit: string; min: number }
 
 function InventoryTab() {
   const [items, setItems] = useState<InventoryItem[]>([
-    { id: '1', item: 'Ensure Original (vanilla)', qty: 24, unit: 'cans',    min: 12 },
-    { id: '2', item: 'Ensure Plus (chocolate)',   qty:  6, unit: 'cans',    min: 12 },
-    { id: '3', item: 'Thickener (Simply Thick)',  qty:  2, unit: 'bottles', min:  3 },
-    { id: '4', item: 'Gluten-Free bread',         qty:  1, unit: 'loaves',  min:  2 },
-    { id: '5', item: 'Lactose-Free milk',         qty: 12, unit: 'cartons', min:  6 },
-    { id: '6', item: 'Sugar-Free syrup',          qty:  3, unit: 'bottles', min:  2 },
+    { id:'1', item:'Ensure Original (vanilla)', qty:24, unit:'cans',    min:12 },
+    { id:'2', item:'Ensure Plus (chocolate)',   qty: 6, unit:'cans',    min:12 },
+    { id:'3', item:'Thickener (Simply Thick)',  qty: 2, unit:'bottles', min: 3 },
+    { id:'4', item:'Gluten-Free bread',         qty: 1, unit:'loaves',  min: 2 },
+    { id:'5', item:'Lactose-Free milk',         qty:12, unit:'cartons', min: 6 },
+    { id:'6', item:'Sugar-Free syrup',          qty: 3, unit:'bottles', min: 2 },
   ])
-  const [editing, setEditing]   = useState<string | null>(null)
-  const [tempQty, setTempQty]   = useState(0)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [tempQty, setTempQty] = useState(0)
 
   function saveEdit(id: string) {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, qty: tempQty } : i))
+    setItems(p => p.map(i => i.id === id ? { ...i, qty:tempQty } : i))
     setEditing(null)
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Items highlighted in amber are below minimum par levels.</p>
+    <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-3)' }}>
+      <p style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>Items highlighted in amber are below minimum par levels.</p>
       {items.map(item => {
         const low = item.qty < item.min
         return (
           <div key={item.id} style={{
             background: low ? '#fffbeb' : 'var(--bg-card)',
             border: `1px solid ${low ? '#fbbf24' : 'var(--border-color)'}`,
-            borderRadius: 'var(--radius-md)', padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            borderRadius:'var(--radius-md)', padding:'12px 16px',
+            display:'flex', alignItems:'center', gap:'var(--space-3)', flexWrap:'wrap',
           }}>
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.item}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Min Par: {item.min} {item.unit}</div>
+            <div style={{ flex:1, minWidth:180 }}>
+              <div style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)' }}>{item.item}</div>
+              <div className="sl-eyebrow" style={{ marginTop:2 }}>Min Par: {item.min} {item.unit}</div>
             </div>
+
             {editing === item.id ? (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <div style={{ display:'flex', gap:'var(--space-2)', alignItems:'center' }}>
                 <input type="number" value={tempQty} onChange={e => setTempQty(+e.target.value)}
-                  style={{ width: 70, padding: '5px 8px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700 }} />
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.unit}</span>
-                <button onClick={() => saveEdit(item.id)} style={{ background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', padding: '5px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Save</button>
-                <button onClick={() => setEditing(null)} style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '5px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--text-secondary)' }}>Cancel</button>
+                  className="sl-input" style={{ width:70 }} />
+                <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>{item.unit}</span>
+                <button onClick={() => saveEdit(item.id)} className="btn btn-primary btn-sm">Save</button>
+                <button onClick={() => setEditing(null)}  className="btn btn-outline btn-sm">Cancel</button>
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: low ? '#d97706' : 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>{item.qty}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.unit}</span>
-                {low && <span style={{ fontSize: 10, fontWeight: 700, color: '#d97706', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 10, padding: '2px 8px' }}>LOW</span>}
-                <button onClick={() => { setEditing(item.id); setTempQty(item.qty) }} style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--text-secondary)' }}>Edit</button>
+              <div style={{ display:'flex', gap:'var(--space-3)', alignItems:'center' }}>
+                <span style={{ fontSize:'var(--text-2xl)', fontWeight:'var(--weight-black)', color: low ? '#d97706' : 'var(--text-primary)', fontFamily:'var(--font-display)' }}>{item.qty}</span>
+                <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>{item.unit}</span>
+                {low && <span className="sl-badge" style={{ background:'#fef3c7', color:'#d97706', border:'1px solid #fbbf24' }}>LOW</span>}
+                <button onClick={() => { setEditing(item.id); setTempQty(item.qty) }} className="btn btn-outline btn-sm">Edit</button>
               </div>
             )}
           </div>
@@ -470,39 +441,48 @@ function InventoryTab() {
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
+// ── Main Page ───────────────────────────────────────────────────────────────────────────
 export default function ProductionPage() {
   const [activeTab, setActiveTab] = useState<ServiceTab>('worksheet')
-  // store.fetch replaces the old fetchResidents that doesn't exist
   const { fetch: fetchResidents } = useResidentsStore()
-  const { fetchWeeks } = useMenuStore()
+  const { fetchWeeks }            = useMenuStore()
 
-  useEffect(() => { fetchResidents(); fetchWeeks() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchResidents(); fetchWeeks() }, []) // eslint-disable-line
+
+  const activeTabMeta = SERVICE_TABS.find(t => t.id === activeTab)!
 
   return (
-    <div className="fade-in" style={{ maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.5px', marginBottom: 4 }}>Production &amp; Service</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>Production worksheets, tray tickets, prep lists, checklists, and dietary inventory.</p>
+    <div className="sl-page fade-in">
+
+      {/* PAGE HEADER */}
+      <div className="sl-page-header">
+        <h1 className="sl-page-title">Production &amp; Service</h1>
+        <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, checklists, and dietary inventory.</p>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 28 }}>
+      {/* TAB STRIP — icon + short label pills, horizontal scroll on mobile */}
+      <div className="sl-pills" style={{ marginBottom:'var(--space-6)' }}>
         {SERVICE_TABS.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            background: activeTab === t.id ? 'var(--color-primary)' : 'var(--bg-card)',
-            color: activeTab === t.id ? 'white' : 'var(--text-primary)',
-            border: `1px solid ${activeTab === t.id ? 'var(--color-primary)' : 'var(--border-color)'}`,
-            borderRadius: 'var(--radius-lg)', padding: '9px 18px',
-            fontWeight: activeTab === t.id ? 700 : 500, fontSize: 13,
-            cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s',
-          }}>{t.label}</button>
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            className={activeTab === t.id ? 'sl-pill active' : 'sl-pill'}
+          >
+            <span style={{ marginRight:'var(--space-1)' }}>{t.icon}</span>{t.label}
+          </button>
         ))}
       </div>
 
-      <div style={{
-        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)', padding: 24, boxShadow: 'var(--shadow-sm)',
-      }}>
+      {/* CONTENT CARD */}
+      <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-6)', boxShadow:'var(--shadow-sm)' }}>
+        {/* Active tab heading */}
+        <h2 className="sl-section-title" style={{ marginBottom:'var(--space-5)' }}>
+          {activeTabMeta.icon} {activeTabMeta.label === 'Worksheet' ? 'Production Worksheet & Census Tallies'
+            : activeTabMeta.label === 'Tray Tickets' ? 'Tray Tickets & Diet Spreadsheets'
+            : activeTabMeta.label === 'Prep List'    ? 'Culinary Prep List'
+            : activeTabMeta.label === 'Ensure'       ? 'Ensure Supplement Checklist'
+            : activeTabMeta.label === 'Shift Checks' ? 'Shift Checklists'
+            : 'Dietary Inventory'}
+        </h2>
+
         {activeTab === 'worksheet'       && <WorksheetTab />}
         {activeTab === 'traytickets'     && <TrayTicketsTab />}
         {activeTab === 'preplist'        && <CulinaryPrepTab />}
