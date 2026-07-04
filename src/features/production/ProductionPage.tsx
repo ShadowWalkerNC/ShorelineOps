@@ -128,6 +128,261 @@ function BreakdownTable({ title, rows }: { title: string; rows: [string, number]
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// ORDER ROUND OVERLAY
+// Full-screen card-by-card flow for entering resident meal choices
+// ────────────────────────────────────────────────────────────────────────────
+function OrderRoundOverlay({
+  residents,
+  orders,
+  opt1LunchLabel,
+  opt2LunchLabel,
+  opt1DinnerLabel,
+  opt2DinnerLabel,
+  onChoice,
+  onClose,
+}: {
+  residents: Resident[]
+  orders: Record<string, ResidentOrder>
+  opt1LunchLabel: string
+  opt2LunchLabel: string
+  opt1DinnerLabel: string
+  opt2DinnerLabel: string
+  onChoice: (id: string, meal: 'lunchChoice' | 'dinnerChoice', val: 'opt1' | 'opt2' | '') => void
+  onClose: () => void
+}) {
+  const [idx, setIdx] = useState(0)
+  const resident = residents[idx] ?? null
+  const total    = residents.length
+  const progress = total > 0 ? ((idx) / total) * 100 : 0
+
+  const order = resident ? (orders[resident.id] ?? { residentId: resident.id, lunchChoice: '', dinnerChoice: '' }) : null
+
+  function pick(meal: 'lunchChoice' | 'dinnerChoice', val: 'opt1' | 'opt2') {
+    if (!resident) return
+    // toggle off if already selected
+    const current = orders[resident.id]?.[meal] ?? ''
+    onChoice(resident.id, meal, current === val ? '' : val)
+  }
+
+  function next() { if (idx < total - 1) setIdx(i => i + 1) }
+  function prev() { if (idx > 0)         setIdx(i => i - 1) }
+  function skip() { next() }
+
+  // keyboard nav
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if (e.key === 'ArrowRight' || e.key === 'Enter') next()
+      if (e.key === 'ArrowLeft')                        prev()
+      if (e.key === 'Escape')                           onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  })
+
+  if (!resident) {
+    // Done screen
+    return (
+      <div style={overlayStyle}>
+        <div style={cardStyle}>
+          <div style={{ textAlign:'center', padding:'var(--space-8) var(--space-6)' }}>
+            <div style={{ fontSize:64, marginBottom:'var(--space-4)' }}>✅</div>
+            <div style={{ fontSize:'var(--text-3xl)', fontWeight:'var(--weight-black)', fontFamily:'var(--font-display)', color:'var(--color-primary)', marginBottom:'var(--space-2)' }}>
+              Order Round Complete
+            </div>
+            <div style={{ fontSize:'var(--text-base)', color:'var(--text-secondary)', marginBottom:'var(--space-6)' }}>
+              All {total} residents have been reviewed.
+            </div>
+            <button onClick={onClose} className="btn btn-primary" style={{ minWidth:160 }}>
+              Back to Worksheet
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const lunchDone  = (order?.lunchChoice  ?? '') !== ''
+  const dinnerDone = (order?.dinnerChoice ?? '') !== ''
+  const bothDone   = lunchDone && dinnerDone
+
+  return (
+    <div style={overlayStyle}>
+      {/* Progress bar */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:4, background:'var(--border-color)' }}>
+        <div style={{ height:'100%', width:`${progress}%`, background:'var(--color-primary)', transition:'width 0.25s ease' }} />
+      </div>
+
+      {/* Close */}
+      <button
+        onClick={onClose}
+        style={{ position:'absolute', top:16, right:20, background:'none', border:'none', fontSize:28, color:'var(--text-muted)', cursor:'pointer', lineHeight:1 }}
+        aria-label="Close"
+      >×</button>
+
+      {/* Counter */}
+      <div style={{ position:'absolute', top:16, left:20, fontSize:'var(--text-sm)', color:'var(--text-muted)', fontWeight:'var(--weight-bold)' }}>
+        {idx + 1} / {total}
+      </div>
+
+      <div style={cardStyle}>
+        {/* Resident header */}
+        <div style={{ padding:'var(--space-5) var(--space-6)', borderBottom:'1px solid var(--border-color)', background:'var(--bg-app)' }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'var(--space-4)', flexWrap:'wrap' }}>
+            <div>
+              <div style={{ fontSize:'var(--text-2xl)', fontWeight:'var(--weight-black)', fontFamily:'var(--font-display)', color:'var(--text-primary)', lineHeight:1.1 }}>
+                {resident.name}
+              </div>
+              <div className="sl-eyebrow" style={{ marginTop:'var(--space-1)' }}>
+                Room {resident.room} · {resident.servingLocation}{resident.tableAssignment ? ` · Table ${resident.tableAssignment}` : ''}
+              </div>
+            </div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'var(--space-1)' }}>
+              <span className="sl-badge sl-badge-primary">{resident.dietType}</span>
+              {resident.texture !== 'Regular' && <span className="sl-badge">{resident.texture}</span>}
+              {resident.portionSize !== 'Regular' && <span className="sl-badge">{resident.portionSize} portion</span>}
+              {resident.allergies.map(a => (
+                <span key={a} style={{ fontSize:11, fontWeight:700, background:'#fef2f2', color:'#dc2626', border:'1px solid #fca5a5', borderRadius:20, padding:'2px 8px' }}>⚠ {a}</span>
+              ))}
+            </div>
+          </div>
+          {(resident.likes || resident.dislikes || resident.specialInstructions) && (
+            <div style={{ marginTop:'var(--space-3)', display:'flex', flexWrap:'wrap', gap:'var(--space-3)' }}>
+              {resident.likes             && <span style={{ fontSize:'var(--text-xs)', color:'#059669' }}>👍 {resident.likes}</span>}
+              {resident.dislikes          && <span style={{ fontSize:'var(--text-xs)', color:'#dc2626' }}>👎 {resident.dislikes}</span>}
+              {resident.specialInstructions && <span style={{ fontSize:'var(--text-xs)', color:'#7c3aed' }}>📝 {resident.specialInstructions}</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Meal choices */}
+        <div style={{ padding:'var(--space-5) var(--space-6)', display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
+          {/* Lunch */}
+          <MealChoiceRow
+            label="Lunch"
+            icon="🥗"
+            opt1Label={opt1LunchLabel}
+            opt2Label={opt2LunchLabel}
+            choice={order?.lunchChoice ?? ''}
+            onPick={val => pick('lunchChoice', val)}
+          />
+
+          {/* Dinner */}
+          <MealChoiceRow
+            label="Dinner"
+            icon="🍽️"
+            opt1Label={opt1DinnerLabel}
+            opt2Label={opt2DinnerLabel}
+            choice={order?.dinnerChoice ?? ''}
+            onPick={val => pick('dinnerChoice', val)}
+          />
+        </div>
+
+        {/* Nav */}
+        <div style={{ padding:'var(--space-4) var(--space-6)', borderTop:'1px solid var(--border-color)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'var(--space-3)', background:'var(--bg-app)' }}>
+          <button onClick={prev} className="btn btn-outline" disabled={idx === 0} style={{ minWidth:80 }}>← Back</button>
+
+          <button onClick={skip} className="btn btn-ghost btn-sm" style={{ color:'var(--text-muted)' }}>
+            Skip →
+          </button>
+
+          <button
+            onClick={bothDone ? next : skip}
+            className="btn btn-primary"
+            style={{ minWidth:140 }}
+          >
+            {bothDone
+              ? idx === total - 1 ? '✓ Finish' : 'Next →'
+              : 'Skip →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MealChoiceRow({
+  label, icon, opt1Label, opt2Label, choice, onPick,
+}: {
+  label: string; icon: string
+  opt1Label: string; opt2Label: string
+  choice: 'opt1' | 'opt2' | ''
+  onPick: (val: 'opt1' | 'opt2') => void
+}) {
+  return (
+    <div>
+      <div style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)', color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'var(--space-2)' }}>
+        {icon} {label}
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'var(--space-3)' }}>
+        <button
+          onClick={() => onPick('opt1')}
+          style={{
+            padding:'14px 12px',
+            borderRadius:'var(--radius-lg)',
+            border: choice === 'opt1' ? '2px solid var(--color-primary)' : '2px solid var(--border-color)',
+            background: choice === 'opt1' ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'var(--bg-card)',
+            color: choice === 'opt1' ? 'var(--color-primary)' : 'var(--text-primary)',
+            fontWeight: choice === 'opt1' ? 700 : 500,
+            fontSize:'var(--text-sm)',
+            cursor:'pointer',
+            textAlign:'center',
+            lineHeight:1.4,
+            transition:'all 0.15s',
+          }}
+        >
+          <div style={{ fontSize:'var(--text-xs)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4, opacity:0.7 }}>Option 1</div>
+          {opt1Label}
+        </button>
+
+        <button
+          onClick={() => onPick('opt2')}
+          style={{
+            padding:'14px 12px',
+            borderRadius:'var(--radius-lg)',
+            border: choice === 'opt2' ? '2px solid var(--color-primary)' : '2px solid var(--border-color)',
+            background: choice === 'opt2' ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'var(--bg-card)',
+            color: choice === 'opt2' ? 'var(--color-primary)' : 'var(--text-primary)',
+            fontWeight: choice === 'opt2' ? 700 : 500,
+            fontSize:'var(--text-sm)',
+            cursor:'pointer',
+            textAlign:'center',
+            lineHeight:1.4,
+            transition:'all 0.15s',
+          }}
+        >
+          <div style={{ fontSize:'var(--text-xs)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4, opacity:0.7 }}>Option 2</div>
+          {opt2Label}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 100,
+  background: 'rgba(0,0,0,0.55)',
+  backdropFilter: 'blur(4px)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '16px',
+}
+const cardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 560,
+  background: 'var(--bg-card)',
+  borderRadius: 'var(--radius-xl)',
+  boxShadow: 'var(--shadow-xl)',
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // WORKSHEET TAB
 // ────────────────────────────────────────────────────────────────────────────
 function WorksheetTab() {
@@ -138,6 +393,7 @@ function WorksheetTab() {
   const today    = new Date().getDay()
   const tmrIndex = (today + 1) % 7
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DAYS[tmrIndex])
+  const [orderRoundOpen, setOrderRoundOpen] = useState(false)
 
   const activeWeek      = weeks.find(w => w.active) ?? weeks[0] ?? null
   const dayMenu         = activeWeek?.days?.[selectedDay]
@@ -197,8 +453,34 @@ function WorksheetTab() {
     return (dayMenu?.[`${slot}Dessert` as keyof typeof dayMenu]?.itemIds ?? []).map(itemName).join(', ') || '—'
   }
 
+  const totalOrdered = activeResidents.filter(r =>
+    (orders[r.id]?.lunchChoice ?? '') !== '' || (orders[r.id]?.dinnerChoice ?? '') !== ''
+  ).length
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-6)' }}>
+
+      {/* Order Round Banner */}
+      <div style={{ background:'color-mix(in srgb, var(--color-primary) 8%, transparent)', border:'1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)', borderRadius:'var(--radius-lg)', padding:'var(--space-4) var(--space-5)', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'var(--space-3)' }}>
+        <div>
+          <div style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-black)', color:'var(--color-primary)', fontFamily:'var(--font-display)' }}>
+            📋 Order Round
+          </div>
+          <div style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)', marginTop:2 }}>
+            Walk through each resident one-by-one and tap their meal choice.
+            {totalOrdered > 0 && <span style={{ color:'var(--color-primary)', fontWeight:700, marginLeft:6 }}>{totalOrdered}/{total} entered</span>}
+          </div>
+        </div>
+        <button
+          onClick={() => setOrderRoundOpen(true)}
+          className="btn btn-primary"
+          style={{ whiteSpace:'nowrap', flexShrink:0 }}
+          disabled={total === 0}
+        >
+          {totalOrdered > 0 ? '✏️ Continue Round' : '▶ Start Order Round'}
+        </button>
+      </div>
+
       <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
         <div className="sl-eyebrow">Planning For</div>
         <div className="sl-pills">
@@ -256,6 +538,20 @@ function WorksheetTab() {
       <div style={{ display:'flex', justifyContent:'flex-end' }}>
         <button onClick={() => window.print()} className="btn btn-primary">🖸 Print Worksheet</button>
       </div>
+
+      {/* Order Round Overlay */}
+      {orderRoundOpen && (
+        <OrderRoundOverlay
+          residents={activeResidents}
+          orders={orders}
+          opt1LunchLabel={optionLabel('lunch', 1)}
+          opt2LunchLabel={optionLabel('lunch', 2)}
+          opt1DinnerLabel={optionLabel('dinner', 1)}
+          opt2DinnerLabel={optionLabel('dinner', 2)}
+          onChoice={setChoice}
+          onClose={() => setOrderRoundOpen(false)}
+        />
+      )}
     </div>
   )
 }
