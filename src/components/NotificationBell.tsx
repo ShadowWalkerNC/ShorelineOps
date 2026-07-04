@@ -7,13 +7,8 @@
 //   2. PERSONAL NOTIFICATIONS — from notificationsStore for
 //      the logged-in staff member
 //
-// Features:
-//   - Unread badge (capped at 9+) combining both categories
-//   - Tabbed: All / System / Personal
-//   - Type icon per notification
-//   - Mark personal read on click / Mark all read
-//   - Dismiss system alerts for the session
-//   - Click-outside to close
+// Inventory alerts now read from useInventoryStore() so that
+// edits made in InventoryPage are instantly reflected here.
 // ============================================================
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
@@ -21,24 +16,10 @@ import { useAuth } from '../security/AuthContext'
 import { useNotificationsStore } from '../state/notificationsStore'
 import { useStaffStore } from '../state/staffStore'
 import { useCommunicationsStore } from '../state/communicationsStore'
+import { useInventoryStore } from '../state/inventoryStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 
-// ── Inventory seed (mirrors Dashboard / InventoryPage) ────────────────────────
-const INV_SEED = [
-  { name:'Chicken Breast',    onHand:18, parLevel:20, unit:'lbs',  category:'Proteins' },
-  { name:'Ground Beef',       onHand:12, parLevel:15, unit:'lbs',  category:'Proteins' },
-  { name:'Salmon Fillets',    onHand: 8, parLevel:10, unit:'lbs',  category:'Proteins' },
-  { name:'Eggs (large)',      onHand:48, parLevel:60, unit:'each', category:'Dairy' },
-  { name:'Whole Milk',        onHand: 6, parLevel: 8, unit:'gal',  category:'Dairy' },
-  { name:'Shredded Cheese',   onHand: 3, parLevel: 4, unit:'lbs',  category:'Dairy' },
-  { name:'Broccoli',          onHand: 5, parLevel: 8, unit:'lbs',  category:'Produce' },
-  { name:'Bagged Spinach',    onHand: 2, parLevel: 4, unit:'bags', category:'Produce' },
-  { name:'Ensure Plus',       onHand:24, parLevel:36, unit:'cans', category:'Supplements' },
-  { name:'Simply Thick (Gel)',onHand: 6, parLevel:10, unit:'jars', category:'Supplements' },
-  { name:'Dish Soap',         onHand: 2, parLevel: 3, unit:'btl',  category:'Cleaning' },
-  { name:'Bleach',            onHand: 1, parLevel: 2, unit:'gal',  category:'Cleaning' },
-  { name:'Gloves (M)',        onHand:50, parLevel:100,unit:'ct',   category:'Supplies' },
-]
+// ── Budget constants (static until budget store exists) ───────────────────────
 const BUDGET_PERIOD = { residentCount: 42, budgetPerResidentPerDay: 9.50, totalDays: 31, label: 'July 2026', startDate: '2026-07-01' }
 const BUDGET_SPENT  = 1097.85
 
@@ -99,6 +80,7 @@ export default function NotificationBell() {
   const { notifications, fetch: fetchNotifs, markRead, markAllRead } = useNotificationsStore()
   const { profiles, fetch: fetchStaff } = useStaffStore()
   const { threads, fetchThreads } = useCommunicationsStore()
+  const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
   const [open, setOpen]           = useState(false)
   const [tab, setTab]             = useState<'all' | 'system' | 'personal'>('all')
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
@@ -110,9 +92,10 @@ export default function NotificationBell() {
     fetchStaff()
     fetchNotifs()
     fetchThreads()
+    fetchInventory()            // seeded once; no-op if already loaded
     const id = setInterval(() => { fetchNotifs(); fetchThreads() }, 30_000)
     return () => clearInterval(id)
-  }, [fetchStaff, fetchNotifs, fetchThreads])
+  }, [fetchStaff, fetchNotifs, fetchThreads, fetchInventory])
 
   if (!user) return null
 
@@ -128,27 +111,30 @@ export default function NotificationBell() {
     : []
   const personalUnread = personal.filter(n => !n.isRead).length
 
-  // ── System alerts (live derived) ────────────────────────────────────────────
+  // ── System alerts (live derived from real stores) ───────────────────────────
   const systemAlerts = useMemo<SystemAlert[]>(() => {
-    const now = new Date().toISOString()
+    const now      = new Date().toISOString()
     const alerts: SystemAlert[] = []
+    const zeroItems = getZeroItems()
+    const lowPar    = getLowParItems()
 
-    // Inventory
-    const lowPar    = INV_SEED.filter(i => i.onHand < i.parLevel)
-    const zeroItems = lowPar.filter(i => i.onHand === 0)
+    // Inventory — zero stock takes priority over low par
     if (zeroItems.length > 0) {
       alerts.push({
         id: 'sys-inv-zero', type: 'inventory', severity: 'critical',
-        subject: `${zeroItems.length} item(s) completely out of stock`,
-        body: zeroItems.map(i => `${i.name} (0 ${i.unit})`).join(', '),
+        subject: `${zeroItems.length} item${zeroItems.length > 1 ? 's' : ''} completely out of stock`,
+        body: zeroItems.map(i => `${i.item} (0 ${i.unit})`).join(', '),
         link: '/inventory', createdAt: now,
       })
-    } else if (lowPar.length > 0) {
+    }
+    // Show low-par alert separately even if some are zero
+    const belowParOnly = lowPar.filter(i => i.qty > 0)
+    if (belowParOnly.length > 0) {
       alerts.push({
         id: 'sys-inv-low', type: 'inventory', severity: 'warning',
-        subject: `${lowPar.length} item(s) below par level`,
-        body: lowPar.slice(0, 4).map(i => `${i.name} (${i.onHand}/${i.parLevel} ${i.unit})`).join(', ') +
-              (lowPar.length > 4 ? ` +${lowPar.length - 4} more` : ''),
+        subject: `${belowParOnly.length} item${belowParOnly.length > 1 ? 's' : ''} below par level`,
+        body: belowParOnly.slice(0, 4).map(i => `${i.item} (${i.qty}/${i.min} ${i.unit})`).join(', ') +
+              (belowParOnly.length > 4 ? ` +${belowParOnly.length - 4} more` : ''),
         link: '/inventory', createdAt: now,
       })
     }
@@ -168,12 +154,12 @@ export default function NotificationBell() {
 
     // Budget (manager+)
     if (atLeast('manager')) {
-      const totalBudget  = BUDGET_PERIOD.residentCount * BUDGET_PERIOD.budgetPerResidentPerDay * BUDGET_PERIOD.totalDays
-      const start        = new Date(BUDGET_PERIOD.startDate)
-      const daysElapsed  = Math.max(1, Math.min(BUDGET_PERIOD.totalDays,
+      const totalBudget = BUDGET_PERIOD.residentCount * BUDGET_PERIOD.budgetPerResidentPerDay * BUDGET_PERIOD.totalDays
+      const start       = new Date(BUDGET_PERIOD.startDate)
+      const daysElapsed = Math.max(1, Math.min(BUDGET_PERIOD.totalDays,
         Math.ceil((Date.now() - start.getTime()) / 86_400_000) + 1))
-      const projected    = (BUDGET_SPENT / daysElapsed) * BUDGET_PERIOD.totalDays
-      const pct          = (BUDGET_SPENT / totalBudget) * 100
+      const projected   = (BUDGET_SPENT / daysElapsed) * BUDGET_PERIOD.totalDays
+      const pct         = (BUDGET_SPENT / totalBudget) * 100
 
       if (projected > totalBudget) {
         alerts.push({
@@ -193,10 +179,10 @@ export default function NotificationBell() {
     }
 
     return alerts.filter(a => !dismissed.has(a.id))
-  }, [threads, dismissed, atLeast])
+  }, [getLowParItems, getZeroItems, threads, dismissed, atLeast])
 
-  const totalUnread  = personalUnread + systemAlerts.length
-  const hasCritical  = systemAlerts.some(a => a.severity === 'critical')
+  const totalUnread = personalUnread + systemAlerts.length
+  const hasCritical = systemAlerts.some(a => a.severity === 'critical')
 
   function dismiss(id: string) {
     setDismissed(prev => new Set([...prev, id]))
