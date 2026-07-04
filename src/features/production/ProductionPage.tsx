@@ -34,6 +34,17 @@ function isProtein(name: string) {
   return PROTEIN_KEYWORDS.some(k => name.toLowerCase().includes(k))
 }
 
+// Items matching any of these keywords are beverages — skip them on the prep list
+const DRINK_KEYWORDS = [
+  'juice','milk','coffee','tea','water','beverage','drink','cocoa','hot chocolate',
+  'lemonade','punch','soda','cider','smoothie','shake','broth','soup','ensure',
+  'boost','nectar','thickened','fluid',
+]
+function isBeverage(name: string) {
+  const lower = name.toLowerCase()
+  return DRINK_KEYWORDS.some(k => lower.includes(k))
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────────────
 type ResidentOrder = {
   residentId: string
@@ -129,7 +140,6 @@ function BreakdownTable({ title, rows }: { title: string; rows: [string, number]
 
 // ────────────────────────────────────────────────────────────────────────────
 // ORDER ROUND OVERLAY
-// Full-screen card-by-card flow for entering resident meal choices
 // ────────────────────────────────────────────────────────────────────────────
 function OrderRoundOverlay({
   residents,
@@ -159,7 +169,6 @@ function OrderRoundOverlay({
 
   function pick(meal: 'lunchChoice' | 'dinnerChoice', val: 'opt1' | 'opt2') {
     if (!resident) return
-    // toggle off if already selected
     const current = orders[resident.id]?.[meal] ?? ''
     onChoice(resident.id, meal, current === val ? '' : val)
   }
@@ -168,7 +177,6 @@ function OrderRoundOverlay({
   function prev() { if (idx > 0)         setIdx(i => i - 1) }
   function skip() { next() }
 
-  // keyboard nav
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if (e.key === 'ArrowRight' || e.key === 'Enter') next()
@@ -180,7 +188,6 @@ function OrderRoundOverlay({
   })
 
   if (!resident) {
-    // Done screen
     return (
       <div style={overlayStyle}>
         <div style={cardStyle}>
@@ -207,25 +214,21 @@ function OrderRoundOverlay({
 
   return (
     <div style={overlayStyle}>
-      {/* Progress bar */}
       <div style={{ position:'absolute', top:0, left:0, right:0, height:4, background:'var(--border-color)' }}>
         <div style={{ height:'100%', width:`${progress}%`, background:'var(--color-primary)', transition:'width 0.25s ease' }} />
       </div>
 
-      {/* Close */}
       <button
         onClick={onClose}
         style={{ position:'absolute', top:16, right:20, background:'none', border:'none', fontSize:28, color:'var(--text-muted)', cursor:'pointer', lineHeight:1 }}
         aria-label="Close"
       >×</button>
 
-      {/* Counter */}
       <div style={{ position:'absolute', top:16, left:20, fontSize:'var(--text-sm)', color:'var(--text-muted)', fontWeight:'var(--weight-bold)' }}>
         {idx + 1} / {total}
       </div>
 
       <div style={cardStyle}>
-        {/* Resident header */}
         <div style={{ padding:'var(--space-5) var(--space-6)', borderBottom:'1px solid var(--border-color)', background:'var(--bg-app)' }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'var(--space-4)', flexWrap:'wrap' }}>
             <div>
@@ -254,9 +257,7 @@ function OrderRoundOverlay({
           )}
         </div>
 
-        {/* Meal choices */}
         <div style={{ padding:'var(--space-5) var(--space-6)', display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
-          {/* Lunch */}
           <MealChoiceRow
             label="Lunch"
             icon="🥗"
@@ -265,8 +266,6 @@ function OrderRoundOverlay({
             choice={order?.lunchChoice ?? ''}
             onPick={val => pick('lunchChoice', val)}
           />
-
-          {/* Dinner */}
           <MealChoiceRow
             label="Dinner"
             icon="🍽️"
@@ -277,14 +276,9 @@ function OrderRoundOverlay({
           />
         </div>
 
-        {/* Nav */}
         <div style={{ padding:'var(--space-4) var(--space-6)', borderTop:'1px solid var(--border-color)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'var(--space-3)', background:'var(--bg-app)' }}>
           <button onClick={prev} className="btn btn-outline" disabled={idx === 0} style={{ minWidth:80 }}>← Back</button>
-
-          <button onClick={skip} className="btn btn-ghost btn-sm" style={{ color:'var(--text-muted)' }}>
-            Skip →
-          </button>
-
+          <button onClick={skip} className="btn btn-ghost btn-sm" style={{ color:'var(--text-muted)' }}>Skip →</button>
           <button
             onClick={bothDone ? next : skip}
             className="btn btn-primary"
@@ -539,7 +533,6 @@ function WorksheetTab() {
         <button onClick={() => window.print()} className="btn btn-primary">🖸 Print Worksheet</button>
       </div>
 
-      {/* Order Round Overlay */}
       {orderRoundOpen && (
         <OrderRoundOverlay
           residents={activeResidents}
@@ -854,7 +847,7 @@ function TrayTicketCard({ ticket:t, onRemove, onUpdate }: { ticket:TrayTicket; o
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// CULINARY PREP LIST — auto-generated from menu + resident census
+// CULINARY PREP LIST
 // ────────────────────────────────────────────────────────────────────────────
 function CulinaryPrepTab() {
   const { residents }    = useResidentsStore()
@@ -888,7 +881,8 @@ function CulinaryPrepTab() {
     const seen=new Set<string>()
 
     function addItem(name:string, meal:PrepTask['meal'], qty:number) {
-      if(!name||seen.has(name)) return
+      // Skip beverages — they don't require kitchen prep
+      if(!name || seen.has(name) || isBeverage(name)) return
       seen.add(name)
       if(isProtein(name)) {
         tasks.push({ id:uid(), type:'freezer-pull', task:`❄️ Freezer Pull — ${name}`, detail:`Pull ${qty} portions from freezer to refrigerator by ${dateLabel(freezeISO)} (${freezerLeadDays} days before service). Verify thaw by service day.`, meal:'prep', dueDate:freezeISO, done:false, qty, unit:'portions' })
@@ -1122,7 +1116,6 @@ export default function ProductionPage() {
         <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, and shift checklists.</p>
       </div>
 
-      {/* ── Sticky Tab Bar ── */}
       <div
         role="tablist"
         aria-label="Production sections"
