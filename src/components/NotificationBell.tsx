@@ -9,6 +9,8 @@
 //
 // Inventory alerts now read from useInventoryStore() so that
 // edits made in InventoryPage are instantly reflected here.
+// Budget alerts read from useBudgetStore() so they stay in sync
+// with BudgetPage entries.
 // ============================================================
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
@@ -17,11 +19,8 @@ import { useNotificationsStore } from '../state/notificationsStore'
 import { useStaffStore } from '../state/staffStore'
 import { useCommunicationsStore } from '../state/communicationsStore'
 import { useInventoryStore } from '../state/inventoryStore'
+import { useBudgetStore } from '../state/budgetStore'
 import { useClickOutside } from '../hooks/useClickOutside'
-
-// ── Budget constants (static until budget store exists) ───────────────────────
-const BUDGET_PERIOD = { residentCount: 42, budgetPerResidentPerDay: 9.50, totalDays: 31, label: 'July 2026', startDate: '2026-07-01' }
-const BUDGET_SPENT  = 1097.85
 
 // ── System alert type ─────────────────────────────────────────────────────────
 type SystemAlert = {
@@ -81,6 +80,14 @@ export default function NotificationBell() {
   const { profiles, fetch: fetchStaff } = useStaffStore()
   const { threads, fetchThreads } = useCommunicationsStore()
   const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
+
+  const budgetFetch      = useBudgetStore(s => s.fetch)
+  const period           = useBudgetStore(s => s.period)
+  const getTotalBudget   = useBudgetStore(s => s.getTotalBudget)
+  const getTotalSpent    = useBudgetStore(s => s.getTotalSpent)
+  const getProjected     = useBudgetStore(s => s.getProjected)
+  const getDaysElapsed   = useBudgetStore(s => s.getDaysElapsed)
+
   const [open, setOpen]           = useState(false)
   const [tab, setTab]             = useState<'all' | 'system' | 'personal'>('all')
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
@@ -92,10 +99,11 @@ export default function NotificationBell() {
     fetchStaff()
     fetchNotifs()
     fetchThreads()
-    fetchInventory()            // seeded once; no-op if already loaded
+    fetchInventory()
+    budgetFetch()
     const id = setInterval(() => { fetchNotifs(); fetchThreads() }, 30_000)
     return () => clearInterval(id)
-  }, [fetchStaff, fetchNotifs, fetchThreads, fetchInventory])
+  }, [fetchStaff, fetchNotifs, fetchThreads, fetchInventory, budgetFetch])
 
   if (!user) return null
 
@@ -152,34 +160,34 @@ export default function NotificationBell() {
       })
     }
 
-    // Budget (manager+)
+    // Budget (manager+) — reads live from store
     if (atLeast('manager')) {
-      const totalBudget = BUDGET_PERIOD.residentCount * BUDGET_PERIOD.budgetPerResidentPerDay * BUDGET_PERIOD.totalDays
-      const start       = new Date(BUDGET_PERIOD.startDate)
-      const daysElapsed = Math.max(1, Math.min(BUDGET_PERIOD.totalDays,
-        Math.ceil((Date.now() - start.getTime()) / 86_400_000) + 1))
-      const projected   = (BUDGET_SPENT / daysElapsed) * BUDGET_PERIOD.totalDays
-      const pct         = (BUDGET_SPENT / totalBudget) * 100
+      const totalBudget = getTotalBudget()
+      const totalSpent  = getTotalSpent()
+      const projected   = getProjected()
+      const daysElapsed = getDaysElapsed()
+      const pct         = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
 
       if (projected > totalBudget) {
         alerts.push({
           id: 'sys-budget-over', type: 'budget', severity: 'warning',
           subject: `Budget on track to exceed by $${(projected - totalBudget).toFixed(2)}`,
-          body: `${BUDGET_PERIOD.label}: spent $${BUDGET_SPENT.toFixed(2)} of $${totalBudget.toFixed(2)} (${pct.toFixed(1)}% used, day ${daysElapsed} of ${BUDGET_PERIOD.totalDays}).`,
+          body: `${period.label}: spent $${totalSpent.toFixed(2)} of $${totalBudget.toFixed(2)} (${pct.toFixed(1)}% used, day ${daysElapsed} of ${period.totalDays}).`,
           link: '/budget', createdAt: now,
         })
       } else if (pct > 75) {
         alerts.push({
           id: 'sys-budget-warn', type: 'budget', severity: 'info',
-          subject: `Budget ${pct.toFixed(0)}% used — ${BUDGET_PERIOD.label}`,
-          body: `$${BUDGET_SPENT.toFixed(2)} spent of $${totalBudget.toFixed(2)} with ${BUDGET_PERIOD.totalDays - daysElapsed} days remaining.`,
+          subject: `Budget ${pct.toFixed(0)}% used — ${period.label}`,
+          body: `$${totalSpent.toFixed(2)} spent of $${totalBudget.toFixed(2)} with ${period.totalDays - daysElapsed} days remaining.`,
           link: '/budget', createdAt: now,
         })
       }
     }
 
     return alerts.filter(a => !dismissed.has(a.id))
-  }, [getLowParItems, getZeroItems, threads, dismissed, atLeast])
+  }, [getLowParItems, getZeroItems, threads, dismissed, atLeast,
+      getTotalBudget, getTotalSpent, getProjected, getDaysElapsed, period])
 
   const totalUnread = personalUnread + systemAlerts.length
   const hasCritical = systemAlerts.some(a => a.severity === 'critical')
