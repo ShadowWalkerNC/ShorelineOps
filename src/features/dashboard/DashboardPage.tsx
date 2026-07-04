@@ -4,35 +4,13 @@ import { useResidentsStore } from '@/state/residentsStore'
 import { useMenuStore } from '@/state/menuStore'
 import { useCommunicationsStore } from '@/state/communicationsStore'
 import { useProductionStore } from '@/state/productionStore'
+import { useInventoryStore } from '@/state/inventoryStore'
 import { useAuth } from '@/security/AuthContext'
 import type { DayOfWeek } from '@/types'
 
-// ── Budget seed (mirrors BudgetPage until a shared store exists) ──────────────
+// ── Budget seed (static until a shared budget store exists) ──────────────────
 const BUDGET_PERIOD = { residentCount: 42, budgetPerResidentPerDay: 9.50, totalDays: 31, label: 'July 2026', startDate: '2026-07-01' }
-const BUDGET_SPENT  = 1097.85   // sum of seed entries in BudgetPage
-
-// ── Inventory seed (mirrors InventoryPage seed until a shared store exists) ───
-const INV_SEED = [
-  { name:'Chicken Breast',    onHand:18, parLevel:20, unit:'lbs', category:'Proteins' },
-  { name:'Ground Beef',       onHand:12, parLevel:15, unit:'lbs', category:'Proteins' },
-  { name:'Salmon Fillets',    onHand: 8, parLevel:10, unit:'lbs', category:'Proteins' },
-  { name:'Eggs (large)',      onHand:48, parLevel:60, unit:'each',category:'Dairy' },
-  { name:'Whole Milk',        onHand: 6, parLevel: 8, unit:'gal', category:'Dairy' },
-  { name:'Shredded Cheese',   onHand: 3, parLevel: 4, unit:'lbs', category:'Dairy' },
-  { name:'Broccoli',          onHand: 5, parLevel: 8, unit:'lbs', category:'Produce' },
-  { name:'Carrots',           onHand:10, parLevel:10, unit:'lbs', category:'Produce' },
-  { name:'Bagged Spinach',    onHand: 2, parLevel: 4, unit:'bags',category:'Produce' },
-  { name:'White Rice',        onHand:25, parLevel:20, unit:'lbs', category:'Dry Goods' },
-  { name:'Pasta',             onHand:12, parLevel:10, unit:'lbs', category:'Dry Goods' },
-  { name:'Ensure Plus',       onHand:24, parLevel:36, unit:'cans',category:'Supplements' },
-  { name:'Simply Thick (Gel)',onHand: 6, parLevel:10, unit:'jars',category:'Supplements' },
-  { name:'Dish Soap',         onHand: 2, parLevel: 3, unit:'btl', category:'Cleaning' },
-  { name:'Bleach',            onHand: 1, parLevel: 2, unit:'gal', category:'Cleaning' },
-  { name:'Gloves (M)',        onHand:50, parLevel:100,unit:'ct',  category:'Supplies' },
-  { name:'Tray Liners',       onHand:200,parLevel:150,unit:'ct',  category:'Supplies' },
-]
-const LOW_PAR_ITEMS = INV_SEED.filter(i => i.onHand < i.parLevel)
-const ZERO_ITEMS    = INV_SEED.filter(i => i.onHand === 0)
+const BUDGET_SPENT  = 1097.85
 
 function getGreeting() {
   const h = new Date().getHours()
@@ -45,7 +23,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES: DayOfWeek[] = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 const KEY_ALLERGIES = ['Gluten-Free','Dairy-Free','Nut Allergy','Egg Allergy','Shellfish','Soy-Free','Vegan','Vegetarian','Kosher','Halal']
 
-// ── CSS ───────────────────────────────────────────────────────────────────────
+// ── CSS ─────────────────────────────────────────────────────────────────────────────
 const DASH_CSS = `
   .dash-metrics {
     display: grid;
@@ -245,7 +223,7 @@ function MealColumn({ mealLabel, opt1Names, opt2Names }: { mealLabel: string; op
   )
 }
 
-// ── Budget progress bar (inline, no store yet) ────────────────────────────────
+// ── Budget progress bar (inline, no store yet) ─────────────────────────────────
 function BudgetStrip() {
   const start = new Date(BUDGET_PERIOD.startDate)
   const today = new Date()
@@ -275,21 +253,27 @@ function BudgetStrip() {
   )
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────────────────
+// ── Main Dashboard ─────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { user, atLeast } = useAuth()
   const { residents, loading, fetch } = useResidentsStore()
   const { weeks, items, fetchWeeks, fetchItems } = useMenuStore()
   const { threads, fetchThreads } = useCommunicationsStore()
   const { tasks, fetch: fetchProduction } = useProductionStore()
+  const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
 
   useEffect(() => { fetch() },           []) // eslint-disable-line
   useEffect(() => { fetchWeeks() },      []) // eslint-disable-line
   useEffect(() => { fetchItems() },      []) // eslint-disable-line
   useEffect(() => { fetchThreads() },    []) // eslint-disable-line
   useEffect(() => { fetchProduction() }, []) // eslint-disable-line
+  useEffect(() => { fetchInventory() },  []) // eslint-disable-line
 
-  // ── Residents ──────────────────────────────────────────────────────────────
+  // ── Live inventory ─────────────────────────────────────────────────────────────
+  const lowParItems = getLowParItems()
+  const zeroItems   = getZeroItems()
+
+  // ── Residents ──────────────────────────────────────────────────────────────────
   const active      = useMemo(() => residents.filter(r => r.status === 'Active'), [residents])
   const hospital    = useMemo(() => residents.filter(r => r.status === 'Hospital').length, [residents])
   const loa         = useMemo(() => residents.filter(r => r.status === 'LOA').length, [residents])
@@ -309,7 +293,7 @@ export default function DashboardPage() {
     return map
   }, [active])
 
-  // ── Birthdays ──────────────────────────────────────────────────────────────
+  // ── Birthdays ─────────────────────────────────────────────────────────────────
   const upcomingBirthdays = useMemo(() => {
     const today = new Date()
     const results: { name: string; room: string; monthDay: string; daysUntil: number }[] = []
@@ -325,7 +309,7 @@ export default function DashboardPage() {
     return results.sort((a, b) => a.daysUntil - b.daysUntil)
   }, [residents])
 
-  // ── Menu ───────────────────────────────────────────────────────────────────
+  // ── Menu ────────────────────────────────────────────────────────────────────────
   const todayDay   = DAY_NAMES[new Date().getDay()]
   const activeWeek = useMemo(() => weeks.find(w => w.active) ?? weeks[0] ?? null, [weeks])
   const todayMenu  = useMemo(() => activeWeek?.days?.[todayDay] ?? null, [activeWeek, todayDay])
@@ -348,12 +332,12 @@ export default function DashboardPage() {
   ).length, [threads])
   const unreadThreads = useMemo(() => threads.filter(t => t.status === 'Open').length, [threads])
 
-  // ── Production ─────────────────────────────────────────────────────────────
+  // ── Production ────────────────────────────────────────────────────────────────
   const completedTasks = useMemo(() => tasks.filter(t => t.completed).length, [tasks])
   const totalTasks     = tasks.length
   const prodPct        = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
-  // ── Derived flags ──────────────────────────────────────────────────────────
+  // ── Derived flags ────────────────────────────────────────────────────────────
   const hasAnyPrep = cutUp > 0 || minced > 0 || pureed > 0 || Object.keys(keyAllergyCount).length > 0
   const todayStr   = new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
   const isManager  = atLeast('manager')
@@ -393,12 +377,12 @@ export default function DashboardPage() {
       <div className="dash-metrics-wide">
         <MetricCard
           label="Inventory Alerts"
-          value={LOW_PAR_ITEMS.length}
-          sub={ZERO_ITEMS.length > 0 ? `${ZERO_ITEMS.length} at zero!` : 'items below par'}
-          iconBg={LOW_PAR_ITEMS.length > 0 ? '#fee2e2' : 'var(--color-success-light)'}
+          value={lowParItems.length}
+          sub={zeroItems.length > 0 ? `${zeroItems.length} at zero!` : 'items below par'}
+          iconBg={lowParItems.length > 0 ? '#fee2e2' : 'var(--color-success-light)'}
           to="/inventory"
-          alertClass={ZERO_ITEMS.length > 0 ? 'alert-card' : LOW_PAR_ITEMS.length > 3 ? 'warn-card' : undefined}
-          icon={<svg width="18" height="18" fill="none" stroke={LOW_PAR_ITEMS.length > 0 ? '#dc2626' : 'var(--color-success)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>}
+          alertClass={zeroItems.length > 0 ? 'alert-card' : lowParItems.length > 3 ? 'warn-card' : undefined}
+          icon={<svg width="18" height="18" fill="none" stroke={lowParItems.length > 0 ? '#dc2626' : 'var(--color-success)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>}
         />
         <MetricCard
           label="Pending Approvals"
@@ -451,14 +435,14 @@ export default function DashboardPage() {
       {isManager && <BudgetStrip />}
 
       {/* ── Inventory alerts banner ── */}
-      {LOW_PAR_ITEMS.length > 0 && (
+      {lowParItems.length > 0 && (
         <Link to="/inventory" style={{ textDecoration: 'none', display: 'block', marginBottom: 14 }}>
-          <div style={{ padding: '10px 16px', background: ZERO_ITEMS.length > 0 ? '#fef2f2' : '#fffbeb', border: `1px solid ${ZERO_ITEMS.length > 0 ? '#fecaca' : '#fde68a'}`, borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 15 }}>{ZERO_ITEMS.length > 0 ? '🚨' : '⚠️'}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: ZERO_ITEMS.length > 0 ? '#991b1b' : '#92400e', flex: 1 }}>
-              {ZERO_ITEMS.length > 0 ? `${ZERO_ITEMS.length} item(s) completely out of stock — ` : ''}
-              {LOW_PAR_ITEMS.length} item(s) below par level:
-              {' '}{LOW_PAR_ITEMS.slice(0,4).map(i => i.name).join(', ')}{LOW_PAR_ITEMS.length > 4 ? ` +${LOW_PAR_ITEMS.length - 4} more` : ''}
+          <div style={{ padding: '10px 16px', background: zeroItems.length > 0 ? '#fef2f2' : '#fffbeb', border: `1px solid ${zeroItems.length > 0 ? '#fecaca' : '#fde68a'}`, borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 15 }}>{zeroItems.length > 0 ? '🚨' : '⚠️'}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: zeroItems.length > 0 ? '#991b1b' : '#92400e', flex: 1 }}>
+              {zeroItems.length > 0 ? `${zeroItems.length} item(s) completely out of stock — ` : ''}
+              {lowParItems.length} item(s) below par level:
+              {' '}{lowParItems.slice(0,4).map(i => i.item).join(', ')}{lowParItems.length > 4 ? ` +${lowParItems.length - 4} more` : ''}
             </span>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>View Inventory →</span>
           </div>
@@ -609,7 +593,7 @@ export default function DashboardPage() {
           <QuickLink to="/residents"      label="Residents"        desc="Diet orders & resident profiles"  iconColor="var(--color-primary-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-primary)"       strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>} />
           <QuickLink to="/menu"           label="Menu Planner"     desc="Plan daily meals & cycle menus"   iconColor="var(--color-teal-light)"     icon={<svg width="16" height="16" fill="none" stroke="var(--color-teal)"         strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>} />
           <QuickLink to="/production"     label="Production"       desc="Worksheets, tray tickets"         iconColor="var(--color-success-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-success)"       strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>} />
-          <QuickLink to="/inventory"      label="Inventory"        desc="Stock levels & truck orders"      iconColor="var(--color-warning-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-warning-hover)" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>} badge={LOW_PAR_ITEMS.length} />
+          <QuickLink to="/inventory"      label="Inventory"        desc="Stock levels & truck orders"      iconColor="var(--color-warning-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-warning-hover)" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>} badge={lowParItems.length} />
           <QuickLink to="/recipes"        label="Recipe Book"      desc="Browse & scale recipes"           iconColor="var(--color-purple-light)"   icon={<svg width="16" height="16" fill="none" stroke="var(--color-purple)"        strokeWidth="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>} />
           <QuickLink to="/communications" label="Communications"   desc="Threads & approvals"               iconColor="var(--color-teal-light)"     icon={<svg width="16" height="16" fill="none" stroke="var(--color-teal)"         strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>} badge={pendingApprovals} />
           {isManager && <QuickLink to="/budget" label="Budget" desc="Spending log & per-resident cost" iconColor="var(--color-success-light)" icon={<svg width="16" height="16" fill="none" stroke="var(--color-success)" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>} />}
