@@ -1,5 +1,5 @@
 // ============================================================
-// NOTIFICATION BELL — HEADER DROPDOWN
+// NOTIFICATION BELL - HEADER DROPDOWN
 // ============================================================
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
@@ -10,6 +10,7 @@ import { useCommunicationsStore } from '../state/communicationsStore'
 import { useInventoryStore } from '../state/inventoryStore'
 import { useBudgetStore } from '../state/budgetStore'
 import { useClickOutside } from '../hooks/useClickOutside'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 type SystemAlert = {
   id: string
@@ -59,15 +60,43 @@ const SEV_COLORS = {
   info:     { bg: 'var(--color-primary-light)', border: 'var(--color-primary)', dot: 'var(--color-primary)', text: 'var(--color-primary)' },
 }
 
-// Detect whether we're on a narrow (mobile) viewport
-function useIsMobile() {
-  const [mobile, setMobile] = useState(() => window.innerWidth < 768)
-  useEffect(() => {
-    const handler = () => setMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [])
-  return mobile
+// Persist dismissed system-alert IDs across re-mounts for the session
+const DISMISSED_KEY = 'sl_dismissed_alerts'
+function loadDismissed(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(DISMISSED_KEY)
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+function saveDismissed(ids: Set<string>) {
+  try {
+    sessionStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]))
+  } catch { /* storage unavailable - no-op */ }
+}
+
+function PersonalRow({ n, onClick }: { n: any; onClick: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', gap: 10, padding: '12px 14px',
+        borderBottom: '1px solid var(--border-color)',
+        background: n.isRead ? 'var(--bg-card)' : 'var(--color-primary-light)',
+        alignItems: 'flex-start', cursor: 'pointer',
+      }}
+    >
+      <div style={{ width: 8, paddingTop: 4, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+        {!n.isRead && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-primary)' }} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: n.isRead ? 500 : 700, color: 'var(--text-primary)', marginBottom: 2 }}>{n.subject}</div>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>{n.body}</p>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{timeAgo(n.createdAt)}</div>
+      </div>
+    </div>
+  )
 }
 
 export default function NotificationBell() {
@@ -83,11 +112,13 @@ export default function NotificationBell() {
   const getTotalBudget = useBudgetStore(s => s.getTotalBudget)
   const getTotalSpent  = useBudgetStore(s => s.getTotalSpent)
   const getProjected   = useBudgetStore(s => s.getProjected)
-  const getDailyPerRes = useBudgetStore(s => s.getDailyPerRes)
+  // getDailyPerRes was previously subscribed here but never used inside the
+  // systemAlerts memo - removed to prevent unnecessary re-renders.
 
   const [open, setOpen]           = useState(false)
   const [tab, setTab]             = useState<'all' | 'system' | 'personal'>('all')
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  // Initialise from sessionStorage so dismissed alerts survive re-mounts
+  const [dismissed, setDismissed] = useState<Set<string>>(loadDismissed)
   const containerRef = useRef<HTMLDivElement>(null)
   const bellRef      = useRef<HTMLButtonElement>(null)
   const isMobile     = useIsMobile()
@@ -116,9 +147,8 @@ export default function NotificationBell() {
 
   if (!user) return null
 
-  const myProfile = profiles.find(p =>
-    (p as any).authUserId === user.id || (p as any).userId === user.id
-  )
+  // StaffProfile defines authUserId explicitly - no cast needed
+  const myProfile = profiles.find(p => p.authUserId === user.id)
 
   const personal = myProfile
     ? [...notifications]
@@ -191,14 +221,20 @@ export default function NotificationBell() {
     }
 
     return alerts.filter(a => !dismissed.has(a.id))
-  }, [getLowParItems, getZeroItems, threads, dismissed, atLeast,
-      getTotalBudget, getTotalSpent, getProjected, getDailyPerRes, period])
+  }, [
+    getLowParItems, getZeroItems, threads, dismissed, atLeast,
+    getTotalBudget, getTotalSpent, getProjected, period,
+  ])
 
   const totalUnread = personalUnread + systemAlerts.length
   const hasCritical = systemAlerts.some(a => a.severity === 'critical')
 
   function dismiss(id: string) {
-    setDismissed(prev => new Set([...prev, id]))
+    setDismissed(prev => {
+      const next = new Set([...prev, id])
+      saveDismissed(next)
+      return next
+    })
   }
 
   function handlePersonalClick(n: typeof personal[number]) {
@@ -222,8 +258,6 @@ export default function NotificationBell() {
     cursor: 'pointer', transition: 'all 0.15s ease', flexShrink: 0,
   }
 
-  // On mobile use position:fixed anchored below the bell button so the dropdown
-  // escapes the mobile header's stacking context and never gets clipped.
   const dropdownStyle: React.CSSProperties = isMobile && bellRect
     ? {
         position: 'fixed',
@@ -336,7 +370,7 @@ export default function NotificationBell() {
                       </span>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{a.subject}</div>
-                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.body}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>{a.body}</p>
                     <div style={{ display: 'flex', gap: 12, marginTop: 6, alignItems: 'center' }}>
                       <Link to={a.link} onClick={() => setOpen(false)}
                         style={{ fontSize: 11, fontWeight: 700, color: c.dot, textDecoration: 'none' }}>View →</Link>
@@ -354,69 +388,16 @@ export default function NotificationBell() {
 
             {isEmpty && (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"
-                  style={{ display: 'block', margin: '0 auto 10px', opacity: 0.35 }}>
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ margin: '0 auto 10px', display: 'block', opacity: 0.35 }}>
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
-                All clear — no notifications
+                All caught up!
               </div>
             )}
           </div>
-
-          {/* Footer */}
-          {!isEmpty && myProfile && (
-            <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-app)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{systemAlerts.length} system · {personal.length} personal</span>
-              <button onClick={() => { navigate(`/staff/${myProfile.id}`); setOpen(false) }}
-                style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                View profile →
-              </button>
-            </div>
-          )}
         </div>
       )}
-    </div>
-  )
-}
-
-function PersonalRow({ n, onClick }: { n: any; onClick: () => void }) {
-  const [hovered, setHovered] = useState(false)
-  const typeColor = n.isRead ? 'var(--text-muted)' : 'var(--color-primary)'
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', gap: 10, padding: '12px 14px',
-        borderBottom: '1px solid var(--border-color)', cursor: 'pointer',
-        background: !n.isRead ? 'var(--color-primary-light)' : hovered ? 'var(--bg-app)' : 'transparent',
-        transition: 'background 0.15s', alignItems: 'flex-start',
-      }}
-    >
-      <div style={{ width: 8, paddingTop: 5, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-        {!n.isRead && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-primary)' }} />}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, flex: 1 }}>
-            <TypeIcon type={n.type} color={typeColor} />
-            <span style={{ fontSize: 13, fontWeight: n.isRead ? 500 : 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {n.subject}
-            </span>
-          </div>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {timeAgo(n.createdAt)}
-          </span>
-        </div>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {n.body}
-        </p>
-        <div style={{ marginTop: 4, fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {TYPE_LABELS[n.type] ?? String(n.type).replace(/_/g, ' ')}
-        </div>
-      </div>
     </div>
   )
 }
