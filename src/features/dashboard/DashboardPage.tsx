@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useResidentsStore } from '@/state/residentsStore'
 import { useMenuStore } from '@/state/menuStore'
 import { useCommunicationsStore } from '@/state/communicationsStore'
 import { useProductionStore } from '@/state/productionStore'
 import { useInventoryStore } from '@/state/inventoryStore'
+import { useBudgetStore } from '@/state/budgetStore'
 import { useAuth } from '@/security/AuthContext'
 import type { DayOfWeek } from '@/types'
-
-// ── Budget seed (static until a shared budget store exists) ──────────────────
-const BUDGET_PERIOD = { residentCount: 42, budgetPerResidentPerDay: 9.50, totalDays: 31, label: 'July 2026', startDate: '2026-07-01' }
-const BUDGET_SPENT  = 1097.85
 
 function getGreeting() {
   const h = new Date().getHours()
@@ -23,7 +20,6 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES: DayOfWeek[] = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 const KEY_ALLERGIES = ['Gluten-Free','Dairy-Free','Nut Allergy','Egg Allergy','Shellfish','Soy-Free','Vegan','Vegetarian','Kosher','Halal']
 
-// ── CSS ─────────────────────────────────────────────────────────────────────────────
 const DASH_CSS = `
   .dash-metrics {
     display: grid;
@@ -223,23 +219,29 @@ function MealColumn({ mealLabel, opt1Names, opt2Names }: { mealLabel: string; op
   )
 }
 
-// ── Budget progress bar (inline, no store yet) ─────────────────────────────────
 function BudgetStrip() {
-  const start = new Date(BUDGET_PERIOD.startDate)
-  const today = new Date()
-  const daysElapsed = Math.max(1, Math.min(BUDGET_PERIOD.totalDays, Math.ceil((today.getTime() - start.getTime()) / 86400000) + 1))
-  const totalBudget = BUDGET_PERIOD.residentCount * BUDGET_PERIOD.budgetPerResidentPerDay * BUDGET_PERIOD.totalDays
-  const projected = (BUDGET_SPENT / daysElapsed) * BUDGET_PERIOD.totalDays
-  const pct = Math.min(100, (BUDGET_SPENT / totalBudget) * 100)
-  const color = pct > 90 ? '#dc2626' : pct > 75 ? '#d97706' : '#059669'
-  const fmt = (n: number) => `$${n.toFixed(2)}`
+  const fetch        = useBudgetStore(s => s.fetch)
+  const period       = useBudgetStore(s => s.period)
+  const getTotalBudget = useBudgetStore(s => s.getTotalBudget)
+  const getTotalSpent  = useBudgetStore(s => s.getTotalSpent)
+  const getProjected   = useBudgetStore(s => s.getProjected)
+
+  useEffect(() => { fetch() }, [fetch])
+
+  const totalBudget = getTotalBudget()
+  const totalSpent  = getTotalSpent()
+  const projected   = getProjected()
+  const pct         = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0
+  const color       = pct > 90 ? '#dc2626' : pct > 75 ? '#d97706' : '#059669'
+  const fmt         = (n: number) => `$${n.toFixed(2)}`
+
   return (
     <Link to="/budget" style={{ display: 'block', textDecoration: 'none' }}>
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', boxShadow: 'var(--shadow-sm)', marginBottom: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>💰 {BUDGET_PERIOD.label} Budget</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>💰 {period.label} Budget</span>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Spent: <b style={{ color: 'var(--text-primary)' }}>{fmt(BUDGET_SPENT)}</b></span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Spent: <b style={{ color: 'var(--text-primary)' }}>{fmt(totalSpent)}</b></span>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Budget: <b style={{ color: 'var(--text-primary)' }}>{fmt(totalBudget)}</b></span>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Projected: <b style={{ color }}>{fmt(projected)}</b></span>
             <span style={{ fontSize: 12, fontWeight: 800, color }}>{pct.toFixed(1)}% used</span>
@@ -253,7 +255,6 @@ function BudgetStrip() {
   )
 }
 
-// ── Main Dashboard ─────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { user, atLeast } = useAuth()
   const { residents, loading, fetch } = useResidentsStore()
@@ -262,18 +263,31 @@ export default function DashboardPage() {
   const { tasks, fetch: fetchProduction } = useProductionStore()
   const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
 
+  const budgetFetch       = useBudgetStore(s => s.fetch)
+  const period            = useBudgetStore(s => s.period)
+  const getTotalBudget    = useBudgetStore(s => s.getTotalBudget)
+  const getTotalSpent     = useBudgetStore(s => s.getTotalSpent)
+  const getDailyPerRes    = useBudgetStore(s => s.getDailyPerRes)
+
   useEffect(() => { fetch() },           []) // eslint-disable-line
   useEffect(() => { fetchWeeks() },      []) // eslint-disable-line
   useEffect(() => { fetchItems() },      []) // eslint-disable-line
   useEffect(() => { fetchThreads() },    []) // eslint-disable-line
   useEffect(() => { fetchProduction() }, []) // eslint-disable-line
   useEffect(() => { fetchInventory() },  []) // eslint-disable-line
+  useEffect(() => { budgetFetch() },     [budgetFetch])
 
-  // ── Live inventory ─────────────────────────────────────────────────────────────
+  // ── Budget (live from store) ───────────────────────────────────────────────
+  const totalBudget = getTotalBudget()
+  const totalSpent  = getTotalSpent()
+  const dailyPerRes = getDailyPerRes()
+  const budgetPct   = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
+
+  // ── Live inventory ─────────────────────────────────────────────────────────
   const lowParItems = getLowParItems()
   const zeroItems   = getZeroItems()
 
-  // ── Residents ──────────────────────────────────────────────────────────────────
+  // ── Residents ──────────────────────────────────────────────────────────────
   const active      = useMemo(() => residents.filter(r => r.status === 'Active'), [residents])
   const hospital    = useMemo(() => residents.filter(r => r.status === 'Hospital').length, [residents])
   const loa         = useMemo(() => residents.filter(r => r.status === 'LOA').length, [residents])
@@ -293,7 +307,7 @@ export default function DashboardPage() {
     return map
   }, [active])
 
-  // ── Birthdays ─────────────────────────────────────────────────────────────────
+  // ── Birthdays ─────────────────────────────────────────────────────────────
   const upcomingBirthdays = useMemo(() => {
     const today = new Date()
     const results: { name: string; room: string; monthDay: string; daysUntil: number }[] = []
@@ -309,7 +323,7 @@ export default function DashboardPage() {
     return results.sort((a, b) => a.daysUntil - b.daysUntil)
   }, [residents])
 
-  // ── Menu ────────────────────────────────────────────────────────────────────────
+  // ── Menu ────────────────────────────────────────────────────────────────────
   const todayDay   = DAY_NAMES[new Date().getDay()]
   const activeWeek = useMemo(() => weeks.find(w => w.active) ?? weeks[0] ?? null, [weeks])
   const todayMenu  = useMemo(() => activeWeek?.days?.[todayDay] ?? null, [activeWeek, todayDay])
@@ -332,12 +346,12 @@ export default function DashboardPage() {
   ).length, [threads])
   const unreadThreads = useMemo(() => threads.filter(t => t.status === 'Open').length, [threads])
 
-  // ── Production ────────────────────────────────────────────────────────────────
+  // ── Production ────────────────────────────────────────────────────────────
   const completedTasks = useMemo(() => tasks.filter(t => t.completed).length, [tasks])
   const totalTasks     = tasks.length
   const prodPct        = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
-  // ── Derived flags ────────────────────────────────────────────────────────────
+  // ── Derived flags ────────────────────────────────────────────────────────
   const hasAnyPrep = cutUp > 0 || minced > 0 || pureed > 0 || Object.keys(keyAllergyCount).length > 0
   const todayStr   = new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
   const isManager  = atLeast('manager')
@@ -413,16 +427,16 @@ export default function DashboardPage() {
           <>
             <MetricCard
               label="Budget (MTD)"
-              value={`${((BUDGET_SPENT / (BUDGET_PERIOD.residentCount * BUDGET_PERIOD.budgetPerResidentPerDay * BUDGET_PERIOD.totalDays)) * 100).toFixed(0)}%`}
-              sub={`$${BUDGET_SPENT.toFixed(0)} of $${(BUDGET_PERIOD.residentCount * BUDGET_PERIOD.budgetPerResidentPerDay * BUDGET_PERIOD.totalDays).toFixed(0)}`}
+              value={`${budgetPct.toFixed(0)}%`}
+              sub={`$${totalSpent.toFixed(0)} of $${totalBudget.toFixed(0)}`}
               iconBg="var(--color-teal-light)"
               to="/budget"
               icon={<svg width="18" height="18" fill="none" stroke="var(--color-teal)" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
             />
             <MetricCard
               label="$/Resident/Day"
-              value={`$${(BUDGET_SPENT / Math.max(1, Math.min(BUDGET_PERIOD.totalDays, Math.ceil((new Date().getTime() - new Date(BUDGET_PERIOD.startDate).getTime()) / 86400000) + 1)) / BUDGET_PERIOD.residentCount).toFixed(2)}`}
-              sub={`Target $${BUDGET_PERIOD.budgetPerResidentPerDay.toFixed(2)}`}
+              value={`$${dailyPerRes.toFixed(2)}`}
+              sub={`Target $${period.budgetPerResidentPerDay.toFixed(2)}`}
               iconBg="var(--color-purple-light)"
               to="/budget"
               icon={<svg width="18" height="18" fill="none" stroke="var(--color-purple)" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
