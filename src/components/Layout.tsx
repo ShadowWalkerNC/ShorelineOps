@@ -36,6 +36,11 @@ const NAV_OPERATIONS = [
     label: 'Inventory & Waste', to: '/inventory',
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
   },
+  {
+    label: 'Staff', to: '/staff',
+    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    minRole: 'manager' as const,
+  },
 ]
 
 const NAV_ADMIN = {
@@ -127,15 +132,16 @@ function InjectLayoutStyles() {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth()
+  const { user, logout, atLeast } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const now = useClock()
   const [navOpen, setNavOpen] = useState(false)
-  const isAdmin = user?.role === 'admin'
+
+  const isAdmin   = user?.role === 'admin'
+  const isManager = atLeast('manager')
 
   useEffect(() => { setNavOpen(false) }, [location.pathname])
-
   useEffect(() => {
     document.body.classList.toggle('nav-open', navOpen)
     return () => document.body.classList.remove('nav-open')
@@ -149,20 +155,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 
+  // Filter nav items by minimum role
+  const visibleOps = NAV_OPERATIONS.filter(item => {
+    if (!item.minRole) return true
+    return atLeast(item.minRole)
+  })
+
   const allNavItems = [
-    ...NAV_OPERATIONS,
+    ...visibleOps,
     ...(isAdmin ? [NAV_ADMIN] : []),
   ]
+
+  const roleDisplay = user ? (
+    user.role === 'admin'      ? 'Administrator' :
+    user.role === 'manager'    ? 'Manager' :
+    user.role === 'dietary'    ? 'Dietary Staff' :
+    user.role === 'activities' ? 'Activities Dir.' :
+    user.role === 'server'     ? 'Server' :
+    user.role === 'staff'      ? 'Staff' : 'Read-Only'
+  ) : ''
 
   return (
     <div style={{ display: 'flex', height: '100dvh', width: '100%', background: 'var(--bg-app)', overflow: 'hidden' }}>
       <InjectLayoutStyles />
 
       {navOpen && (
-        <div
-          onClick={() => setNavOpen(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(13,27,42,0.4)', backdropFilter: 'blur(2px)' }}
-        />
+        <div onClick={() => setNavOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(13,27,42,0.4)', backdropFilter: 'blur(2px)' }} />
       )}
 
       {/* MOBILE HEADER */}
@@ -194,7 +212,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <div style={{ fontSize:13, fontWeight:700, color:'var(--text-primary)' }}>{user.name}</div>
-              <div style={{ fontSize:11, color:'var(--text-muted)' }}>{isAdmin ? 'Supervisor / Admin' : 'Staff'}</div>
+              <div style={{ fontSize:11, color:'var(--text-muted)' }}>{roleDisplay}</div>
             </div>
           </div>
         )}
@@ -236,7 +254,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         <nav style={{ padding:'12px 10px', display:'flex', flexDirection:'column', gap:2, flex:1, overflowY:'auto' }}>
           <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:'var(--text-muted)', padding:'8px 16px 4px' }}>Operations</div>
-          {NAV_OPERATIONS.map(item => <NavItem key={item.to} {...item} />)}
+          {visibleOps.map(item => <NavItem key={item.to} {...item} />)}
           {isAdmin && (
             <>
               <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:'var(--text-muted)', padding:'14px 16px 4px' }}>Administration</div>
@@ -246,6 +264,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div style={{ padding:'16px', borderTop:'1px solid var(--border-color)', display:'flex', flexDirection:'column', gap:10, flexShrink:0 }}>
+          {user && (
+            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'var(--bg-app)', borderRadius:'var(--radius-sm)', border:'1px solid var(--border-color)' }}>
+              <div style={{ width:30, height:30, borderRadius:'50%', background:'var(--color-primary)', color:'#fff', fontWeight:700, fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'Outfit, sans-serif' }}>
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'var(--text-primary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.name}</div>
+                <div style={{ fontSize:10, color:'var(--text-muted)', fontWeight:500 }}>{roleDisplay}</div>
+              </div>
+            </div>
+          )}
           <button onClick={handleLogout} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px 0', background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-sm)', color:'var(--text-secondary)', cursor:'pointer', fontSize:12, fontWeight:600, minHeight:44 }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Logout
@@ -264,7 +293,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {user && (
             <div style={{ fontSize:11, fontWeight:700, color:'var(--color-primary)', background:'var(--color-primary-light)', border:'1px solid var(--color-primary)', padding:'3px 10px', borderRadius:20, whiteSpace:'nowrap', flexShrink:0 }}>
               {user.name.toUpperCase()}
-              {isAdmin && <span style={{ color:'var(--text-muted)', fontWeight:400, marginLeft:4 }}>(Admin)</span>}
+              <span style={{ color:'var(--text-muted)', fontWeight:400, marginLeft:4 }}>({roleDisplay})</span>
             </div>
           )}
           <div style={{ display:'flex', alignItems:'center', gap:10, background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'7px 14px', flex:1, maxWidth:400 }}>
@@ -274,7 +303,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'var(--text-secondary)', flexShrink:0, marginLeft:'auto' }}>
             <span style={{ fontWeight:600, textTransform:'uppercase', fontSize:9, letterSpacing:'0.5px', color:'var(--text-muted)' }}>Role:</span>
             <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-sm)', padding:'3px 8px', fontSize:12, fontWeight:600, color:'var(--text-primary)' }}>
-              {isAdmin ? 'Supervisor' : 'Staff'}
+              {roleDisplay}
             </div>
           </div>
         </header>
