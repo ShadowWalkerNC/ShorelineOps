@@ -259,7 +259,8 @@ export default function DashboardPage() {
   const { user, atLeast } = useAuth()
   const { residents, loading, fetch } = useResidentsStore()
   const { weeks, items, fetchWeeks, fetchItems } = useMenuStore()
-  const { threads, fetchThreads } = useCommunicationsStore()
+  // communicationsStore exposes `fetch`, not `fetchThreads`
+  const { threads, fetch: fetchThreads } = useCommunicationsStore()
   const { sheets, fetchSheets } = useProductionStore()
   const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
 
@@ -350,7 +351,6 @@ export default function DashboardPage() {
   ).length, [threads])
 
   // ── Production ────────────────────────────────────────────────────────────
-  // productionStore exposes `sheets` (ProductionSheet[]) and `fetchSheets`
   const completedSheets = useMemo(() => sheets.filter(s => !!s.signedOffAt).length, [sheets])
   const totalSheets     = sheets.length
   const prodPct         = totalSheets > 0 ? Math.round((completedSheets / totalSheets) * 100) : 0
