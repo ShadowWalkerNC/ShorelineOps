@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext'
 import NotificationBell from './NotificationBell'
+import { useCommunicationsStore } from '../state/communicationsStore'
 
 function useClock() {
   const [now, setNow] = useState(new Date())
@@ -38,6 +39,11 @@ const NAV_OPERATIONS = [
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
   },
   {
+    label: 'Communications', to: '/communications',
+    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+    badge: true,
+  },
+  {
     label: 'Staff', to: '/staff',
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
     minRole: 'manager' as const,
@@ -49,7 +55,10 @@ const NAV_ADMIN = {
   icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
 }
 
-function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void }) {
+function NavItem({ to, icon, label, badge, onClick }: { to: string; icon: React.ReactNode; label: string; badge?: boolean; onClick?: () => void }) {
+  const pendingApprovals = useCommunicationsStore(s => s.approvals.filter(a => a.status === 'Pending').length)
+  const count = badge ? pendingApprovals : 0
+
   return (
     <NavLink
       to={to} end={to === '/'} onClick={onClick}
@@ -62,10 +71,22 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
         background: isActive ? 'var(--color-primary-light)' : 'transparent',
         boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
         transition: 'all 0.2s ease', minHeight: 44,
+        position: 'relative',
       })}
     >
       {icon}
       <span style={{ flex: 1, lineHeight: 1.3 }}>{label}</span>
+      {count > 0 && (
+        <span style={{
+          fontSize: 10, fontWeight: 800, minWidth: 18, height: 18,
+          padding: '0 4px', borderRadius: 9,
+          background: '#dc2626', color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          lineHeight: 1, flexShrink: 0,
+        }}>
+          {count}
+        </span>
+      )}
     </NavLink>
   )
 }
@@ -139,7 +160,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const now       = useClock()
   const [navOpen, setNavOpen] = useState(false)
 
-  const isAdmin   = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => { setNavOpen(false) }, [location.pathname])
   useEffect(() => {
@@ -184,71 +205,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* ═══════════════════════════════════════════════════════
-          MOBILE HEADER
-      ═══════════════════════════════════════════════════════ */}
+      {/* MOBILE HEADER */}
       <header
         className="mobile-header"
-        style={{
-          display: 'none',
-          position: 'fixed', top: 0, left: 0, right: 0,
-          height: 'var(--mobile-header)',
-          background: 'var(--bg-card)',
-          borderBottom: '1px solid var(--border-color)',
-          alignItems: 'center',
-          padding: '0 14px',
-          gap: 10,
-          zIndex: 310,
-          boxShadow: 'var(--shadow-sm)',
-        }}
+        style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, height: 'var(--mobile-header)', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', alignItems: 'center', padding: '0 14px', gap: 10, zIndex: 310, boxShadow: 'var(--shadow-sm)' }}
       >
-        {/* Hamburger */}
         <button
           onClick={() => setNavOpen(v => !v)}
           aria-label="Toggle navigation"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 40, height: 40,
-            background: navOpen ? 'var(--color-primary-light)' : 'transparent',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm)',
-            color: navOpen ? 'var(--color-primary)' : 'var(--text-secondary)',
-            cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease',
-          }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: navOpen ? 'var(--color-primary-light)' : 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: navOpen ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease' }}
         >
           {navOpen
             ? <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
             : <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           }
         </button>
-
-        {/* Logo */}
         <img src="/icon-192.png" alt="Shoreline" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Shoreline</div>
           <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>iMPAC Operations</div>
         </div>
-
-        {/* RIGHT SIDE: Bell + Avatar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <NotificationBell />
           {user && (
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'var(--color-primary)', color: '#fff',
-              fontWeight: 700, fontSize: 13,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, fontFamily: 'Outfit, sans-serif',
-            }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', color: '#fff', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'Outfit, sans-serif' }}>
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
       </header>
 
-      {/* ═══════════════════════════════════════════════════════
-          MOBILE NAV SHEET
-      ═══════════════════════════════════════════════════════ */}
+      {/* MOBILE NAV SHEET */}
       <div className={`mobile-nav-sheet${navOpen ? ' open' : ''}`}>
         {user && (
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-color)', background: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -266,15 +253,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <NavLink
               key={item.to} to={item.to} end={item.to === '/'}
               onClick={() => setNavOpen(false)}
-              style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '14px 16px', borderRadius: 'var(--radius-md)',
-                textDecoration: 'none', fontSize: 15,
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? 'var(--color-primary)' : 'var(--text-primary)',
-                background: isActive ? 'var(--color-primary-light)' : 'transparent',
-                marginBottom: 2, minHeight: 52,
-              })}
+              style={({ isActive }) => ({ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 15, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--color-primary)' : 'var(--text-primary)', background: isActive ? 'var(--color-primary-light)' : 'transparent', marginBottom: 2, minHeight: 52 })}
             >
               <span style={{ color: 'inherit', opacity: 0.8 }}>{item.icon}</span>
               {item.label}
@@ -282,10 +261,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </div>
         <div style={{ padding: '12px 16px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <button
-            onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-app)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}
-          >
+          <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-app)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Logout
           </button>
@@ -296,21 +272,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════
-          DESKTOP SIDEBAR
-      ═══════════════════════════════════════════════════════ */}
+      {/* DESKTOP SIDEBAR */}
       <aside
         className="sidebar-aside"
-        style={{
-          width: 'var(--sidebar-width)', flexShrink: 0,
-          background: 'var(--bg-sidebar)',
-          borderRight: '1px solid var(--border-color)',
-          display: 'flex', flexDirection: 'column',
-          height: '100dvh', zIndex: 200,
-          overflowY: 'auto', overflowX: 'hidden',
-        }}
+        style={{ width: 'var(--sidebar-width)', flexShrink: 0, background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100dvh', zIndex: 200, overflowY: 'auto', overflowX: 'hidden' }}
       >
-        {/* Logo */}
         <div style={{ padding: '20px 20px 18px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <img src="/icon-192.png" alt="Shoreline" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
           <div>
@@ -319,13 +285,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Server status pill */}
         <div style={{ padding: '7px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'var(--color-primary-light)', flexShrink: 0 }}>
           <div className="status-dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }} />
           LAN Server Mode — data synced across all devices
         </div>
 
-        {/* Nav */}
         <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '8px 16px 4px' }}>Operations</div>
           {visibleOps.map(item => <NavItem key={item.to} {...item} />)}
@@ -337,7 +301,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* User + logout */}
         <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg-app)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
@@ -350,10 +313,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44 }}
-          >
+          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44 }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Logout
           </button>
@@ -365,40 +325,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* ═══════════════════════════════════════════════════════
-          MAIN CONTENT
-      ═══════════════════════════════════════════════════════ */}
-      <div
-        className="main-scroll"
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh', overflowY: 'auto' }}
-      >
-        {/* Desktop header */}
-        <header
-          className="desktop-header"
-          style={{
-            height: 58, padding: '0 20px',
-            borderBottom: '1px solid var(--border-color)',
-            display: 'flex', alignItems: 'center', gap: 10,
-            background: 'var(--bg-card)',
-            position: 'sticky', top: 0, zIndex: 90,
-            boxShadow: 'var(--shadow-sm)', flexShrink: 0,
-          }}
-        >
-          {/* User badge */}
+      {/* MAIN CONTENT */}
+      <div className="main-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh', overflowY: 'auto' }}>
+        <header className="desktop-header" style={{ height: 58, padding: '0 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-card)', position: 'sticky', top: 0, zIndex: 90, boxShadow: 'var(--shadow-sm)', flexShrink: 0 }}>
           {user && (
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', background: 'var(--color-primary-light)', border: '1px solid var(--color-primary)', padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>
               {user.name.toUpperCase()}
               <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4 }}>({roleDisplay})</span>
             </div>
           )}
-
-          {/* Search */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '7px 14px', flex: 1, maxWidth: 400 }}>
             <svg width="13" height="13" fill="none" stroke="var(--text-muted)" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Search residents...</span>
           </div>
-
-          {/* RIGHT SIDE: Bell + Role pill */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto', flexShrink: 0 }}>
             <NotificationBell />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
@@ -409,7 +348,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-
         <main className="main-content" style={{ padding: '32px 24px', flex: 1 }}>
           {children}
         </main>

@@ -11,6 +11,7 @@ import RecipeBookPage from './features/recipes/RecipeBookPage'
 import InventoryPage from './features/inventory/InventoryPage'
 import StaffPage from './features/staff/StaffPage'
 import StaffProfilePage from './features/staff/StaffProfilePage'
+import CommunicationsPage from './features/communications/CommunicationsPage'
 import Layout from './components/Layout'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
@@ -26,16 +27,17 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
-      <Route path="/"           element={<AuthedLayout><DashboardPage /></AuthedLayout>} />
-      <Route path="/residents"  element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
-      <Route path="/residents/:id" element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
-      <Route path="/menu"       element={<AuthedLayout><MenuPage /></AuthedLayout>} />
-      <Route path="/production" element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
-      <Route path="/recipes"    element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
-      <Route path="/inventory"  element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
-      <Route path="/staff"      element={<AuthedLayout><StaffPage /></AuthedLayout>} />
-      <Route path="/staff/:staffId" element={<AuthedLayout><StaffProfilePage /></AuthedLayout>} />
-      <Route path="/admin"      element={<AuthedLayout><AdminPage /></AuthedLayout>} />
+      <Route path="/"                 element={<AuthedLayout><DashboardPage /></AuthedLayout>} />
+      <Route path="/residents"        element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
+      <Route path="/residents/:id"    element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
+      <Route path="/menu"             element={<AuthedLayout><MenuPage /></AuthedLayout>} />
+      <Route path="/production"       element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
+      <Route path="/recipes"          element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
+      <Route path="/inventory"        element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
+      <Route path="/staff"            element={<AuthedLayout><StaffPage /></AuthedLayout>} />
+      <Route path="/staff/:staffId"   element={<AuthedLayout><StaffProfilePage /></AuthedLayout>} />
+      <Route path="/communications"   element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />
+      <Route path="/admin"            element={<AuthedLayout><AdminPage /></AuthedLayout>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
