@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext'
 import NotificationBell from './NotificationBell'
-import { useCommunicationsStore } from '../state/communicationsStore'
 
 function useClock() {
   const [now, setNow] = useState(new Date())
@@ -41,7 +40,6 @@ const NAV_OPERATIONS = [
   {
     label: 'Communications', to: '/communications',
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-    badge: true,
   },
   {
     label: 'Staff', to: '/staff',
@@ -55,10 +53,7 @@ const NAV_ADMIN = {
   icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
 }
 
-function NavItem({ to, icon, label, badge, onClick }: { to: string; icon: React.ReactNode; label: string; badge?: boolean; onClick?: () => void }) {
-  const pendingApprovals = useCommunicationsStore(s => s.approvals.filter(a => a.status === 'Pending').length)
-  const count = badge ? pendingApprovals : 0
-
+function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void }) {
   return (
     <NavLink
       to={to} end={to === '/'} onClick={onClick}
@@ -71,22 +66,10 @@ function NavItem({ to, icon, label, badge, onClick }: { to: string; icon: React.
         background: isActive ? 'var(--color-primary-light)' : 'transparent',
         boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
         transition: 'all 0.2s ease', minHeight: 44,
-        position: 'relative',
       })}
     >
       {icon}
       <span style={{ flex: 1, lineHeight: 1.3 }}>{label}</span>
-      {count > 0 && (
-        <span style={{
-          fontSize: 10, fontWeight: 800, minWidth: 18, height: 18,
-          padding: '0 4px', borderRadius: 9,
-          background: '#dc2626', color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          lineHeight: 1, flexShrink: 0,
-        }}>
-          {count}
-        </span>
-      )}
     </NavLink>
   )
 }
@@ -199,26 +182,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <InjectLayoutStyles />
 
       {navOpen && (
-        <div
-          onClick={() => setNavOpen(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(13,27,42,0.4)', backdropFilter: 'blur(2px)' }}
-        />
+        <div onClick={() => setNavOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(13,27,42,0.4)', backdropFilter: 'blur(2px)' }} />
       )}
 
       {/* MOBILE HEADER */}
-      <header
-        className="mobile-header"
-        style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, height: 'var(--mobile-header)', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', alignItems: 'center', padding: '0 14px', gap: 10, zIndex: 310, boxShadow: 'var(--shadow-sm)' }}
-      >
-        <button
-          onClick={() => setNavOpen(v => !v)}
-          aria-label="Toggle navigation"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: navOpen ? 'var(--color-primary-light)' : 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: navOpen ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease' }}
-        >
+      <header className="mobile-header" style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, height: 'var(--mobile-header)', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', alignItems: 'center', padding: '0 14px', gap: 10, zIndex: 310, boxShadow: 'var(--shadow-sm)' }}>
+        <button onClick={() => setNavOpen(v => !v)} aria-label="Toggle navigation" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: navOpen ? 'var(--color-primary-light)' : 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: navOpen ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease' }}>
           {navOpen
             ? <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            : <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-          }
+            : <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>}
         </button>
         <img src="/icon-192.png" alt="Shoreline" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
@@ -250,11 +222,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
         <div style={{ padding: '8px 10px' }}>
           {allNavItems.map(item => (
-            <NavLink
-              key={item.to} to={item.to} end={item.to === '/'}
-              onClick={() => setNavOpen(false)}
-              style={({ isActive }) => ({ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 15, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--color-primary)' : 'var(--text-primary)', background: isActive ? 'var(--color-primary-light)' : 'transparent', marginBottom: 2, minHeight: 52 })}
-            >
+            <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={() => setNavOpen(false)}
+              style={({ isActive }) => ({ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 15, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--color-primary)' : 'var(--text-primary)', background: isActive ? 'var(--color-primary-light)' : 'transparent', marginBottom: 2, minHeight: 52 })}>
               <span style={{ color: 'inherit', opacity: 0.8 }}>{item.icon}</span>
               {item.label}
             </NavLink>
@@ -273,10 +242,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* DESKTOP SIDEBAR */}
-      <aside
-        className="sidebar-aside"
-        style={{ width: 'var(--sidebar-width)', flexShrink: 0, background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100dvh', zIndex: 200, overflowY: 'auto', overflowX: 'hidden' }}
-      >
+      <aside className="sidebar-aside" style={{ width: 'var(--sidebar-width)', flexShrink: 0, background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100dvh', zIndex: 200, overflowY: 'auto', overflowX: 'hidden' }}>
         <div style={{ padding: '20px 20px 18px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <img src="/icon-192.png" alt="Shoreline" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
           <div>
@@ -284,12 +250,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.6px', textTransform: 'uppercase' }}>iMPAC Operations</div>
           </div>
         </div>
-
         <div style={{ padding: '7px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'var(--color-primary-light)', flexShrink: 0 }}>
           <div className="status-dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }} />
           LAN Server Mode — data synced across all devices
         </div>
-
         <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '8px 16px 4px' }}>Operations</div>
           {visibleOps.map(item => <NavItem key={item.to} {...item} />)}
@@ -300,7 +264,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </>
           )}
         </nav>
-
         <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg-app)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
@@ -342,9 +305,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <NotificationBell />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
               <span style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 9, letterSpacing: '0.5px', color: 'var(--text-muted)' }}>Role:</span>
-              <div style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                {roleDisplay}
-              </div>
+              <div style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{roleDisplay}</div>
             </div>
           </div>
         </header>
