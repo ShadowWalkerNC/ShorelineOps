@@ -826,15 +826,67 @@ export default function ProductionPage() {
         <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, and shift checklists.</p>
       </div>
 
-      <div className="sl-pills" style={{ marginBottom:'var(--space-6)' }}>
-        {SERVICE_TABS.map(t=>(
-          <button key={t.id} onClick={()=>setActiveTab(t.id)} className={activeTab===t.id?'sl-pill active':'sl-pill'}>
-            <span style={{ marginRight:'var(--space-1)' }}>{t.icon}</span>{t.label}
-          </button>
-        ))}
+      {/* ── Sticky Tab Bar ── */}
+      <div
+        role="tablist"
+        aria-label="Production sections"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          display: 'flex',
+          background: 'var(--bg-app)',
+          borderBottom: '2px solid var(--border-color)',
+          marginBottom: 'var(--space-6)',
+          marginLeft: 'calc(var(--space-6) * -1)',
+          marginRight: 'calc(var(--space-6) * -1)',
+          paddingLeft: 'var(--space-6)',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {SERVICE_TABS.map(t => {
+          const isActive = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(t.id)}
+              style={{
+                flex: '0 0 auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '14px 20px',
+                background: 'none',
+                border: 'none',
+                borderBottom: isActive ? '3px solid var(--color-primary)' : '3px solid transparent',
+                color: isActive ? 'var(--color-primary)' : 'var(--text-muted)',
+                fontWeight: isActive ? 700 : 500,
+                fontSize: 'var(--text-sm)',
+                fontFamily: 'var(--font-display)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'color 0.15s, border-color 0.15s',
+                marginBottom: -2,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{t.icon}</span>
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
-      <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-6)', boxShadow:'var(--shadow-sm)' }}>
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        padding: 'var(--space-6)',
+        boxShadow: 'var(--shadow-sm)',
+      }}>
         {activeTab==='worksheet'       && <WorksheetTab />}
         {activeTab==='traytickets'     && <TrayTicketsTab />}
         {activeTab==='preplist'        && <CulinaryPrepTab />}
