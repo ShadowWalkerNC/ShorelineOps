@@ -2,16 +2,25 @@ import React, { useEffect, useState } from 'react'
 import { useAdminStore } from '../../../state/adminStore'
 import type { UserRole } from '../../../security/AuthContext'
 
+// Must cover all 7 values of UserRole
 const ROLE_LABELS: Record<UserRole, string> = {
-  admin: 'Admin',
-  staff: 'Staff',
-  readonly: 'Read-only',
+  admin:      'Admin',
+  manager:    'Manager',
+  dietary:    'Dietary',
+  activities: 'Activities',
+  server:     'Server',
+  staff:      'Staff',
+  readonly:   'Read-only',
 }
 
 const ROLE_COLORS: Record<UserRole, string> = {
-  admin: 'bg-red-100 text-red-700',
-  staff: 'bg-blue-100 text-blue-700',
-  readonly: 'bg-gray-100 text-gray-600',
+  admin:      'bg-red-100 text-red-700',
+  manager:    'bg-orange-100 text-orange-700',
+  dietary:    'bg-green-100 text-green-700',
+  activities: 'bg-purple-100 text-purple-700',
+  server:     'bg-yellow-100 text-yellow-700',
+  staff:      'bg-blue-100 text-blue-700',
+  readonly:   'bg-gray-100 text-gray-600',
 }
 
 export default function UserManager() {

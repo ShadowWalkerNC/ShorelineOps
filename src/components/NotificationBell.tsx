@@ -78,15 +78,17 @@ export default function NotificationBell() {
   const navigate = useNavigate()
   const { notifications, fetch: fetchNotifs, markRead, markAllRead } = useNotificationsStore()
   const { profiles, fetch: fetchStaff } = useStaffStore()
-  const { threads, fetchThreads } = useCommunicationsStore()
+  // communicationsStore exposes `fetch`, not `fetchThreads`
+  const { threads, fetch: fetchThreads } = useCommunicationsStore()
   const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
 
-  const budgetFetch      = useBudgetStore(s => s.fetch)
-  const period           = useBudgetStore(s => s.period)
-  const getTotalBudget   = useBudgetStore(s => s.getTotalBudget)
-  const getTotalSpent    = useBudgetStore(s => s.getTotalSpent)
-  const getProjected     = useBudgetStore(s => s.getProjected)
-  const getDaysElapsed   = useBudgetStore(s => s.getDaysElapsed)
+  const budgetFetch    = useBudgetStore(s => s.fetch)
+  const period         = useBudgetStore(s => s.period)
+  const getTotalBudget = useBudgetStore(s => s.getTotalBudget)
+  const getTotalSpent  = useBudgetStore(s => s.getTotalSpent)
+  const getProjected   = useBudgetStore(s => s.getProjected)
+  // getDailyPerRes is the days-aware selector; compute elapsed inline for the alert copy
+  const getDailyPerRes = useBudgetStore(s => s.getDailyPerRes)
 
   const [open, setOpen]           = useState(false)
   const [tab, setTab]             = useState<'all' | 'system' | 'personal'>('all')
@@ -147,15 +149,13 @@ export default function NotificationBell() {
       })
     }
 
-    // Pending approvals
-    const pending = threads.filter(t =>
-      t.status === 'Pending Approval' || t.category === 'Approval Request'
-    )
+    // Pending approvals — ThreadStatus: 'Draft'|'Pending Review'|'Approved'|'Distributed'|'Archived'
+    const pending = threads.filter(t => t.status === 'Pending Review')
     if (pending.length > 0) {
       alerts.push({
         id: 'sys-approvals', type: 'approval', severity: 'warning',
         subject: `${pending.length} pending approval request${pending.length > 1 ? 's' : ''}`,
-        body: pending.slice(0, 3).map(t => t.subject ?? t.category).join(' · '),
+        body: pending.slice(0, 3).map(t => t.subject).join(' · '),
         link: '/communications', createdAt: now,
       })
     }
@@ -165,8 +165,13 @@ export default function NotificationBell() {
       const totalBudget = getTotalBudget()
       const totalSpent  = getTotalSpent()
       const projected   = getProjected()
-      const daysElapsed = getDaysElapsed()
       const pct         = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
+      // Compute days elapsed inline (same logic as budgetStore helper)
+      const start = new Date(period.startDate)
+      const today = new Date()
+      const daysElapsed = Math.max(1, Math.min(period.totalDays,
+        Math.ceil((today.getTime() - start.getTime()) / 86_400_000) + 1
+      ))
 
       if (projected > totalBudget) {
         alerts.push({
@@ -187,7 +192,7 @@ export default function NotificationBell() {
 
     return alerts.filter(a => !dismissed.has(a.id))
   }, [getLowParItems, getZeroItems, threads, dismissed, atLeast,
-      getTotalBudget, getTotalSpent, getProjected, getDaysElapsed, period])
+      getTotalBudget, getTotalSpent, getProjected, getDailyPerRes, period])
 
   const totalUnread = personalUnread + systemAlerts.length
   const hasCritical = systemAlerts.some(a => a.severity === 'critical')
