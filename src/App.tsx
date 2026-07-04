@@ -13,6 +13,7 @@ import StaffPage from './features/staff/StaffPage'
 import StaffProfilePage from './features/staff/StaffProfilePage'
 import CommunicationsPage from './features/communications/CommunicationsPage'
 import BudgetPage from './features/budget/BudgetPage'
+import TimecardPage from './features/timecard/TimecardPage'
 import Layout from './components/Layout'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/recipes"         element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
       <Route path="/inventory"       element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
       <Route path="/budget"          element={<AuthedLayout><BudgetPage /></AuthedLayout>} />
+      <Route path="/timecards"       element={<AuthedLayout><TimecardPage /></AuthedLayout>} />
       <Route path="/staff"           element={<AuthedLayout><StaffPage /></AuthedLayout>} />
       <Route path="/staff/:staffId"  element={<AuthedLayout><StaffProfilePage /></AuthedLayout>} />
       <Route path="/communications"  element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />

@@ -67,3 +67,17 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_residents_status ON residents(status);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+
+-- Timecard Punches (from AoD kiosk webhook integration)
+CREATE TABLE IF NOT EXISTS timecard_punches (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  badge_id     TEXT NOT NULL,
+  operation    TEXT NOT NULL,
+  kiosk_id     TEXT DEFAULT 'Default',
+  punched_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_timecard_punches_badge_id ON timecard_punches(badge_id);
+CREATE INDEX IF NOT EXISTS idx_timecard_punches_punched_at ON timecard_punches(punched_at DESC);
+

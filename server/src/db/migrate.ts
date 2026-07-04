@@ -140,6 +140,22 @@ const migrations: { name: string; sql: string }[] = [
         ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
     `,
   },
+  {
+    name: '004_timecard_punches',
+    sql: `
+      CREATE TABLE IF NOT EXISTS timecard_punches (
+        id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        badge_id     TEXT NOT NULL,
+        operation    TEXT NOT NULL,
+        kiosk_id     TEXT DEFAULT 'Default',
+        punched_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_timecard_punches_badge_id ON timecard_punches(badge_id);
+      CREATE INDEX IF NOT EXISTS idx_timecard_punches_punched_at ON timecard_punches(punched_at DESC);
+    `,
+  },
 ]
 
 export async function runMigrations() {
