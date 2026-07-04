@@ -2,19 +2,25 @@
  * ============================================================
  * AUTH CONTEXT — DEMO MODE
  * ============================================================
- * This file uses hardcoded local credentials so the app works
- * as a fully self-contained demo with NO backend required.
+ * Uses hardcoded local credentials so the app works as a
+ * fully self-contained demo with NO backend required.
  *
  * ⚠️  DEMO ONLY — Do NOT use in production.
- *     See DEMO.md for the full guide on replacing this with
- *     real Supabase authentication.
+ *     Replace with Supabase auth + RLS in production.
+ *     See DEMO.md for migration guide.
+ *
+ * Roles (lowest → highest privilege):
+ *   readonly → staff → server → dietary → activities → manager → admin
  * ============================================================
  */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import type { UserRole, Permission } from '../types/roles'
+import { ROLE_PERMISSIONS, ROLE_RANK, hasPermission } from '../types/roles'
 
-export type UserRole = 'admin' | 'staff' | 'readonly'
+export type { UserRole }
 
 export interface AuthUser {
+  /** Matches the staffProfile.authUserId for linking */
   id: string
   name: string
   email: string
@@ -28,18 +34,54 @@ interface AuthContextValue {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: (reason?: string) => Promise<void>
+  /** Returns true if the current user has the given permission */
+  can: (permission: Permission) => boolean
+  /** Returns true if the current user's role is at least as privileged as the given role */
+  atLeast: (role: UserRole) => boolean
 }
 
 // ── Demo credential store ─────────────────────────────────────────────────────
-// Three accounts cover all three role levels for demo/review purposes.
-// Replace this entire block with Supabase auth in production (see DEMO.md).
+// Seven accounts cover all role levels for demo/review purposes.
+// Replace this block with Supabase auth.signInWithPassword() in production.
 const DEMO_USERS: (AuthUser & { password: string })[] = [
   {
     id: 'demo-admin-1',
-    name: 'Admin User',
+    name: 'Alex Rivera',
     email: 'admin@shoreline.demo',
     password: 'Admin1234!',
     role: 'admin',
+    mfaVerified: true,
+  },
+  {
+    id: 'demo-manager-1',
+    name: 'Morgan Ellis',
+    email: 'manager@shoreline.demo',
+    password: 'Manager1234!',
+    role: 'manager',
+    mfaVerified: true,
+  },
+  {
+    id: 'demo-dietary-1',
+    name: 'Jamie Torres',
+    email: 'dietary@shoreline.demo',
+    password: 'Dietary1234!',
+    role: 'dietary',
+    mfaVerified: true,
+  },
+  {
+    id: 'demo-activities-1',
+    name: 'Casey Nguyen',
+    email: 'activities@shoreline.demo',
+    password: 'Activities1234!',
+    role: 'activities',
+    mfaVerified: true,
+  },
+  {
+    id: 'demo-server-1',
+    name: 'Jordan Lee',
+    email: 'server@shoreline.demo',
+    password: 'Server1234!',
+    role: 'server',
     mfaVerified: true,
   },
   {
@@ -69,7 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Restore session from sessionStorage on mount
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(SESSION_KEY)
@@ -82,7 +123,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    // Simulate a brief network delay so the UX feels natural
     await new Promise(r => setTimeout(r, 400))
     const match = DEMO_USERS.find(
       u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
@@ -98,8 +138,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }, [])
 
+  const can = useCallback((permission: Permission): boolean => {
+    if (!user) return false
+    return hasPermission(user.role, permission)
+  }, [user])
+
+  const atLeast = useCallback((role: UserRole): boolean => {
+    if (!user) return false
+    return ROLE_RANK[user.role] >= ROLE_RANK[role]
+  }, [user])
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, can, atLeast }}>
       {children}
     </AuthContext.Provider>
   )
@@ -111,19 +161,42 @@ export function useAuth(): AuthContextValue {
   return ctx
 }
 
-export type UserRoleType = UserRole
-
+// ── Role guard component ──────────────────────────────────────────────────────
+/**
+ * Renders children only if the current user has AT LEAST the given role.
+ * Renders fallback (or null) otherwise.
+ */
 export function RequireRole({
   role,
   children,
+  fallback = null,
 }: {
   role: UserRole
   children: React.ReactNode
+  fallback?: React.ReactNode
 }) {
-  const { user } = useAuth()
-  const roleRank: Record<UserRole, number> = { readonly: 0, staff: 1, admin: 2 }
-  if (!user || roleRank[user.role] < roleRank[role]) {
-    return <div className="p-4 text-red-600">Access denied.</div>
-  }
+  const { atLeast } = useAuth()
+  if (!atLeast(role)) return <>{fallback}</>
   return <>{children}</>
 }
+
+/**
+ * Renders children only if the current user has the given permission.
+ */
+export function RequirePermission({
+  permission,
+  children,
+  fallback = null,
+}: {
+  permission: Permission
+  children: React.ReactNode
+  fallback?: React.ReactNode
+}) {
+  const { can } = useAuth()
+  if (!can(permission)) return <>{fallback}</>
+  return <>{children}</>
+}
+
+// Re-export for consumers that imported from here previously
+export type UserRoleType = UserRole
+export { ROLE_PERMISSIONS }
