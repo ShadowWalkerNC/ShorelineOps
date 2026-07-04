@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Resident } from '@/types/resident'
 
 type Props = {
@@ -43,6 +44,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 
 function ResidentCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: Resident) => void; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const statusStyle = STATUS_STYLE[r.status]
 
   return (
@@ -170,6 +172,18 @@ function ResidentCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: Reside
 
           {/* Actions */}
           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 12, display: 'flex', gap: 10 }}>
+            <button
+              onClick={e => { e.stopPropagation(); navigate(`/residents/${r.id}`) }}
+              style={{
+                flex: 1, padding: '10px 0',
+                background: 'var(--bg-card)', color: 'var(--color-primary)',
+                border: '1.5px solid var(--color-primary)', borderRadius: 'var(--radius-md)',
+                fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'Outfit, sans-serif',
+              }}
+            >
+              👤 View Profile
+            </button>
             <button
               onClick={e => { e.stopPropagation(); onEdit(r) }}
               style={{
