@@ -1,17 +1,6 @@
 // ============================================================
 // NOTIFICATION BELL — HEADER DROPDOWN
 // ============================================================
-// Two categories:
-//   1. SYSTEM ALERTS — derived live from ops stores
-//      (inventory below par, pending comms approvals, budget warn)
-//   2. PERSONAL NOTIFICATIONS — from notificationsStore for
-//      the logged-in staff member
-//
-// Inventory alerts now read from useInventoryStore() so that
-// edits made in InventoryPage are instantly reflected here.
-// Budget alerts read from useBudgetStore() so they stay in sync
-// with BudgetPage entries.
-// ============================================================
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext'
@@ -22,7 +11,6 @@ import { useInventoryStore } from '../state/inventoryStore'
 import { useBudgetStore } from '../state/budgetStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 
-// ── System alert type ─────────────────────────────────────────────────────────
 type SystemAlert = {
   id: string
   type: 'inventory' | 'approval' | 'budget' | 'info'
@@ -33,7 +21,6 @@ type SystemAlert = {
   createdAt: string
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60_000)
@@ -72,13 +59,22 @@ const SEV_COLORS = {
   info:     { bg: 'var(--color-primary-light)', border: 'var(--color-primary)', dot: 'var(--color-primary)', text: 'var(--color-primary)' },
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// Detect whether we're on a narrow (mobile) viewport
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return mobile
+}
+
 export default function NotificationBell() {
   const { user, atLeast } = useAuth()
   const navigate = useNavigate()
   const { notifications, fetch: fetchNotifs, markRead, markAllRead } = useNotificationsStore()
   const { profiles, fetch: fetchStaff } = useStaffStore()
-  // communicationsStore exposes `fetch`, not `fetchThreads`
   const { threads, fetch: fetchThreads } = useCommunicationsStore()
   const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
 
@@ -87,15 +83,26 @@ export default function NotificationBell() {
   const getTotalBudget = useBudgetStore(s => s.getTotalBudget)
   const getTotalSpent  = useBudgetStore(s => s.getTotalSpent)
   const getProjected   = useBudgetStore(s => s.getProjected)
-  // getDailyPerRes is the days-aware selector; compute elapsed inline for the alert copy
   const getDailyPerRes = useBudgetStore(s => s.getDailyPerRes)
 
   const [open, setOpen]           = useState(false)
   const [tab, setTab]             = useState<'all' | 'system' | 'personal'>('all')
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const containerRef = useRef<HTMLDivElement>(null)
+  const bellRef      = useRef<HTMLButtonElement>(null)
+  const isMobile     = useIsMobile()
+
+  // For position:fixed on mobile we need to know where the bell button is
+  const [bellRect, setBellRect] = useState<DOMRect | null>(null)
 
   useClickOutside(containerRef, () => setOpen(false))
+
+  function handleBellClick() {
+    if (!open && bellRef.current) {
+      setBellRect(bellRef.current.getBoundingClientRect())
+    }
+    setOpen(v => !v)
+  }
 
   useEffect(() => {
     fetchStaff()
@@ -113,7 +120,6 @@ export default function NotificationBell() {
     (p as any).authUserId === user.id || (p as any).userId === user.id
   )
 
-  // ── Personal notifications ──────────────────────────────────────────────────
   const personal = myProfile
     ? [...notifications]
         .filter(n => n.toStaffId === myProfile.id)
@@ -121,14 +127,12 @@ export default function NotificationBell() {
     : []
   const personalUnread = personal.filter(n => !n.isRead).length
 
-  // ── System alerts (live derived from real stores) ───────────────────────────
   const systemAlerts = useMemo<SystemAlert[]>(() => {
     const now      = new Date().toISOString()
     const alerts: SystemAlert[] = []
     const zeroItems = getZeroItems()
     const lowPar    = getLowParItems()
 
-    // Inventory — zero stock takes priority over low par
     if (zeroItems.length > 0) {
       alerts.push({
         id: 'sys-inv-zero', type: 'inventory', severity: 'critical',
@@ -137,7 +141,6 @@ export default function NotificationBell() {
         link: '/inventory', createdAt: now,
       })
     }
-    // Show low-par alert separately even if some are zero
     const belowParOnly = lowPar.filter(i => i.qty > 0)
     if (belowParOnly.length > 0) {
       alerts.push({
@@ -149,7 +152,6 @@ export default function NotificationBell() {
       })
     }
 
-    // Pending approvals — ThreadStatus: 'Draft'|'Pending Review'|'Approved'|'Distributed'|'Archived'
     const pending = threads.filter(t => t.status === 'Pending Review')
     if (pending.length > 0) {
       alerts.push({
@@ -160,13 +162,11 @@ export default function NotificationBell() {
       })
     }
 
-    // Budget (manager+) — reads live from store
     if (atLeast('manager')) {
       const totalBudget = getTotalBudget()
       const totalSpent  = getTotalSpent()
       const projected   = getProjected()
       const pct         = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
-      // Compute days elapsed inline (same logic as budgetStore helper)
       const start = new Date(period.startDate)
       const today = new Date()
       const daysElapsed = Math.max(1, Math.min(period.totalDays,
@@ -222,12 +222,43 @@ export default function NotificationBell() {
     cursor: 'pointer', transition: 'all 0.15s ease', flexShrink: 0,
   }
 
+  // On mobile use position:fixed anchored below the bell button so the dropdown
+  // escapes the mobile header's stacking context and never gets clipped.
+  const dropdownStyle: React.CSSProperties = isMobile && bellRect
+    ? {
+        position: 'fixed',
+        top: bellRect.bottom + 8,
+        right: 8,
+        left: 8,
+        width: 'auto',
+        maxWidth: '100vw',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: '0 12px 40px rgba(13,27,42,0.22)',
+        zIndex: 9999,
+        overflow: 'hidden',
+      }
+    : {
+        position: 'absolute',
+        top: 'calc(100% + 8px)',
+        right: 0,
+        width: 400,
+        maxWidth: 'calc(100vw - 24px)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: '0 12px 40px rgba(13,27,42,0.22)',
+        zIndex: 500,
+        overflow: 'hidden',
+      }
+
   return (
     <div ref={containerRef} style={{ position: 'relative', flexShrink: 0 }}>
 
-      {/* ── Bell button ── */}
       <button
-        onClick={() => setOpen(v => !v)}
+        ref={bellRef}
+        onClick={handleBellClick}
         aria-label={`Notifications${totalUnread > 0 ? `, ${totalUnread} unread` : ''}`}
         aria-expanded={open}
         style={bellBtn}
@@ -251,15 +282,8 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* ── Dropdown ── */}
       {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-          width: 400, maxWidth: 'calc(100vw - 24px)',
-          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-lg)', boxShadow: '0 12px 40px rgba(13,27,42,0.22)',
-          zIndex: 500, overflow: 'hidden',
-        }}>
+        <div style={dropdownStyle}>
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-app)' }}>
@@ -297,7 +321,6 @@ export default function NotificationBell() {
           {/* List */}
           <div style={{ maxHeight: 420, overflowY: 'auto' }}>
 
-            {/* System alerts */}
             {showSystem && systemAlerts.map(a => {
               const c = SEV_COLORS[a.severity]
               return (
@@ -325,12 +348,10 @@ export default function NotificationBell() {
               )
             })}
 
-            {/* Personal notifications */}
             {showPersonal && personal.map(n => (
               <PersonalRow key={n.id} n={n} onClick={() => handlePersonalClick(n)} />
             ))}
 
-            {/* Empty state */}
             {isEmpty && (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                 <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"
@@ -359,7 +380,6 @@ export default function NotificationBell() {
   )
 }
 
-// ── Personal notification row ─────────────────────────────────────────────────
 function PersonalRow({ n, onClick }: { n: any; onClick: () => void }) {
   const [hovered, setHovered] = useState(false)
   const typeColor = n.isRead ? 'var(--text-muted)' : 'var(--color-primary)'
