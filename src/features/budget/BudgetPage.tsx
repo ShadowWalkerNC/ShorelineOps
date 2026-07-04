@@ -1,42 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useBudgetStore, type BudgetPeriod, type SpendCategory, type SpendEntry } from '../../state/budgetStore'
 
-// ── Types ────────────────────────────────────────────────────────────────────
-type SpendCategory =
-  | 'Food — Proteins'
-  | 'Food — Produce'
-  | 'Food — Dairy'
-  | 'Food — Dry Goods'
-  | 'Food — Dietary / Special'
-  | 'Food — Beverages'
-  | 'Non-Food — Cleaning'
-  | 'Non-Food — Paper Goods'
-  | 'Labor'
-  | 'Equipment / Repair'
-  | 'Other'
-
-type SpendEntry = {
-  id: string
-  date: string          // YYYY-MM-DD
-  vendor: string
-  description: string
-  category: SpendCategory
-  amount: number
-  invoiceRef?: string
-  loggedBy: string
-  truckOrderRef?: string  // links back to a truck order if applicable
-}
-
-type BudgetPeriod = {
-  id: string
-  label: string           // e.g. "July 2026"
-  startDate: string
-  endDate: string
-  residentCount: number
-  budgetPerResidentPerDay: number
-  totalDays: number
-}
-
-// ── Seed ─────────────────────────────────────────────────────────────────────
 const CATEGORIES: SpendCategory[] = [
   'Food — Proteins', 'Food — Produce', 'Food — Dairy', 'Food — Dry Goods',
   'Food — Dietary / Special', 'Food — Beverages',
@@ -44,64 +8,9 @@ const CATEGORIES: SpendCategory[] = [
   'Labor', 'Equipment / Repair', 'Other',
 ]
 
-const CURRENT_PERIOD: BudgetPeriod = {
-  id: 'p1',
-  label: 'July 2026',
-  startDate: '2026-07-01',
-  endDate: '2026-07-31',
-  residentCount: 42,
-  budgetPerResidentPerDay: 9.50,
-  totalDays: 31,
-}
-
-const SEED_ENTRIES: SpendEntry[] = [
-  // Week 1 deliveries
-  { id:'e1',  date:'2026-07-02', vendor:'Sysco',         description:'Weekly truck order #1 — Proteins & Produce',  category:'Food — Proteins',          amount:412.80, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e2',  date:'2026-07-02', vendor:'Sysco',         description:'Weekly truck order #1 — Dairy & Dry Goods',   category:'Food — Dairy',             amount:188.40, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e3',  date:'2026-07-02', vendor:'Sysco',         description:'Weekly truck order #1 — Dietary specials',    category:'Food — Dietary / Special', amount:214.60, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e4',  date:'2026-07-02', vendor:'Sysco',         description:'Weekly truck order #1 — Beverages',           category:'Food — Beverages',         amount: 96.30, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e5',  date:'2026-07-02', vendor:'Sysco',         description:'Weekly truck order #1 — Paper & Cleaning',    category:'Non-Food — Paper Goods',   amount: 74.20, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  // Week 2 deliveries
-  { id:'e6',  date:'2026-07-09', vendor:'Sysco',         description:'Weekly truck order #2 — Proteins',            category:'Food — Proteins',          amount:388.50, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e7',  date:'2026-07-09', vendor:'Sysco',         description:'Weekly truck order #2 — Produce',             category:'Food — Produce',           amount:142.10, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e8',  date:'2026-07-09', vendor:'Sysco',         description:'Weekly truck order #2 — Dairy',               category:'Food — Dairy',             amount:162.80, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e9',  date:'2026-07-09', vendor:'Sysco',         description:'Weekly truck order #2 — Dry Goods',           category:'Food — Dry Goods',         amount: 88.60, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e10', date:'2026-07-09', vendor:'Sysco',         description:'Weekly truck order #2 — Cleaning supplies',   category:'Non-Food — Cleaning',      amount: 52.40, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  // Misc this week
-  { id:'e11', date:'2026-07-04', vendor:'Local Market',  description:'Supplemental produce — holiday cookout',      category:'Food — Produce',           amount: 64.75, loggedBy:'Chef Maria' },
-  { id:'e12', date:'2026-07-01', vendor:'Sysco',         description:'Ensure Plus restock (supplemental)',           category:'Food — Dietary / Special', amount: 74.40, invoiceRef:'SYS-88100', loggedBy:'Manager Kim' },
-  { id:'e13', date:'2026-07-03', vendor:'Home Depot',    description:'Fridge gasket replacement — Walk-in Cooler',   category:'Equipment / Repair',       amount:138.00, invoiceRef:'HD-39821', loggedBy:'Manager Kim' },
-]
-
-const PREV_PERIOD: BudgetPeriod = {
-  id: 'p0',
-  label: 'June 2026',
-  startDate: '2026-06-01',
-  endDate: '2026-06-30',
-  residentCount: 41,
-  budgetPerResidentPerDay: 9.50,
-  totalDays: 30,
-}
-
-const SEED_PREV: SpendEntry[] = [
-  { id:'p1e1', date:'2026-06-04', vendor:'Sysco', description:'Wk1 truck', category:'Food — Proteins',   amount:398.20, loggedBy:'Chef Maria' },
-  { id:'p1e2', date:'2026-06-04', vendor:'Sysco', description:'Wk1 truck', category:'Food — Produce',    amount:128.40, loggedBy:'Chef Maria' },
-  { id:'p1e3', date:'2026-06-04', vendor:'Sysco', description:'Wk1 truck', category:'Food — Dairy',      amount:174.60, loggedBy:'Chef Maria' },
-  { id:'p1e4', date:'2026-06-11', vendor:'Sysco', description:'Wk2 truck', category:'Food — Proteins',   amount:421.80, loggedBy:'Chef Maria' },
-  { id:'p1e5', date:'2026-06-11', vendor:'Sysco', description:'Wk2 truck', category:'Food — Produce',    amount:136.90, loggedBy:'Chef Maria' },
-  { id:'p1e6', date:'2026-06-18', vendor:'Sysco', description:'Wk3 truck', category:'Food — Proteins',   amount:387.50, loggedBy:'Chef Maria' },
-  { id:'p1e7', date:'2026-06-18', vendor:'Sysco', description:'Wk3 truck', category:'Food — Dry Goods',  amount: 91.20, loggedBy:'Chef Maria' },
-  { id:'p1e8', date:'2026-06-25', vendor:'Sysco', description:'Wk4 truck', category:'Food — Proteins',   amount:410.00, loggedBy:'Chef Maria' },
-  { id:'p1e9', date:'2026-06-25', vendor:'Sysco', description:'Wk4 truck', category:'Food — Dairy',      amount:182.00, loggedBy:'Chef Maria' },
-  { id:'p1e10',date:'2026-06-25', vendor:'Sysco', description:'Wk4 truck', category:'Food — Beverages',  amount: 88.50, loggedBy:'Chef Maria' },
-  { id:'p1e11',date:'2026-06-15', vendor:'Med Sup','description':'Simply Thick restock', category:'Food — Dietary / Special', amount:108.00, loggedBy:'Manager Kim' },
-]
-
-function uid() { return Math.random().toString(36).slice(2,10) }
 function fmt$(n: number) { return `$${n.toFixed(2)}` }
 function fmtPct(v: number, total: number) { return total === 0 ? '0%' : `${((v/total)*100).toFixed(1)}%` }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 function Badge({ children, color = 'var(--color-primary)' }: { children: React.ReactNode; color?: string }) {
   return (
     <span style={{ display:'inline-block', fontSize:'var(--text-xs)', fontWeight:'var(--weight-bold)', padding:'2px 8px', borderRadius:20, background:`${color}22`, color, border:`1px solid ${color}55` }}>{children}</span>
@@ -125,14 +34,12 @@ const CATEGORY_COLORS: Record<SpendCategory, string> = {
   'Other':                    '#6b7280',
 }
 
-// ── OVERVIEW TAB ─────────────────────────────────────────────────────────────
 function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: SpendEntry[]; period: BudgetPeriod; prevEntries: SpendEntry[]; prevPeriod: BudgetPeriod }) {
   const totalBudget = period.residentCount * period.budgetPerResidentPerDay * period.totalDays
   const totalSpent  = entries.reduce((s, e) => s + e.amount, 0)
   const remaining   = totalBudget - totalSpent
   const pctUsed     = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
 
-  // Days elapsed in period
   const today = new Date().toISOString().slice(0,10)
   const start = new Date(period.startDate)
   const todayDate = new Date(today)
@@ -147,13 +54,10 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
   const overBudget = remaining < 0
   const barColor = pctUsed > 90 ? '#dc2626' : pctUsed > 75 ? '#d97706' : '#059669'
 
-  // Category totals
   const catTotals = CATEGORIES.map(c => ({ cat: c, total: entries.filter(e => e.category === c).reduce((s,e) => s+e.amount, 0) })).filter(x => x.total > 0).sort((a,b) => b.total - a.total)
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-6)' }}>
-
-      {/* Period summary stat cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:'var(--space-3)' }}>
         <div className="sl-stat-card">
           <div className="sl-eyebrow">Period Budget</div>
@@ -187,7 +91,6 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
         </div>
       </div>
 
-      {/* Budget progress bar */}
       <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-5)' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
           <div style={{ fontSize:14, fontWeight:700, color:'var(--text-primary)' }}>{period.label} Budget Utilization</div>
@@ -205,7 +108,6 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
         {!overBudget && projectedTotal > totalBudget && <div style={{ marginTop:10, padding:'8px 14px', background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'var(--radius-md)', fontSize:13, color:'#92400e', fontWeight:600 }}>⚠ Projected month-end {fmt$(projectedTotal)} exceeds budget by {fmt$(projectedTotal - totalBudget)} — consider reducing order quantities.</div>}
       </div>
 
-      {/* Category breakdown */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'var(--space-4)' }}>
         <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)' }}>
           <div className="sl-section-title" style={{ color:'var(--color-primary)', marginBottom:'var(--space-3)' }}>Spend by Category</div>
@@ -222,7 +124,6 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
           ))}
         </div>
 
-        {/* Period-over-period comparison */}
         <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)' }}>
           <div className="sl-section-title" style={{ color:'var(--color-primary)', marginBottom:'var(--space-3)' }}>Period Comparison</div>
           {[
@@ -250,14 +151,13 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
   )
 }
 
-// ── SPENDING LOG TAB ──────────────────────────────────────────────────────────
-function SpendingLogTab({ entries, setEntries, period }: { entries: SpendEntry[]; setEntries: React.Dispatch<React.SetStateAction<SpendEntry[]>>; period: BudgetPeriod }) {
-  const [search, setSearch]   = useState('')
+function SpendingLogTab({ entries, addEntry, removeEntry, period }: { entries: SpendEntry[]; addEntry: (entry: Omit<SpendEntry, 'id'>) => void; removeEntry: (id: string) => void; period: BudgetPeriod }) {
+  const [search, setSearch] = useState('')
   const [filterCat, setFCat] = useState<SpendCategory | 'All'>('All')
-  const [showForm, setShow]   = useState(false)
-  const [form, setForm]       = useState<Partial<SpendEntry>>({ date: new Date().toISOString().slice(0,10), category:'Food — Proteins', loggedBy:'', amount:0 })
-  const [sortField, setSort]  = useState<'date' | 'amount' | 'category'>('date')
-  const [sortDir, setSDir]    = useState<'asc' | 'desc'>('desc')
+  const [showForm, setShow] = useState(false)
+  const [form, setForm] = useState<Partial<SpendEntry>>({ date: new Date().toISOString().slice(0,10), category:'Food — Proteins', loggedBy:'', amount:0 })
+  const [sortField, setSort] = useState<'date' | 'amount' | 'category'>('date')
+  const [sortDir, setSDir] = useState<'asc' | 'desc'>('desc')
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -279,9 +179,9 @@ function SpendingLogTab({ entries, setEntries, period }: { entries: SpendEntry[]
     else { setSort(f); setSDir('desc') }
   }
 
-  function addEntry() {
+  function onAddEntry() {
     if (!form.vendor?.trim() || !form.description?.trim() || !form.loggedBy?.trim() || !form.amount) return
-    setEntries(p => [{ id:uid(), date:form.date!, vendor:form.vendor!, description:form.description!, category:form.category as SpendCategory, amount:form.amount!, invoiceRef:form.invoiceRef, loggedBy:form.loggedBy! }, ...p])
+    addEntry({ date:form.date!, vendor:form.vendor!, description:form.description!, category:form.category as SpendCategory, amount:form.amount!, invoiceRef:form.invoiceRef, loggedBy:form.loggedBy! })
     setForm({ date:new Date().toISOString().slice(0,10), category:'Food — Proteins', loggedBy:'', amount:0 })
     setShow(false)
   }
@@ -291,7 +191,6 @@ function SpendingLogTab({ entries, setEntries, period }: { entries: SpendEntry[]
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-4)' }}>
-      {/* Controls */}
       <div style={{ display:'flex', gap:'var(--space-3)', flexWrap:'wrap', alignItems:'center' }}>
         <input className="sl-input" style={{ flex:'1 1 180px', maxWidth:280 }} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search vendor, description, invoice…" />
         <select className="sl-select" value={filterCat} onChange={e => setFCat(e.target.value as any)} style={{ flex:'1 1 160px', maxWidth:240 }}>
@@ -304,7 +203,6 @@ function SpendingLogTab({ entries, setEntries, period }: { entries: SpendEntry[]
         </div>
       </div>
 
-      {/* Add form */}
       {showForm && (
         <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)', display:'flex', flexWrap:'wrap', gap:'var(--space-3)' }}>
           <div style={{ flex:'1 1 140px' }}><label>Vendor</label><input className="sl-input" value={form.vendor??''} onChange={e => setForm(p => ({...p,vendor:e.target.value}))} placeholder="e.g. Sysco" /></div>
@@ -315,13 +213,12 @@ function SpendingLogTab({ entries, setEntries, period }: { entries: SpendEntry[]
           <div style={{ flex:'0 1 130px' }}><label>Invoice Ref</label><input className="sl-input" value={form.invoiceRef??''} onChange={e => setForm(p => ({...p,invoiceRef:e.target.value}))} placeholder="optional" /></div>
           <div style={{ flex:'1 1 130px' }}><label>Logged By</label><input className="sl-input" value={form.loggedBy??''} onChange={e => setForm(p => ({...p,loggedBy:e.target.value}))} placeholder="Staff name" /></div>
           <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexShrink:0 }}>
-            <button onClick={addEntry} className="btn btn-primary">Save</button>
+            <button onClick={onAddEntry} className="btn btn-primary">Save</button>
             <button onClick={() => setShow(false)} className="btn btn-outline">Cancel</button>
           </div>
         </div>
       )}
 
-      {/* Table */}
       <div style={{ border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', overflow:'hidden' }}>
         <div style={{ overflowX:'auto' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'var(--text-sm)' }}>
@@ -345,7 +242,7 @@ function SpendingLogTab({ entries, setEntries, period }: { entries: SpendEntry[]
                   <td style={{ ...TD, fontWeight:700, color:'var(--color-primary)', textAlign:'right', fontFamily:'var(--font-display)', whiteSpace:'nowrap' }}>{fmt$(e.amount)}</td>
                   <td style={{ ...TD, color:'var(--text-muted)', fontSize:'var(--text-xs)' }}>{e.invoiceRef || '—'}</td>
                   <td style={{ ...TD, color:'var(--text-muted)', fontSize:'var(--text-xs)' }}>{e.loggedBy}</td>
-                  <td style={TD}><button onClick={() => setEntries(p => p.filter(x => x.id !== e.id))} style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:12 }}>Remove</button></td>
+                  <td style={TD}><button onClick={() => removeEntry(e.id)} style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:12 }}>Remove</button></td>
                 </tr>
               ))}
             </tbody>
@@ -364,7 +261,6 @@ function SpendingLogTab({ entries, setEntries, period }: { entries: SpendEntry[]
   )
 }
 
-// ── PER-RESIDENT COST TAB ─────────────────────────────────────────────────────
 function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: BudgetPeriod }) {
   const today = new Date().toISOString().slice(0,10)
   const start = new Date(period.startDate)
@@ -373,23 +269,21 @@ function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: Bu
   const totalSpent = entries.reduce((s,e) => s+e.amount, 0)
   const foodEntries = entries.filter(e => e.category.startsWith('Food'))
   const nonFoodEntries = entries.filter(e => !e.category.startsWith('Food'))
-  const laborEntries = entries.filter(e => e.category === 'Labor')
 
   const foodSpent = foodEntries.reduce((s,e) => s+e.amount, 0)
   const nonFoodSpent = nonFoodEntries.reduce((s,e) => s+e.amount, 0)
 
-  const dailyPerRes     = totalSpent / daysElapsed / period.residentCount
-  const foodPerRes      = foodSpent  / daysElapsed / period.residentCount
-  const nonFoodPerRes   = nonFoodSpent / daysElapsed / period.residentCount
+  const dailyPerRes = totalSpent / daysElapsed / period.residentCount
+  const foodPerRes = foodSpent / daysElapsed / period.residentCount
+  const nonFoodPerRes = nonFoodSpent / daysElapsed / period.residentCount
 
   const rows = [
-    { label:'Total Cost / Resident / Day',    val:dailyPerRes,   budget:period.budgetPerResidentPerDay, note:'All categories' },
-    { label:'Food Only / Resident / Day',     val:foodPerRes,    budget:period.budgetPerResidentPerDay * 0.80, note:'~80% budget target for food' },
-    { label:'Non-Food / Resident / Day',      val:nonFoodPerRes, budget:period.budgetPerResidentPerDay * 0.20, note:'~20% budget target for supplies' },
-    { label:'Total Cost / Resident / Month',  val:dailyPerRes * period.totalDays, budget:period.budgetPerResidentPerDay * period.totalDays, note:'Projected full month at current rate' },
+    { label:'Total Cost / Resident / Day', val:dailyPerRes, budget:period.budgetPerResidentPerDay, note:'All categories' },
+    { label:'Food Only / Resident / Day', val:foodPerRes, budget:period.budgetPerResidentPerDay * 0.80, note:'~80% budget target for food' },
+    { label:'Non-Food / Resident / Day', val:nonFoodPerRes, budget:period.budgetPerResidentPerDay * 0.20, note:'~20% budget target for supplies' },
+    { label:'Total Cost / Resident / Month', val:dailyPerRes * period.totalDays, budget:period.budgetPerResidentPerDay * period.totalDays, note:'Projected full month at current rate' },
   ]
 
-  // Daily cost by week
   const weekTotals: { week: string; total: number }[] = []
   for (let w = 0; w < 5; w++) {
     const ws = new Date(start)
@@ -407,8 +301,6 @@ function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: Bu
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
-
-      {/* Key metrics */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:'var(--space-3)' }}>
         {rows.map(r => {
           const over = r.val > r.budget
@@ -423,7 +315,6 @@ function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: Bu
         })}
       </div>
 
-      {/* Weekly spend bars */}
       <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)' }}>
         <div className="sl-section-title" style={{ color:'var(--color-primary)', marginBottom:'var(--space-3)' }}>Weekly Spend (all categories)</div>
         {weekTotals.map(w => (
@@ -438,7 +329,6 @@ function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: Bu
         ))}
       </div>
 
-      {/* Info tip */}
       <div className="sl-alert sl-alert-info" style={{ fontSize:'var(--text-sm)' }}>
         <b>📋 Note:</b> Per-resident cost includes all logged spend categories. Labor, equipment, and repair costs are included in the total but tracked separately. Food-only cost should stay within 75–80% of the daily budget per resident ({fmt$(period.budgetPerResidentPerDay * 0.80)}/res/day).
       </div>
@@ -446,10 +336,13 @@ function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: Bu
   )
 }
 
-// ── SETTINGS PANEL ────────────────────────────────────────────────────────────
-function SettingsTab({ period, setPeriod }: { period: BudgetPeriod; setPeriod: React.Dispatch<React.SetStateAction<BudgetPeriod>> }) {
+function SettingsTab({ period, setPeriod }: { period: BudgetPeriod; setPeriod: (period: BudgetPeriod) => void }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<BudgetPeriod>(period)
+
+  useEffect(() => {
+    setDraft(period)
+  }, [period])
 
   function save() { setPeriod(draft); setEditing(false) }
 
@@ -474,11 +367,11 @@ function SettingsTab({ period, setPeriod }: { period: BudgetPeriod; setPeriod: R
           ? <div style={{ display:'flex', gap:8 }}><button onClick={save} className="btn btn-primary btn-sm">Save</button><button onClick={() => { setDraft(period); setEditing(false) }} className="btn btn-outline btn-sm">Cancel</button></div>
           : <button onClick={() => setEditing(true)} className="btn btn-outline btn-sm">Edit</button>}
       </div>
-      {row('Period Label',                inp(draft.label,            v => setDraft(p => ({...p,label:v}))))}
-      {row('Start Date',                  inp(draft.startDate,        v => setDraft(p => ({...p,startDate:v})), 'date'))}
-      {row('End Date',                    inp(draft.endDate,          v => setDraft(p => ({...p,endDate:v})), 'date'))}
-      {row('Total Days',                  inp(draft.totalDays,        v => setDraft(p => ({...p,totalDays:+v})), 'number'))}
-      {row('Resident Count',              inp(draft.residentCount,    v => setDraft(p => ({...p,residentCount:+v})), 'number'))}
+      {row('Period Label', inp(draft.label, v => setDraft(p => ({...p,label:v}))))}
+      {row('Start Date', inp(draft.startDate, v => setDraft(p => ({...p,startDate:v})), 'date'))}
+      {row('End Date', inp(draft.endDate, v => setDraft(p => ({...p,endDate:v})), 'date'))}
+      {row('Total Days', inp(draft.totalDays, v => setDraft(p => ({...p,totalDays:+v})), 'number'))}
+      {row('Resident Count', inp(draft.residentCount, v => setDraft(p => ({...p,residentCount:+v})), 'number'))}
       {row('Budget / Resident / Day ($)', inp(draft.budgetPerResidentPerDay, v => setDraft(p => ({...p,budgetPerResidentPerDay:+v})), 'number'))}
       <div style={{ marginTop:14, padding:'10px 14px', background:'var(--bg-app)', borderRadius:'var(--radius-md)', border:'1px solid var(--border-color)', fontSize:13 }}>
         Computed total budget: <b style={{ color:'var(--color-primary)' }}>{fmt$(draft.residentCount * draft.budgetPerResidentPerDay * draft.totalDays)}</b>
@@ -487,24 +380,34 @@ function SettingsTab({ period, setPeriod }: { period: BudgetPeriod; setPeriod: R
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 type BudgetTab = 'overview' | 'log' | 'per-resident' | 'settings'
 const BUDGET_TABS: { id: BudgetTab; label: string; icon: string }[] = [
-  { id:'overview',      label:'Overview',          icon:'📊' },
-  { id:'log',           label:'Spending Log',       icon:'💸' },
-  { id:'per-resident',  label:'Per-Resident Cost',  icon:'👤' },
-  { id:'settings',      label:'Period Settings',    icon:'⚙️' },
+  { id:'overview', label:'Overview', icon:'📊' },
+  { id:'log', label:'Spending Log', icon:'💸' },
+  { id:'per-resident', label:'Per-Resident Cost', icon:'👤' },
+  { id:'settings', label:'Period Settings', icon:'⚙️' },
 ]
 
 export default function BudgetPage() {
-  const [tab, setTab]         = useState<BudgetTab>('overview')
-  const [period, setPeriod]   = useState<BudgetPeriod>(CURRENT_PERIOD)
-  const [entries, setEntries] = useState<SpendEntry[]>(JSON.parse(JSON.stringify(SEED_ENTRIES)))
+  const [tab, setTab] = useState<BudgetTab>('overview')
+
+  const fetch = useBudgetStore(s => s.fetch)
+  const period = useBudgetStore(s => s.period)
+  const entries = useBudgetStore(s => s.entries)
+  const prevPeriod = useBudgetStore(s => s.prevPeriod)
+  const prevEntries = useBudgetStore(s => s.prevEntries)
+  const setPeriod = useBudgetStore(s => s.setPeriod)
+  const addEntry = useBudgetStore(s => s.addEntry)
+  const removeEntry = useBudgetStore(s => s.removeEntry)
+
+  useEffect(() => {
+    fetch()
+  }, [fetch])
 
   const totalBudget = period.residentCount * period.budgetPerResidentPerDay * period.totalDays
-  const totalSpent  = entries.reduce((s,e) => s+e.amount, 0)
-  const pctUsed     = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
-  const overBudget  = totalSpent > totalBudget
+  const totalSpent = entries.reduce((s,e) => s+e.amount, 0)
+  const pctUsed = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
+  const overBudget = totalSpent > totalBudget
 
   return (
     <div className="sl-page fade-in">
@@ -513,7 +416,6 @@ export default function BudgetPage() {
         <p className="sl-page-subtitle">Track food and supply costs against your per-resident daily budget.</p>
       </div>
 
-      {/* Quick status strip */}
       <div style={{ display:'flex', gap:'var(--space-3)', flexWrap:'wrap', marginBottom:'var(--space-5)', alignItems:'center' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', background:'var(--bg-card)', border:`1px solid ${overBudget ? '#fecaca' : 'var(--border-color)'}`, borderRadius:'var(--radius-lg)', boxShadow:'var(--shadow-sm)' }}>
           <span style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', color:'var(--text-muted)' }}>{period.label}</span>
@@ -538,10 +440,10 @@ export default function BudgetPage() {
       </div>
 
       <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-6)', boxShadow:'var(--shadow-sm)' }}>
-        {tab === 'overview'     && <OverviewTab entries={entries} period={period} prevEntries={SEED_PREV} prevPeriod={PREV_PERIOD} />}
-        {tab === 'log'          && <SpendingLogTab entries={entries} setEntries={setEntries} period={period} />}
+        {tab === 'overview' && <OverviewTab entries={entries} period={period} prevEntries={prevEntries} prevPeriod={prevPeriod} />}
+        {tab === 'log' && <SpendingLogTab entries={entries} addEntry={addEntry} removeEntry={removeEntry} period={period} />}
         {tab === 'per-resident' && <PerResidentTab entries={entries} period={period} />}
-        {tab === 'settings'     && <SettingsTab period={period} setPeriod={setPeriod} />}
+        {tab === 'settings' && <SettingsTab period={period} setPeriod={setPeriod} />}
       </div>
     </div>
   )
