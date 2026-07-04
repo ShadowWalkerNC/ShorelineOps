@@ -337,6 +337,7 @@ export const SEED_SETTINGS: SystemSettings = {
   mfaRequired: false,
   allowReadonlyExport: true,
   maintenanceMode: false,
+  kitchenServiceMode: 'hybrid',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

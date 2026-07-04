@@ -15,7 +15,9 @@ export default function SystemSettingsPanel() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { fetchSettings() }, [])
-  useEffect(() => { if (settings) setForm({ kitchenServiceMode: 'hybrid', ...settings }) }, [settings])
+  useEffect(() => {
+    if (settings) setForm({ ...settings, kitchenServiceMode: settings.kitchenServiceMode ?? 'hybrid' })
+  }, [settings])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
