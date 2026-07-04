@@ -18,3 +18,15 @@ export type { ChecklistTemplate, ChecklistTemplateItem, ChecklistShift, Checklis
 export { CHECKLIST_EDIT_MIN_ROLE } from './checklist'
 
 export type { PrepListTemplate, PrepListSection, PrepListTemplateItem, PrepListMeal, PrepListInstance, PrepListInstanceSection, PrepListInstanceItem } from './preplist'
+
+// ── Menu ──────────────────────────────────────────────────────────────────────
+export type { MealSlot, MealGroup, DayOfWeek, ItemMealCategory, DietaryTag, MenuItem, MealEntry, DayMenu, MenuWeek } from './menu'
+export { MEAL_SLOTS, MEAL_SLOT_LABELS, MEAL_GROUPS, DAYS_OF_WEEK, ITEM_MEAL_CATEGORIES, DIETARY_TAGS, emptyDayMenu, emptyWeek } from './menu'
+
+// ── Residents ─────────────────────────────────────────────────────────────────
+export type { ResidentStatus, Texture, PortionSize, ServingLocation, DietType, Allergy, Beverage, Resident } from './resident'
+export { DIET_TYPES, ALLERGY_OPTIONS, BEVERAGE_OPTIONS, MONTHS } from './resident'
+
+// ── Production ────────────────────────────────────────────────────────────────
+export type { ProductionRow, MealCount, ProductionSheet } from './production'
+export { TEXTURE_LIST, DIET_LIST, LOCATION_LIST, emptyMealCount } from './production'

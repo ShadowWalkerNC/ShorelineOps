@@ -260,7 +260,7 @@ export default function DashboardPage() {
   const { residents, loading, fetch } = useResidentsStore()
   const { weeks, items, fetchWeeks, fetchItems } = useMenuStore()
   const { threads, fetchThreads } = useCommunicationsStore()
-  const { tasks, fetch: fetchProduction } = useProductionStore()
+  const { sheets, fetchSheets } = useProductionStore()
   const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
 
   const budgetFetch       = useBudgetStore(s => s.fetch)
@@ -273,7 +273,7 @@ export default function DashboardPage() {
   useEffect(() => { fetchWeeks() },      []) // eslint-disable-line
   useEffect(() => { fetchItems() },      []) // eslint-disable-line
   useEffect(() => { fetchThreads() },    []) // eslint-disable-line
-  useEffect(() => { fetchProduction() }, []) // eslint-disable-line
+  useEffect(() => { fetchSheets() },     []) // eslint-disable-line
   useEffect(() => { fetchInventory() },  []) // eslint-disable-line
   useEffect(() => { budgetFetch() },     [budgetFetch])
 
@@ -301,7 +301,7 @@ export default function DashboardPage() {
 
   const keyAllergyCount = useMemo(() => {
     const map: Record<string, number> = {}
-    active.forEach(r => r.allergies?.forEach(a => {
+    active.forEach(r => r.allergies?.forEach((a: string) => {
       if (KEY_ALLERGIES.includes(a)) map[a] = (map[a] ?? 0) + 1
     }))
     return map
@@ -341,15 +341,19 @@ export default function DashboardPage() {
   const dinnerDessert = todayMenu ? resolveNames(todayMenu.dinnerDessert?.itemIds ?? []).join(', ') : ''
 
   // ── Communications ─────────────────────────────────────────────────────────
+  // ThreadStatus values: 'Draft' | 'Pending Review' | 'Approved' | 'Distributed' | 'Archived'
   const pendingApprovals = useMemo(() => threads.filter(t =>
-    t.status === 'Pending Approval' || t.category === 'Approval Request'
+    t.status === 'Pending Review'
   ).length, [threads])
-  const unreadThreads = useMemo(() => threads.filter(t => t.status === 'Open').length, [threads])
+  const unreadThreads = useMemo(() => threads.filter(t =>
+    t.status === 'Draft' || t.status === 'Pending Review'
+  ).length, [threads])
 
   // ── Production ────────────────────────────────────────────────────────────
-  const completedTasks = useMemo(() => tasks.filter(t => t.completed).length, [tasks])
-  const totalTasks     = tasks.length
-  const prodPct        = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+  // productionStore exposes `sheets` (ProductionSheet[]) and `fetchSheets`
+  const completedSheets = useMemo(() => sheets.filter(s => !!s.signedOffAt).length, [sheets])
+  const totalSheets     = sheets.length
+  const prodPct         = totalSheets > 0 ? Math.round((completedSheets / totalSheets) * 100) : 0
 
   // ── Derived flags ────────────────────────────────────────────────────────
   const hasAnyPrep = cutUp > 0 || minced > 0 || pureed > 0 || Object.keys(keyAllergyCount).length > 0
@@ -401,24 +405,24 @@ export default function DashboardPage() {
         <MetricCard
           label="Pending Approvals"
           value={pendingApprovals}
-          sub="comms requests"
+          sub="awaiting review"
           iconBg={pendingApprovals > 0 ? '#fffbeb' : 'var(--color-success-light)'}
           to="/communications"
           alertClass={pendingApprovals > 0 ? 'warn-card' : undefined}
           icon={<svg width="18" height="18" fill="none" stroke={pendingApprovals > 0 ? '#d97706' : 'var(--color-success)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
         />
         <MetricCard
-          label="Open Threads"
+          label="Active Threads"
           value={unreadThreads}
-          sub="communications"
+          sub="draft or pending review"
           iconBg="var(--color-primary-light)"
           to="/communications"
           icon={<svg width="18" height="18" fill="none" stroke="var(--color-primary)" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg>}
         />
         <MetricCard
           label="Production Today"
-          value={totalTasks > 0 ? `${prodPct}%` : '—'}
-          sub={totalTasks > 0 ? `${completedTasks}/${totalTasks} tasks done` : 'No tasks loaded'}
+          value={totalSheets > 0 ? `${prodPct}%` : '—'}
+          sub={totalSheets > 0 ? `${completedSheets}/${totalSheets} sheets signed off` : 'No sheets loaded'}
           iconBg={prodPct === 100 ? 'var(--color-success-light)' : 'var(--color-primary-light)'}
           to="/production"
           icon={<svg width="18" height="18" fill="none" stroke={prodPct === 100 ? 'var(--color-success)' : 'var(--color-primary)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>}
@@ -475,7 +479,7 @@ export default function DashboardPage() {
               <PrepPill label="Cut-Up"  count={cutUp}  bg="var(--color-warning-light)" color="var(--color-warning-hover)" border="rgba(201,146,88,.35)" />
               <PrepPill label="Minced"  count={minced} bg="var(--color-purple-light)"  color="var(--color-purple)"       border="rgba(137,120,164,.35)" />
               <PrepPill label="Puréed"  count={pureed} bg="var(--color-teal-light)"    color="var(--color-teal-hover)"   border="rgba(58,157,168,.35)" />
-              {Object.entries(keyAllergyCount).sort((a,b) => b[1]-a[1]).map(([allergy, count]) => (
+              {Object.entries(keyAllergyCount).sort((a, b) => b[1]-a[1]).map(([allergy, count]) => (
                 <PrepPill key={allergy} label={allergy} count={count} bg="var(--color-danger-light)" color="var(--color-danger-hover)" border="rgba(188,106,88,.35)" />
               ))}
             </div>
@@ -583,8 +587,8 @@ export default function DashboardPage() {
           title="📋 Production Status"
           action={<Link to="/production" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Open →</Link>}
         >
-          {totalTasks === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No production tasks loaded for today. <Link to="/production" style={{ color: 'var(--color-primary)' }}>Go to Production →</Link></p>
+          {totalSheets === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No production sheets loaded for today. <Link to="/production" style={{ color: 'var(--color-primary)' }}>Go to Production →</Link></p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -593,8 +597,8 @@ export default function DashboardPage() {
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 800, color: prodPct === 100 ? '#059669' : 'var(--color-primary)', minWidth: 40, textAlign: 'right' }}>{prodPct}%</span>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{completedTasks} of {totalTasks} tasks complete</div>
-              {prodPct === 100 && <div style={{ padding: '6px 12px', background: 'var(--color-success-light)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, color: 'var(--color-success-hover)' }}>✅ All tasks complete!</div>}
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{completedSheets} of {totalSheets} sheets signed off</div>
+              {prodPct === 100 && <div style={{ padding: '6px 12px', background: 'var(--color-success-light)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, color: 'var(--color-success-hover)' }}>✅ All sheets complete!</div>}
             </div>
           )}
         </SectionCard>
