@@ -15,13 +15,16 @@ export const updateSW = registerSW({
   onOfflineReady() {
     window.dispatchEvent(new CustomEvent('pwa:offline-ready'))
   },
-  onRegisteredSW(swUrl, r) {
+  onRegisteredSW(swUrl: string, r: ServiceWorkerRegistration | undefined) {
     // Poll for updates every 60 minutes while the app is open
     if (r) {
       setInterval(async () => {
         if (!(!r.installing && navigator.onLine)) return
         try {
-          const resp = await fetch(swUrl, { cache: 'no-store', headers: { cache: 'no-store', 'cache-control': 'no-cache' } })
+          const resp = await fetch(swUrl, {
+            cache: 'no-store',
+            headers: { cache: 'no-store', 'cache-control': 'no-cache' },
+          })
           if (resp?.status === 200) await r.update()
         } catch { /* offline — ignore */ }
       }, 60 * 60 * 1000)
