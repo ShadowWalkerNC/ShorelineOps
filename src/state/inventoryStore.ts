@@ -1,7 +1,6 @@
 import { create } from 'zustand'
-import { supabase } from '@/lib/supabase'
+import { ls, LS_KEYS } from '@/lib/localStorage'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 export const INVENTORY_CATEGORIES = [
   'Dry Goods', 'Canned Goods', 'Frozen', 'Dairy', 'Produce',
   'Meat & Seafood', 'Beverages', 'Cleaning Supplies', 'Paper Goods', 'Other',
@@ -87,132 +86,111 @@ export interface TruckOrder {
   receivedById?: string
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
 export interface InventoryState {
-  // stock
   stockItems:   StockItem[]
-  items:        StockItem[]   // alias kept for NotificationBell compat
-  // waste
+  items:        StockItem[]
   wasteEntries: WasteEntry[]
-  // counts
   counts:       InventoryCount[]
-  // orders
   truckOrders:  TruckOrder[]
   loading: boolean
   error: string | null
-  // actions – stock
   fetch: (search?: string) => Promise<void>
   addItem:    (data: Omit<StockItem, 'id'>) => Promise<void>
   updateItem: (id: string, data: Partial<StockItem>) => Promise<void>
   remove:     (id: string) => Promise<void>
-  // actions – waste
   addWasteEntry:    (data: Omit<WasteEntry, 'id'>) => void
   removeWasteEntry: (id: string) => void
-  // actions – counts
   addCount:    (data: Omit<InventoryCount, 'id'>) => void
   updateCount: (id: string, data: Partial<InventoryCount>) => void
-  // actions – orders
   addOrder:    (data: Omit<TruckOrder, 'id'>) => TruckOrder
   updateOrder: (id: string, data: Partial<TruckOrder>) => void
-  // helpers
-  getLowParItems:  () => StockItem[]
-  getZeroItems:    () => StockItem[]
+  getLowParItems: () => StockItem[]
+  getZeroItems:   () => StockItem[]
 }
 
-function uid() { return Math.random().toString(36).slice(2, 10) }
-
-function toStock(row: Record<string, unknown>): StockItem {
-  return {
-    id:         row.id as string,
-    item:       row.item as string,
-    category:   ((row.category as string) ?? 'Other') as InventoryCategory,
-    qty:        Number(row.quantity ?? row.qty ?? 0),
-    unit:       (row.unit as string) ?? '',
-    min:        Number(row.par_level ?? row.min ?? 0),
-    reorderQty: row.reorder_qty != null ? Number(row.reorder_qty) : undefined,
-    cost:       row.cost        != null ? Number(row.cost)        : undefined,
-    vendor:     (row.vendor as string | null) ?? undefined,
-    notes:      (row.notes  as string | null) ?? undefined,
-  }
-}
+function uid() { return crypto.randomUUID() }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
-  stockItems: [], items: [], wasteEntries: [], counts: [], truckOrders: [],
-  loading: false, error: null,
+  stockItems:   ls.get<StockItem[]>(LS_KEYS.stockItems, []),
+  items:        ls.get<StockItem[]>(LS_KEYS.stockItems, []),
+  wasteEntries: ls.get<WasteEntry[]>(LS_KEYS.wasteEntries, []),
+  counts:       ls.get<InventoryCount[]>(LS_KEYS.counts, []),
+  truckOrders:  ls.get<TruckOrder[]>(LS_KEYS.truckOrders, []),
+  loading: false,
+  error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })
-    const { data, error } = await supabase.from('inventory').select('*').order('item')
-    if (error) { set({ error: error.message, loading: false }); return }
-    const stock = (data ?? []).map(r => toStock(r as Record<string, unknown>))
+    const stock = [...ls.get<StockItem[]>(LS_KEYS.stockItems, [])]
+      .sort((a, b) => a.item.localeCompare(b.item))
     set({ stockItems: stock, items: stock, loading: false })
   },
 
   addItem: async (data) => {
-    const row = {
-      item: data.item, category: data.category,
-      quantity: data.qty, unit: data.unit, par_level: data.min,
-      ...(data.reorderQty !== undefined && { reorder_qty: data.reorderQty }),
-      ...(data.cost       !== undefined && { cost:        data.cost }),
-      ...(data.vendor     !== undefined && { vendor:      data.vendor }),
-      ...(data.notes      !== undefined && { notes:       data.notes }),
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('inventory') as any).insert(row).select().single()
-    if (error) throw new Error(error.message)
-    const item = toStock(r as Record<string, unknown>)
-    set(s => { const next = [...s.stockItems, item].sort((a, b) => a.item.localeCompare(b.item)); return { stockItems: next, items: next } })
+    const item: StockItem = { ...data, id: uid() }
+    const all = [...ls.get<StockItem[]>(LS_KEYS.stockItems, []), item]
+      .sort((a, b) => a.item.localeCompare(b.item))
+    ls.set(LS_KEYS.stockItems, all)
+    set({ stockItems: all, items: all })
   },
 
   updateItem: async (id, data) => {
-    const patch: Record<string, unknown> = {}
-    if (data.item       !== undefined) patch.item       = data.item
-    if (data.category   !== undefined) patch.category   = data.category
-    if (data.qty        !== undefined) patch.quantity   = data.qty
-    if (data.unit       !== undefined) patch.unit       = data.unit
-    if (data.min        !== undefined) patch.par_level  = data.min
-    if (data.reorderQty !== undefined) patch.reorder_qty = data.reorderQty
-    if (data.cost       !== undefined) patch.cost       = data.cost
-    if (data.vendor     !== undefined) patch.vendor     = data.vendor
-    if (data.notes      !== undefined) patch.notes      = data.notes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('inventory') as any).update(patch).eq('id', id).select().single()
-    if (error) throw new Error(error.message)
-    const updated = toStock(r as Record<string, unknown>)
-    set(s => { const next = s.stockItems.map(i => i.id === id ? updated : i); return { stockItems: next, items: next } })
+    const all = ls.get<StockItem[]>(LS_KEYS.stockItems, []).map(i =>
+      i.id === id ? { ...i, ...data } : i
+    )
+    ls.set(LS_KEYS.stockItems, all)
+    set({ stockItems: all, items: all })
   },
 
   remove: async (id) => {
-    const { error } = await supabase.from('inventory').delete().eq('id', id)
-    if (error) throw new Error(error.message)
-    set(s => { const next = s.stockItems.filter(i => i.id !== id); return { stockItems: next, items: next } })
+    const all = ls.get<StockItem[]>(LS_KEYS.stockItems, []).filter(i => i.id !== id)
+    ls.set(LS_KEYS.stockItems, all)
+    set({ stockItems: all, items: all })
   },
 
-  // Waste — local only (no DB table yet)
   addWasteEntry: (data) => {
     const entry: WasteEntry = { ...data, id: uid() }
-    set(s => ({ wasteEntries: [...s.wasteEntries, entry] }))
+    const all = [...ls.get<WasteEntry[]>(LS_KEYS.wasteEntries, []), entry]
+    ls.set(LS_KEYS.wasteEntries, all)
+    set({ wasteEntries: all })
   },
-  removeWasteEntry: (id) => set(s => ({ wasteEntries: s.wasteEntries.filter(e => e.id !== id) })),
 
-  // Counts — local only
+  removeWasteEntry: (id) => {
+    const all = ls.get<WasteEntry[]>(LS_KEYS.wasteEntries, []).filter(e => e.id !== id)
+    ls.set(LS_KEYS.wasteEntries, all)
+    set({ wasteEntries: all })
+  },
+
   addCount: (data) => {
     const count: InventoryCount = { ...data, id: uid() }
-    set(s => ({ counts: [...s.counts, count] }))
+    const all = [...ls.get<InventoryCount[]>(LS_KEYS.counts, []), count]
+    ls.set(LS_KEYS.counts, all)
+    set({ counts: all })
   },
-  updateCount: (id, data) => set(s => ({
-    counts: s.counts.map(c => c.id === id ? { ...c, ...data } : c)
-  })),
 
-  // Truck orders — local only
+  updateCount: (id, data) => {
+    const all = ls.get<InventoryCount[]>(LS_KEYS.counts, []).map(c =>
+      c.id === id ? { ...c, ...data } : c
+    )
+    ls.set(LS_KEYS.counts, all)
+    set({ counts: all })
+  },
+
   addOrder: (data) => {
     const order: TruckOrder = { ...data, id: uid() }
-    set(s => ({ truckOrders: [...s.truckOrders, order] }))
+    const all = [...ls.get<TruckOrder[]>(LS_KEYS.truckOrders, []), order]
+    ls.set(LS_KEYS.truckOrders, all)
+    set({ truckOrders: all })
     return order
   },
-  updateOrder: (id, data) => set(s => ({
-    truckOrders: s.truckOrders.map(o => o.id === id ? { ...o, ...data } : o)
-  })),
+
+  updateOrder: (id, data) => {
+    const all = ls.get<TruckOrder[]>(LS_KEYS.truckOrders, []).map(o =>
+      o.id === id ? { ...o, ...data } : o
+    )
+    ls.set(LS_KEYS.truckOrders, all)
+    set({ truckOrders: all })
+  },
 
   getLowParItems: () => get().stockItems.filter(i => i.qty < i.min && i.min > 0),
   getZeroItems:   () => get().stockItems.filter(i => i.qty <= 0),

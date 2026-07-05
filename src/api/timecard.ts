@@ -1,4 +1,7 @@
-import { supabase } from '@/lib/supabase'
+// ============================================================
+// TIMECARD API — local branch (localStorage only)
+// ============================================================
+import { ls, LS_KEYS } from '@/lib/localStorage'
 
 export interface TimecardPunch {
   id: string
@@ -11,15 +14,11 @@ export interface TimecardPunch {
 }
 
 export async function fetchPunches(badgeId?: string, limit = 200): Promise<TimecardPunch[]> {
-  let q = supabase
-    .from('time_punches')
-    .select('*')
-    .order('punched_at', { ascending: false })
-    .limit(limit)
-  if (badgeId) q = q.eq('badge_id', badgeId)
-  const { data, error } = await q
-  if (error) throw new Error(error.message)
-  return (data ?? []) as TimecardPunch[]
+  let punches = ls.get<TimecardPunch[]>(LS_KEYS.timePunches, [])
+  if (badgeId) punches = punches.filter(p => p.badge_id === badgeId)
+  return punches
+    .sort((a, b) => b.punched_at.localeCompare(a.punched_at))
+    .slice(0, limit)
 }
 
 export async function insertPunch(
@@ -28,23 +27,23 @@ export async function insertPunch(
   kioskId = 'Main Terminal',
   notes?: string
 ): Promise<TimecardPunch> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from('time_punches') as any)
-    .insert({ badge_id: badgeId, operation, kiosk_id: kioskId, punched_at: new Date().toISOString(), notes })
-    .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return data as TimecardPunch
+  const punch: TimecardPunch = {
+    id:         crypto.randomUUID(),
+    badge_id:   badgeId,
+    operation,
+    kiosk_id:   kioskId,
+    punched_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    notes:      notes ?? null,
+  }
+  const all = [punch, ...ls.get<TimecardPunch[]>(LS_KEYS.timePunches, [])]
+  ls.set(LS_KEYS.timePunches, all)
+  return punch
 }
 
 export async function getLastPunch(badgeId: string): Promise<TimecardPunch | null> {
-  const { data, error } = await supabase
-    .from('time_punches')
-    .select('*')
-    .eq('badge_id', badgeId)
-    .order('punched_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (error) throw new Error(error.message)
-  return data as TimecardPunch | null
+  const punches = ls.get<TimecardPunch[]>(LS_KEYS.timePunches, [])
+    .filter(p => p.badge_id === badgeId)
+    .sort((a, b) => b.punched_at.localeCompare(a.punched_at))
+  return punches[0] ?? null
 }

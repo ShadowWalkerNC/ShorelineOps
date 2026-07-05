@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { supabase } from '@/lib/supabase'
+import { ls, LS_KEYS } from '@/lib/localStorage'
 import type { DayMenu, DayOfWeek, MenuWeek as CanonicalMenuWeek } from '@/types/menu'
 
 export type { DayMenu, DayOfWeek }
@@ -43,80 +43,47 @@ export interface MenuState {
   deleteItem:  (id: string) => Promise<void>
 }
 
-const VALID_MEAL_CATEGORIES = new Set<ItemMealCategory>(['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert'])
-const VALID_DIETARY_TAGS = new Set<DietaryTag>([
-  'Gluten-Free', 'Dairy-Free', 'Nut-Free', 'Egg-Free',
-  'Vegan', 'Vegetarian', 'Low-Sodium', 'Diabetic-Friendly',
-])
-
-function toMealCategory(v: unknown): ItemMealCategory | undefined {
-  if (typeof v === 'string' && VALID_MEAL_CATEGORIES.has(v as ItemMealCategory))
-    return v as ItemMealCategory
-  return undefined
-}
-
-function toDietaryTags(v: unknown): DietaryTag[] | undefined {
-  if (!Array.isArray(v)) return undefined
-  const filtered = (v as unknown[]).filter(
-    (t): t is DietaryTag => typeof t === 'string' && VALID_DIETARY_TAGS.has(t as DietaryTag)
-  )
-  return filtered.length ? filtered : undefined
-}
-
-function rowToWeek(row: Record<string, unknown>): MenuWeek {
-  return {
-    id:        row.id        as string,
-    name:      ((row.label ?? row.name ?? '') as string),
-    active:    Boolean(row.active),
-    days:      ((row.days ?? {}) as Record<DayOfWeek, DayMenu>),
-    createdAt: (row.created_at as string) ?? '',
-    updatedAt: (row.updated_at as string) ?? '',
-  }
-}
-
-function rowToItem(row: Record<string, unknown>): MenuItem {
-  return {
-    id:              row.id   as string,
-    name:            row.name as string,
-    category:        (row.category as string | null) ?? null,
-    textureModified: Boolean(row.texture_modified ?? false),
-    mealCategory:    toMealCategory(row.meal_category),
-    dietaryTags:     toDietaryTags(row.dietary_tags),
-    recipeId:        (row.recipe_id as string | undefined) ?? undefined,
-    notes:           (row.notes    as string | undefined) ?? undefined,
-  }
-}
+function uid() { return crypto.randomUUID() }
+function now() { return new Date().toISOString() }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
-  weeks: [], items: [], selectedWeekId: null, loading: false, error: null,
+  weeks:          ls.get<MenuWeek[]>(LS_KEYS.menuWeeks, []),
+  items:          ls.get<MenuItem[]>(LS_KEYS.menuItems, []),
+  selectedWeekId: null,
+  loading: false,
+  error: null,
 
   fetchWeeks: async () => {
     set({ loading: true, error: null })
-    const { data, error } = await supabase.from('menu_weeks').select('*').order('created_at')
-    if (error) { set({ error: error.message, loading: false }); return }
-    set({ weeks: (data ?? []).map(w => rowToWeek(w as Record<string, unknown>)), loading: false })
+    const weeks = [...ls.get<MenuWeek[]>(LS_KEYS.menuWeeks, [])]
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    set({ weeks, loading: false })
   },
 
   addWeek: async (label) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('menu_weeks') as any)
-      .insert({ label, active: false, days: {} }).select().single()
-    if (error) throw new Error(error.message)
-    const week = rowToWeek(data as Record<string, unknown>)
+    const week: MenuWeek = {
+      id: uid(), name: label, active: false,
+      days: {} as Record<DayOfWeek, DayMenu>,
+      createdAt: now(), updatedAt: now(),
+    }
+    const all = [...ls.get<MenuWeek[]>(LS_KEYS.menuWeeks, []), week]
+    ls.set(LS_KEYS.menuWeeks, all)
     set(s => ({ weeks: [...s.weeks, week] }))
     return week
   },
 
   updateWeek: async (id, patch) => {
-    const update: Record<string, unknown> = {}
-    if (patch.name   !== undefined) update.label  = patch.name
-    if (patch.active !== undefined) update.active = patch.active
-    if (patch.days   !== undefined) update.days   = patch.days
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('menu_weeks') as any)
-      .update(update).eq('id', id).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ weeks: s.weeks.map(w => w.id === id ? rowToWeek(data as Record<string, unknown>) : w) }))
+    const all = ls.get<MenuWeek[]>(LS_KEYS.menuWeeks, []).map(w =>
+      w.id === id ? {
+        ...w,
+        ...(patch.name   !== undefined && { name:   patch.name }),
+        ...(patch.active !== undefined && { active: patch.active }),
+        ...(patch.days   !== undefined && { days:   patch.days }),
+        updatedAt: now(),
+      } : w
+    )
+    ls.set(LS_KEYS.menuWeeks, all)
+    set({ weeks: all })
   },
 
   updateMealEntry: async (weekId, day, slot, itemIds) => {
@@ -130,66 +97,58 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   setActiveWeek: async (id) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('menu_weeks') as any).update({ active: false }).neq('id', id)
-    await get().updateWeek(id, { active: true })
-    set(s => ({ weeks: s.weeks.map(w => ({ ...w, active: w.id === id })) }))
+    const all = ls.get<MenuWeek[]>(LS_KEYS.menuWeeks, []).map(w => ({
+      ...w, active: w.id === id, updatedAt: now(),
+    }))
+    ls.set(LS_KEYS.menuWeeks, all)
+    set({ weeks: all })
   },
 
   selectWeek: (id) => set({ selectedWeekId: id }),
 
   removeWeek: async (id) => {
-    const { error } = await supabase.from('menu_weeks').delete().eq('id', id)
-    if (error) throw new Error(error.message)
+    const all = ls.get<MenuWeek[]>(LS_KEYS.menuWeeks, []).filter(w => w.id !== id)
+    ls.set(LS_KEYS.menuWeeks, all)
     set(s => ({ weeks: s.weeks.filter(w => w.id !== id) }))
   },
   deleteWeek: async (id) => get().removeWeek(id),
 
   fetchItems: async () => {
-    const { data, error } = await supabase.from('menu_items').select('*').order('name')
-    if (error) { set({ error: error.message }); return }
-    set({ items: (data ?? []).map(r => rowToItem(r as Record<string, unknown>)) })
+    const items = [...ls.get<MenuItem[]>(LS_KEYS.menuItems, [])]
+      .sort((a, b) => a.name.localeCompare(b.name))
+    set({ items })
   },
 
   addItem: async (data) => {
     const isString = typeof data === 'string'
-    const name     = isString ? data : data.name
-    const row: Record<string, unknown> = {
-      name,
-      texture_modified: isString ? false : (data.textureModified ?? false),
-      ...(!isString && data.category     && { category:      data.category }),
-      ...(!isString && data.mealCategory && { meal_category: data.mealCategory }),
-      ...(!isString && data.dietaryTags  && { dietary_tags:  data.dietaryTags }),
-      ...(!isString && data.recipeId     && { recipe_id:     data.recipeId }),
-      ...(!isString && data.notes        && { notes:         data.notes }),
+    const item: MenuItem = {
+      id: uid(),
+      name:            isString ? data : data.name,
+      textureModified: isString ? false : (data.textureModified ?? false),
+      category:        isString ? null : (data.category ?? null),
+      mealCategory:    isString ? undefined : data.mealCategory,
+      dietaryTags:     isString ? undefined : data.dietaryTags,
+      recipeId:        isString ? undefined : data.recipeId,
+      notes:           isString ? undefined : data.notes,
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('menu_items') as any).insert(row).select().single()
-    if (error) throw new Error(error.message)
-    const item = rowToItem(r as Record<string, unknown>)
-    set(s => ({ items: [...s.items, item].sort((a, b) => a.name.localeCompare(b.name)) }))
+    const all = [...ls.get<MenuItem[]>(LS_KEYS.menuItems, []), item]
+      .sort((a, b) => a.name.localeCompare(b.name))
+    ls.set(LS_KEYS.menuItems, all)
+    set({ items: all })
     return item
   },
 
   updateItem: async (id, patch) => {
-    const update: Record<string, unknown> = {}
-    if (patch.name            !== undefined) update.name             = patch.name
-    if (patch.category        !== undefined) update.category         = patch.category
-    if (patch.textureModified !== undefined) update.texture_modified = patch.textureModified
-    if (patch.mealCategory    !== undefined) update.meal_category    = patch.mealCategory
-    if (patch.dietaryTags     !== undefined) update.dietary_tags     = patch.dietaryTags
-    if (patch.recipeId        !== undefined) update.recipe_id        = patch.recipeId
-    if (patch.notes           !== undefined) update.notes            = patch.notes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('menu_items') as any)
-      .update(update).eq('id', id).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ items: s.items.map(i => i.id === id ? rowToItem(data as Record<string, unknown>) : i) }))
+    const all = ls.get<MenuItem[]>(LS_KEYS.menuItems, []).map(i =>
+      i.id === id ? { ...i, ...patch } : i
+    )
+    ls.set(LS_KEYS.menuItems, all)
+    set({ items: all })
   },
 
   removeItem: async (id) => {
-    const { error } = await supabase.from('menu_items').delete().eq('id', id)
-    if (error) throw new Error(error.message)
+    const all = ls.get<MenuItem[]>(LS_KEYS.menuItems, []).filter(i => i.id !== id)
+    ls.set(LS_KEYS.menuItems, all)
     set(s => ({ items: s.items.filter(i => i.id !== id) }))
   },
   deleteItem: async (id) => get().removeItem(id),

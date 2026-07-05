@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { supabase } from '@/lib/supabase'
+import { ls, LS_KEYS } from '@/lib/localStorage'
 import type { ProductionRow } from '@/types/production'
 
 export interface ProductionSheet {
@@ -13,19 +13,7 @@ export interface ProductionSheet {
   signedOffBy?: string | null
 }
 
-function toSheet(row: Record<string, unknown>): ProductionSheet {
-  const rawItems = Array.isArray(row.items) ? (row.items as ProductionRow[]) : []
-  return {
-    id:          row.id as string,
-    label:       row.label as string,
-    meal:        row.meal as string,
-    date:        row.date as string,
-    rows:        rawItems,
-    items:       rawItems,
-    signedOffAt: row.signed_off_at as string | null,
-    signedOffBy: row.signed_off_by as string | null,
-  }
-}
+function uid() { return crypto.randomUUID() }
 
 type ProductionState = {
   sheets: ProductionSheet[]
@@ -40,64 +28,54 @@ type ProductionState = {
 }
 
 export const useProductionStore = create<ProductionState>((set, get) => ({
-  sheets: [],
+  sheets:  ls.get<ProductionSheet[]>(LS_KEYS.productions, []),
   loading: false,
-  error: null,
+  error:   null,
 
   fetchSheets: async () => {
     set({ loading: true, error: null })
-    const { data, error } = await supabase
-      .from('production_sheets').select('*').order('date', { ascending: false })
-    if (error) { set({ error: error.message, loading: false }); return }
-    set({ sheets: (data ?? []).map(r => toSheet(r as Record<string, unknown>)), loading: false })
+    const sheets = [...ls.get<ProductionSheet[]>(LS_KEYS.productions, [])]
+      .sort((a, b) => b.date.localeCompare(a.date))
+    set({ sheets, loading: false })
   },
 
   addSheet: async (data) => {
-    const row = { label: data.label, meal: data.meal, date: data.date, items: data.items ?? [] }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('production_sheets') as any).insert(row).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ sheets: [toSheet(r as Record<string, unknown>), ...s.sheets] }))
+    const sheet: ProductionSheet = {
+      ...data, id: uid(),
+      rows: (data.items ?? []) as ProductionRow[],
+    }
+    const all = [sheet, ...ls.get<ProductionSheet[]>(LS_KEYS.productions, [])]
+    ls.set(LS_KEYS.productions, all)
+    set(s => ({ sheets: [sheet, ...s.sheets] }))
   },
 
   updateSheet: async (id, data) => {
-    const patch: Record<string, unknown> = {}
-    if (data.label !== undefined) patch.label = data.label
-    if (data.meal  !== undefined) patch.meal  = data.meal
-    if (data.date  !== undefined) patch.date  = data.date
-    if (data.rows  !== undefined) patch.items = data.rows
-    if (data.items !== undefined) patch.items = data.items
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('production_sheets') as any).update(patch).eq('id', id).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(r as Record<string, unknown>) : sh) }))
+    const all = ls.get<ProductionSheet[]>(LS_KEYS.productions, []).map(sh =>
+      sh.id === id ? { ...sh, ...data } : sh
+    )
+    ls.set(LS_KEYS.productions, all)
+    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? { ...sh, ...data } : sh) }))
   },
 
   updateRow: async (sheetId, menuItemId, patch) => {
     const sheet = get().sheets.find(s => s.id === sheetId)
     if (!sheet) return
-    const updatedRows = sheet.rows.map(r =>
+    const rows = sheet.rows.map(r =>
       r.menuItemId === menuItemId ? { ...r, ...patch } : r
     )
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('production_sheets') as any)
-      .update({ items: updatedRows }).eq('id', sheetId).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ sheets: s.sheets.map(sh => sh.id === sheetId ? toSheet(r as Record<string, unknown>) : sh) }))
+    await get().updateSheet(sheetId, { rows, items: rows })
   },
 
   signOff: async (id, by) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('production_sheets') as any)
-      .update({ signed_off_at: new Date().toISOString(), signed_off_by: by })
-      .eq('id', id).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(r as Record<string, unknown>) : sh) }))
+    await get().updateSheet(id, {
+      signedOffAt: new Date().toISOString(),
+      signedOffBy: by,
+    })
   },
 
   removeSheet: async (id) => {
-    const { error } = await supabase.from('production_sheets').delete().eq('id', id)
-    if (error) throw new Error(error.message)
+    const all = ls.get<ProductionSheet[]>(LS_KEYS.productions, []).filter(sh => sh.id !== id)
+    ls.set(LS_KEYS.productions, all)
     set(s => ({ sheets: s.sheets.filter(sh => sh.id !== id) }))
   },
 }))

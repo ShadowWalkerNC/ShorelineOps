@@ -1,7 +1,6 @@
 import { create } from 'zustand'
-import { supabase } from '@/lib/supabase'
+import { ls, LS_KEYS } from '@/lib/localStorage'
 
-// ─ Types ───────────────────────────────────────────────────────────────────
 export interface BudgetPeriod {
   id: string
   label: string
@@ -30,60 +29,27 @@ export interface BudgetEntry {
 export type SpendCategory = string
 export interface SpendEntry extends BudgetEntry {}
 
-// ─ Default / empty period ──────────────────────────────────────────────────
-const now0 = new Date()
-const DEFAULT_PERIOD: BudgetPeriod = {
-  id:                      '',
-  label:                   '—',
-  month:                   now0.getMonth() + 1,
-  year:                    now0.getFullYear(),
-  totalBudget:             0,
-  residentCount:           1,
-  budgetPerResidentPerDay: 0,
-  startDate:               `${now0.getFullYear()}-${String(now0.getMonth()+1).padStart(2,'0')}-01`,
-  endDate:                 `${now0.getFullYear()}-${String(now0.getMonth()+1).padStart(2,'0')}-01`,
-  totalDays:               new Date(now0.getFullYear(), now0.getMonth()+1, 0).getDate(),
-}
-
-// ─ Helpers ───────────────────────────────────────────────────────────────────
-function daysInMonth(month: number, year: number): number {
-  return new Date(year, month, 0).getDate()
-}
+function uid() { return crypto.randomUUID() }
 function pad2(n: number) { return String(n).padStart(2, '0') }
+function daysInMonth(m: number, y: number) { return new Date(y, m, 0).getDate() }
 
-function toPeriod(row: Record<string, unknown>): BudgetPeriod {
-  const month = row.month as number
-  const year  = row.year  as number
-  const days  = daysInMonth(month, year)
+function makePeriod(raw: Omit<BudgetPeriod, 'startDate' | 'endDate' | 'totalDays'>): BudgetPeriod {
+  const days = daysInMonth(raw.month, raw.year)
   return {
-    id:                      row.id as string,
-    label:                   row.label as string,
-    month,
-    year,
-    totalBudget:             Number(row.total_budget ?? 0),
-    residentCount:           Number(row.resident_count ?? 1),
-    budgetPerResidentPerDay: Number(row.budget_per_resident_per_day ?? 0),
-    startDate:               `${year}-${pad2(month)}-01`,
-    endDate:                 `${year}-${pad2(month)}-${pad2(days)}`,
-    totalDays:               days,
+    ...raw,
+    startDate: `${raw.year}-${pad2(raw.month)}-01`,
+    endDate:   `${raw.year}-${pad2(raw.month)}-${pad2(days)}`,
+    totalDays: days,
   }
 }
 
-function toEntry(row: Record<string, unknown>): BudgetEntry {
-  return {
-    id:          row.id as string,
-    periodId:    row.period_id as string,
-    date:        row.date as string,
-    vendor:      (row.vendor     as string | null) ?? null,
-    description: row.description as string,
-    amount:      Number(row.amount ?? 0),
-    category:    (row.category   as string | null) ?? null,
-    invoiceRef:  (row.invoice_ref as string | null) ?? null,
-    loggedBy:    (row.logged_by  as string | null) ?? null,
-  }
-}
+const now0 = new Date()
+const DEFAULT_PERIOD: BudgetPeriod = makePeriod({
+  id: '', label: '—',
+  month: now0.getMonth() + 1, year: now0.getFullYear(),
+  totalBudget: 0, residentCount: 1, budgetPerResidentPerDay: 0,
+})
 
-// ─ State ────────────────────────────────────────────────────────────────────
 export interface BudgetState {
   period:      BudgetPeriod
   prevPeriod:  BudgetPeriod
@@ -107,121 +73,83 @@ export interface BudgetState {
 }
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
-  period: DEFAULT_PERIOD,
-  prevPeriod: DEFAULT_PERIOD,
-  periods: [], entries: [], prevEntries: [],
-  loading: false, error: null,
+  period:      DEFAULT_PERIOD,
+  prevPeriod:  DEFAULT_PERIOD,
+  periods:     [],
+  entries:     [],
+  prevEntries: [],
+  loading: false,
+  error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })
-    try {
-      const now = new Date()
-      const thisMonth = now.getMonth() + 1
-      const thisYear  = now.getFullYear()
-      const { data: pr, error: pe } = await supabase
-        .from('budget_periods').select('*')
-        .eq('month', thisMonth).eq('year', thisYear)
-        .maybeSingle()
-      if (pe) throw new Error(pe.message)
-
-      const prevMonth = thisMonth === 1 ? 12 : thisMonth - 1
-      const prevYear  = thisMonth === 1 ? thisYear - 1 : thisYear
-      const { data: pp } = await supabase
-        .from('budget_periods').select('*')
-        .eq('month', prevMonth).eq('year', prevYear)
-        .maybeSingle()
-
-      if (!pr) { set({ loading: false }); return }
-      const period = toPeriod(pr as Record<string, unknown>)
-      const { data: er, error: ee } = await supabase
-        .from('budget_entries').select('*').eq('period_id', period.id).order('date')
-      if (ee) throw new Error(ee.message)
-
-      const prevPeriod: BudgetPeriod = pp ? toPeriod(pp as Record<string, unknown>) : DEFAULT_PERIOD
-      let prevEntries: BudgetEntry[] = []
-      if (pp) {
-        const { data: pe2 } = await supabase
-          .from('budget_entries').select('*').eq('period_id', prevPeriod.id).order('date')
-        prevEntries = (pe2 ?? []).map(r => toEntry(r as Record<string, unknown>))
-      }
-
-      set({ period, prevPeriod, entries: (er ?? []).map(r => toEntry(r as Record<string, unknown>)), prevEntries, loading: false })
-    } catch (e: unknown) { set({ error: (e as Error).message, loading: false }) }
+    const allPeriods = ls.get<BudgetPeriod[]>(LS_KEYS.budgetPeriods, [])
+    const allEntries = ls.get<BudgetEntry[]>(LS_KEYS.budgetEntries, [])
+    const now = new Date()
+    const thisMonth = now.getMonth() + 1
+    const thisYear  = now.getFullYear()
+    const prevMonth = thisMonth === 1 ? 12 : thisMonth - 1
+    const prevYear  = thisMonth === 1 ? thisYear - 1 : thisYear
+    const period     = allPeriods.find(p => p.month === thisMonth && p.year === thisYear)
+    const prevPeriod = allPeriods.find(p => p.month === prevMonth && p.year === prevYear)
+    const entries     = period     ? allEntries.filter(e => e.periodId === period.id)     : []
+    const prevEntries = prevPeriod ? allEntries.filter(e => e.periodId === prevPeriod.id) : []
+    set({
+      period:      period     ?? DEFAULT_PERIOD,
+      prevPeriod:  prevPeriod ?? DEFAULT_PERIOD,
+      entries, prevEntries, loading: false,
+    })
   },
 
   fetchPeriods: async () => {
-    const { data, error } = await supabase
-      .from('budget_periods').select('*').order('year', { ascending: false }).order('month', { ascending: false })
-    if (error) { set({ error: error.message }); return }
-    set({ periods: (data ?? []).map(r => toPeriod(r as Record<string, unknown>)) })
+    const periods = [...ls.get<BudgetPeriod[]>(LS_KEYS.budgetPeriods, [])]
+      .sort((a, b) => b.year - a.year || b.month - a.month)
+    set({ periods })
   },
 
   fetchEntries: async (periodId) => {
-    const { data, error } = await supabase
-      .from('budget_entries').select('*').eq('period_id', periodId).order('date')
-    if (error) { set({ error: error.message }); return }
-    set({ entries: (data ?? []).map(r => toEntry(r as Record<string, unknown>)) })
+    const entries = ls.get<BudgetEntry[]>(LS_KEYS.budgetEntries, [])
+      .filter(e => e.periodId === periodId)
+      .sort((a, b) => a.date.localeCompare(b.date))
+    set({ entries })
   },
 
   setPeriod: (p) => set({ period: p }),
 
   upsertPeriod: async (data) => {
-    const row = {
-      label: data.label, month: data.month, year: data.year,
-      total_budget: data.totalBudget,
-      resident_count: data.residentCount,
-      budget_per_resident_per_day: data.budgetPerResidentPerDay,
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const q = supabase.from('budget_periods') as any
-    const { data: saved, error } = data.id
-      ? await q.update(row).eq('id', data.id).select().single()
-      : await q.insert(row).select().single()
-    if (error) throw new Error(error.message)
-    const period = toPeriod(saved as Record<string, unknown>)
+    const all = ls.get<BudgetPeriod[]>(LS_KEYS.budgetPeriods, [])
+    const existing = data.id ? all.find(p => p.id === data.id) : null
+    const period = makePeriod({ ...data, id: data.id ?? uid() })
+    const updated = existing
+      ? all.map(p => p.id === period.id ? period : p)
+      : [period, ...all]
+    ls.set(LS_KEYS.budgetPeriods, updated)
     set(s => ({
       period,
-      periods: data.id
-        ? s.periods.map(p => p.id === data.id ? period : p)
+      periods: existing
+        ? s.periods.map(p => p.id === period.id ? period : p)
         : [period, ...s.periods],
     }))
   },
 
   addEntry: async (data) => {
-    const row: Record<string, unknown> = {
-      period_id:   data.periodId,
-      date:        data.date,
-      description: data.description,
-      amount:      data.amount,
-      ...(data.vendor     != null && { vendor:      data.vendor }),
-      ...(data.category   != null && { category:    data.category }),
-      ...(data.invoiceRef != null && { invoice_ref: data.invoiceRef }),
-      ...(data.loggedBy   != null && { logged_by:   data.loggedBy }),
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('budget_entries') as any).insert(row).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ entries: [...s.entries, toEntry(r as Record<string, unknown>)] }))
+    const entry: BudgetEntry = { ...data, id: uid() }
+    const all = [...ls.get<BudgetEntry[]>(LS_KEYS.budgetEntries, []), entry]
+    ls.set(LS_KEYS.budgetEntries, all)
+    set(s => ({ entries: [...s.entries, entry] }))
   },
 
   updateEntry: async (id, data) => {
-    const patch: Record<string, unknown> = {}
-    if (data.date        !== undefined) patch.date        = data.date
-    if (data.vendor      !== undefined) patch.vendor      = data.vendor
-    if (data.description !== undefined) patch.description = data.description
-    if (data.amount      !== undefined) patch.amount      = data.amount
-    if (data.category    !== undefined) patch.category    = data.category
-    if (data.invoiceRef  !== undefined) patch.invoice_ref = data.invoiceRef
-    if (data.loggedBy    !== undefined) patch.logged_by   = data.loggedBy
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('budget_entries') as any).update(patch).eq('id', id).select().single()
-    if (error) throw new Error(error.message)
-    set(s => ({ entries: s.entries.map(e => e.id === id ? toEntry(r as Record<string, unknown>) : e) }))
+    const all = ls.get<BudgetEntry[]>(LS_KEYS.budgetEntries, []).map(e =>
+      e.id === id ? { ...e, ...data } : e
+    )
+    ls.set(LS_KEYS.budgetEntries, all)
+    set(s => ({ entries: s.entries.map(e => e.id === id ? { ...e, ...data } : e) }))
   },
 
   removeEntry: async (id) => {
-    const { error } = await supabase.from('budget_entries').delete().eq('id', id)
-    if (error) throw new Error(error.message)
+    const all = ls.get<BudgetEntry[]>(LS_KEYS.budgetEntries, []).filter(e => e.id !== id)
+    ls.set(LS_KEYS.budgetEntries, all)
     set(s => ({ entries: s.entries.filter(e => e.id !== id) }))
   },
 
