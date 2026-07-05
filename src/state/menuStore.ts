@@ -4,13 +4,15 @@ import type { DayMenu, DayOfWeek, MenuWeek as CanonicalMenuWeek } from '@/types/
 
 export type { DayMenu, DayOfWeek }
 
-// MenuItem must include textureModified to match src/types/menu.ts MenuItem
+// mealCategory must match the canonical ItemMealCategory union from src/types/menu.ts
+export type ItemMealCategory = 'All' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Dessert'
+
 export interface MenuItem {
   id: string
   name: string
   category?: string | null
   textureModified: boolean
-  mealCategory?: string
+  mealCategory?: ItemMealCategory
   dietaryTags?: string[]
   recipeId?: string
   notes?: string
@@ -41,6 +43,15 @@ export interface MenuState {
   deleteItem:  (id: string) => Promise<void>
 }
 
+const VALID_MEAL_CATEGORIES = new Set<ItemMealCategory>(['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert'])
+
+function toMealCategory(v: unknown): ItemMealCategory | undefined {
+  if (typeof v === 'string' && VALID_MEAL_CATEGORIES.has(v as ItemMealCategory)) {
+    return v as ItemMealCategory
+  }
+  return undefined
+}
+
 function rowToWeek(row: Record<string, unknown>): MenuWeek {
   return {
     id:        row.id        as string,
@@ -58,7 +69,7 @@ function rowToItem(row: Record<string, unknown>): MenuItem {
     name:            row.name as string,
     category:        (row.category as string | null) ?? null,
     textureModified: Boolean(row.texture_modified ?? false),
-    mealCategory:    (row.meal_category as string | undefined) ?? undefined,
+    mealCategory:    toMealCategory(row.meal_category),
     dietaryTags:     (row.dietary_tags  as string[] | undefined) ?? undefined,
     recipeId:        (row.recipe_id     as string | undefined) ?? undefined,
     notes:           (row.notes         as string | undefined) ?? undefined,

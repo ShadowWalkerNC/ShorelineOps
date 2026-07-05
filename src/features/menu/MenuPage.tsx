@@ -264,7 +264,7 @@ export default function MenuPage() {
 
   /**
    * Resolve the Recipe for a MenuItem using recipeId (exact, stable).
-   * Returns null if no recipeId is set or the recipe isn’t found.
+   * Returns null if no recipeId is set or the recipe isn't found.
    */
   const recipeForItem = useCallback((item: MenuItem): Recipe | null => {
     if (!item.recipeId) return null
@@ -319,7 +319,7 @@ export default function MenuPage() {
     if (!selectedWeekId) return
     await Promise.all(
       (Object.entries(updates) as [MealSlot, Partial<MealEntry>][]).map(([slot, entry]) =>
-        updateMealEntry(selectedWeekId, day, slot, entry)
+        updateMealEntry(selectedWeekId, day, slot, entry.itemIds ?? [])
       )
     )
   }, [selectedWeekId, updateMealEntry])
