@@ -1,50 +1,22 @@
 /**
- * Session timeout hook — HIPAA §164.312(a)(2)(iii) requires automatic
- * logoff after a period of inactivity.
+ * ============================================================
+ * SESSION TIMEOUT — Deprecated standalone hook
+ * ============================================================
+ * Session timeout is now managed directly inside AuthProvider
+ * in AuthContext.tsx for mandatory enforcement.
  *
- * Default: 15 minutes (900,000ms). Configurable via VITE_SESSION_TIMEOUT_MS.
+ * This file is retained for any legacy imports but is a no-op.
+ * Do not use this hook directly — use useAuth() instead.
+ * The AuthProvider wires timeout, warning, and key clearing
+ * automatically for all authenticated sessions.
+ * ============================================================
  */
-import { useEffect, useRef, useCallback } from 'react'
-import { auditLog } from './auditLog'
 
-const TIMEOUT_MS = Number(
-  import.meta.env.VITE_SESSION_TIMEOUT_MS ?? 900_000 // 15 minutes
-)
-
-const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
-  'mousemove',
-  'mousedown',
-  'keydown',
-  'touchstart',
-  'scroll',
-  'click',
-]
-
+// No-op export retained for import compatibility
 export function useSessionTimeout(
-  onTimeout: () => void,
-  userId?: string
+  _onTimeout: () => void,
+  _userId?: string
 ): void {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      auditLog('SESSION_TIMEOUT', { userId, outcome: 'success' })
-      onTimeout()
-    }, TIMEOUT_MS)
-  }, [onTimeout, userId])
-
-  useEffect(() => {
-    ACTIVITY_EVENTS.forEach((event) =>
-      window.addEventListener(event, resetTimer, { passive: true })
-    )
-    resetTimer()
-
-    return () => {
-      ACTIVITY_EVENTS.forEach((event) =>
-        window.removeEventListener(event, resetTimer)
-      )
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [resetTimer])
+  // Timeout is now mandatory and managed in AuthProvider.
+  // This hook is intentionally a no-op.
 }
