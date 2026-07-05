@@ -1,67 +1,85 @@
-/**
- * Production store — DEMO MODE
- * All data lives in memory. Changes persist for the session but reset on reload.
- */
 import { create } from 'zustand'
-import type { ProductionSheet, ProductionRow } from '../types/production'
-import type { DayOfWeek, MealSlot } from '../types/menu'
-import { SEED_PRODUCTION_SHEETS, uid, now } from '@/demo/seed'
+import { supabase } from '@/lib/supabase'
 
-let _sheets: ProductionSheet[] = JSON.parse(JSON.stringify(SEED_PRODUCTION_SHEETS))
-
-interface ProductionState {
-  sheets: ProductionSheet[]
-  activeSheet: ProductionSheet | null
-  loading: boolean
-  error: string | null
-  fetchSheets: (weekId?: string) => Promise<void>
-  loadSheet: (weekId: string, day: DayOfWeek, slot: MealSlot) => Promise<void>
-  updateRow: (sheetId: string, menuItemId: string, patch: Partial<ProductionRow>) => Promise<void>
-  signOff: (sheetId: string, staffName: string) => Promise<void>
-  setActiveSheet: (sheet: ProductionSheet | null) => void
-  clearError: () => void
+export interface ProductionSheet {
+  id: string
+  label: string
+  meal: string
+  date: string
+  items: unknown[]
+  signedOffAt?: string | null
+  signedOffBy?: string | null
 }
 
-export const useProductionStore = create<ProductionState>((set, get) => ({
+function toSheet(row: Record<string, unknown>): ProductionSheet {
+  return {
+    id:          row.id as string,
+    label:       row.label as string,
+    meal:        row.meal as string,
+    date:        row.date as string,
+    items:       Array.isArray(row.items) ? row.items : [],
+    signedOffAt: row.signed_off_at as string | null,
+    signedOffBy: row.signed_off_by as string | null,
+  }
+}
+
+type ProductionState = {
+  sheets: ProductionSheet[]
+  loading: boolean
+  error: string | null
+  fetchSheets: () => Promise<void>
+  addSheet: (data: Omit<ProductionSheet, 'id'>) => Promise<void>
+  updateSheet: (id: string, data: Partial<ProductionSheet>) => Promise<void>
+  signOff: (id: string, by: string) => Promise<void>
+  removeSheet: (id: string) => Promise<void>
+}
+
+export const useProductionStore = create<ProductionState>((set) => ({
   sheets: [],
-  activeSheet: null,
   loading: false,
   error: null,
 
-  fetchSheets: async (weekId) => {
+  fetchSheets: async () => {
     set({ loading: true, error: null })
-    await new Promise(r => setTimeout(r, 150))
-    const results = weekId ? _sheets.filter(s => s.menuWeekId === weekId) : [..._sheets]
-    set({ sheets: results, loading: false })
+    const { data, error } = await supabase
+      .from('production_sheets').select('*').order('date', { ascending: false })
+    if (error) { set({ error: error.message, loading: false }); return }
+    set({ sheets: (data ?? []).map(r => toSheet(r as Record<string, unknown>)), loading: false })
   },
 
-  loadSheet: async (weekId, day, slot) => {
-    set({ loading: true, error: null })
-    await new Promise(r => setTimeout(r, 100))
-    const sheet = _sheets.find(s => s.menuWeekId === weekId && s.day === day && s.slot === slot) ?? null
-    set({ activeSheet: sheet, loading: false })
+  addSheet: async (data) => {
+    const { data: row, error } = await supabase
+      .from('production_sheets')
+      .insert({ label: data.label, meal: data.meal, date: data.date, items: data.items ?? [] })
+      .select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ sheets: [toSheet(row as Record<string, unknown>), ...s.sheets] }))
   },
 
-  updateRow: async (sheetId, menuItemId, patch) => {
-    _sheets = _sheets.map(s => {
-      if (s.id !== sheetId) return s
-      const rows = s.rows.map(r => r.menuItemId === menuItemId ? { ...r, ...patch } : r)
-      return { ...s, rows, updatedAt: now() }
-    })
-    const updated = _sheets.find(s => s.id === sheetId) ?? null
-    set({ sheets: [..._sheets], activeSheet: updated })
+  updateSheet: async (id, data) => {
+    const patch: Record<string, unknown> = {}
+    if (data.label !== undefined) patch.label = data.label
+    if (data.meal  !== undefined) patch.meal  = data.meal
+    if (data.date  !== undefined) patch.date  = data.date
+    if (data.items !== undefined) patch.items = data.items
+    const { data: row, error } = await supabase
+      .from('production_sheets').update(patch).eq('id', id).select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(row as Record<string, unknown>) : sh) }))
   },
 
-  signOff: async (sheetId, staffName) => {
-    set({ loading: true, error: null })
-    await new Promise(r => setTimeout(r, 200))
-    _sheets = _sheets.map(s =>
-      s.id === sheetId ? { ...s, signedOffBy: staffName, signedOffAt: now(), updatedAt: now() } : s
-    )
-    const updated = _sheets.find(s => s.id === sheetId) ?? null
-    set({ sheets: [..._sheets], activeSheet: updated, loading: false })
+  signOff: async (id, by) => {
+    const { data: row, error } = await supabase
+      .from('production_sheets')
+      .update({ signed_off_at: new Date().toISOString(), signed_off_by: by })
+      .eq('id', id).select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(row as Record<string, unknown>) : sh) }))
   },
 
-  setActiveSheet: (sheet) => set({ activeSheet: sheet }),
-  clearError: () => set({ error: null }),
+  removeSheet: async (id) => {
+    const { error } = await supabase.from('production_sheets').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+    set(s => ({ sheets: s.sheets.filter(sh => sh.id !== id) }))
+  },
 }))

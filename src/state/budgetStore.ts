@@ -1,192 +1,180 @@
-// ============================================================
-// BUDGET STORE
-// ============================================================
-// Single source of truth for:
-//   - Current budget period settings
-//   - Spend entries (MTD log)
-//   - Previous period (read-only comparison)
-//
-// Consumers:
-//   BudgetPage   — reads/writes everything
-//   DashboardPage — reads period + totalSpent for metrics
-//   NotificationBell — reads period + totalSpent for budget alert
-// ============================================================
 import { create } from 'zustand'
+import { supabase } from '@/lib/supabase'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-export type SpendCategory =
-  | 'Food — Proteins'
-  | 'Food — Produce'
-  | 'Food — Dairy'
-  | 'Food — Dry Goods'
-  | 'Food — Dietary / Special'
-  | 'Food — Beverages'
-  | 'Non-Food — Cleaning'
-  | 'Non-Food — Paper Goods'
-  | 'Labor'
-  | 'Equipment / Repair'
-  | 'Other'
-
-export type SpendEntry = {
-  id: string
-  date: string           // YYYY-MM-DD
-  vendor: string
-  description: string
-  category: SpendCategory
-  amount: number
-  invoiceRef?: string
-  loggedBy: string
-  truckOrderRef?: string
-}
-
-export type BudgetPeriod = {
+export interface BudgetPeriod {
   id: string
   label: string
-  startDate: string
-  endDate: string
+  month: number
+  year: number
+  totalBudget: number
   residentCount: number
   budgetPerResidentPerDay: number
-  totalDays: number
 }
 
-// ── Seed data ─────────────────────────────────────────────────────────────────
-const SEED_PERIOD: BudgetPeriod = {
-  id: 'p1',
-  label: 'July 2026',
-  startDate: '2026-07-01',
-  endDate: '2026-07-31',
-  residentCount: 42,
-  budgetPerResidentPerDay: 9.50,
-  totalDays: 31,
+export interface BudgetEntry {
+  id: string
+  periodId: string
+  date: string
+  vendor?: string | null
+  description: string
+  amount: number
+  category?: string | null
 }
 
-const SEED_ENTRIES: SpendEntry[] = [
-  { id:'e1',  date:'2026-07-02', vendor:'Sysco',        description:'Weekly truck order #1 — Proteins & Produce',  category:'Food — Proteins',          amount:412.80, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e2',  date:'2026-07-02', vendor:'Sysco',        description:'Weekly truck order #1 — Dairy & Dry Goods',   category:'Food — Dairy',             amount:188.40, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e3',  date:'2026-07-02', vendor:'Sysco',        description:'Weekly truck order #1 — Dietary specials',    category:'Food — Dietary / Special', amount:214.60, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e4',  date:'2026-07-02', vendor:'Sysco',        description:'Weekly truck order #1 — Beverages',           category:'Food — Beverages',         amount: 96.30, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e5',  date:'2026-07-02', vendor:'Sysco',        description:'Weekly truck order #1 — Paper & Cleaning',    category:'Non-Food — Paper Goods',   amount: 74.20, invoiceRef:'SYS-88201', loggedBy:'Chef Maria' },
-  { id:'e6',  date:'2026-07-09', vendor:'Sysco',        description:'Weekly truck order #2 — Proteins',            category:'Food — Proteins',          amount:388.50, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e7',  date:'2026-07-09', vendor:'Sysco',        description:'Weekly truck order #2 — Produce',             category:'Food — Produce',           amount:142.10, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e8',  date:'2026-07-09', vendor:'Sysco',        description:'Weekly truck order #2 — Dairy',               category:'Food — Dairy',             amount:162.80, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e9',  date:'2026-07-09', vendor:'Sysco',        description:'Weekly truck order #2 — Dry Goods',           category:'Food — Dry Goods',         amount: 88.60, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e10', date:'2026-07-09', vendor:'Sysco',        description:'Weekly truck order #2 — Cleaning supplies',   category:'Non-Food — Cleaning',      amount: 52.40, invoiceRef:'SYS-88390', loggedBy:'Chef Maria' },
-  { id:'e11', date:'2026-07-04', vendor:'Local Market', description:'Supplemental produce — holiday cookout',      category:'Food — Produce',           amount: 64.75, loggedBy:'Chef Maria' },
-  { id:'e12', date:'2026-07-01', vendor:'Sysco',        description:'Ensure Plus restock (supplemental)',           category:'Food — Dietary / Special', amount: 74.40, invoiceRef:'SYS-88100', loggedBy:'Manager Kim' },
-  { id:'e13', date:'2026-07-03', vendor:'Home Depot',   description:'Fridge gasket replacement — Walk-in Cooler',  category:'Equipment / Repair',       amount:138.00, invoiceRef:'HD-39821',  loggedBy:'Manager Kim' },
-]
-
-const SEED_PREV_PERIOD: BudgetPeriod = {
-  id: 'p0',
-  label: 'June 2026',
-  startDate: '2026-06-01',
-  endDate: '2026-06-30',
-  residentCount: 41,
-  budgetPerResidentPerDay: 9.50,
-  totalDays: 30,
+function toPeriod(row: Record<string, unknown>): BudgetPeriod {
+  return {
+    id:                     row.id as string,
+    label:                  row.label as string,
+    month:                  row.month as number,
+    year:                   row.year as number,
+    totalBudget:            Number(row.total_budget ?? 0),
+    residentCount:          Number(row.resident_count ?? 0),
+    budgetPerResidentPerDay: Number(row.budget_per_resident_per_day ?? 0),
+  }
 }
 
-const SEED_PREV_ENTRIES: SpendEntry[] = [
-  { id:'p1e1',  date:'2026-06-04', vendor:'Sysco',   description:'Wk1 truck', category:'Food — Proteins',          amount:398.20, loggedBy:'Chef Maria' },
-  { id:'p1e2',  date:'2026-06-04', vendor:'Sysco',   description:'Wk1 truck', category:'Food — Produce',           amount:128.40, loggedBy:'Chef Maria' },
-  { id:'p1e3',  date:'2026-06-04', vendor:'Sysco',   description:'Wk1 truck', category:'Food — Dairy',             amount:174.60, loggedBy:'Chef Maria' },
-  { id:'p1e4',  date:'2026-06-11', vendor:'Sysco',   description:'Wk2 truck', category:'Food — Proteins',          amount:421.80, loggedBy:'Chef Maria' },
-  { id:'p1e5',  date:'2026-06-11', vendor:'Sysco',   description:'Wk2 truck', category:'Food — Produce',           amount:136.90, loggedBy:'Chef Maria' },
-  { id:'p1e6',  date:'2026-06-18', vendor:'Sysco',   description:'Wk3 truck', category:'Food — Proteins',          amount:387.50, loggedBy:'Chef Maria' },
-  { id:'p1e7',  date:'2026-06-18', vendor:'Sysco',   description:'Wk3 truck', category:'Food — Dry Goods',         amount: 91.20, loggedBy:'Chef Maria' },
-  { id:'p1e8',  date:'2026-06-25', vendor:'Sysco',   description:'Wk4 truck', category:'Food — Proteins',          amount:410.00, loggedBy:'Chef Maria' },
-  { id:'p1e9',  date:'2026-06-25', vendor:'Sysco',   description:'Wk4 truck', category:'Food — Dairy',             amount:182.00, loggedBy:'Chef Maria' },
-  { id:'p1e10', date:'2026-06-25', vendor:'Sysco',   description:'Wk4 truck', category:'Food — Beverages',         amount: 88.50, loggedBy:'Chef Maria' },
-  { id:'p1e11', date:'2026-06-15', vendor:'Med Sup', description:'Simply Thick restock', category:'Food — Dietary / Special', amount:108.00, loggedBy:'Manager Kim' },
-]
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function uid() { return Math.random().toString(36).slice(2, 10) }
-
-function daysElapsed(period: BudgetPeriod): number {
-  const start = new Date(period.startDate)
-  const today = new Date()
-  return Math.max(1, Math.min(period.totalDays,
-    Math.ceil((today.getTime() - start.getTime()) / 86_400_000) + 1
-  ))
+function toEntry(row: Record<string, unknown>): BudgetEntry {
+  return {
+    id:          row.id as string,
+    periodId:    row.period_id as string,
+    date:        row.date as string,
+    vendor:      row.vendor as string | null,
+    description: row.description as string,
+    amount:      Number(row.amount ?? 0),
+    category:    row.category as string | null,
+  }
 }
 
-// ── Store ─────────────────────────────────────────────────────────────────────
 type BudgetState = {
-  // State
-  period:      BudgetPeriod
-  entries:     SpendEntry[]
-  prevPeriod:  BudgetPeriod
-  prevEntries: SpendEntry[]
-  seeded:      boolean
+  period: BudgetPeriod | null
+  periods: BudgetPeriod[]
+  entries: BudgetEntry[]
+  loading: boolean
+  error: string | null
 
-  // Actions
-  fetch:        () => void          // seeds from constants; no-op if already loaded
-  setPeriod:    (p: BudgetPeriod) => void
-  addEntry:     (e: Omit<SpendEntry, 'id'>) => void
-  removeEntry:  (id: string) => void
+  fetch: () => Promise<void>
+  fetchPeriods: () => Promise<void>
+  fetchEntries: (periodId: string) => Promise<void>
+  setPeriod: (p: BudgetPeriod) => void
 
-  // Selectors
+  upsertPeriod: (data: Omit<BudgetPeriod, 'id'> & { id?: string }) => Promise<void>
+  addEntry: (data: Omit<BudgetEntry, 'id'>) => Promise<void>
+  updateEntry: (id: string, data: Partial<BudgetEntry>) => Promise<void>
+  removeEntry: (id: string) => Promise<void>
+
   getTotalBudget:  () => number
   getTotalSpent:   () => number
-  getRemaining:    () => number
-  getPctUsed:      () => number
   getProjected:    () => number
   getDailyPerRes:  () => number
 }
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
-  period:      SEED_PERIOD,
-  entries:     [],
-  prevPeriod:  SEED_PREV_PERIOD,
-  prevEntries: SEED_PREV_ENTRIES,
-  seeded:      false,
+  period:  null,
+  periods: [],
+  entries: [],
+  loading: false,
+  error:   null,
 
-  fetch() {
-    if (get().seeded) return
-    set({ entries: JSON.parse(JSON.stringify(SEED_ENTRIES)), seeded: true })
+  // fetch current month's period + its entries
+  fetch: async () => {
+    set({ loading: true, error: null })
+    try {
+      const now = new Date()
+      const { data: periodRows, error: pe } = await supabase
+        .from('budget_periods')
+        .select('*')
+        .eq('month', now.getMonth() + 1)
+        .eq('year',  now.getFullYear())
+        .maybeSingle()
+      if (pe) throw new Error(pe.message)
+
+      if (!periodRows) { set({ loading: false }); return }
+      const period = toPeriod(periodRows as Record<string, unknown>)
+      set({ period })
+
+      const { data: entryRows, error: ee } = await supabase
+        .from('budget_entries').select('*').eq('period_id', period.id).order('date')
+      if (ee) throw new Error(ee.message)
+      set({ entries: (entryRows ?? []).map(r => toEntry(r as Record<string, unknown>)), loading: false })
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false })
+    }
   },
 
-  setPeriod(p) {
-    set({ period: p })
+  fetchPeriods: async () => {
+    const { data, error } = await supabase
+      .from('budget_periods').select('*').order('year', { ascending: false }).order('month', { ascending: false })
+    if (error) { set({ error: error.message }); return }
+    set({ periods: (data ?? []).map(r => toPeriod(r as Record<string, unknown>)) })
   },
 
-  addEntry(e) {
-    set(s => ({ entries: [{ id: uid(), ...e }, ...s.entries] }))
+  fetchEntries: async (periodId) => {
+    const { data, error } = await supabase
+      .from('budget_entries').select('*').eq('period_id', periodId).order('date')
+    if (error) { set({ error: error.message }); return }
+    set({ entries: (data ?? []).map(r => toEntry(r as Record<string, unknown>)) })
   },
 
-  removeEntry(id) {
+  setPeriod: (p) => set({ period: p }),
+
+  upsertPeriod: async (data) => {
+    const row = {
+      label:                       data.label,
+      month:                       data.month,
+      year:                        data.year,
+      total_budget:                data.totalBudget,
+      resident_count:              data.residentCount,
+      budget_per_resident_per_day: data.budgetPerResidentPerDay,
+    }
+    const { data: saved, error } = data.id
+      ? await supabase.from('budget_periods').update(row).eq('id', data.id).select().single()
+      : await supabase.from('budget_periods').insert(row).select().single()
+    if (error) throw new Error(error.message)
+    const period = toPeriod(saved as Record<string, unknown>)
+    set(s => ({
+      period,
+      periods: data.id
+        ? s.periods.map(p => p.id === data.id ? period : p)
+        : [period, ...s.periods],
+    }))
+  },
+
+  addEntry: async (data) => {
+    const { data: row, error } = await supabase
+      .from('budget_entries')
+      .insert({ period_id: data.periodId, date: data.date, vendor: data.vendor, description: data.description, amount: data.amount, category: data.category })
+      .select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ entries: [...s.entries, toEntry(row as Record<string, unknown>)] }))
+  },
+
+  updateEntry: async (id, data) => {
+    const patch: Record<string, unknown> = {}
+    if (data.date        !== undefined) patch.date        = data.date
+    if (data.vendor      !== undefined) patch.vendor      = data.vendor
+    if (data.description !== undefined) patch.description = data.description
+    if (data.amount      !== undefined) patch.amount      = data.amount
+    if (data.category    !== undefined) patch.category    = data.category
+    const { data: row, error } = await supabase
+      .from('budget_entries').update(patch).eq('id', id).select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ entries: s.entries.map(e => e.id === id ? toEntry(row as Record<string, unknown>) : e) }))
+  },
+
+  removeEntry: async (id) => {
+    const { error } = await supabase.from('budget_entries').delete().eq('id', id)
+    if (error) throw new Error(error.message)
     set(s => ({ entries: s.entries.filter(e => e.id !== id) }))
   },
 
-  // ── Selectors ──────────────────────────────────────────────────────────────
-  getTotalBudget() {
-    const { period } = get()
-    return period.residentCount * period.budgetPerResidentPerDay * period.totalDays
+  getTotalBudget:  () => get().period?.totalBudget ?? 0,
+  getTotalSpent:   () => get().entries.reduce((s, e) => s + e.amount, 0),
+  getProjected:    () => {
+    const spent = get().entries.reduce((s, e) => s + e.amount, 0)
+    const now   = new Date()
+    const day   = now.getDate()
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    return day > 0 ? (spent / day) * daysInMonth : 0
   },
-
-  getTotalSpent() {
-    return get().entries.reduce((s, e) => s + e.amount, 0)
-  },
-
-  getRemaining() {
-    return get().getTotalBudget() - get().getTotalSpent()
-  },
-
-  getPctUsed() {
-    const total = get().getTotalBudget()
-    return total > 0 ? (get().getTotalSpent() / total) * 100 : 0
-  },
-
-  getProjected() {
-    const { period } = get()
-    const elapsed = daysElapsed(period)
-    return (get().getTotalSpent() / elapsed) * period.totalDays
-  },
-
-  getDailyPerRes() {
-    const { period } = get()
-    const elapsed = daysElapsed(period)
-    return get().getTotalSpent() / elapsed / period.residentCount
-  },
+  getDailyPerRes:  () => get().period?.budgetPerResidentPerDay ?? 0,
 }))
