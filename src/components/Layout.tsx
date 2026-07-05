@@ -83,15 +83,20 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
   )
 }
 
+// Mobile header height = 56px content + iOS safe-area-inset-top
 const LAYOUT_CSS = `
-  :root { --sidebar-width: 260px; --mobile-header: 56px; }
+  :root {
+    --sidebar-width: 260px;
+    --mobile-header-content: 56px;
+    --mobile-header: calc(var(--mobile-header-content) + env(safe-area-inset-top, 0px));
+  }
 
   @media (max-width: 767px) {
     .sidebar-aside { display: none !important; }
     .mobile-header { display: flex !important; }
     .desktop-header { display: none !important; }
     .main-scroll { padding-top: var(--mobile-header) !important; }
-    .main-content { padding: 16px 14px 24px !important; }
+    .main-content { padding: 16px 14px calc(24px + env(safe-area-inset-bottom, 0px)) !important; }
     .mobile-nav-sheet {
       position: fixed;
       top: var(--mobile-header);
@@ -194,22 +199,54 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div onClick={() => setNavOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(13,27,42,0.4)', backdropFilter: 'blur(2px)' }} />
       )}
 
-      {/* MOBILE HEADER */}
-      <header className="mobile-header" style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, height: 'var(--mobile-header)', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', alignItems: 'center', padding: '0 14px', gap: 10, zIndex: 310, boxShadow: 'var(--shadow-sm)' }}>
-        <button onClick={() => setNavOpen(v => !v)} aria-label="Toggle navigation" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, background: navOpen ? 'var(--color-primary-light)' : 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: navOpen ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease' }}>
+      {/* MOBILE HEADER — height grows with iOS safe area */}
+      <header
+        className="mobile-header"
+        style={{
+          display: 'none',
+          position: 'fixed', top: 0, left: 0, right: 0,
+          // Total height: content (56px) + iOS status bar
+          height: 'var(--mobile-header)',
+          // Push content below the notch/Dynamic Island
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingLeft: 'max(14px, env(safe-area-inset-left, 14px))',
+          paddingRight: 'max(14px, env(safe-area-inset-right, 14px))',
+          paddingBottom: 0,
+          background: 'var(--bg-card)',
+          borderBottom: '1px solid var(--border-color)',
+          alignItems: 'center',
+          gap: 10,
+          zIndex: 310,
+          boxShadow: 'var(--shadow-sm)',
+          boxSizing: 'border-box',
+        }}
+      >
+        <button
+          onClick={() => setNavOpen(v => !v)}
+          aria-label="Toggle navigation"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 44, height: 44,
+            background: navOpen ? 'var(--color-primary-light)' : 'transparent',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-sm)',
+            color: navOpen ? 'var(--color-primary)' : 'var(--text-secondary)',
+            cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease',
+          }}
+        >
           {navOpen
-            ? <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            : <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>}
+            ? <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            : <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>}
         </button>
-        <img src="/icon-192.png" alt="Shoreline" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
+        <img src="/icon-192.png" alt="Shoreline" style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Shoreline</div>
           <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>iMPAC Operations</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <NotificationBell />
           {user && (
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', color: '#fff', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'Outfit, sans-serif' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-primary)', color: '#fff', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'Outfit, sans-serif' }}>
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}
