@@ -4,8 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:demo": "VITE_MODE=demo vite",
+    "dev:web": "VITE_MODE=web vite",
     "build": "tsc && vite build",
+    "build:local": "VITE_MODE=local tsc && VITE_MODE=local vite build --outDir dist/local",
+    "build:demo": "VITE_MODE=demo tsc && VITE_MODE=demo vite build --outDir dist/demo",
+    "build:web": "VITE_MODE=web tsc && VITE_MODE=web vite build --outDir dist/web",
+    "build:all": "npm run build:local && npm run build:demo && npm run build:web",
     "preview": "vite preview",
+    "preview:local": "vite preview --outDir dist/local",
+    "preview:demo": "vite preview --outDir dist/demo",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

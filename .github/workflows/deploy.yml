@@ -1,0 +1,74 @@
+# ============================================================
+# Shoreline — Multi-Mode CI/CD
+# ============================================================
+# On every push to main:
+#   1. Builds the LAN (local) bundle  → artifact for manual deploy
+#   2. Builds the demo site           → deploys to demo hosting
+#   3. Builds the web/marketing site  → deploys to main hosting
+#
+# Required GitHub Secrets:
+#   NETLIFY_AUTH_TOKEN   — your Netlify personal access token
+#   NETLIFY_DEMO_SITE_ID — site ID for the demo deployment
+#   NETLIFY_WEB_SITE_ID  — site ID for the marketing site deployment
+# ============================================================
+
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      # ── Local / LAN build ──────────────────────────────────
+      - name: Build LOCAL (LAN)
+        run: VITE_MODE=local npm run build -- --outDir dist/local
+
+      - name: Upload LOCAL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shoreline-local-build
+          path: dist/local/
+          retention-days: 30
+
+      # ── Demo site build & deploy ───────────────────────────
+      - name: Build DEMO
+        run: VITE_MODE=demo npm run build -- --outDir dist/demo
+
+      - name: Deploy DEMO to Netlify
+        if: github.ref == 'refs/heads/main'
+        uses: netlify/actions/cli@master
+        with:
+          args: deploy --prod --dir=dist/demo --site=${{ secrets.NETLIFY_DEMO_SITE_ID }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+      # ── Web / marketing build & deploy ────────────────────
+      - name: Build WEB (marketing)
+        run: VITE_MODE=web npm run build -- --outDir dist/web
+
+      - name: Deploy WEB to Netlify
+        if: github.ref == 'refs/heads/main'
+        uses: netlify/actions/cli@master
+        with:
+          args: deploy --prod --dir=dist/web --site=${{ secrets.NETLIFY_WEB_SITE_ID }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
