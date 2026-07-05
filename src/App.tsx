@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
+import { RequireRole } from './security/AuthContext'
 import LoginPage from './features/auth/LoginPage'
 import DashboardPage from './features/dashboard/DashboardPage'
 import ResidentsPage from './features/residents/ResidentsPage'
@@ -26,6 +27,16 @@ function AuthedLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** Wraps a route so only users with at least `role` can access it.
+ *  Everyone else is redirected to the dashboard. */
+function RoleGate({ role, children }: { role: Parameters<typeof RequireRole>[0]['role']; children: React.ReactNode }) {
+  return (
+    <RequireRole role={role} fallback={<Navigate to="/" replace />}>
+      {children}
+    </RequireRole>
+  )
+}
+
 export default function App() {
   return (
     <>
@@ -36,6 +47,7 @@ export default function App() {
         <Route path="/login"   element={<LoginPage />} />
         <Route path="/offline" element={<OfflinePage />} />
 
+        {/* ── All-staff routes ─────────────────────────────────────── */}
         <Route path="/"                element={<AuthedLayout><DashboardPage /></AuthedLayout>} />
         <Route path="/residents"       element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
         <Route path="/residents/:id"   element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
@@ -43,12 +55,44 @@ export default function App() {
         <Route path="/production"      element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
         <Route path="/recipes"         element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
         <Route path="/inventory"       element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
-        <Route path="/budget"          element={<AuthedLayout><BudgetPage /></AuthedLayout>} />
         <Route path="/timecards"       element={<AuthedLayout><TimecardPage /></AuthedLayout>} />
-        <Route path="/staff"           element={<AuthedLayout><StaffPage /></AuthedLayout>} />
-        <Route path="/staff/:staffId"  element={<AuthedLayout><StaffProfilePage /></AuthedLayout>} />
         <Route path="/communications"  element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />
-        <Route path="/admin"           element={<AuthedLayout><AdminPage /></AuthedLayout>} />
+
+        {/* ── Manager+ routes ──────────────────────────────────────── */}
+        <Route
+          path="/budget"
+          element={
+            <AuthedLayout>
+              <RoleGate role="manager"><BudgetPage /></RoleGate>
+            </AuthedLayout>
+          }
+        />
+        <Route
+          path="/staff"
+          element={
+            <AuthedLayout>
+              <RoleGate role="manager"><StaffPage /></RoleGate>
+            </AuthedLayout>
+          }
+        />
+        <Route
+          path="/staff/:staffId"
+          element={
+            <AuthedLayout>
+              <RoleGate role="manager"><StaffProfilePage /></RoleGate>
+            </AuthedLayout>
+          }
+        />
+
+        {/* ── Admin-only routes ────────────────────────────────────── */}
+        <Route
+          path="/admin"
+          element={
+            <AuthedLayout>
+              <RoleGate role="admin"><AdminPage /></RoleGate>
+            </AuthedLayout>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

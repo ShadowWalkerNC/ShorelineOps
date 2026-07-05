@@ -4,210 +4,127 @@
 // Manages staff profiles, call-outs, and schedule entries.
 //
 // SECURITY NOTE:
-//   getCallOuts(viewerId, viewerRole) filters call-outs so a
-//   staff member can NEVER see records filed against themselves.
-//   In production, enforce this at Postgres RLS level as well.
-//
-// Production migration:
-//   Replace fetch() body with Supabase queries.
-//   State shape and selectors remain identical.
+//   getCallOuts(viewerAuthUserId, viewerRole) filters call-outs
+//   so a staff member can NEVER see records filed against
+//   themselves. Enforce this at Postgres RLS level as well.
 // ============================================================
 
 import { create } from 'zustand'
+import { supabase } from '@/lib/supabase'
 import type { StaffProfile, CallOut, ScheduleEntry } from '../types/staff'
 import type { UserRole } from '../types/roles'
 
-// ── Seed Data ────────────────────────────────────────────────────────────────
-const SEED_STAFF: StaffProfile[] = [
-  {
-    id: 'staff-1',
-    authUserId: 'demo-admin-1',
-    employeeNumber: 'EMP-001',
-    firstName: 'Alex',
-    lastName: 'Rivera',
-    role: 'admin',
-    department: 'Administration',
-    position: 'Executive Director',
-    hireDate: '2020-01-15',
-    status: 'Active',
-    fullTime: true,
-    phone: '555-100-0001',
-    email: 'admin@shoreline.demo',
-    certifications: [
-      { id: 'cert-1', name: 'ServSafe Food Manager', issuedDate: '2023-03-01', expiresDate: '2028-03-01' },
-    ],
-    createdAt: '2020-01-15T08:00:00Z',
-    updatedAt: '2024-01-01T08:00:00Z',
-  },
-  {
-    id: 'staff-2',
-    authUserId: 'demo-manager-1',
-    employeeNumber: 'EMP-002',
-    firstName: 'Morgan',
-    lastName: 'Ellis',
-    role: 'manager',
-    department: 'Dietary',
-    position: 'Dietary Manager',
-    hireDate: '2021-06-01',
-    status: 'Active',
-    fullTime: true,
-    phone: '555-100-0002',
-    email: 'manager@shoreline.demo',
-    certifications: [
-      { id: 'cert-2', name: 'ServSafe Food Manager', issuedDate: '2022-05-10', expiresDate: '2027-05-10' },
-      { id: 'cert-3', name: 'CPR / AED', issuedDate: '2023-01-20', expiresDate: '2025-01-20' },
-    ],
-    createdAt: '2021-06-01T08:00:00Z',
-    updatedAt: '2024-01-01T08:00:00Z',
-  },
-  {
-    id: 'staff-3',
-    authUserId: 'demo-dietary-1',
-    employeeNumber: 'EMP-003',
-    firstName: 'Jamie',
-    lastName: 'Torres',
-    role: 'dietary',
-    department: 'Dietary',
-    position: 'Head Cook',
-    hireDate: '2022-03-14',
-    status: 'Active',
-    fullTime: true,
-    phone: '555-100-0003',
-    email: 'dietary@shoreline.demo',
-    certifications: [
-      { id: 'cert-4', name: 'ServSafe Food Handler', issuedDate: '2022-03-01', expiresDate: '2025-03-01' },
-    ],
-    createdAt: '2022-03-14T08:00:00Z',
-    updatedAt: '2024-01-01T08:00:00Z',
-  },
-  {
-    id: 'staff-4',
-    authUserId: 'demo-activities-1',
-    employeeNumber: 'EMP-004',
-    firstName: 'Casey',
-    lastName: 'Nguyen',
-    role: 'activities',
-    department: 'Activities',
-    position: 'Activities Director',
-    hireDate: '2021-09-01',
-    status: 'Active',
-    fullTime: true,
-    phone: '555-100-0004',
-    email: 'activities@shoreline.demo',
-    certifications: [],
-    createdAt: '2021-09-01T08:00:00Z',
-    updatedAt: '2024-01-01T08:00:00Z',
-  },
-  {
-    id: 'staff-5',
-    authUserId: 'demo-server-1',
-    employeeNumber: 'EMP-005',
-    firstName: 'Jordan',
-    lastName: 'Lee',
-    role: 'server',
-    department: 'Dietary',
-    position: 'Dining Room Server',
-    hireDate: '2023-05-20',
-    status: 'Active',
-    fullTime: false,
-    phone: '555-100-0005',
-    email: 'server@shoreline.demo',
-    certifications: [
-      { id: 'cert-5', name: 'ServSafe Food Handler', issuedDate: '2023-05-01', expiresDate: '2026-05-01' },
-    ],
-    createdAt: '2023-05-20T08:00:00Z',
-    updatedAt: '2024-01-01T08:00:00Z',
-  },
-  {
-    id: 'staff-6',
-    authUserId: 'demo-staff-1',
-    employeeNumber: 'EMP-006',
-    firstName: 'Sam',
-    lastName: 'Washington',
-    role: 'staff',
-    department: 'Dietary',
-    position: 'Dietary Aide',
-    hireDate: '2024-02-01',
-    status: 'Active',
-    fullTime: false,
-    phone: '555-100-0006',
-    email: 'staff@shoreline.demo',
-    certifications: [],
-    createdAt: '2024-02-01T08:00:00Z',
-    updatedAt: '2024-02-01T08:00:00Z',
-  },
-]
+// ── Row mappers ──────────────────────────────────────────────────────────────
 
-const SEED_CALLOUTS: CallOut[] = [
-  {
-    id: 'co-1',
-    staffId: 'staff-3',      // Jamie Torres — HEAD COOK
-    filedById: 'staff-2',   // Morgan Ellis — MANAGER
-    date: '2026-06-15',
-    shift: 'Morning',
-    reason: 'Sick',
-    notes: 'Called in at 5:45am. Kitchen was short-staffed for breakfast service.',
-    followUpRequired: false,
-    wasCovered: true,
-    coveredById: 'staff-6',
-    createdAt: '2026-06-15T06:00:00Z',
-    updatedAt: '2026-06-15T06:00:00Z',
-  },
-  {
-    id: 'co-2',
-    staffId: 'staff-5',      // Jordan Lee — SERVER
-    filedById: 'staff-2',   // Morgan Ellis — MANAGER
-    date: '2026-06-28',
-    shift: 'Evening',
-    reason: 'No Call No Show',
-    notes: 'Did not show for dinner service. Could not be reached by phone.',
-    followUpRequired: true,
-    followUpNotes: 'Verbal warning issued on 06/29.',
-    wasCovered: false,
-    createdAt: '2026-06-28T16:00:00Z',
-    updatedAt: '2026-06-29T09:00:00Z',
-  },
-]
+function toProfile(row: Record<string, unknown>): StaffProfile {
+  return {
+    id:              row.id             as string,
+    authUserId:      (row.auth_user_id  as string) ?? '',
+    employeeNumber:  (row.employee_number as string) ?? '',
+    firstName:       (row.first_name    as string) ?? '',
+    lastName:        (row.last_name     as string) ?? '',
+    preferredName:   row.preferred_name as string | undefined,
+    role:            (row.role          as UserRole) ?? 'staff',
+    department:      (row.department    as StaffProfile['department']) ?? 'Dietary',
+    position:        (row.position      as string) ?? '',
+    hireDate:        (row.hire_date     as string) ?? '',
+    status:          (row.status        as StaffProfile['status']) ?? 'Active',
+    fullTime:        Boolean(row.full_time ?? false),
+    phone:           row.phone          as string | undefined,
+    email:           row.email          as string | undefined,
+    emergencyContact: row.emergency_contact as StaffProfile['emergencyContact'] | undefined,
+    certifications:  (row.certifications as StaffProfile['certifications']) ?? [],
+    managerNotes:    row.manager_notes  as string | undefined,
+    createdAt:       (row.created_at    as string) ?? new Date().toISOString(),
+    updatedAt:       (row.updated_at    as string) ?? new Date().toISOString(),
+  }
+}
 
-const SEED_SCHEDULE: ScheduleEntry[] = []
+function profileToRow(data: Partial<StaffProfile>): Record<string, unknown> {
+  const r: Record<string, unknown> = {}
+  if (data.authUserId      !== undefined) r.auth_user_id      = data.authUserId
+  if (data.employeeNumber  !== undefined) r.employee_number   = data.employeeNumber
+  if (data.firstName       !== undefined) r.first_name        = data.firstName
+  if (data.lastName        !== undefined) r.last_name         = data.lastName
+  if (data.preferredName   !== undefined) r.preferred_name    = data.preferredName
+  if (data.role            !== undefined) r.role              = data.role
+  if (data.department      !== undefined) r.department        = data.department
+  if (data.position        !== undefined) r.position          = data.position
+  if (data.hireDate        !== undefined) r.hire_date         = data.hireDate
+  if (data.status          !== undefined) r.status            = data.status
+  if (data.fullTime        !== undefined) r.full_time         = data.fullTime
+  if (data.phone           !== undefined) r.phone             = data.phone
+  if (data.email           !== undefined) r.email             = data.email
+  if (data.emergencyContact !== undefined) r.emergency_contact = data.emergencyContact
+  if (data.certifications  !== undefined) r.certifications    = data.certifications
+  if (data.managerNotes    !== undefined) r.manager_notes     = data.managerNotes
+  return r
+}
+
+function toCallOut(row: Record<string, unknown>): CallOut {
+  return {
+    id:               row.id               as string,
+    staffId:          (row.staff_id        as string) ?? '',
+    filedById:        (row.filed_by_id     as string) ?? '',
+    date:             (row.date            as string) ?? '',
+    shift:            (row.shift           as CallOut['shift']) ?? 'Morning',
+    reason:           (row.reason          as CallOut['reason']) ?? 'Other',
+    notes:            row.notes            as string | undefined,
+    followUpRequired: Boolean(row.follow_up_required ?? false),
+    followUpNotes:    row.follow_up_notes  as string | undefined,
+    wasCovered:       Boolean(row.was_covered ?? false),
+    coveredById:      row.covered_by_id    as string | undefined,
+    createdAt:        (row.created_at      as string) ?? new Date().toISOString(),
+    updatedAt:        (row.updated_at      as string) ?? new Date().toISOString(),
+  }
+}
+
+function callOutToRow(data: Partial<CallOut>): Record<string, unknown> {
+  const r: Record<string, unknown> = {}
+  if (data.staffId          !== undefined) r.staff_id           = data.staffId
+  if (data.filedById        !== undefined) r.filed_by_id        = data.filedById
+  if (data.date             !== undefined) r.date               = data.date
+  if (data.shift            !== undefined) r.shift              = data.shift
+  if (data.reason           !== undefined) r.reason             = data.reason
+  if (data.notes            !== undefined) r.notes              = data.notes
+  if (data.followUpRequired !== undefined) r.follow_up_required = data.followUpRequired
+  if (data.followUpNotes    !== undefined) r.follow_up_notes    = data.followUpNotes
+  if (data.wasCovered       !== undefined) r.was_covered        = data.wasCovered
+  if (data.coveredById      !== undefined) r.covered_by_id      = data.coveredById
+  return r
+}
 
 // ── Store ────────────────────────────────────────────────────────────────────
+
 interface StaffState {
-  profiles: StaffProfile[]
-  callOuts: CallOut[]
-  schedule: ScheduleEntry[]
+  profiles:  StaffProfile[]
+  callOuts:  CallOut[]
+  schedule:  ScheduleEntry[]
   isLoading: boolean
-  error: string | null
+  error:     string | null
 
   fetch: () => Promise<void>
 
-  // Profile mutations
-  addProfile:    (profile: StaffProfile) => void
-  updateProfile: (id: string, updates: Partial<StaffProfile>) => void
-  removeProfile: (id: string) => void
+  addProfile:    (profile: Omit<StaffProfile, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateProfile: (id: string, updates: Partial<StaffProfile>) => Promise<void>
+  removeProfile: (id: string) => Promise<void>
 
-  // Call-out mutations
-  addCallOut:    (callOut: CallOut) => void
-  updateCallOut: (id: string, updates: Partial<CallOut>) => void
-  removeCallOut: (id: string) => void
+  addCallOut:    (callOut: Omit<CallOut, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateCallOut: (id: string, updates: Partial<CallOut>) => Promise<void>
+  removeCallOut: (id: string) => Promise<void>
 
   /**
    * Returns call-outs filtered by viewer identity.
    * A staff member (role < manager) can NEVER see their own call-outs.
+   * Enforce at Postgres RLS level as well.
    */
   getCallOuts: (viewerAuthUserId: string, viewerRole: UserRole) => CallOut[]
 
-  // Schedule
   addScheduleEntry:    (entry: ScheduleEntry) => void
   updateScheduleEntry: (id: string, updates: Partial<ScheduleEntry>) => void
   removeScheduleEntry: (id: string) => void
 
-  /** Resolve staff profile from an auth user ID */
   profileByAuthId: (authUserId: string) => StaffProfile | undefined
-}
-
-function uid(): string {
-  return Math.random().toString(36).slice(2, 10)
 }
 
 export const useStaffStore = create<StaffState>((set, get) => ({
@@ -219,48 +136,73 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   fetch: async () => {
     set({ isLoading: true, error: null })
-    // Production: replace with Supabase queries
-    // const { data, error } = await supabase.from('staff_profiles').select('*')
-    await new Promise(r => setTimeout(r, 100)) // simulate latency
-    set({
-      profiles:  SEED_STAFF,
-      callOuts:  SEED_CALLOUTS,
-      schedule:  SEED_SCHEDULE,
-      isLoading: false,
-    })
+    try {
+      const [profilesRes, callOutsRes] = await Promise.all([
+        supabase.from('staff_profiles').select('*').order('last_name'),
+        supabase.from('call_outs').select('*').order('date', { ascending: false }),
+      ])
+      if (profilesRes.error) throw new Error(profilesRes.error.message)
+      if (callOutsRes.error) throw new Error(callOutsRes.error.message)
+      set({
+        profiles:  (profilesRes.data ?? []).map(r => toProfile(r as Record<string, unknown>)),
+        callOuts:  (callOutsRes.data  ?? []).map(r => toCallOut(r as Record<string, unknown>)),
+        isLoading: false,
+      })
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, isLoading: false })
+    }
   },
 
-  addProfile: (profile) =>
-    set(s => ({ profiles: [...s.profiles, profile] })),
+  addProfile: async (data) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row, error } = await (supabase.from('staff_profiles') as any)
+      .insert(profileToRow(data as Partial<StaffProfile>)).select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ profiles: [...s.profiles, toProfile(row as Record<string, unknown>)] }))
+  },
 
-  updateProfile: (id, updates) =>
-    set(s => ({
-      profiles: s.profiles.map(p =>
-        p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
-      ),
-    })),
+  updateProfile: async (id, updates) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row, error } = await (supabase.from('staff_profiles') as any)
+      .update({ ...profileToRow(updates), updated_at: new Date().toISOString() })
+      .eq('id', id).select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ profiles: s.profiles.map(p => p.id === id ? toProfile(row as Record<string, unknown>) : p) }))
+  },
 
-  removeProfile: (id) =>
-    set(s => ({ profiles: s.profiles.filter(p => p.id !== id) })),
+  removeProfile: async (id) => {
+    const { error } = await supabase.from('staff_profiles').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+    set(s => ({ profiles: s.profiles.filter(p => p.id !== id) }))
+  },
 
-  addCallOut: (callOut) =>
-    set(s => ({ callOuts: [...s.callOuts, callOut] })),
+  addCallOut: async (data) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row, error } = await (supabase.from('call_outs') as any)
+      .insert(callOutToRow(data as Partial<CallOut>)).select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ callOuts: [toCallOut(row as Record<string, unknown>), ...s.callOuts] }))
+  },
 
-  updateCallOut: (id, updates) =>
-    set(s => ({
-      callOuts: s.callOuts.map(c =>
-        c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
-      ),
-    })),
+  updateCallOut: async (id, updates) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row, error } = await (supabase.from('call_outs') as any)
+      .update({ ...callOutToRow(updates), updated_at: new Date().toISOString() })
+      .eq('id', id).select().single()
+    if (error) throw new Error(error.message)
+    set(s => ({ callOuts: s.callOuts.map(c => c.id === id ? toCallOut(row as Record<string, unknown>) : c) }))
+  },
 
-  removeCallOut: (id) =>
-    set(s => ({ callOuts: s.callOuts.filter(c => c.id !== id) })),
+  removeCallOut: async (id) => {
+    const { error } = await supabase.from('call_outs').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+    set(s => ({ callOuts: s.callOuts.filter(c => c.id !== id) }))
+  },
 
   getCallOuts: (viewerAuthUserId, viewerRole) => {
     const { callOuts, profiles } = get()
     const isPrivileged = viewerRole === 'admin' || viewerRole === 'manager'
     if (isPrivileged) return callOuts
-    // Non-privileged: strip any call-outs filed against the viewer
     const viewerProfile = profiles.find(p => p.authUserId === viewerAuthUserId)
     if (!viewerProfile) return []
     return callOuts.filter(c => c.staffId !== viewerProfile.id)
@@ -271,9 +213,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   updateScheduleEntry: (id, updates) =>
     set(s => ({
-      schedule: s.schedule.map(e =>
-        e.id === id ? { ...e, ...updates } : e
-      ),
+      schedule: s.schedule.map(e => e.id === id ? { ...e, ...updates } : e),
     })),
 
   removeScheduleEntry: (id) =>
