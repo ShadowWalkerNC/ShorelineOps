@@ -4,6 +4,7 @@ import RequireAuth from './components/RequireAuth'
 import { RequireRole } from './security/AuthContext'
 import { ls, LS_KEYS } from './lib/localStorage'
 import LoginPage from './features/auth/LoginPage'
+import ChangePasswordPage from './features/auth/ChangePasswordPage'
 import DashboardPage from './features/dashboard/DashboardPage'
 import ResidentsPage from './features/residents/ResidentsPage'
 import ResidentProfilePage from './features/residents/ResidentProfilePage'
@@ -75,8 +76,9 @@ export default function App() {
         <Route path="/login"   element={<SetupGuard><LoginPage /></SetupGuard>} />
         <Route path="/offline" element={<OfflinePage />} />
 
-        {/* ── All-staff routes ──────────────────────────────────── */}
+        {/* ── All-staff routes ─────────────────────────────────────── */}
         <Route path="/"                element={<SetupGuard><AuthedLayout><DashboardPage /></AuthedLayout></SetupGuard>} />
+        <Route path="/change-password" element={<SetupGuard><AuthedLayout><ChangePasswordPage /></AuthedLayout></SetupGuard>} />
         <Route path="/residents"       element={<SetupGuard><AuthedLayout><ResidentsPage /></AuthedLayout></SetupGuard>} />
         <Route path="/residents/:id"   element={<SetupGuard><AuthedLayout><ResidentProfilePage /></AuthedLayout></SetupGuard>} />
         <Route path="/menu"            element={<SetupGuard><AuthedLayout><MenuPage /></AuthedLayout></SetupGuard>} />
@@ -86,7 +88,7 @@ export default function App() {
         <Route path="/timecards"       element={<SetupGuard><AuthedLayout><TimecardPage /></AuthedLayout></SetupGuard>} />
         <Route path="/communications"  element={<SetupGuard><AuthedLayout><CommunicationsPage /></AuthedLayout></SetupGuard>} />
 
-        {/* ── Manager+ routes ────────────────────────────────── */}
+        {/* ── Manager+ routes ──────────────────────────────────────── */}
         <Route
           path="/budget"
           element={
@@ -112,7 +114,7 @@ export default function App() {
           }
         />
 
-        {/* ── Admin-only routes ─────────────────────────────── */}
+        {/* ── Admin-only routes ────────────────────────────────────── */}
         <Route
           path="/admin"
           element={
