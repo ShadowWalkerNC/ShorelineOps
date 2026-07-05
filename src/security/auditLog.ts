@@ -16,16 +16,21 @@
  *   - Entries are append-only — no update or delete methods exposed.
  *   - Retention: entries older than 6 years are pruned on write
  *     (HIPAA requires 6-year retention of security documentation).
- *   - verifyAuditLog() checks every HMAC — returns list of tampered entries.
+ *   - verifyAuditLog() checks every HMAC — returns list of tampered entry IDs.
  * ============================================================
  */
 
-const AUDIT_KEY = 'sl_audit_log'
+const AUDIT_KEY      = 'sl_audit_log'
 const HMAC_SECRET_KEY = 'sl_audit_hmac_key'
-const SIX_YEARS_MS = 6 * 365.25 * 24 * 60 * 60 * 1000
+const SIX_YEARS_MS   = 6 * 365.25 * 24 * 60 * 60 * 1000
+
+// ── Action catalogue ─────────────────────────────────────────────────────────
+// Typed as a wide union so stores and components can use string literals
+// without casting. All values are lowercase-dotted (store actions) or
+// SCREAMING_SNAKE (AuthContext / session actions).
 
 export type AuditAction =
-  // Auth
+  // ─ Auth / session ─────────────────────────────────────────────────────────
   | 'LOGIN'
   | 'LOGOUT'
   | 'LOGIN_FAILED'
@@ -33,43 +38,56 @@ export type AuditAction =
   | 'ACCOUNT_LOCKED'
   | 'ACCOUNT_UNLOCKED'
   | 'PASSWORD_CHANGED'
+  | 'PASSWORD_CHANGE_FAILED'
   | 'PASSWORD_EXPIRED'
+  | 'KEY_INITIALIZED'
+  | 'KEY_CLEARED'
   | 'EMERGENCY_ACCESS_GRANTED'
   | 'EMERGENCY_ACCESS_USED'
-  // Residents (PHI)
+  // ─ User management (admin panel) ─────────────────────────────────
+  | 'user.create'
+  | 'user.role_change'
+  | 'user.lock'
+  | 'user.unlock'
+  | 'user.force_reset'
+  | 'user.password_reset'
+  // ─ Residents (PHI) ─────────────────────────────────────────────────
+  | 'resident.create'
+  | 'resident.update'
+  | 'resident.delete'
   | 'VIEW_RESIDENT'
-  | 'CREATE_RESIDENT'
-  | 'UPDATE_RESIDENT'
-  | 'DELETE_RESIDENT'
   | 'EXPORT_RESIDENTS'
-  // Staff
+  // ─ Staff ────────────────────────────────────────────────────────────
+  | 'staff.profile.create'
+  | 'staff.profile.update'
+  | 'staff.profile.delete'
+  | 'staff.callout.create'
+  | 'staff.callout.update'
+  | 'staff.callout.delete'
   | 'VIEW_STAFF'
-  | 'CREATE_STAFF'
-  | 'UPDATE_STAFF'
-  | 'DELETE_STAFF'
-  // Timecard
+  // ─ Timecard ──────────────────────────────────────────────────────────
   | 'CLOCK_IN'
   | 'CLOCK_OUT'
   | 'VIEW_TIMECARD'
   | 'EXPORT_TIMECARD'
-  // Budget
+  // ─ Budget ───────────────────────────────────────────────────────────
   | 'VIEW_BUDGET'
   | 'CREATE_BUDGET_ENTRY'
   | 'UPDATE_BUDGET_ENTRY'
   | 'DELETE_BUDGET_ENTRY'
   | 'EXPORT_BUDGET'
-  // Communications
+  // ─ Communications ───────────────────────────────────────────────
   | 'VIEW_THREAD'
   | 'CREATE_THREAD'
   | 'UPDATE_THREAD'
   | 'DELETE_THREAD'
-  // Inventory
+  // ─ Inventory ─────────────────────────────────────────────────────────
   | 'VIEW_INVENTORY'
   | 'UPDATE_INVENTORY'
-  // Menu
+  // ─ Menu / Production ─────────────────────────────────────────────
   | 'VIEW_MENU'
   | 'UPDATE_MENU'
-  // Admin / Compliance
+  // ─ Admin / Compliance / Setup ─────────────────────────────────
   | 'ACCESS_DENIED'
   | 'SETTINGS_CHANGED'
   | 'BACKUP_CREATED'
@@ -79,8 +97,6 @@ export type AuditAction =
   | 'USER_DELETED'
   | 'COMPLIANCE_ACKNOWLEDGED'
   | 'SETUP_COMPLETED'
-  | 'KEY_INITIALIZED'
-  | 'KEY_CLEARED'
 
 export interface AuditEntry {
   id: string
@@ -141,6 +157,8 @@ function pruneOld(entries: AuditEntry[]): AuditEntry[] {
   return entries.filter(e => new Date(e.timestamp).getTime() >= cutoff)
 }
 
+// ── Write ─────────────────────────────────────────────────────────────────────
+
 /**
  * Append a new audit event. Fire-and-forget from callers.
  * Never throws — audit failure must not block UI.
@@ -178,10 +196,34 @@ export async function auditLog(
       console.info('[AuditLog]', action, entry.outcome, entry.userId)
     }
   } catch (err) {
-    // Log to console but never throw — never block UI
     console.error('[AuditLog] Failed to write entry:', err)
   }
 }
+
+/**
+ * Flat-object variant used by stores and admin components.
+ * Fire-and-forget (no await needed at call sites).
+ */
+export function writeAudit(params: {
+  action: AuditAction
+  userId?: string | null
+  userName?: string | null
+  resourceType?: string
+  resourceId?: string
+  outcome?: 'success' | 'failure'
+  details?: Record<string, unknown>
+}): void {
+  void auditLog(params.action, {
+    userId:       params.userId,
+    userName:     params.userName,
+    resourceType: params.resourceType,
+    resourceId:   params.resourceId,
+    outcome:      params.outcome ?? 'success',
+    details:      params.details,
+  })
+}
+
+// ── Read ──────────────────────────────────────────────────────────────────────
 
 /**
  * Read all audit entries (admin viewer).
@@ -209,15 +251,15 @@ export async function verifyAuditLog(): Promise<string[]> {
 
 /**
  * Export audit log as a JSON string for download.
- * Includes tamper verification results.
+ * Includes tamper-verification results.
  */
 export async function exportAuditLog(): Promise<string> {
   const entries = loadRaw()
   const tampered = await verifyAuditLog()
   return JSON.stringify(
     {
-      exportedAt: new Date().toISOString(),
-      totalEntries: entries.length,
+      exportedAt:      new Date().toISOString(),
+      totalEntries:    entries.length,
       tamperedEntries: tampered,
       integrityStatus: tampered.length === 0 ? 'VERIFIED' : 'COMPROMISED',
       entries,
