@@ -28,24 +28,29 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: '/icons/icon-192.png',
+            src: '/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: '/icons/icon-512.png',
+            src: '/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
+          },
+          {
+            src: '/apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png'
           }
         ],
         shortcuts: [
           {
-            name: 'Today\'s Menu',
+            name: "Today's Menu",
             short_name: 'Menu',
             url: '/menu',
-            description: 'View today\'s menu'
+            description: "View today's menu"
           },
           {
             name: 'Residents',
@@ -59,7 +64,6 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            // App shell — cache first
             urlPattern: /^https?:.*\.(js|css|woff2)$/,
             handler: 'CacheFirst',
             options: {
@@ -68,7 +72,6 @@ export default defineConfig({
             },
           },
           {
-            // API data — network first, fall back to cache
             urlPattern: /\/api\//,
             handler: 'NetworkFirst',
             options: {
