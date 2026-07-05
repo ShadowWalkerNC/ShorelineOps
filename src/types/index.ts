@@ -4,7 +4,7 @@
 export type { UserRole, Department, Permission } from './roles'
 export { ROLE_RANK, ROLE_LABEL, ROLE_PERMISSIONS, DEPARTMENTS, USER_ROLES, hasPermission, roleAtLeast } from './roles'
 
-export type { StaffProfile, StaffStatus, CallOut, CallOutReason, CallOutShift, Certification, EmergencyContact, ScheduleEntry } from './staff'
+export type { StaffProfile, StaffStatus, CallOut, CallOutReason, CallOutShift, Certification, EmergencyContact, ScheduleEntry, TimecardPunch } from './staff'
 export { COMMON_CERTIFICATIONS } from './staff'
 
 export type { InventoryItem, InventoryCategory, InventoryUnit, StorageLocation, PriceRecord, InventoryCount, InventoryCountStatus, InventoryCountItem, TruckOrder, TruckOrderStatus, TruckOrderItem, VendorContact, LocationSettings } from './inventory'

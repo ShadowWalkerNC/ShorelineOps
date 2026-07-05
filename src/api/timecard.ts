@@ -2,16 +2,9 @@
 // TIMECARD API — local branch (localStorage only)
 // ============================================================
 import { ls, LS_KEYS } from '@/lib/localStorage'
+import type { TimecardPunch } from '@/types'
 
-export interface TimecardPunch {
-  id: string
-  badge_id: string
-  operation: 'In' | 'Out'
-  kiosk_id: string
-  punched_at: string
-  created_at: string
-  notes?: string | null
-}
+export type { TimecardPunch }
 
 export async function fetchPunches(badgeId?: string, limit = 200): Promise<TimecardPunch[]> {
   let punches = ls.get<TimecardPunch[]>(LS_KEYS.timePunches, [])

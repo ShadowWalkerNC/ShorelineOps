@@ -127,3 +127,16 @@ export interface ScheduleEntry {
   createdById: string
   createdAt: string
 }
+
+// ── Timecard Punches ──────────────────────────────────────────────────────────
+// Stored under LS_KEYS.timePunches ('sl_time_punches').
+// badge_id and kiosk_id are non-PHI identifiers — safe for plain ls (not cs).
+export interface TimecardPunch {
+  id: string
+  badge_id: string
+  operation: 'In' | 'Out'
+  kiosk_id: string
+  punched_at: string        // ISO 8601
+  created_at: string        // ISO 8601
+  notes?: string | null
+}
