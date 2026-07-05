@@ -26,9 +26,7 @@ import type {
   ApprovalRequest, ApprovalStatus, ApprovalType,
 } from '../../types/communications'
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function uid() { return Math.random().toString(36).slice(2, 10) }
-
+// ── Helpers ────────────────────────────────────────────────────────────────────────
 function relTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60_000)
@@ -82,7 +80,7 @@ const APPROVAL_TYPE_LABEL: Record<ApprovalType, string> = {
   checklist_change:      'Checklist Change',
 }
 
-// ── Small reusable pieces ───────────────────────────────────────────────────
+// ── Small reusable pieces ──────────────────────────────────────────────────────────────────
 function Badge({ label, bg, text }: { label: string; bg: string; text: string }) {
   return (
     <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: bg, color: text, whiteSpace: 'nowrap' }}>
@@ -114,7 +112,7 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
-// ── Staff name resolver ────────────────────────────────────────────────────
+// ── Staff name resolver ──────────────────────────────────────────────────────────────────────
 function useStaffName() {
   const { profiles } = useStaffStore()
   return (id: string) => {
@@ -158,25 +156,28 @@ function ThreadsTab({ isPrivileged, myStaffId }: { isPrivileged: boolean; myStaf
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   }, [threads, typeFilter, statusFilter, search])
 
-  function handleCreateThread() {
+  async function handleCreateThread() {
     if (!newSubject.trim() || !newBody.trim()) return
-    const id = addThread({ type: newType, subject: newSubject, status: 'Draft', createdById: myStaffId })
-    addEntry(id, { authorId: myStaffId, authorRole: 'manager', body: newBody, isInternal: false })
+    const id = await addThread(
+      { type: newType, subject: newSubject, status: 'Draft', createdById: myStaffId },
+      myStaffId
+    )
+    await addEntry(id, { authorId: myStaffId, authorRole: 'manager', body: newBody, isInternal: false }, myStaffId)
     setNewSubject(''); setNewType('memo'); setNewBody('')
     setShowNew(false)
     setExpanded(id)
   }
 
-  function handleReply(threadId: string) {
+  async function handleReply(threadId: string) {
     if (!replyBody.trim()) return
-    addEntry(threadId, { authorId: myStaffId, authorRole: 'manager', body: replyBody, isInternal: replyInternal })
+    await addEntry(threadId, { authorId: myStaffId, authorRole: 'manager', body: replyBody, isInternal: replyInternal }, myStaffId)
     setReplyBody('')
     setReplyInternal(false)
   }
 
-  function handleDistribute(threadId: string) {
+  async function handleDistribute(threadId: string) {
     const allIds = profiles.map(p => p.id)
-    distribute(threadId, allIds, myStaffId)
+    await distribute(threadId, allIds, myStaffId)
   }
 
   const selectStyle: React.CSSProperties = {
@@ -267,7 +268,7 @@ function ThreadsTab({ isPrivileged, myStaffId }: { isPrivileged: boolean; myStaf
               replyInternal={replyInternal}
               setReplyInternal={setReplyInternal}
               onReply={() => handleReply(thread.id)}
-              onStatusChange={(s) => setStatus(thread.id, s)}
+              onStatusChange={(s) => setStatus(thread.id, s, myStaffId)}
               onDistribute={() => handleDistribute(thread.id)}
               selectStyle={selectStyle}
             />
@@ -424,6 +425,7 @@ function ThreadRow({
 function ApprovalsTab({ isPrivileged, myStaffId }: { isPrivileged: boolean; myStaffId: string }) {
   const { approvals, reviewApproval, withdrawApproval, isLoading } = useCommunicationsStore()
   const getName = useStaffName()
+  const { user } = useAuth()
 
   const [statusFilter, setStatusFilter] = useState<ApprovalStatus | 'All'>('All')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -555,23 +557,33 @@ function ApprovalsTab({ isPrivileged, myStaffId }: { isPrivileged: boolean; mySt
                             />
                             <div style={{ display: 'flex', gap: 10 }}>
                               <button
-                                onClick={() => { reviewApproval(req.id, 'Approved', reviewNote[req.id]); setExpanded(null) }}
+                                onClick={async () => {
+                                  await reviewApproval(req.id, 'Approved', reviewNote[req.id], myStaffId, user?.name)
+                                  setExpanded(null)
+                                }}
                                 style={{ padding: '9px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
                               >
                                 ✓ Approve
                               </button>
                               <button
-                                onClick={() => { reviewApproval(req.id, 'Rejected', reviewNote[req.id]); setExpanded(null) }}
+                                onClick={async () => {
+                                  await reviewApproval(req.id, 'Rejected', reviewNote[req.id], myStaffId, user?.name)
+                                  setExpanded(null)
+                                }}
                                 style={{ padding: '9px 20px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
                               >
                                 ✕ Reject
                               </button>
                             </div>
+
                           </div>
                         )}
                         {canWithdraw && !canReview && (
                           <button
-                            onClick={() => { withdrawApproval(req.id); setExpanded(null) }}
+                            onClick={async () => {
+                              await withdrawApproval(req.id, myStaffId)
+                              setExpanded(null)
+                            }}
                             style={{ padding: '8px 18px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}
                           >
                             Withdraw Request
