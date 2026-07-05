@@ -44,20 +44,21 @@ export type AuditAction =
   | 'KEY_CLEARED'
   | 'EMERGENCY_ACCESS_GRANTED'
   | 'EMERGENCY_ACCESS_USED'
-  // ─ User management (admin panel) ─────────────────────────────────
+  | 'EMERGENCY_ACCESS_REVOKED'
+  // ─ User management (admin panel) ──────────────────────────────────────────
   | 'user.create'
   | 'user.role_change'
   | 'user.lock'
   | 'user.unlock'
   | 'user.force_reset'
   | 'user.password_reset'
-  // ─ Residents (PHI) ─────────────────────────────────────────────────
+  // ─ Residents (PHI) ────────────────────────────────────────────────────────
   | 'resident.create'
   | 'resident.update'
   | 'resident.delete'
   | 'VIEW_RESIDENT'
   | 'EXPORT_RESIDENTS'
-  // ─ Staff ────────────────────────────────────────────────────────────
+  // ─ Staff ──────────────────────────────────────────────────────────────────
   | 'staff.profile.create'
   | 'staff.profile.update'
   | 'staff.profile.delete'
@@ -65,29 +66,37 @@ export type AuditAction =
   | 'staff.callout.update'
   | 'staff.callout.delete'
   | 'VIEW_STAFF'
-  // ─ Timecard ──────────────────────────────────────────────────────────
+  // ─ Timecard ───────────────────────────────────────────────────────────────
   | 'CLOCK_IN'
   | 'CLOCK_OUT'
   | 'VIEW_TIMECARD'
   | 'EXPORT_TIMECARD'
-  // ─ Budget ───────────────────────────────────────────────────────────
+  // ─ Budget ─────────────────────────────────────────────────────────────────
   | 'VIEW_BUDGET'
   | 'CREATE_BUDGET_ENTRY'
   | 'UPDATE_BUDGET_ENTRY'
   | 'DELETE_BUDGET_ENTRY'
   | 'EXPORT_BUDGET'
-  // ─ Communications ───────────────────────────────────────────────
+  // ─ Communications ─────────────────────────────────────────────────────────
   | 'VIEW_THREAD'
   | 'CREATE_THREAD'
   | 'UPDATE_THREAD'
   | 'DELETE_THREAD'
-  // ─ Inventory ─────────────────────────────────────────────────────────
+  | 'comms.thread.create'
+  | 'comms.thread.addEntry'
+  | 'comms.thread.update'
+  | 'comms.thread.delete'
+  | 'comms.approval.create'
+  | 'comms.approval.approved'
+  | 'comms.approval.rejected'
+  | 'comms.approval.withdraw'
+  // ─ Inventory ──────────────────────────────────────────────────────────────
   | 'VIEW_INVENTORY'
   | 'UPDATE_INVENTORY'
-  // ─ Menu / Production ─────────────────────────────────────────────
+  // ─ Menu / Production ──────────────────────────────────────────────────────
   | 'VIEW_MENU'
   | 'UPDATE_MENU'
-  // ─ Admin / Compliance / Setup ─────────────────────────────────
+  // ─ Admin / Compliance / Setup ─────────────────────────────────────────────
   | 'ACCESS_DENIED'
   | 'SETTINGS_CHANGED'
   | 'BACKUP_CREATED'
@@ -113,7 +122,7 @@ export interface AuditEntry {
   hmac: string
 }
 
-// ── HMAC helpers ─────────────────────────────────────────────────────────────
+// ── HMAC helpers ──────────────────────────────────────────────────────────────
 
 async function getOrCreateHmacKey(): Promise<CryptoKey> {
   let raw = localStorage.getItem(HMAC_SECRET_KEY)

@@ -134,7 +134,7 @@ export async function revokeEmergencyAccess(
       : g
   )
   saveGrants(grants)
-  await auditLog('ACCOUNT_UNLOCKED', {
+  await auditLog('EMERGENCY_ACCESS_REVOKED', {
     userId: revokedByUserId,
     userName: revokedByUserName,
     resourceId: targetUserId,
