@@ -25,6 +25,12 @@
  *   4. Re-derive encryption key from new password
  *   5. Clear forcePasswordReset flag
  *   6. Update sessionStorage user record
+ *
+ * loginAsDemo (DEMO BUILDS ONLY):
+ *   Bypasses all HIPAA checks — no password, no encryption key,
+ *   no audit log. Sets a synthetic AuthUser directly into state.
+ *   This method must never be called in local or web builds.
+ *   The DemoBootstrap component is the only caller.
  * ============================================================
  */
 import React, {
@@ -42,6 +48,7 @@ import { ls, LS_KEYS } from '../lib/localStorage'
 import { auditLog } from './auditLog'
 import { verifyPassword, hashPassword, checkPasswordExpiry } from './passwordPolicy'
 import { sessionStore } from './sessionStore'
+import { IS_DEMO } from '@/config/mode'
 
 export type { UserRole }
 
@@ -72,6 +79,14 @@ export interface AuthUser {
   forcePasswordReset: boolean
 }
 
+/** Minimal shape accepted by loginAsDemo — no password fields needed. */
+export interface DemoUser {
+  id: string
+  name: string
+  email: string
+  role: UserRole
+}
+
 interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
@@ -80,6 +95,8 @@ interface AuthContextValue {
   passwordExpiry: { shouldWarn: boolean; daysUntilExpiry: number } | null
   sessionWarning: boolean
   login: (email: string, password: string) => Promise<void>
+  /** Demo mode only. Bypasses all HIPAA checks and sets a synthetic user directly. */
+  loginAsDemo: (demoUser: DemoUser) => void
   logout: (reason?: string) => Promise<void>
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>
   can: (permission: Permission) => boolean
@@ -173,6 +190,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
+  }, [])
+
+  // ── loginAsDemo (DEMO BUILDS ONLY) ───────────────────────────────────────────
+  //
+  // Sets a synthetic AuthUser directly — no PBKDF2, no audit log, no keyManager.
+  // Calling this in a local or web build is a no-op with a console warning.
+
+  const loginAsDemo = useCallback((demoUser: DemoUser) => {
+    if (!IS_DEMO) {
+      console.warn('[AuthContext] loginAsDemo called outside of demo build — ignoring.')
+      return
+    }
+    const authUser: AuthUser = {
+      id: demoUser.id,
+      name: demoUser.name,
+      email: demoUser.email,
+      role: demoUser.role,
+      mfaVerified: true,
+      forcePasswordReset: false,
+    }
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
+    setUser(authUser)
+    setIsLoading(false)
   }, [])
 
   // ── Login ────────────────────────────────────────────────────────────────────────────
@@ -299,7 +339,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const match = users.find(u => u.id === user.id)
     if (!match) throw new Error('User record not found.')
 
-    // Verify current password
     const valid = await verifyPassword(currentPassword, match.passwordHash)
     if (!valid) {
       await auditLog('PASSWORD_CHANGE_FAILED', {
@@ -311,7 +350,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Current password is incorrect.')
     }
 
-    // Check password history (last 10)
     const historyToCheck = [match.passwordHash, ...(match.passwordHistory ?? [])]
     for (const oldHash of historyToCheck) {
       const reused = await verifyPassword(newPassword, oldHash)
@@ -326,7 +364,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Hash and store new password
     const newHash = await hashPassword(newPassword)
     const newHistory = [match.passwordHash, ...(match.passwordHistory ?? [])].slice(0, 10)
 
@@ -344,10 +381,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
     ls.set(LS_KEYS.users, updatedUsers)
 
-    // Re-derive encryption key from new password
     await keyManager.initKey(newPassword)
 
-    // Update session record
     const updatedAuthUser: AuthUser = { ...user, forcePasswordReset: false }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(updatedAuthUser))
     setUser(updatedAuthUser)
@@ -386,6 +421,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       passwordExpiry,
       sessionWarning,
       login,
+      loginAsDemo,
       logout,
       changePassword,
       can,
