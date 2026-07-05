@@ -17,6 +17,14 @@
  *   4. On success: keyManager.initKey(passphrase), start session
  *   5. On failure: increment failedAttempts, lock at 5
  *   6. Check password expiry — force reset if expired
+ *
+ * changePassword flow:
+ *   1. Verify current password
+ *   2. Validate new password not in history
+ *   3. Hash new password, update sl_users
+ *   4. Re-derive encryption key from new password
+ *   5. Clear forcePasswordReset flag
+ *   6. Update sessionStorage user record
  * ============================================================
  */
 import React, {
@@ -32,13 +40,12 @@ import { ROLE_PERMISSIONS, ROLE_RANK, hasPermission } from '../types/roles'
 import { keyManager } from '../lib/keyManager'
 import { ls, LS_KEYS } from '../lib/localStorage'
 import { auditLog } from './auditLog'
-import { verifyPassword } from './passwordPolicy'
-import { checkPasswordExpiry } from './passwordPolicy'
+import { verifyPassword, hashPassword, checkPasswordExpiry } from './passwordPolicy'
 import { sessionStore } from './sessionStore'
 
 export type { UserRole }
 
-// ── Types ───────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────────
 
 export interface AppUser {
   id: string               // crypto.randomUUID() — unique, immutable
@@ -56,19 +63,6 @@ export interface AppUser {
   forcePasswordReset: boolean
 }
 
-interface AuthContextValue {
-  user: AuthUser | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  passwordExpiry: { shouldWarn: boolean; daysUntilExpiry: number } | null
-  sessionWarning: boolean  // true when 2-min timeout warning is active
-  login: (email: string, password: string) => Promise<void>
-  logout: (reason?: string) => Promise<void>
-  can: (permission: Permission) => boolean
-  atLeast: (role: UserRole) => boolean
-  dismissSessionWarning: () => void
-}
-
 export interface AuthUser {
   id: string
   name: string
@@ -76,6 +70,21 @@ export interface AuthUser {
   role: UserRole
   mfaVerified: boolean
   forcePasswordReset: boolean
+}
+
+interface AuthContextValue {
+  user: AuthUser | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  forcePasswordReset: boolean
+  passwordExpiry: { shouldWarn: boolean; daysUntilExpiry: number } | null
+  sessionWarning: boolean
+  login: (email: string, password: string) => Promise<void>
+  logout: (reason?: string) => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  can: (permission: Permission) => boolean
+  atLeast: (role: UserRole) => boolean
+  dismissSessionWarning: () => void
 }
 
 const SESSION_KEY = 'sl_session_user'
@@ -86,9 +95,9 @@ const SESSION_TIMEOUT_MS = (() => {
   if (parsed && parsed >= 5 * 60_000 && parsed <= 30 * 60_000) return parsed
   return 15 * 60_000 // default 15 minutes
 })()
-const WARN_BEFORE_MS = 2 * 60_000 // warn 2 minutes before timeout
+const WARN_BEFORE_MS = 2 * 60_000
 
-// ── Context ────────────────────────────────────────────────────────────
+// ── Context ────────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -102,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const warnRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sessionIdRef = useRef<string | null>(null)
 
-  // ── Session timeout ──────────────────────────────────────────
+  // ── Session timeout ──────────────────────────────────────────────────────
 
   const clearTimers = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -138,7 +147,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (sessionIdRef.current) sessionStore.touchSession(sessionIdRef.current)
   }, [clearTimers, handleTimeout])
 
-  // Wire activity listeners when user is logged in
   useEffect(() => {
     if (!user) return
     const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
@@ -151,16 +159,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, resetTimeout, clearTimers])
 
-  // ── Restore session on mount ───────────────────────────────
+  // ── Restore session on mount ──────────────────────────────────────────
 
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(SESSION_KEY)
       if (stored) {
         const parsed = JSON.parse(stored) as AuthUser
-        // Key is not in memory after page reload — user must re-enter passphrase
-        // We keep the session record so UI can show the passphrase prompt
-        // rather than a full re-login, but PHI is blocked until key is re-derived.
         setUser(parsed)
       }
     } catch {
@@ -170,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // ── Login ────────────────────────────────────────────────────────────────
+  // ── Login ────────────────────────────────────────────────────────────────────────────
 
   const login = useCallback(async (email: string, password: string) => {
     const users: AppUser[] = ls.get(LS_KEYS.users, [])
@@ -217,20 +222,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       throw new Error(
         locked
-          ? 'This account has been locked due to too many failed login attempts.'
-          : `Invalid email or password. ${Math.max(0, MAX_FAILED_ATTEMPTS - newAttempts)} attempt(s) remaining.`
+          ? 'This account has been locked due to too many failed login attempts. Contact your administrator.'
+          : `Invalid email or password. ${Math.max(0, MAX_FAILED_ATTEMPTS - newAttempts)} attempt(s) remaining before lockout.`
       )
     }
 
-    // Derive encryption key from password (password doubles as passphrase)
     await keyManager.initKey(password)
     await auditLog('KEY_INITIALIZED', { userId: match.id, userName: match.name, outcome: 'success' })
 
-    // Check password expiry
     const expiry = checkPasswordExpiry(match.passwordSetAt)
     setPasswordExpiry({ shouldWarn: expiry.shouldWarn, daysUntilExpiry: expiry.daysUntilExpiry })
 
-    // Reset failed attempts, update last login
     const updatedUsers = users.map(u =>
       u.id === match.id
         ? { ...u, failedAttempts: 0, lockedAt: null, lastLoginAt: new Date().toISOString() }
@@ -261,7 +263,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(authUser)
   }, [])
 
-  // ── Logout ───────────────────────────────────────────────────────────────
+  // ── Logout ────────────────────────────────────────────────────────────────────────
 
   const logout = useCallback(async (reason = 'user_initiated') => {
     const currentUser = user
@@ -288,7 +290,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPasswordExpiry(null)
   }, [user, clearTimers])
 
-  // ── Permission helpers ─────────────────────────────────────────────
+  // ── Change Password ───────────────────────────────────────────────────────────
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    if (!user) throw new Error('Not authenticated.')
+
+    const users: AppUser[] = ls.get(LS_KEYS.users, [])
+    const match = users.find(u => u.id === user.id)
+    if (!match) throw new Error('User record not found.')
+
+    // Verify current password
+    const valid = await verifyPassword(currentPassword, match.passwordHash)
+    if (!valid) {
+      await auditLog('PASSWORD_CHANGE_FAILED', {
+        userId: user.id,
+        userName: user.name,
+        outcome: 'failure',
+        details: { reason: 'wrong_current_password' },
+      })
+      throw new Error('Current password is incorrect.')
+    }
+
+    // Check password history (last 10)
+    const historyToCheck = [match.passwordHash, ...(match.passwordHistory ?? [])]
+    for (const oldHash of historyToCheck) {
+      const reused = await verifyPassword(newPassword, oldHash)
+      if (reused) {
+        await auditLog('PASSWORD_CHANGE_FAILED', {
+          userId: user.id,
+          userName: user.name,
+          outcome: 'failure',
+          details: { reason: 'password_reuse' },
+        })
+        throw new Error('This password has been used recently. Choose a different password.')
+      }
+    }
+
+    // Hash and store new password
+    const newHash = await hashPassword(newPassword)
+    const newHistory = [match.passwordHash, ...(match.passwordHistory ?? [])].slice(0, 10)
+
+    const updatedUsers = users.map(u =>
+      u.id === user.id
+        ? {
+            ...u,
+            passwordHash: newHash,
+            passwordHistory: newHistory,
+            passwordSetAt: new Date().toISOString(),
+            forcePasswordReset: false,
+            failedAttempts: 0,
+          }
+        : u
+    )
+    ls.set(LS_KEYS.users, updatedUsers)
+
+    // Re-derive encryption key from new password
+    await keyManager.initKey(newPassword)
+
+    // Update session record
+    const updatedAuthUser: AuthUser = { ...user, forcePasswordReset: false }
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(updatedAuthUser))
+    setUser(updatedAuthUser)
+    setPasswordExpiry(null)
+
+    await auditLog('PASSWORD_CHANGED', {
+      userId: user.id,
+      userName: user.name,
+      outcome: 'success',
+    })
+  }, [user])
+
+  // ── Permission helpers ───────────────────────────────────────────────────────
 
   const can = useCallback((permission: Permission): boolean => {
     if (!user) return false
@@ -310,10 +382,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isAuthenticated: !!user,
       isLoading,
+      forcePasswordReset: user?.forcePasswordReset ?? false,
       passwordExpiry,
       sessionWarning,
       login,
       logout,
+      changePassword,
       can,
       atLeast,
       dismissSessionWarning,
@@ -329,7 +403,7 @@ export function useAuth(): AuthContextValue {
   return ctx
 }
 
-// ── Role guard components (unchanged API) ───────────────────────
+// ── Role guard components ──────────────────────────────────────────────
 
 export function RequireRole({
   role,

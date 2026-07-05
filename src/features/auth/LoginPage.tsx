@@ -1,33 +1,38 @@
 /**
- * Login page — Demo Mode
- * Shows demo credentials on screen so reviewers can log in immediately.
- * Remove the demo hint panel before going to production.
+ * ============================================================
+ * LOGIN PAGE
+ * ============================================================
+ * Handles: normal login, locked-account errors,
+ * password-expiry warnings, and forced-reset redirects.
+ * ============================================================
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
 
-const DEMO_ACCOUNTS = [
-  { role: 'Admin',     email: 'admin@shoreline.demo',    password: 'Admin1234!' },
-  { role: 'Staff',     email: 'staff@shoreline.demo',     password: 'Staff1234!' },
-  { role: 'Read-Only', email: 'readonly@shoreline.demo',  password: 'Readonly1234!' },
-]
-
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, forcePasswordReset, passwordExpiry } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
+
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
+  const [showExpiry, setShowExpiry] = useState(false)
 
-  // Redirect to Dashboard (/) after successful login, or back to the page
-  // they were trying to reach before being sent to /login
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
+
+  // After successful login: route based on forcePasswordReset flag
   useEffect(() => {
-    if (isAuthenticated) navigate(from, { replace: true })
-  }, [isAuthenticated, navigate, from])
+    if (!isAuthenticated) return
+    if (forcePasswordReset) {
+      navigate('/change-password', { replace: true })
+    } else {
+      if (passwordExpiry?.shouldWarn) setShowExpiry(true)
+      navigate(from, { replace: true })
+    }
+  }, [isAuthenticated, forcePasswordReset])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,16 +40,12 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-    } catch {
-      setError('Invalid email or password. Use the demo credentials below.')
+      // Navigation is handled by the useEffect above
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Sign in failed. Please try again.'
+      setError(msg)
       setLoading(false)
     }
-  }
-
-  function fillDemo(acct: typeof DEMO_ACCOUNTS[number]) {
-    setEmail(acct.email)
-    setPassword(acct.password)
-    setError('')
   }
 
   const inp: React.CSSProperties = {
@@ -66,6 +67,35 @@ export default function LoginPage() {
       padding: 16, zIndex: 10000,
     }}>
       <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Password expiry warning (shown briefly after redirect if shouldWarn) */}
+        {showExpiry && passwordExpiry && (
+          <div style={{
+            background: '#fffbeb',
+            border: '1px solid #fcd34d',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 16px',
+            color: '#92400e',
+            fontSize: 13,
+            fontWeight: 500,
+          }}>
+            ⚠️ Your password expires in {passwordExpiry.daysUntilExpiry} day{passwordExpiry.daysUntilExpiry !== 1 ? 's' : ''}.
+            {' '}
+            <button
+              onClick={() => navigate('/change-password')}
+              style={{ textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: 13 }}
+            >
+              Change it now
+            </button>
+            {' or '}
+            <button
+              onClick={() => setShowExpiry(false)}
+              style={{ textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: 13 }}
+            >
+              dismiss
+            </button>.
+          </div>
+        )}
 
         {/* Login card */}
         <div style={{
@@ -90,76 +120,76 @@ export default function LoginPage() {
               fontSize: 11, color: 'var(--text-muted)',
               fontWeight: 600, letterSpacing: '0.5px',
               textTransform: 'uppercase',
-            }}>Operations Platform</div>
+            }}>Dietary Operations Platform</div>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                required autoComplete="email" style={inp} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                autoFocus
+                style={inp}
+              />
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required autoComplete="current-password" style={inp} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                style={inp}
+              />
             </div>
 
             {error && (
               <div style={{
-                background: '#faf1ef', border: '1px solid rgba(189,110,92,0.25)',
-                color: '#a35a49', padding: '10px 12px',
-                borderRadius: 'var(--radius-md)', fontSize: 13,
-                fontWeight: 500, marginBottom: 16,
+                background: '#faf1ef',
+                border: '1px solid rgba(189,110,92,0.25)',
+                color: '#a35a49',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 13,
+                fontWeight: 500,
+                marginBottom: 16,
+                lineHeight: 1.5,
               }}>{error}</div>
             )}
 
-            <button type="submit" disabled={loading} style={{
-              width: '100%', padding: '12px',
-              background: loading ? 'var(--text-muted)' : 'var(--color-primary)',
-              color: 'white', border: 'none',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 14, fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              minHeight: 44, transition: 'background 0.2s ease',
-            }}>{loading ? 'Signing in...' : 'Sign in'}</button>
-          </form>
-        </div>
-
-        {/* Demo credentials panel — remove before production */}
-        <div style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px dashed rgba(255,255,255,0.15)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 16px',
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'rgba(255,255,255,0.35)', marginBottom: 10 }}>
-            🔑 Demo Accounts — click to fill
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {DEMO_ACCOUNTS.map(acct => (
-              <button key={acct.role} onClick={() => fillDemo(acct)} type="button" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%', padding: '12px',
+                background: loading ? 'var(--text-muted)' : 'var(--color-primary)',
+                color: 'white', border: 'none',
                 borderRadius: 'var(--radius-md)',
-                padding: '8px 12px', cursor: 'pointer',
-                textAlign: 'left', gap: 12,
-              }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', minWidth: 72 }}>{acct.role}</span>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', flex: 1 }}>{acct.email}</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{acct.password}</span>
-              </button>
-            ))}
-          </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 10, lineHeight: 1.5 }}>
-            ⚠ Demo mode — all data is static. See DEMO.md for production setup.
-          </div>
+                fontSize: 14, fontWeight: 600,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                minHeight: 44, transition: 'background 0.2s ease',
+              }}
+            >
+              {loading ? 'Signing in…' : 'Sign In'}
+            </button>
+          </form>
         </div>
       </div>
 
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </div>
   )

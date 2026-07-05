@@ -1,15 +1,23 @@
 /**
- * Route guard — redirects unauthenticated users to /login.
- * Preserves the original destination so after login they return to it.
+ * ============================================================
+ * REQUIRE AUTH — Route Guard
+ * ============================================================
+ * 1. Waits for session restore (isLoading).
+ * 2. Redirects unauthenticated users to /login,
+ *    preserving the original destination via location state.
+ * 3. If the user is authenticated but has forcePasswordReset set,
+ *    redirects to /change-password (except when already there).
+ *    This makes the forced-reset gate airtight — no other route
+ *    can be reached until the password is changed.
+ * ============================================================
  */
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext'
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, forcePasswordReset } = useAuth()
   const location = useLocation()
 
-  // Wait for session restore before making any auth decision
   if (isLoading) {
     return (
       <div style={{
@@ -27,8 +35,12 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   }
 
   if (!isAuthenticated) {
-    // Pass current location so LoginPage can redirect back after login
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  // Force password change before any other route is accessible
+  if (forcePasswordReset && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
   }
 
   return <>{children}</>
