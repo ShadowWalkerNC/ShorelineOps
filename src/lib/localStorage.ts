@@ -2,25 +2,40 @@
 // LOCAL STORAGE HELPER
 // ============================================================
 // Typed key registry + thin get/set/remove wrappers.
+//
+// NON-PHI keys only — use cs (cryptoStore) for PHI keys.
+// PHI keys are listed in PHI_KEYS in cryptoStore.ts.
+//
 // All stores on the `local` branch use this instead of Supabase.
 // ============================================================
 
 export const LS_KEYS = {
+  // PHI — read/write via cryptoStore (cs), not ls
   residents:      'sl_residents',
+  staffProfiles:  'sl_staff_profiles',
+  callOuts:       'sl_call_outs',
+  timePunches:    'sl_time_punches',
+  threads:        'sl_comm_threads',
+  approvals:      'sl_comm_approvals',
+  budgetPeriods:  'sl_budget_periods',
+  budgetEntries:  'sl_budget_entries',
+  // Non-PHI — safe to use ls directly
   stockItems:     'sl_stock_items',
   wasteEntries:   'sl_waste_entries',
   counts:         'sl_inventory_counts',
   truckOrders:    'sl_truck_orders',
   menuWeeks:      'sl_menu_weeks',
   menuItems:      'sl_menu_items',
-  budgetPeriods:  'sl_budget_periods',
-  budgetEntries:  'sl_budget_entries',
   productions:    'sl_production_sheets',
-  threads:        'sl_comm_threads',
-  approvals:      'sl_comm_approvals',
-  staffProfiles:  'sl_staff_profiles',
-  callOuts:       'sl_call_outs',
-  timePunches:    'sl_time_punches',
+  // Auth / setup / compliance (non-PHI metadata)
+  users:          'sl_users',
+  complianceRecord: 'sl_compliance_record',
+  setupComplete:  'sl_setup_complete',
+  facilityInfo:   'sl_facility_info',
+  auditLog:       'sl_audit_log',
+  auditHmacKey:   'sl_audit_hmac_key',
+  keySalt:        'sl_key_salt',
+  activeSessions: 'sl_active_sessions',
 } as const
 
 export type LsKey = typeof LS_KEYS[keyof typeof LS_KEYS]
