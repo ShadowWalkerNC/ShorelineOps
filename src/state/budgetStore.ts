@@ -1,34 +1,26 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/lib/database.types'
 
 export interface BudgetPeriod {
-  id: string
-  label: string
-  month: number
-  year: number
-  totalBudget: number
-  residentCount: number
-  budgetPerResidentPerDay: number
+  id: string; label: string; month: number; year: number
+  totalBudget: number; residentCount: number; budgetPerResidentPerDay: number
 }
 
 export interface BudgetEntry {
-  id: string
-  periodId: string
-  date: string
-  vendor?: string | null
-  description: string
-  amount: number
-  category?: string | null
+  id: string; periodId: string; date: string
+  vendor?: string | null; description: string
+  amount: number; category?: string | null
 }
 
 function toPeriod(row: Record<string, unknown>): BudgetPeriod {
   return {
-    id:                     row.id as string,
-    label:                  row.label as string,
-    month:                  row.month as number,
-    year:                   row.year as number,
-    totalBudget:            Number(row.total_budget ?? 0),
-    residentCount:          Number(row.resident_count ?? 0),
+    id:                      row.id as string,
+    label:                   row.label as string,
+    month:                   row.month as number,
+    year:                    row.year as number,
+    totalBudget:             Number(row.total_budget ?? 0),
+    residentCount:           Number(row.resident_count ?? 0),
     budgetPerResidentPerDay: Number(row.budget_per_resident_per_day ?? 0),
   }
 }
@@ -38,10 +30,10 @@ function toEntry(row: Record<string, unknown>): BudgetEntry {
     id:          row.id as string,
     periodId:    row.period_id as string,
     date:        row.date as string,
-    vendor:      row.vendor as string | null,
+    vendor:      (row.vendor as string | null) ?? null,
     description: row.description as string,
     amount:      Number(row.amount ?? 0),
-    category:    row.category as string | null,
+    category:    (row.category as string | null) ?? null,
   }
 }
 
@@ -51,54 +43,41 @@ type BudgetState = {
   entries: BudgetEntry[]
   loading: boolean
   error: string | null
-
   fetch: () => Promise<void>
   fetchPeriods: () => Promise<void>
   fetchEntries: (periodId: string) => Promise<void>
   setPeriod: (p: BudgetPeriod) => void
-
   upsertPeriod: (data: Omit<BudgetPeriod, 'id'> & { id?: string }) => Promise<void>
   addEntry: (data: Omit<BudgetEntry, 'id'>) => Promise<void>
   updateEntry: (id: string, data: Partial<BudgetEntry>) => Promise<void>
   removeEntry: (id: string) => Promise<void>
-
-  getTotalBudget:  () => number
-  getTotalSpent:   () => number
-  getProjected:    () => number
-  getDailyPerRes:  () => number
+  getTotalBudget: () => number
+  getTotalSpent: () => number
+  getProjected: () => number
+  getDailyPerRes: () => number
 }
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
-  period:  null,
-  periods: [],
-  entries: [],
-  loading: false,
-  error:   null,
+  period: null, periods: [], entries: [], loading: false, error: null,
 
-  // fetch current month's period + its entries
   fetch: async () => {
     set({ loading: true, error: null })
     try {
       const now = new Date()
-      const { data: periodRows, error: pe } = await supabase
+      const { data: pr, error: pe } = await supabase
         .from('budget_periods')
         .select('*')
         .eq('month', now.getMonth() + 1)
-        .eq('year',  now.getFullYear())
+        .eq('year', now.getFullYear())
         .maybeSingle()
       if (pe) throw new Error(pe.message)
-
-      if (!periodRows) { set({ loading: false }); return }
-      const period = toPeriod(periodRows as Record<string, unknown>)
-      set({ period })
-
-      const { data: entryRows, error: ee } = await supabase
+      if (!pr) { set({ loading: false }); return }
+      const period = toPeriod(pr as Record<string, unknown>)
+      const { data: er, error: ee } = await supabase
         .from('budget_entries').select('*').eq('period_id', period.id).order('date')
       if (ee) throw new Error(ee.message)
-      set({ entries: (entryRows ?? []).map(r => toEntry(r as Record<string, unknown>)), loading: false })
-    } catch (e: unknown) {
-      set({ error: (e as Error).message, loading: false })
-    }
+      set({ period, entries: (er ?? []).map(r => toEntry(r as Record<string, unknown>)), loading: false })
+    } catch (e: unknown) { set({ error: (e as Error).message, loading: false }) }
   },
 
   fetchPeriods: async () => {
@@ -118,16 +97,14 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   setPeriod: (p) => set({ period: p }),
 
   upsertPeriod: async (data) => {
-    const row = {
-      label:                       data.label,
-      month:                       data.month,
-      year:                        data.year,
-      total_budget:                data.totalBudget,
-      resident_count:              data.residentCount,
+    const row: Database['public']['Tables']['budget_periods']['Insert'] = {
+      label: data.label, month: data.month, year: data.year,
+      total_budget: data.totalBudget,
+      resident_count: data.residentCount,
       budget_per_resident_per_day: data.budgetPerResidentPerDay,
     }
     const { data: saved, error } = data.id
-      ? await supabase.from('budget_periods').update(row).eq('id', data.id).select().single()
+      ? await supabase.from('budget_periods').update(row as Database['public']['Tables']['budget_periods']['Update']).eq('id', data.id).select().single()
       : await supabase.from('budget_periods').insert(row).select().single()
     if (error) throw new Error(error.message)
     const period = toPeriod(saved as Record<string, unknown>)
@@ -140,25 +117,28 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   addEntry: async (data) => {
-    const { data: row, error } = await supabase
-      .from('budget_entries')
-      .insert({ period_id: data.periodId, date: data.date, vendor: data.vendor, description: data.description, amount: data.amount, category: data.category })
-      .select().single()
+    const row: Database['public']['Tables']['budget_entries']['Insert'] = {
+      period_id: data.periodId, date: data.date,
+      description: data.description, amount: data.amount,
+      ...(data.vendor   && { vendor:   data.vendor }),
+      ...(data.category && { category: data.category }),
+    }
+    const { data: r, error } = await supabase.from('budget_entries').insert(row).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ entries: [...s.entries, toEntry(row as Record<string, unknown>)] }))
+    set(s => ({ entries: [...s.entries, toEntry(r as Record<string, unknown>)] }))
   },
 
   updateEntry: async (id, data) => {
-    const patch: Record<string, unknown> = {}
-    if (data.date        !== undefined) patch.date        = data.date
-    if (data.vendor      !== undefined) patch.vendor      = data.vendor
-    if (data.description !== undefined) patch.description = data.description
-    if (data.amount      !== undefined) patch.amount      = data.amount
-    if (data.category    !== undefined) patch.category    = data.category
-    const { data: row, error } = await supabase
-      .from('budget_entries').update(patch).eq('id', id).select().single()
+    const patch: Database['public']['Tables']['budget_entries']['Update'] = {
+      ...(data.date        !== undefined && { date:        data.date }),
+      ...(data.vendor      !== undefined && { vendor:      data.vendor }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.amount      !== undefined && { amount:      data.amount }),
+      ...(data.category    !== undefined && { category:    data.category }),
+    }
+    const { data: r, error } = await supabase.from('budget_entries').update(patch).eq('id', id).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ entries: s.entries.map(e => e.id === id ? toEntry(row as Record<string, unknown>) : e) }))
+    set(s => ({ entries: s.entries.map(e => e.id === id ? toEntry(r as Record<string, unknown>) : e) }))
   },
 
   removeEntry: async (id) => {
@@ -167,14 +147,14 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     set(s => ({ entries: s.entries.filter(e => e.id !== id) }))
   },
 
-  getTotalBudget:  () => get().period?.totalBudget ?? 0,
-  getTotalSpent:   () => get().entries.reduce((s, e) => s + e.amount, 0),
-  getProjected:    () => {
+  getTotalBudget: () => get().period?.totalBudget ?? 0,
+  getTotalSpent:  () => get().entries.reduce((s, e) => s + e.amount, 0),
+  getProjected:   () => {
     const spent = get().entries.reduce((s, e) => s + e.amount, 0)
-    const now   = new Date()
-    const day   = now.getDate()
+    const now = new Date()
+    const day = now.getDate()
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
     return day > 0 ? (spent / day) * daysInMonth : 0
   },
-  getDailyPerRes:  () => get().period?.budgetPerResidentPerDay ?? 0,
+  getDailyPerRes: () => get().period?.budgetPerResidentPerDay ?? 0,
 }))

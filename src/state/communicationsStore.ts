@@ -1,18 +1,13 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/lib/database.types'
 
 export type ThreadStatus = 'Draft' | 'Pending Review' | 'Approved' | 'Distributed' | 'Archived'
 
 export interface CommThread {
-  id: string
-  subject: string
-  body: string
-  status: ThreadStatus
-  author?: string | null
-  recipients?: string[] | null
-  attachments?: unknown | null
-  createdAt: string
-  updatedAt: string
+  id: string; subject: string; body: string; status: ThreadStatus
+  author?: string | null; recipients?: string[] | null
+  attachments?: unknown | null; createdAt: string; updatedAt: string
 }
 
 function toThread(row: Record<string, unknown>): CommThread {
@@ -21,9 +16,9 @@ function toThread(row: Record<string, unknown>): CommThread {
     subject:     row.subject as string,
     body:        (row.body as string) ?? '',
     status:      (row.status as ThreadStatus) ?? 'Draft',
-    author:      row.author as string | null,
-    recipients:  row.recipients as string[] | null,
-    attachments: row.attachments,
+    author:      (row.author as string | null) ?? null,
+    recipients:  (row.recipients as string[] | null) ?? null,
+    attachments: row.attachments ?? null,
     createdAt:   row.created_at as string,
     updatedAt:   row.updated_at as string,
   }
@@ -40,9 +35,7 @@ type CommState = {
 }
 
 export const useCommunicationsStore = create<CommState>((set) => ({
-  threads: [],
-  loading: false,
-  error: null,
+  threads: [], loading: false, error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })
@@ -53,33 +46,31 @@ export const useCommunicationsStore = create<CommState>((set) => ({
   },
 
   add: async (data) => {
-    const { data: row, error } = await supabase
-      .from('communications')
-      .insert({
-        subject:     data.subject,
-        body:        data.body ?? '',
-        status:      data.status ?? 'Draft',
-        author:      data.author,
-        recipients:  data.recipients,
-        attachments: data.attachments,
-      })
-      .select().single()
+    const row: Database['public']['Tables']['communications']['Insert'] = {
+      subject:     data.subject,
+      body:        data.body ?? '',
+      status:      data.status ?? 'Draft',
+      ...(data.author      && { author:      data.author }),
+      ...(data.recipients  && { recipients:  data.recipients }),
+      ...(data.attachments && { attachments: data.attachments as import('@/lib/database.types').Json }),
+    }
+    const { data: r, error } = await supabase.from('communications').insert(row).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ threads: [toThread(row as Record<string, unknown>), ...s.threads] }))
+    set(s => ({ threads: [toThread(r as Record<string, unknown>), ...s.threads] }))
   },
 
   update: async (id, data) => {
-    const patch: Record<string, unknown> = {}
-    if (data.subject     !== undefined) patch.subject     = data.subject
-    if (data.body        !== undefined) patch.body        = data.body
-    if (data.status      !== undefined) patch.status      = data.status
-    if (data.author      !== undefined) patch.author      = data.author
-    if (data.recipients  !== undefined) patch.recipients  = data.recipients
-    if (data.attachments !== undefined) patch.attachments = data.attachments
-    const { data: row, error } = await supabase
-      .from('communications').update(patch).eq('id', id).select().single()
+    const patch: Database['public']['Tables']['communications']['Update'] = {
+      ...(data.subject     !== undefined && { subject:     data.subject }),
+      ...(data.body        !== undefined && { body:        data.body }),
+      ...(data.status      !== undefined && { status:      data.status }),
+      ...(data.author      !== undefined && { author:      data.author }),
+      ...(data.recipients  !== undefined && { recipients:  data.recipients }),
+      ...(data.attachments !== undefined && { attachments: data.attachments as import('@/lib/database.types').Json }),
+    }
+    const { data: r, error } = await supabase.from('communications').update(patch).eq('id', id).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ threads: s.threads.map(t => t.id === id ? toThread(row as Record<string, unknown>) : t) }))
+    set(s => ({ threads: s.threads.map(t => t.id === id ? toThread(r as Record<string, unknown>) : t) }))
   },
 
   remove: async (id) => {

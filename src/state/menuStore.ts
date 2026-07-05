@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/lib/database.types'
 
 export interface MenuItem {
   id: string
@@ -13,6 +14,9 @@ export interface MenuWeek {
   active: boolean
   days: Record<string, unknown>
 }
+
+type MenuInsert = Database['public']['Tables']['menu_weeks']['Insert']
+type MenuItemInsert = Database['public']['Tables']['menu_items']['Insert']
 
 type MenuState = {
   weeks: MenuWeek[]
@@ -40,7 +44,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ loading: true, error: null })
     const { data, error } = await supabase.from('menu_weeks').select('*').order('created_at')
     if (error) { set({ error: error.message, loading: false }); return }
-    set({ weeks: (data ?? []) as MenuWeek[], loading: false })
+    set({ weeks: (data ?? []).map(w => ({ ...w, days: (w.days ?? {}) as Record<string, unknown> })) as MenuWeek[], loading: false })
   },
 
   fetchItems: async () => {
@@ -50,22 +54,25 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   addWeek: async (label) => {
-    const { data, error } = await supabase
-      .from('menu_weeks').insert({ label, active: false, days: {} }).select().single()
+    const insert: MenuInsert = { label, active: false, days: {} }
+    const { data, error } = await supabase.from('menu_weeks').insert(insert).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ weeks: [...s.weeks, data as MenuWeek] }))
+    set(s => ({ weeks: [...s.weeks, { ...data, days: (data.days ?? {}) as Record<string, unknown> } as MenuWeek] }))
   },
 
   updateWeek: async (id, patch) => {
-    const { data, error } = await supabase
-      .from('menu_weeks').update(patch as Record<string, unknown>).eq('id', id).select().single()
+    const update: Database['public']['Tables']['menu_weeks']['Update'] = {
+      ...(patch.label  !== undefined && { label:  patch.label }),
+      ...(patch.active !== undefined && { active: patch.active }),
+      ...(patch.days   !== undefined && { days:   patch.days as import('@/lib/database.types').Json }),
+    }
+    const { data, error } = await supabase.from('menu_weeks').update(update).eq('id', id).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ weeks: s.weeks.map(w => w.id === id ? data as MenuWeek : w) }))
+    set(s => ({ weeks: s.weeks.map(w => w.id === id ? { ...data, days: (data.days ?? {}) as Record<string, unknown> } as MenuWeek : w) }))
   },
 
   setActiveWeek: async (id) => {
-    // Deactivate all, then activate the chosen week
-    await supabase.from('menu_weeks').update({ active: false }).neq('id', id)
+    await supabase.from('menu_weeks').update({ active: false } as Database['public']['Tables']['menu_weeks']['Update']).neq('id', id)
     await get().updateWeek(id, { active: true })
     set(s => ({ weeks: s.weeks.map(w => ({ ...w, active: w.id === id })) }))
   },
@@ -77,15 +84,18 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   addItem: async (name, category) => {
-    const { data, error } = await supabase
-      .from('menu_items').insert({ name, category }).select().single()
+    const insert: MenuItemInsert = { name, ...(category && { category }) }
+    const { data, error } = await supabase.from('menu_items').insert(insert).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ items: [...s.items, data as MenuItem].sort((a, b) => a.name.localeCompare(b.name)) }))
   },
 
   updateItem: async (id, patch) => {
-    const { data, error } = await supabase
-      .from('menu_items').update(patch as Record<string, unknown>).eq('id', id).select().single()
+    const update: Database['public']['Tables']['menu_items']['Update'] = {
+      ...(patch.name     !== undefined && { name:     patch.name }),
+      ...(patch.category !== undefined && { category: patch.category }),
+    }
+    const { data, error } = await supabase.from('menu_items').update(update).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ items: s.items.map(i => i.id === id ? data as MenuItem : i) }))
   },

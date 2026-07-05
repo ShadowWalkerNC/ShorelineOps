@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/lib/database.types'
 
 export interface InventoryItem {
   id: string
@@ -15,15 +16,26 @@ function toItem(row: Record<string, unknown>): InventoryItem {
   return {
     id:       row.id as string,
     item:     row.item as string,
-    category: row.category as string | null,
+    category: (row.category as string | null) ?? null,
     quantity: Number(row.quantity ?? 0),
-    unit:     row.unit as string | null,
+    unit:     (row.unit as string | null) ?? null,
     parLevel: row.par_level != null ? Number(row.par_level) : null,
-    notes:    row.notes as string | null,
+    notes:    (row.notes as string | null) ?? null,
   }
 }
 
-function toRow(data: Partial<InventoryItem>) {
+function toInsert(data: Partial<InventoryItem>): Database['public']['Tables']['inventory']['Insert'] {
+  return {
+    item:      data.item ?? '',
+    ...(data.category !== undefined && { category:  data.category }),
+    ...(data.quantity !== undefined && { quantity:  data.quantity }),
+    ...(data.unit     !== undefined && { unit:      data.unit }),
+    ...(data.parLevel !== undefined && { par_level: data.parLevel }),
+    ...(data.notes    !== undefined && { notes:     data.notes }),
+  }
+}
+
+function toUpdate(data: Partial<InventoryItem>): Database['public']['Tables']['inventory']['Update'] {
   return {
     ...(data.item     !== undefined && { item:      data.item }),
     ...(data.category !== undefined && { category:  data.category }),
@@ -60,14 +72,14 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   add: async (data) => {
     const { data: row, error } = await supabase
-      .from('inventory').insert(toRow(data as Partial<InventoryItem>)).select().single()
+      .from('inventory').insert(toInsert(data as Partial<InventoryItem>)).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ items: [...s.items, toItem(row as Record<string, unknown>)].sort((a, b) => a.item.localeCompare(b.item)) }))
   },
 
   update: async (id, data) => {
     const { data: row, error } = await supabase
-      .from('inventory').update(toRow(data)).eq('id', id).select().single()
+      .from('inventory').update(toUpdate(data)).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ items: s.items.map(i => i.id === id ? toItem(row as Record<string, unknown>) : i) }))
   },
@@ -81,6 +93,5 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   getLowParItems: () => get().items.filter(i =>
     i.parLevel != null && i.parLevel > 0 && i.quantity < i.parLevel && i.quantity > 0
   ),
-
   getZeroItems: () => get().items.filter(i => i.quantity <= 0),
 }))

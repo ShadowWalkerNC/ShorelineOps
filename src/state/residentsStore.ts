@@ -2,38 +2,46 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { Resident } from '@/types'
 
-// Map Supabase snake_case row → app camelCase Resident
 function toResident(row: Record<string, unknown>): Resident {
   return {
-    id:              row.id as string,
-    name:            row.name as string,
-    room:            row.room as string,
-    status:          (row.status as string) ?? 'Active',
-    dietType:        (row.diet_type as string | undefined) ?? undefined,
-    texture:         (row.texture as string | undefined) ?? undefined,
-    allergies:       (row.allergies as string[] | undefined) ?? [],
-    servingLocation: (row.serving_location as string | undefined) ?? undefined,
-    ensurePerDay:    (row.ensure_per_day as number | undefined) ?? 0,
-    birthdayMonth:   (row.birthday_month as string | undefined) ?? undefined,
-    birthdayDay:     (row.birthday_day as number | undefined) ?? undefined,
-    notes:           (row.notes as string | undefined) ?? undefined,
-  } as Resident
+    id:                  row.id as string,
+    name:                row.name as string,
+    room:                row.room as string,
+    status:              ((row.status as string) ?? 'Active') as Resident['status'],
+    dietType:            ((row.diet_type as string) ?? 'Regular') as Resident['dietType'],
+    texture:             ((row.texture as string) ?? 'Regular') as Resident['texture'],
+    portionSize:         ((row.portion_size as string) ?? 'Regular') as Resident['portionSize'],
+    ensurePerDay:        Number(row.ensure_per_day ?? 0),
+    allergies:           (row.allergies as string[] | null) ?? [],
+    beverages:           (row.beverages as string[] | null) ?? [],
+    birthdayMonth:       (row.birthday_month as string) ?? '',
+    birthdayDay:         (row.birthday_day as number | null) ?? null,
+    servingLocation:     ((row.serving_location as string) ?? 'Dining Room') as Resident['servingLocation'],
+    tableAssignment:     (row.table_assignment as string) ?? '',
+    likes:               (row.likes as string) ?? '',
+    dislikes:            (row.dislikes as string) ?? '',
+    specialInstructions: (row.special_instructions as string) ?? '',
+  }
 }
 
-// Map app camelCase → Supabase snake_case for inserts/updates
 function toRow(data: Partial<Resident>) {
   return {
-    ...(data.name            !== undefined && { name:             data.name }),
-    ...(data.room            !== undefined && { room:             data.room }),
-    ...(data.status          !== undefined && { status:           data.status }),
-    ...(data.dietType        !== undefined && { diet_type:        data.dietType }),
-    ...(data.texture         !== undefined && { texture:          data.texture }),
-    ...(data.allergies       !== undefined && { allergies:        data.allergies }),
-    ...(data.servingLocation !== undefined && { serving_location: data.servingLocation }),
-    ...(data.ensurePerDay    !== undefined && { ensure_per_day:   data.ensurePerDay }),
-    ...(data.birthdayMonth   !== undefined && { birthday_month:   data.birthdayMonth }),
-    ...(data.birthdayDay     !== undefined && { birthday_day:     data.birthdayDay }),
-    ...(data.notes           !== undefined && { notes:            data.notes }),
+    ...(data.name                !== undefined && { name:                 data.name }),
+    ...(data.room                !== undefined && { room:                 data.room }),
+    ...(data.status              !== undefined && { status:               data.status }),
+    ...(data.dietType            !== undefined && { diet_type:            data.dietType }),
+    ...(data.texture             !== undefined && { texture:              data.texture }),
+    ...(data.portionSize         !== undefined && { portion_size:         data.portionSize }),
+    ...(data.ensurePerDay        !== undefined && { ensure_per_day:       data.ensurePerDay }),
+    ...(data.allergies           !== undefined && { allergies:            data.allergies }),
+    ...(data.beverages           !== undefined && { beverages:            data.beverages }),
+    ...(data.birthdayMonth       !== undefined && { birthday_month:       data.birthdayMonth }),
+    ...(data.birthdayDay         !== undefined && { birthday_day:         data.birthdayDay }),
+    ...(data.servingLocation     !== undefined && { serving_location:     data.servingLocation }),
+    ...(data.tableAssignment     !== undefined && { table_assignment:     data.tableAssignment }),
+    ...(data.likes               !== undefined && { likes:                data.likes }),
+    ...(data.dislikes            !== undefined && { dislikes:             data.dislikes }),
+    ...(data.specialInstructions !== undefined && { special_instructions: data.specialInstructions }),
   }
 }
 
@@ -60,7 +68,7 @@ export const useResidentsStore = create<ResidentsState>((set, get) => ({
       if (search) q = q.or(`name.ilike.%${search}%,room.ilike.%${search}%`)
       const { data, error } = await q
       if (error) throw new Error(error.message)
-      set({ residents: (data ?? []).map(toResident), loading: false })
+      set({ residents: (data ?? []).map(r => toResident(r as Record<string, unknown>)), loading: false })
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false })
     }
@@ -68,14 +76,18 @@ export const useResidentsStore = create<ResidentsState>((set, get) => ({
 
   add: async (data) => {
     const { data: row, error } = await supabase
-      .from('residents').insert(toRow(data as Partial<Resident>)).select().single()
+      .from('residents')
+      .insert(toRow(data as Partial<Resident>) as Parameters<typeof supabase.from<'residents', any>>[0])
+      .select().single()
     if (error) throw new Error(error.message)
     set(s => ({ residents: [...s.residents, toResident(row as Record<string, unknown>)] }))
   },
 
   update: async (id, data) => {
     const { data: row, error } = await supabase
-      .from('residents').update(toRow(data)).eq('id', id).select().single()
+      .from('residents')
+      .update(toRow(data) as Parameters<typeof supabase.from<'residents', any>>[0])
+      .eq('id', id).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ residents: s.residents.map(r => r.id === id ? toResident(row as Record<string, unknown>) : r) }))
   },
