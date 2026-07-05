@@ -14,12 +14,12 @@ export const LS_KEYS = {
   residents:      'sl_residents',
   staffProfiles:  'sl_staff_profiles',
   callOuts:       'sl_call_outs',
-  timePunches:    'sl_time_punches',
   threads:        'sl_comm_threads',
   approvals:      'sl_comm_approvals',
   budgetPeriods:  'sl_budget_periods',
   budgetEntries:  'sl_budget_entries',
   // Non-PHI — safe to use ls directly
+  timePunches:    'sl_time_punches',   // badge IDs only, not PHI
   stockItems:     'sl_stock_items',
   wasteEntries:   'sl_waste_entries',
   counts:         'sl_inventory_counts',
