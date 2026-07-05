@@ -14,7 +14,9 @@ import StaffProfilePage from './features/staff/StaffProfilePage'
 import CommunicationsPage from './features/communications/CommunicationsPage'
 import BudgetPage from './features/budget/BudgetPage'
 import TimecardPage from './features/timecard/TimecardPage'
+import OfflinePage from './features/offline/OfflinePage'
 import Layout from './components/Layout'
+import PwaBanner from './components/PwaBanner'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -26,24 +28,30 @@ function AuthedLayout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      {/* PWA install / update / offline-ready toast — rendered outside router outlets */}
+      <PwaBanner />
 
-      <Route path="/"                element={<AuthedLayout><DashboardPage /></AuthedLayout>} />
-      <Route path="/residents"       element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
-      <Route path="/residents/:id"   element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
-      <Route path="/menu"            element={<AuthedLayout><MenuPage /></AuthedLayout>} />
-      <Route path="/production"      element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
-      <Route path="/recipes"         element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
-      <Route path="/inventory"       element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
-      <Route path="/budget"          element={<AuthedLayout><BudgetPage /></AuthedLayout>} />
-      <Route path="/timecards"       element={<AuthedLayout><TimecardPage /></AuthedLayout>} />
-      <Route path="/staff"           element={<AuthedLayout><StaffPage /></AuthedLayout>} />
-      <Route path="/staff/:staffId"  element={<AuthedLayout><StaffProfilePage /></AuthedLayout>} />
-      <Route path="/communications"  element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />
-      <Route path="/admin"           element={<AuthedLayout><AdminPage /></AuthedLayout>} />
+      <Routes>
+        <Route path="/login"   element={<LoginPage />} />
+        <Route path="/offline" element={<OfflinePage />} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="/"                element={<AuthedLayout><DashboardPage /></AuthedLayout>} />
+        <Route path="/residents"       element={<AuthedLayout><ResidentsPage /></AuthedLayout>} />
+        <Route path="/residents/:id"   element={<AuthedLayout><ResidentProfilePage /></AuthedLayout>} />
+        <Route path="/menu"            element={<AuthedLayout><MenuPage /></AuthedLayout>} />
+        <Route path="/production"      element={<AuthedLayout><ProductionPage /></AuthedLayout>} />
+        <Route path="/recipes"         element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
+        <Route path="/inventory"       element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
+        <Route path="/budget"          element={<AuthedLayout><BudgetPage /></AuthedLayout>} />
+        <Route path="/timecards"       element={<AuthedLayout><TimecardPage /></AuthedLayout>} />
+        <Route path="/staff"           element={<AuthedLayout><StaffPage /></AuthedLayout>} />
+        <Route path="/staff/:staffId"  element={<AuthedLayout><StaffProfilePage /></AuthedLayout>} />
+        <Route path="/communications"  element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />
+        <Route path="/admin"           element={<AuthedLayout><AdminPage /></AuthedLayout>} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   )
 }
