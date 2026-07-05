@@ -20,12 +20,13 @@
 import { keyManager } from './keyManager'
 import { LS_KEYS, type LsKey } from './localStorage'
 
-// Keys that contain PHI — must be encrypted
+// Keys that contain PHI — must be encrypted.
+// NOTE: timePunches is intentionally absent — timecard data is stored
+// in Supabase via src/api/timecard.ts, never in localStorage.
 export const PHI_KEYS = new Set<LsKey>([
   LS_KEYS.residents,
   LS_KEYS.staffProfiles,
   LS_KEYS.callOuts,
-  LS_KEYS.timePunches,
   LS_KEYS.threads,
   LS_KEYS.approvals,
   LS_KEYS.budgetEntries,
