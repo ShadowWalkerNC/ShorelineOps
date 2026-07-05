@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@/lib/database.types'
+import type { DayMenu, DayOfWeek, MenuWeek as CanonicalMenuWeek } from '@/types/menu'
+
+// Re-export the canonical types so consumers can import from here if needed
+export type { DayMenu, DayOfWeek }
 
 export interface MenuItem {
   id: string
@@ -8,15 +11,8 @@ export interface MenuItem {
   category?: string | null
 }
 
-export interface MenuWeek {
-  id: string
-  label: string
-  active: boolean
-  days: Record<string, unknown>
-}
-
-type MenuInsert = Database['public']['Tables']['menu_weeks']['Insert']
-type MenuItemInsert = Database['public']['Tables']['menu_items']['Insert']
+// Use the canonical MenuWeek shape — 'name' field, days typed as Record<DayOfWeek, DayMenu>
+export type MenuWeek = CanonicalMenuWeek
 
 type MenuState = {
   weeks: MenuWeek[]
@@ -26,12 +22,23 @@ type MenuState = {
   fetchWeeks: () => Promise<void>
   fetchItems: () => Promise<void>
   addWeek: (label: string) => Promise<void>
-  updateWeek: (id: string, patch: Partial<MenuWeek>) => Promise<void>
+  updateWeek: (id: string, patch: Partial<Pick<MenuWeek, 'name' | 'active' | 'days'>>) => Promise<void>
   setActiveWeek: (id: string) => Promise<void>
   removeWeek: (id: string) => Promise<void>
   addItem: (name: string, category?: string) => Promise<void>
   updateItem: (id: string, patch: Partial<MenuItem>) => Promise<void>
   removeItem: (id: string) => Promise<void>
+}
+
+function rowToWeek(row: Record<string, unknown>): MenuWeek {
+  return {
+    id:          row.id as string,
+    name:        (row.label ?? row.name ?? '') as string,
+    active:      Boolean(row.active),
+    days:        ((row.days ?? {}) as Record<DayOfWeek, DayMenu>),
+    createdAt:   row.created_at as string,
+    updatedAt:   row.updated_at as string,
+  }
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -44,7 +51,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ loading: true, error: null })
     const { data, error } = await supabase.from('menu_weeks').select('*').order('created_at')
     if (error) { set({ error: error.message, loading: false }); return }
-    set({ weeks: (data ?? []).map(w => ({ ...w, days: (w.days ?? {}) as Record<string, unknown> })) as MenuWeek[], loading: false })
+    set({ weeks: (data ?? []).map(w => rowToWeek(w as Record<string, unknown>)), loading: false })
   },
 
   fetchItems: async () => {
@@ -54,25 +61,29 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   addWeek: async (label) => {
-    const insert: MenuInsert = { label, active: false, days: {} }
-    const { data, error } = await supabase.from('menu_weeks').insert(insert).select().single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('menu_weeks') as any)
+      .insert({ label, active: false, days: {} })
+      .select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ weeks: [...s.weeks, { ...data, days: (data.days ?? {}) as Record<string, unknown> } as MenuWeek] }))
+    set(s => ({ weeks: [...s.weeks, rowToWeek(data as Record<string, unknown>)] }))
   },
 
   updateWeek: async (id, patch) => {
-    const update: Database['public']['Tables']['menu_weeks']['Update'] = {
-      ...(patch.label  !== undefined && { label:  patch.label }),
-      ...(patch.active !== undefined && { active: patch.active }),
-      ...(patch.days   !== undefined && { days:   patch.days as import('@/lib/database.types').Json }),
-    }
-    const { data, error } = await supabase.from('menu_weeks').update(update).eq('id', id).select().single()
+    const update: Record<string, unknown> = {}
+    if (patch.name   !== undefined) update.label  = patch.name
+    if (patch.active !== undefined) update.active = patch.active
+    if (patch.days   !== undefined) update.days   = patch.days
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('menu_weeks') as any)
+      .update(update).eq('id', id).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ weeks: s.weeks.map(w => w.id === id ? { ...data, days: (data.days ?? {}) as Record<string, unknown> } as MenuWeek : w) }))
+    set(s => ({ weeks: s.weeks.map(w => w.id === id ? rowToWeek(data as Record<string, unknown>) : w) }))
   },
 
   setActiveWeek: async (id) => {
-    await supabase.from('menu_weeks').update({ active: false } as Database['public']['Tables']['menu_weeks']['Update']).neq('id', id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from('menu_weeks') as any).update({ active: false }).neq('id', id)
     await get().updateWeek(id, { active: true })
     set(s => ({ weeks: s.weeks.map(w => ({ ...w, active: w.id === id })) }))
   },
@@ -84,18 +95,21 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   addItem: async (name, category) => {
-    const insert: MenuItemInsert = { name, ...(category && { category }) }
-    const { data, error } = await supabase.from('menu_items').insert(insert).select().single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('menu_items') as any)
+      .insert({ name, ...(category && { category }) })
+      .select().single()
     if (error) throw new Error(error.message)
     set(s => ({ items: [...s.items, data as MenuItem].sort((a, b) => a.name.localeCompare(b.name)) }))
   },
 
   updateItem: async (id, patch) => {
-    const update: Database['public']['Tables']['menu_items']['Update'] = {
-      ...(patch.name     !== undefined && { name:     patch.name }),
-      ...(patch.category !== undefined && { category: patch.category }),
-    }
-    const { data, error } = await supabase.from('menu_items').update(update).eq('id', id).select().single()
+    const update: Record<string, unknown> = {}
+    if (patch.name     !== undefined) update.name     = patch.name
+    if (patch.category !== undefined) update.category = patch.category
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('menu_items') as any)
+      .update(update).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ items: s.items.map(i => i.id === id ? data as MenuItem : i) }))
   },

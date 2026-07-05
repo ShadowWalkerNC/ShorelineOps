@@ -53,12 +53,11 @@ export const useProductionStore = create<ProductionState>((set, get) => ({
   },
 
   addSheet: async (data) => {
-    const { data: row, error } = await supabase
-      .from('production_sheets')
-      .insert({ label: data.label, meal: data.meal, date: data.date, items: (data.items ?? []) as import('@/lib/database.types').Json })
-      .select().single()
+    const row = { label: data.label, meal: data.meal, date: data.date, items: data.items ?? [] }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('production_sheets') as any).insert(row).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ sheets: [toSheet(row as Record<string, unknown>), ...s.sheets] }))
+    set(s => ({ sheets: [toSheet(r as Record<string, unknown>), ...s.sheets] }))
   },
 
   updateSheet: async (id, data) => {
@@ -66,36 +65,34 @@ export const useProductionStore = create<ProductionState>((set, get) => ({
     if (data.label !== undefined) patch.label = data.label
     if (data.meal  !== undefined) patch.meal  = data.meal
     if (data.date  !== undefined) patch.date  = data.date
-    if (data.items !== undefined) patch.items = data.items
     if (data.rows  !== undefined) patch.items = data.rows
-    const { data: row, error } = await supabase
-      .from('production_sheets').update(patch as import('@/lib/database.types').Database['public']['Tables']['production_sheets']['Update']).eq('id', id).select().single()
+    if (data.items !== undefined) patch.items = data.items
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('production_sheets') as any).update(patch).eq('id', id).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(row as Record<string, unknown>) : sh) }))
+    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(r as Record<string, unknown>) : sh) }))
   },
 
   updateRow: async (sheetId, menuItemId, patch) => {
-    // Update a single row inside the JSONB items array, then persist
     const sheet = get().sheets.find(s => s.id === sheetId)
     if (!sheet) return
     const updatedRows = sheet.rows.map(r =>
       r.menuItemId === menuItemId ? { ...r, ...patch } : r
     )
-    const { data: row, error } = await supabase
-      .from('production_sheets')
-      .update({ items: updatedRows as import('@/lib/database.types').Json })
-      .eq('id', sheetId).select().single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('production_sheets') as any)
+      .update({ items: updatedRows }).eq('id', sheetId).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ sheets: s.sheets.map(sh => sh.id === sheetId ? toSheet(row as Record<string, unknown>) : sh) }))
+    set(s => ({ sheets: s.sheets.map(sh => sh.id === sheetId ? toSheet(r as Record<string, unknown>) : sh) }))
   },
 
   signOff: async (id, by) => {
-    const { data: row, error } = await supabase
-      .from('production_sheets')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('production_sheets') as any)
       .update({ signed_off_at: new Date().toISOString(), signed_off_by: by })
       .eq('id', id).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(row as Record<string, unknown>) : sh) }))
+    set(s => ({ sheets: s.sheets.map(sh => sh.id === id ? toSheet(r as Record<string, unknown>) : sh) }))
   },
 
   removeSheet: async (id) => {

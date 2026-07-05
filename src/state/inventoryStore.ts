@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@/lib/database.types'
 
 export interface InventoryItem {
   id: string
@@ -21,28 +20,6 @@ function toItem(row: Record<string, unknown>): InventoryItem {
     unit:     (row.unit as string | null) ?? null,
     parLevel: row.par_level != null ? Number(row.par_level) : null,
     notes:    (row.notes as string | null) ?? null,
-  }
-}
-
-function toInsert(data: Partial<InventoryItem>): Database['public']['Tables']['inventory']['Insert'] {
-  return {
-    item:      data.item ?? '',
-    ...(data.category !== undefined && { category:  data.category }),
-    ...(data.quantity !== undefined && { quantity:  data.quantity }),
-    ...(data.unit     !== undefined && { unit:      data.unit }),
-    ...(data.parLevel !== undefined && { par_level: data.parLevel }),
-    ...(data.notes    !== undefined && { notes:     data.notes }),
-  }
-}
-
-function toUpdate(data: Partial<InventoryItem>): Database['public']['Tables']['inventory']['Update'] {
-  return {
-    ...(data.item     !== undefined && { item:      data.item }),
-    ...(data.category !== undefined && { category:  data.category }),
-    ...(data.quantity !== undefined && { quantity:  data.quantity }),
-    ...(data.unit     !== undefined && { unit:      data.unit }),
-    ...(data.parLevel !== undefined && { par_level: data.parLevel }),
-    ...(data.notes    !== undefined && { notes:     data.notes }),
   }
 }
 
@@ -71,17 +48,32 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   add: async (data) => {
-    const { data: row, error } = await supabase
-      .from('inventory').insert(toInsert(data as Partial<InventoryItem>)).select().single()
+    const row = {
+      item:      data.item,
+      quantity:  data.quantity ?? 0,
+      ...(data.category !== undefined && { category:  data.category }),
+      ...(data.unit     !== undefined && { unit:      data.unit }),
+      ...(data.parLevel !== undefined && { par_level: data.parLevel }),
+      ...(data.notes    !== undefined && { notes:     data.notes }),
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('inventory') as any).insert(row).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ items: [...s.items, toItem(row as Record<string, unknown>)].sort((a, b) => a.item.localeCompare(b.item)) }))
+    set(s => ({ items: [...s.items, toItem(r as Record<string, unknown>)].sort((a, b) => a.item.localeCompare(b.item)) }))
   },
 
   update: async (id, data) => {
-    const { data: row, error } = await supabase
-      .from('inventory').update(toUpdate(data)).eq('id', id).select().single()
+    const patch: Record<string, unknown> = {}
+    if (data.item     !== undefined) patch.item      = data.item
+    if (data.category !== undefined) patch.category  = data.category
+    if (data.quantity !== undefined) patch.quantity   = data.quantity
+    if (data.unit     !== undefined) patch.unit       = data.unit
+    if (data.parLevel !== undefined) patch.par_level  = data.parLevel
+    if (data.notes    !== undefined) patch.notes      = data.notes
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('inventory') as any).update(patch).eq('id', id).select().single()
     if (error) throw new Error(error.message)
-    set(s => ({ items: s.items.map(i => i.id === id ? toItem(row as Record<string, unknown>) : i) }))
+    set(s => ({ items: s.items.map(i => i.id === id ? toItem(r as Record<string, unknown>) : i) }))
   },
 
   remove: async (id) => {

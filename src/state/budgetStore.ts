@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@/lib/database.types'
 
 export interface BudgetPeriod {
   id: string; label: string; month: number; year: number
@@ -65,10 +64,8 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     try {
       const now = new Date()
       const { data: pr, error: pe } = await supabase
-        .from('budget_periods')
-        .select('*')
-        .eq('month', now.getMonth() + 1)
-        .eq('year', now.getFullYear())
+        .from('budget_periods').select('*')
+        .eq('month', now.getMonth() + 1).eq('year', now.getFullYear())
         .maybeSingle()
       if (pe) throw new Error(pe.message)
       if (!pr) { set({ loading: false }); return }
@@ -97,15 +94,17 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   setPeriod: (p) => set({ period: p }),
 
   upsertPeriod: async (data) => {
-    const row: Database['public']['Tables']['budget_periods']['Insert'] = {
+    const row = {
       label: data.label, month: data.month, year: data.year,
       total_budget: data.totalBudget,
       resident_count: data.residentCount,
       budget_per_resident_per_day: data.budgetPerResidentPerDay,
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const q = supabase.from('budget_periods') as any
     const { data: saved, error } = data.id
-      ? await supabase.from('budget_periods').update(row as Database['public']['Tables']['budget_periods']['Update']).eq('id', data.id).select().single()
-      : await supabase.from('budget_periods').insert(row).select().single()
+      ? await q.update(row).eq('id', data.id).select().single()
+      : await q.insert(row).select().single()
     if (error) throw new Error(error.message)
     const period = toPeriod(saved as Record<string, unknown>)
     set(s => ({
@@ -117,26 +116,27 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   addEntry: async (data) => {
-    const row: Database['public']['Tables']['budget_entries']['Insert'] = {
+    const row = {
       period_id: data.periodId, date: data.date,
       description: data.description, amount: data.amount,
       ...(data.vendor   && { vendor:   data.vendor }),
       ...(data.category && { category: data.category }),
     }
-    const { data: r, error } = await supabase.from('budget_entries').insert(row).select().single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('budget_entries') as any).insert(row).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ entries: [...s.entries, toEntry(r as Record<string, unknown>)] }))
   },
 
   updateEntry: async (id, data) => {
-    const patch: Database['public']['Tables']['budget_entries']['Update'] = {
-      ...(data.date        !== undefined && { date:        data.date }),
-      ...(data.vendor      !== undefined && { vendor:      data.vendor }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.amount      !== undefined && { amount:      data.amount }),
-      ...(data.category    !== undefined && { category:    data.category }),
-    }
-    const { data: r, error } = await supabase.from('budget_entries').update(patch).eq('id', id).select().single()
+    const patch: Record<string, unknown> = {}
+    if (data.date        !== undefined) patch.date        = data.date
+    if (data.vendor      !== undefined) patch.vendor      = data.vendor
+    if (data.description !== undefined) patch.description = data.description
+    if (data.amount      !== undefined) patch.amount      = data.amount
+    if (data.category    !== undefined) patch.category    = data.category
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('budget_entries') as any).update(patch).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ entries: s.entries.map(e => e.id === id ? toEntry(r as Record<string, unknown>) : e) }))
   },

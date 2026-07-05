@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@/lib/database.types'
 
 export type ThreadStatus = 'Draft' | 'Pending Review' | 'Approved' | 'Distributed' | 'Archived'
 
@@ -46,29 +45,30 @@ export const useCommunicationsStore = create<CommState>((set) => ({
   },
 
   add: async (data) => {
-    const row: Database['public']['Tables']['communications']['Insert'] = {
+    const row = {
       subject:     data.subject,
       body:        data.body ?? '',
       status:      data.status ?? 'Draft',
       ...(data.author      && { author:      data.author }),
       ...(data.recipients  && { recipients:  data.recipients }),
-      ...(data.attachments && { attachments: data.attachments as import('@/lib/database.types').Json }),
+      ...(data.attachments && { attachments: data.attachments }),
     }
-    const { data: r, error } = await supabase.from('communications').insert(row).select().single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('communications') as any).insert(row).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ threads: [toThread(r as Record<string, unknown>), ...s.threads] }))
   },
 
   update: async (id, data) => {
-    const patch: Database['public']['Tables']['communications']['Update'] = {
-      ...(data.subject     !== undefined && { subject:     data.subject }),
-      ...(data.body        !== undefined && { body:        data.body }),
-      ...(data.status      !== undefined && { status:      data.status }),
-      ...(data.author      !== undefined && { author:      data.author }),
-      ...(data.recipients  !== undefined && { recipients:  data.recipients }),
-      ...(data.attachments !== undefined && { attachments: data.attachments as import('@/lib/database.types').Json }),
-    }
-    const { data: r, error } = await supabase.from('communications').update(patch).eq('id', id).select().single()
+    const patch: Record<string, unknown> = {}
+    if (data.subject     !== undefined) patch.subject     = data.subject
+    if (data.body        !== undefined) patch.body        = data.body
+    if (data.status      !== undefined) patch.status      = data.status
+    if (data.author      !== undefined) patch.author      = data.author
+    if (data.recipients  !== undefined) patch.recipients  = data.recipients
+    if (data.attachments !== undefined) patch.attachments = data.attachments
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: r, error } = await (supabase.from('communications') as any).update(patch).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ threads: s.threads.map(t => t.id === id ? toThread(r as Record<string, unknown>) : t) }))
   },

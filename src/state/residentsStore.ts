@@ -24,25 +24,25 @@ function toResident(row: Record<string, unknown>): Resident {
   }
 }
 
-function toRow(data: Partial<Resident>) {
-  return {
-    ...(data.name                !== undefined && { name:                 data.name }),
-    ...(data.room                !== undefined && { room:                 data.room }),
-    ...(data.status              !== undefined && { status:               data.status }),
-    ...(data.dietType            !== undefined && { diet_type:            data.dietType }),
-    ...(data.texture             !== undefined && { texture:              data.texture }),
-    ...(data.portionSize         !== undefined && { portion_size:         data.portionSize }),
-    ...(data.ensurePerDay        !== undefined && { ensure_per_day:       data.ensurePerDay }),
-    ...(data.allergies           !== undefined && { allergies:            data.allergies }),
-    ...(data.beverages           !== undefined && { beverages:            data.beverages }),
-    ...(data.birthdayMonth       !== undefined && { birthday_month:       data.birthdayMonth }),
-    ...(data.birthdayDay         !== undefined && { birthday_day:         data.birthdayDay }),
-    ...(data.servingLocation     !== undefined && { serving_location:     data.servingLocation }),
-    ...(data.tableAssignment     !== undefined && { table_assignment:     data.tableAssignment }),
-    ...(data.likes               !== undefined && { likes:                data.likes }),
-    ...(data.dislikes            !== undefined && { dislikes:             data.dislikes }),
-    ...(data.specialInstructions !== undefined && { special_instructions: data.specialInstructions }),
-  }
+function toRow(data: Partial<Resident>): Record<string, unknown> {
+  const r: Record<string, unknown> = {}
+  if (data.name                !== undefined) r.name                 = data.name
+  if (data.room                !== undefined) r.room                 = data.room
+  if (data.status              !== undefined) r.status               = data.status
+  if (data.dietType            !== undefined) r.diet_type            = data.dietType
+  if (data.texture             !== undefined) r.texture              = data.texture
+  if (data.portionSize         !== undefined) r.portion_size         = data.portionSize
+  if (data.ensurePerDay        !== undefined) r.ensure_per_day       = data.ensurePerDay
+  if (data.allergies           !== undefined) r.allergies            = data.allergies
+  if (data.beverages           !== undefined) r.beverages            = data.beverages
+  if (data.birthdayMonth       !== undefined) r.birthday_month       = data.birthdayMonth
+  if (data.birthdayDay         !== undefined) r.birthday_day         = data.birthdayDay
+  if (data.servingLocation     !== undefined) r.serving_location     = data.servingLocation
+  if (data.tableAssignment     !== undefined) r.table_assignment     = data.tableAssignment
+  if (data.likes               !== undefined) r.likes                = data.likes
+  if (data.dislikes            !== undefined) r.dislikes             = data.dislikes
+  if (data.specialInstructions !== undefined) r.special_instructions = data.specialInstructions
+  return r
 }
 
 type ResidentsState = {
@@ -75,19 +75,17 @@ export const useResidentsStore = create<ResidentsState>((set, get) => ({
   },
 
   add: async (data) => {
-    const { data: row, error } = await supabase
-      .from('residents')
-      .insert(toRow(data as Partial<Resident>) as Parameters<typeof supabase.from<'residents', any>>[0])
-      .select().single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row, error } = await (supabase.from('residents') as any)
+      .insert(toRow(data as Partial<Resident>)).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ residents: [...s.residents, toResident(row as Record<string, unknown>)] }))
   },
 
   update: async (id, data) => {
-    const { data: row, error } = await supabase
-      .from('residents')
-      .update(toRow(data) as Parameters<typeof supabase.from<'residents', any>>[0])
-      .eq('id', id).select().single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row, error } = await (supabase.from('residents') as any)
+      .update(toRow(data)).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     set(s => ({ residents: s.residents.map(r => r.id === id ? toResident(row as Record<string, unknown>) : r) }))
   },
