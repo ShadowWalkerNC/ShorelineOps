@@ -22,117 +22,34 @@
 import { create } from 'zustand'
 import { ls, LS_KEYS } from '../lib/localStorage'
 import { auditLog } from '../security/auditLog'
+import type {
+  FacilityInfo,
+  HipaaOfficer,
+  BaaAcknowledgment,
+  RiskAssessment,
+  WorkforceAcknowledgment,
+  BreachIncident,
+  ComplianceStatusItem,
+  ComplianceRecord,
+} from '@/types'
 
-// ── Types ───────────────────────────────────────────────────────────────
-
-export interface FacilityInfo {
-  name: string
-  address: string
-  city: string
-  state: string
-  zip: string
-  phone: string
-  npiNumber: string
-  facilityType: 'snf' | 'alf' | 'memory_care' | 'adult_day' | 'other'
-  bedCount: number
-  timezone: string
-}
-
-export interface HipaaOfficer {
-  name: string
-  title: string
-  email: string
-  phone: string
-  designatedAt: string // ISO
-}
-
-export interface BaaAcknowledgment {
-  acknowledgedBy: string  // user name
-  acknowledgedById: string // user id
-  acknowledgedAt: string  // ISO
-  baaVersion: string      // e.g. '2025-01'
-  ipAddress: string | null
-}
-
-export interface RiskAssessment {
-  id: string
-  conductedAt: string     // ISO date
-  conductedBy: string
-  summary: string
-  riskLevel: 'low' | 'medium' | 'high'
-  documentRef: string     // file name or location note
-  nextDueDate: string     // ISO date (annual)
-  remediationNotes: string
-}
-
-export interface WorkforceAcknowledgment {
-  id: string
-  userId: string
-  userName: string
-  policyType: 'hipaa_training' | 'sanction_policy' | 'workstation_use' | 'device_policy' | 'incident_response'
-  acknowledgedAt: string  // ISO
-  expiresAt: string       // ISO (annual renewal)
-}
-
-export type BreachSeverity = 'low' | 'medium' | 'high' | 'critical'
-export type BreachStatus = 'open' | 'investigating' | 'contained' | 'reported' | 'closed'
-
-export interface BreachIncident {
-  id: string
-  discoveredAt: string    // ISO
-  discoveredBy: string
-  discoveredById: string
-  description: string
-  affectedRecords: number
-  affectedResidentIds: string[] // IDs only, no names stored here
-  severity: BreachSeverity
-  status: BreachStatus
-  hhsNotificationDue: string  // discoveredAt + 60 days
-  hhsNotifiedAt: string | null
-  remediationSteps: string
-  closedAt: string | null
-  notes: string
-}
-
-export type ComplianceStatusColor = 'green' | 'amber' | 'red'
-
-export interface ComplianceStatusItem {
-  category: string
-  status: ComplianceStatusColor
-  message: string
-}
-
-export interface ComplianceRecord {
-  facilityInfo: FacilityInfo | null
-  hipaaOfficer: HipaaOfficer | null
-  jurisdiction: string | null           // US state abbreviation
-  baaAcknowledgment: BaaAcknowledgment | null
-  riskAssessments: RiskAssessment[]
-  workforceAcknowledgments: WorkforceAcknowledgment[]
-  breachIncidents: BreachIncident[]
-  lastComplianceReview: string | null   // ISO date
-  nextReviewDue: string | null          // ISO date (annual)
-  setupCompletedAt: string | null
-}
-
+// ── Empty sentinel ────────────────────────────────────────────────────────────
 const EMPTY: ComplianceRecord = {
-  facilityInfo: null,
-  hipaaOfficer: null,
-  jurisdiction: null,
-  baaAcknowledgment: null,
-  riskAssessments: [],
+  facilityInfo:             null,
+  hipaaOfficer:             null,
+  jurisdiction:             null,
+  baaAcknowledgment:        null,
+  riskAssessments:          [],
   workforceAcknowledgments: [],
-  breachIncidents: [],
-  lastComplianceReview: null,
-  nextReviewDue: null,
-  setupCompletedAt: null,
+  breachIncidents:          [],
+  lastComplianceReview:     null,
+  nextReviewDue:            null,
+  setupCompletedAt:         null,
 }
 
-// ── Store ────────────────────────────────────────────────────────────────
-
+// ── Store ─────────────────────────────────────────────────────────────────────
 interface ComplianceStoreState {
   record: ComplianceRecord
-  // Actions
   load: () => void
   setFacility: (info: FacilityInfo) => void
   setOfficer: (officer: HipaaOfficer) => void

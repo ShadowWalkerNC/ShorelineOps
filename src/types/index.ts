@@ -30,3 +30,6 @@ export { DIET_TYPES, ALLERGY_OPTIONS, BEVERAGE_OPTIONS, MONTHS } from './residen
 // ── Production ────────────────────────────────────────────────────────────────
 export type { ProductionRow, MealCount, ProductionSheet } from './production'
 export { TEXTURE_LIST, DIET_LIST, LOCATION_LIST, emptyMealCount } from './production'
+
+// ── Compliance ────────────────────────────────────────────────────────────────
+export type { FacilityInfo, HipaaOfficer, BaaAcknowledgment, RiskAssessment, WorkforceAcknowledgment, BreachSeverity, BreachStatus, BreachIncident, ComplianceStatusColor, ComplianceStatusItem, ComplianceRecord } from './compliance'
