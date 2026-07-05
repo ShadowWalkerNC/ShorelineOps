@@ -28,8 +28,8 @@ export async function insertPunch(
   kioskId = 'Main Terminal',
   notes?: string
 ): Promise<TimecardPunch> {
-  const { data, error } = await supabase
-    .from('time_punches')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('time_punches') as any)
     .insert({ badge_id: badgeId, operation, kiosk_id: kioskId, punched_at: new Date().toISOString(), notes })
     .select()
     .single()

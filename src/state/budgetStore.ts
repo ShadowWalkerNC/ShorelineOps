@@ -23,12 +23,14 @@ export interface BudgetEntry {
   description: string
   amount: number
   category?: string | null
+  invoiceRef?: string | null
+  loggedBy?: string | null
 }
 
 export type SpendCategory = string
 export interface SpendEntry extends BudgetEntry {}
 
-// ─ Default / empty period used before the first fetch ─────────────────────────
+// ─ Default / empty period ──────────────────────────────────────────────────
 const now0 = new Date()
 const DEFAULT_PERIOD: BudgetPeriod = {
   id:                      '',
@@ -72,16 +74,17 @@ function toEntry(row: Record<string, unknown>): BudgetEntry {
     id:          row.id as string,
     periodId:    row.period_id as string,
     date:        row.date as string,
-    vendor:      (row.vendor as string | null) ?? null,
+    vendor:      (row.vendor     as string | null) ?? null,
     description: row.description as string,
     amount:      Number(row.amount ?? 0),
-    category:    (row.category as string | null) ?? null,
+    category:    (row.category   as string | null) ?? null,
+    invoiceRef:  (row.invoice_ref as string | null) ?? null,
+    loggedBy:    (row.logged_by  as string | null) ?? null,
   }
 }
 
 // ─ State ────────────────────────────────────────────────────────────────────
 export interface BudgetState {
-  // period is always non-null — initialised with DEFAULT_PERIOD until fetch resolves
   period:      BudgetPeriod
   prevPeriod:  BudgetPeriod
   periods:     BudgetPeriod[]
@@ -185,11 +188,15 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   addEntry: async (data) => {
-    const row = {
-      period_id: data.periodId, date: data.date,
-      description: data.description, amount: data.amount,
-      ...(data.vendor   && { vendor:   data.vendor }),
-      ...(data.category && { category: data.category }),
+    const row: Record<string, unknown> = {
+      period_id:   data.periodId,
+      date:        data.date,
+      description: data.description,
+      amount:      data.amount,
+      ...(data.vendor     != null && { vendor:      data.vendor }),
+      ...(data.category   != null && { category:    data.category }),
+      ...(data.invoiceRef != null && { invoice_ref: data.invoiceRef }),
+      ...(data.loggedBy   != null && { logged_by:   data.loggedBy }),
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: r, error } = await (supabase.from('budget_entries') as any).insert(row).select().single()
@@ -204,6 +211,8 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     if (data.description !== undefined) patch.description = data.description
     if (data.amount      !== undefined) patch.amount      = data.amount
     if (data.category    !== undefined) patch.category    = data.category
+    if (data.invoiceRef  !== undefined) patch.invoice_ref = data.invoiceRef
+    if (data.loggedBy    !== undefined) patch.logged_by   = data.loggedBy
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: r, error } = await (supabase.from('budget_entries') as any).update(patch).eq('id', id).select().single()
     if (error) throw new Error(error.message)
