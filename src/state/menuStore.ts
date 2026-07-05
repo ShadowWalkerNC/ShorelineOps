@@ -4,8 +4,10 @@ import type { DayMenu, DayOfWeek, MenuWeek as CanonicalMenuWeek } from '@/types/
 
 export type { DayMenu, DayOfWeek }
 
-// mealCategory must match the canonical ItemMealCategory union from src/types/menu.ts
 export type ItemMealCategory = 'All' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Dessert'
+export type DietaryTag =
+  | 'Gluten-Free' | 'Dairy-Free' | 'Nut-Free' | 'Egg-Free'
+  | 'Vegan' | 'Vegetarian' | 'Low-Sodium' | 'Diabetic-Friendly'
 
 export interface MenuItem {
   id: string
@@ -13,7 +15,7 @@ export interface MenuItem {
   category?: string | null
   textureModified: boolean
   mealCategory?: ItemMealCategory
-  dietaryTags?: string[]
+  dietaryTags?: DietaryTag[]
   recipeId?: string
   notes?: string
 }
@@ -26,7 +28,6 @@ export interface MenuState {
   selectedWeekId: string | null
   loading:  boolean
   error:    string | null
-  // week actions
   fetchWeeks:       () => Promise<void>
   addWeek:          (label: string) => Promise<MenuWeek>
   updateWeek:       (id: string, patch: Partial<Pick<MenuWeek, 'name' | 'active' | 'days'>>) => Promise<void>
@@ -35,7 +36,6 @@ export interface MenuState {
   selectWeek:       (id: string | null) => void
   removeWeek:       (id: string) => Promise<void>
   deleteWeek:       (id: string) => Promise<void>
-  // item actions
   fetchItems:  () => Promise<void>
   addItem:     (data: Omit<MenuItem, 'id'> | string) => Promise<MenuItem>
   updateItem:  (id: string, patch: Partial<MenuItem>) => Promise<void>
@@ -44,12 +44,23 @@ export interface MenuState {
 }
 
 const VALID_MEAL_CATEGORIES = new Set<ItemMealCategory>(['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert'])
+const VALID_DIETARY_TAGS = new Set<DietaryTag>([
+  'Gluten-Free', 'Dairy-Free', 'Nut-Free', 'Egg-Free',
+  'Vegan', 'Vegetarian', 'Low-Sodium', 'Diabetic-Friendly',
+])
 
 function toMealCategory(v: unknown): ItemMealCategory | undefined {
-  if (typeof v === 'string' && VALID_MEAL_CATEGORIES.has(v as ItemMealCategory)) {
+  if (typeof v === 'string' && VALID_MEAL_CATEGORIES.has(v as ItemMealCategory))
     return v as ItemMealCategory
-  }
   return undefined
+}
+
+function toDietaryTags(v: unknown): DietaryTag[] | undefined {
+  if (!Array.isArray(v)) return undefined
+  const filtered = (v as unknown[]).filter(
+    (t): t is DietaryTag => typeof t === 'string' && VALID_DIETARY_TAGS.has(t as DietaryTag)
+  )
+  return filtered.length ? filtered : undefined
 }
 
 function rowToWeek(row: Record<string, unknown>): MenuWeek {
@@ -70,9 +81,9 @@ function rowToItem(row: Record<string, unknown>): MenuItem {
     category:        (row.category as string | null) ?? null,
     textureModified: Boolean(row.texture_modified ?? false),
     mealCategory:    toMealCategory(row.meal_category),
-    dietaryTags:     (row.dietary_tags  as string[] | undefined) ?? undefined,
-    recipeId:        (row.recipe_id     as string | undefined) ?? undefined,
-    notes:           (row.notes         as string | undefined) ?? undefined,
+    dietaryTags:     toDietaryTags(row.dietary_tags),
+    recipeId:        (row.recipe_id as string | undefined) ?? undefined,
+    notes:           (row.notes    as string | undefined) ?? undefined,
   }
 }
 
@@ -89,8 +100,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   addWeek: async (label) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from('menu_weeks') as any)
-      .insert({ label, active: false, days: {} })
-      .select().single()
+      .insert({ label, active: false, days: {} }).select().single()
     if (error) throw new Error(error.message)
     const week = rowToWeek(data as Record<string, unknown>)
     set(s => ({ weeks: [...s.weeks, week] }))
@@ -147,11 +157,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const row: Record<string, unknown> = {
       name,
       texture_modified: isString ? false : (data.textureModified ?? false),
-      ...((!isString && data.category)    && { category:     data.category }),
-      ...((!isString && data.mealCategory) && { meal_category: data.mealCategory }),
-      ...((!isString && data.dietaryTags)  && { dietary_tags:  data.dietaryTags }),
-      ...((!isString && data.recipeId)     && { recipe_id:     data.recipeId }),
-      ...((!isString && data.notes)        && { notes:         data.notes }),
+      ...(!isString && data.category     && { category:      data.category }),
+      ...(!isString && data.mealCategory && { meal_category: data.mealCategory }),
+      ...(!isString && data.dietaryTags  && { dietary_tags:  data.dietaryTags }),
+      ...(!isString && data.recipeId     && { recipe_id:     data.recipeId }),
+      ...(!isString && data.notes        && { notes:         data.notes }),
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: r, error } = await (supabase.from('menu_items') as any).insert(row).select().single()

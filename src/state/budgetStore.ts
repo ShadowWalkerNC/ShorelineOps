@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ─ Types ───────────────────────────────────────────────────────────────────
 export interface BudgetPeriod {
   id: string
   label: string
@@ -10,10 +10,9 @@ export interface BudgetPeriod {
   totalBudget: number
   residentCount: number
   budgetPerResidentPerDay: number
-  // computed helpers used by BudgetPage / NotificationBell
-  startDate: string        // e.g. "2026-07-01"
-  endDate: string          // e.g. "2026-07-31"
-  totalDays: number        // days in the month
+  startDate: string
+  endDate: string
+  totalDays: number
 }
 
 export interface BudgetEntry {
@@ -26,11 +25,25 @@ export interface BudgetEntry {
   category?: string | null
 }
 
-// BudgetPage also imports SpendCategory / SpendEntry — provide them
 export type SpendCategory = string
 export interface SpendEntry extends BudgetEntry {}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ─ Default / empty period used before the first fetch ─────────────────────────
+const now0 = new Date()
+const DEFAULT_PERIOD: BudgetPeriod = {
+  id:                      '',
+  label:                   '—',
+  month:                   now0.getMonth() + 1,
+  year:                    now0.getFullYear(),
+  totalBudget:             0,
+  residentCount:           1,
+  budgetPerResidentPerDay: 0,
+  startDate:               `${now0.getFullYear()}-${String(now0.getMonth()+1).padStart(2,'0')}-01`,
+  endDate:                 `${now0.getFullYear()}-${String(now0.getMonth()+1).padStart(2,'0')}-01`,
+  totalDays:               new Date(now0.getFullYear(), now0.getMonth()+1, 0).getDate(),
+}
+
+// ─ Helpers ───────────────────────────────────────────────────────────────────
 function daysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate()
 }
@@ -46,7 +59,7 @@ function toPeriod(row: Record<string, unknown>): BudgetPeriod {
     month,
     year,
     totalBudget:             Number(row.total_budget ?? 0),
-    residentCount:           Number(row.resident_count ?? 0),
+    residentCount:           Number(row.resident_count ?? 1),
     budgetPerResidentPerDay: Number(row.budget_per_resident_per_day ?? 0),
     startDate:               `${year}-${pad2(month)}-01`,
     endDate:                 `${year}-${pad2(month)}-${pad2(days)}`,
@@ -66,10 +79,11 @@ function toEntry(row: Record<string, unknown>): BudgetEntry {
   }
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ─ State ────────────────────────────────────────────────────────────────────
 export interface BudgetState {
-  period:      BudgetPeriod | null
-  prevPeriod:  BudgetPeriod | null
+  // period is always non-null — initialised with DEFAULT_PERIOD until fetch resolves
+  period:      BudgetPeriod
+  prevPeriod:  BudgetPeriod
   periods:     BudgetPeriod[]
   entries:     BudgetEntry[]
   prevEntries: BudgetEntry[]
@@ -90,7 +104,9 @@ export interface BudgetState {
 }
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
-  period: null, prevPeriod: null, periods: [], entries: [], prevEntries: [],
+  period: DEFAULT_PERIOD,
+  prevPeriod: DEFAULT_PERIOD,
+  periods: [], entries: [], prevEntries: [],
   loading: false, error: null,
 
   fetch: async () => {
@@ -99,13 +115,12 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       const now = new Date()
       const thisMonth = now.getMonth() + 1
       const thisYear  = now.getFullYear()
-      // current period
       const { data: pr, error: pe } = await supabase
         .from('budget_periods').select('*')
         .eq('month', thisMonth).eq('year', thisYear)
         .maybeSingle()
       if (pe) throw new Error(pe.message)
-      // previous period
+
       const prevMonth = thisMonth === 1 ? 12 : thisMonth - 1
       const prevYear  = thisMonth === 1 ? thisYear - 1 : thisYear
       const { data: pp } = await supabase
@@ -119,10 +134,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         .from('budget_entries').select('*').eq('period_id', period.id).order('date')
       if (ee) throw new Error(ee.message)
 
-      let prevPeriod: BudgetPeriod | null = null
+      const prevPeriod: BudgetPeriod = pp ? toPeriod(pp as Record<string, unknown>) : DEFAULT_PERIOD
       let prevEntries: BudgetEntry[] = []
       if (pp) {
-        prevPeriod = toPeriod(pp as Record<string, unknown>)
         const { data: pe2 } = await supabase
           .from('budget_entries').select('*').eq('period_id', prevPeriod.id).order('date')
         prevEntries = (pe2 ?? []).map(r => toEntry(r as Record<string, unknown>))
@@ -202,14 +216,13 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     set(s => ({ entries: s.entries.filter(e => e.id !== id) }))
   },
 
-  getTotalBudget: () => get().period?.totalBudget ?? 0,
+  getTotalBudget: () => get().period.totalBudget,
   getTotalSpent:  () => get().entries.reduce((s, e) => s + e.amount, 0),
   getProjected: () => {
     const spent = get().entries.reduce((s, e) => s + e.amount, 0)
-    const now   = new Date()
-    const day   = now.getDate()
-    const days  = get().period?.totalDays ?? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const day   = new Date().getDate()
+    const days  = get().period.totalDays
     return day > 0 ? (spent / day) * days : 0
   },
-  getDailyPerRes: () => get().period?.budgetPerResidentPerDay ?? 0,
+  getDailyPerRes: () => get().period.budgetPerResidentPerDay,
 }))

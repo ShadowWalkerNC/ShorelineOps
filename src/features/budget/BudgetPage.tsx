@@ -20,7 +20,7 @@ function Badge({ children, color = 'var(--color-primary)' }: { children: React.R
 const TH: React.CSSProperties = { padding:'8px 12px', textAlign:'left', fontSize:'var(--text-xs)', fontWeight:'var(--weight-bold)', textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--text-muted)', whiteSpace:'nowrap' }
 const TD: React.CSSProperties = { padding:'9px 12px', verticalAlign:'middle', fontSize:'var(--text-sm)' }
 
-const CATEGORY_COLORS: Record<SpendCategory, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   'Food — Proteins':          '#0ea5e9',
   'Food — Produce':           '#22c55e',
   'Food — Dairy':             '#f59e0b',
@@ -32,6 +32,10 @@ const CATEGORY_COLORS: Record<SpendCategory, string> = {
   'Labor':                    '#f97316',
   'Equipment / Repair':       '#dc2626',
   'Other':                    '#6b7280',
+}
+const DEFAULT_CATEGORY_COLOR = '#6b7280'
+function catColor(cat: string | null | undefined): string {
+  return CATEGORY_COLORS[cat ?? ''] ?? DEFAULT_CATEGORY_COLOR
 }
 
 function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: SpendEntry[]; period: BudgetPeriod; prevEntries: SpendEntry[]; prevPeriod: BudgetPeriod }) {
@@ -54,7 +58,7 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
   const overBudget = remaining < 0
   const barColor = pctUsed > 90 ? '#dc2626' : pctUsed > 75 ? '#d97706' : '#059669'
 
-  const catTotals = CATEGORIES.map(c => ({ cat: c, total: entries.filter(e => e.category === c).reduce((s,e) => s+e.amount, 0) })).filter(x => x.total > 0).sort((a,b) => b.total - a.total)
+  const catTotals = CATEGORIES.map(c => ({ cat: c, total: entries.filter(e => (e.category ?? 'Other') === c).reduce((s,e) => s+e.amount, 0) })).filter(x => x.total > 0).sort((a,b) => b.total - a.total)
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-6)' }}>
@@ -115,10 +119,10 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
             <div key={cat} style={{ marginBottom:10 }}>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
                 <span style={{ fontWeight:600, color:'var(--text-primary)' }}>{cat}</span>
-                <span style={{ fontWeight:700, color:CATEGORY_COLORS[cat] }}>{fmt$(total)} <span style={{ fontWeight:400, color:'var(--text-muted)' }}>({fmtPct(total,totalSpent)})</span></span>
+                <span style={{ fontWeight:700, color:catColor(cat) }}>{fmt$(total)} <span style={{ fontWeight:400, color:'var(--text-muted)' }}>({fmtPct(total,totalSpent)})</span></span>
               </div>
               <div style={{ height:8, background:'var(--bg-app)', borderRadius:4, overflow:'hidden', border:'1px solid var(--border-color)' }}>
-                <div style={{ height:'100%', width:`${(total/totalSpent)*100}%`, background:CATEGORY_COLORS[cat], borderRadius:4, transition:'width 0.4s ease' }} />
+                <div style={{ height:'100%', width:`${(total/totalSpent)*100}%`, background:catColor(cat), borderRadius:4, transition:'width 0.4s ease' }} />
               </div>
             </div>
           ))}
@@ -163,13 +167,15 @@ function SpendingLogTab({ entries, addEntry, removeEntry, period }: { entries: S
     const q = search.toLowerCase().trim()
     return entries
       .filter(e =>
-        (filterCat === 'All' || e.category === filterCat) &&
-        (!q || e.description.toLowerCase().includes(q) || e.vendor.toLowerCase().includes(q) || (e.invoiceRef ?? '').toLowerCase().includes(q))
+        (filterCat === 'All' || (e.category ?? 'Other') === filterCat) &&
+        (!q || e.description.toLowerCase().includes(q) || (e.vendor ?? '').toLowerCase().includes(q) || (e.invoiceRef ?? '').toLowerCase().includes(q))
       )
       .sort((a,b) => {
-        let va: any = a[sortField], vb: any = b[sortField]
-        if (sortField === 'amount') { va = a.amount; vb = b.amount }
-        const cmp = typeof va === 'number' ? va - vb : (va as string).localeCompare(vb as string)
+        let va: string | number = a[sortField as 'date' | 'amount'] ?? ''
+        let vb: string | number = b[sortField as 'date' | 'amount'] ?? ''
+        if (sortField === 'category') { va = a.category ?? 'Other'; vb = b.category ?? 'Other' }
+        if (sortField === 'amount')   { va = a.amount; vb = b.amount }
+        const cmp = typeof va === 'number' ? va - (vb as number) : (va as string).localeCompare(vb as string)
         return sortDir === 'asc' ? cmp : -cmp
       })
   }, [entries, search, filterCat, sortField, sortDir])
@@ -181,7 +187,7 @@ function SpendingLogTab({ entries, addEntry, removeEntry, period }: { entries: S
 
   function onAddEntry() {
     if (!form.vendor?.trim() || !form.description?.trim() || !form.loggedBy?.trim() || !form.amount) return
-    addEntry({ date:form.date!, vendor:form.vendor!, description:form.description!, category:form.category as SpendCategory, amount:form.amount!, invoiceRef:form.invoiceRef, loggedBy:form.loggedBy! })
+    addEntry({ date:form.date!, vendor:form.vendor!, description:form.description!, category:form.category as SpendCategory, amount:form.amount!, invoiceRef:form.invoiceRef, loggedBy:form.loggedBy!, periodId: period.id })
     setForm({ date:new Date().toISOString().slice(0,10), category:'Food — Proteins', loggedBy:'', amount:0 })
     setShow(false)
   }
@@ -193,7 +199,7 @@ function SpendingLogTab({ entries, addEntry, removeEntry, period }: { entries: S
     <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-4)' }}>
       <div style={{ display:'flex', gap:'var(--space-3)', flexWrap:'wrap', alignItems:'center' }}>
         <input className="sl-input" style={{ flex:'1 1 180px', maxWidth:280 }} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search vendor, description, invoice…" />
-        <select className="sl-select" value={filterCat} onChange={e => setFCat(e.target.value as any)} style={{ flex:'1 1 160px', maxWidth:240 }}>
+        <select className="sl-select" value={filterCat} onChange={e => setFCat(e.target.value as SpendCategory | 'All')} style={{ flex:'1 1 160px', maxWidth:240 }}>
           <option value="All">All Categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -207,9 +213,9 @@ function SpendingLogTab({ entries, addEntry, removeEntry, period }: { entries: S
         <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)', display:'flex', flexWrap:'wrap', gap:'var(--space-3)' }}>
           <div style={{ flex:'1 1 140px' }}><label>Vendor</label><input className="sl-input" value={form.vendor??''} onChange={e => setForm(p => ({...p,vendor:e.target.value}))} placeholder="e.g. Sysco" /></div>
           <div style={{ flex:'2 1 200px' }}><label>Description</label><input className="sl-input" value={form.description??''} onChange={e => setForm(p => ({...p,description:e.target.value}))} placeholder="e.g. Weekly truck order #3" /></div>
-          <div style={{ flex:'1 1 160px' }}><label>Category</label><select className="sl-select" value={form.category} onChange={e => setForm(p => ({...p,category:e.target.value as SpendCategory}))}>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+          <div style={{ flex:'1 1 160px' }}><label>Category</label><select className="sl-select" value={form.category ?? ''} onChange={e => setForm(p => ({...p,category:e.target.value as SpendCategory}))}>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
           <div style={{ flex:'0 1 100px' }}><label>Amount $</label><input type="number" step="0.01" min={0} className="sl-input" value={form.amount||''} onChange={e => setForm(p => ({...p,amount:+e.target.value}))} /></div>
-          <div style={{ flex:'0 1 120px' }}><label>Date</label><input type="date" className="sl-input" value={form.date} onChange={e => setForm(p => ({...p,date:e.target.value}))} /></div>
+          <div style={{ flex:'0 1 120px' }}><label>Date</label><input type="date" className="sl-input" value={form.date ?? ''} onChange={e => setForm(p => ({...p,date:e.target.value}))} /></div>
           <div style={{ flex:'0 1 130px' }}><label>Invoice Ref</label><input className="sl-input" value={form.invoiceRef??''} onChange={e => setForm(p => ({...p,invoiceRef:e.target.value}))} placeholder="optional" /></div>
           <div style={{ flex:'1 1 130px' }}><label>Logged By</label><input className="sl-input" value={form.loggedBy??''} onChange={e => setForm(p => ({...p,loggedBy:e.target.value}))} placeholder="Staff name" /></div>
           <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexShrink:0 }}>
@@ -236,9 +242,9 @@ function SpendingLogTab({ entries, addEntry, removeEntry, period }: { entries: S
               {filtered.map((e, i) => (
                 <tr key={e.id} style={{ background: i%2===0 ? 'var(--bg-card)' : 'var(--bg-app)', borderBottom:'1px solid var(--border-color)' }}>
                   <td style={{ ...TD, color:'var(--text-muted)' }}>{e.date}</td>
-                  <td style={{ ...TD, fontWeight:600, color:'var(--text-primary)' }}>{e.vendor}</td>
+                  <td style={{ ...TD, fontWeight:600, color:'var(--text-primary)' }}>{e.vendor ?? '—'}</td>
                   <td style={{ ...TD, color:'var(--text-secondary)', maxWidth:260, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{e.description}</td>
-                  <td style={TD}><Badge color={CATEGORY_COLORS[e.category]}>{e.category}</Badge></td>
+                  <td style={TD}><Badge color={catColor(e.category)}>{e.category ?? 'Other'}</Badge></td>
                   <td style={{ ...TD, fontWeight:700, color:'var(--color-primary)', textAlign:'right', fontFamily:'var(--font-display)', whiteSpace:'nowrap' }}>{fmt$(e.amount)}</td>
                   <td style={{ ...TD, color:'var(--text-muted)', fontSize:'var(--text-xs)' }}>{e.invoiceRef || '—'}</td>
                   <td style={{ ...TD, color:'var(--text-muted)', fontSize:'var(--text-xs)' }}>{e.loggedBy}</td>
@@ -267,8 +273,8 @@ function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: Bu
   const daysElapsed = Math.max(1, Math.min(period.totalDays, Math.ceil((new Date(today).getTime() - start.getTime()) / 86400000) + 1))
 
   const totalSpent = entries.reduce((s,e) => s+e.amount, 0)
-  const foodEntries = entries.filter(e => e.category.startsWith('Food'))
-  const nonFoodEntries = entries.filter(e => !e.category.startsWith('Food'))
+  const foodEntries = entries.filter(e => (e.category ?? '').startsWith('Food'))
+  const nonFoodEntries = entries.filter(e => !(e.category ?? '').startsWith('Food'))
 
   const foodSpent = foodEntries.reduce((s,e) => s+e.amount, 0)
   const nonFoodSpent = nonFoodEntries.reduce((s,e) => s+e.amount, 0)
@@ -340,9 +346,7 @@ function SettingsTab({ period, setPeriod }: { period: BudgetPeriod; setPeriod: (
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<BudgetPeriod>(period)
 
-  useEffect(() => {
-    setDraft(period)
-  }, [period])
+  useEffect(() => { setDraft(period) }, [period])
 
   function save() { setPeriod(draft); setEditing(false) }
 
@@ -382,32 +386,35 @@ function SettingsTab({ period, setPeriod }: { period: BudgetPeriod; setPeriod: (
 
 type BudgetTab = 'overview' | 'log' | 'per-resident' | 'settings'
 const BUDGET_TABS: { id: BudgetTab; label: string; icon: string }[] = [
-  { id:'overview', label:'Overview', icon:'📊' },
-  { id:'log', label:'Spending Log', icon:'💸' },
-  { id:'per-resident', label:'Per-Resident Cost', icon:'👤' },
-  { id:'settings', label:'Period Settings', icon:'⚙️' },
+  { id:'overview',      label:'Overview',          icon:'📊' },
+  { id:'log',           label:'Spending Log',       icon:'💸' },
+  { id:'per-resident',  label:'Per-Resident Cost',  icon:'👤' },
+  { id:'settings',      label:'Period Settings',    icon:'⚙️' },
 ]
 
 export default function BudgetPage() {
   const [tab, setTab] = useState<BudgetTab>('overview')
 
-  const fetch = useBudgetStore(s => s.fetch)
-  const period = useBudgetStore(s => s.period)
-  const entries = useBudgetStore(s => s.entries)
-  const prevPeriod = useBudgetStore(s => s.prevPeriod)
+  const fetch       = useBudgetStore(s => s.fetch)
+  const period      = useBudgetStore(s => s.period)
+  const entries     = useBudgetStore(s => s.entries)
+  const prevPeriod  = useBudgetStore(s => s.prevPeriod)
   const prevEntries = useBudgetStore(s => s.prevEntries)
-  const setPeriod = useBudgetStore(s => s.setPeriod)
-  const addEntry = useBudgetStore(s => s.addEntry)
+  const setPeriod   = useBudgetStore(s => s.setPeriod)
+  const addEntry    = useBudgetStore(s => s.addEntry)
   const removeEntry = useBudgetStore(s => s.removeEntry)
 
-  useEffect(() => {
-    fetch()
-  }, [fetch])
+  useEffect(() => { fetch() }, [fetch])
 
   const totalBudget = period.residentCount * period.budgetPerResidentPerDay * period.totalDays
-  const totalSpent = entries.reduce((s,e) => s+e.amount, 0)
-  const pctUsed = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
-  const overBudget = totalSpent > totalBudget
+  const totalSpent  = entries.reduce((s,e) => s+e.amount, 0)
+  const pctUsed     = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
+  const overBudget  = totalSpent > totalBudget
+
+  // addEntry wrapper — fill in periodId automatically
+  function handleAddEntry(entry: Omit<SpendEntry, 'id'>) {
+    void addEntry({ ...entry, periodId: entry.periodId || period.id })
+  }
 
   return (
     <div className="sl-page fade-in">
@@ -440,10 +447,10 @@ export default function BudgetPage() {
       </div>
 
       <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-6)', boxShadow:'var(--shadow-sm)' }}>
-        {tab === 'overview' && <OverviewTab entries={entries} period={period} prevEntries={prevEntries} prevPeriod={prevPeriod} />}
-        {tab === 'log' && <SpendingLogTab entries={entries} addEntry={addEntry} removeEntry={removeEntry} period={period} />}
-        {tab === 'per-resident' && <PerResidentTab entries={entries} period={period} />}
-        {tab === 'settings' && <SettingsTab period={period} setPeriod={setPeriod} />}
+        {tab === 'overview'      && <OverviewTab     entries={entries}     period={period}   prevEntries={prevEntries} prevPeriod={prevPeriod} />}
+        {tab === 'log'           && <SpendingLogTab  entries={entries}     addEntry={handleAddEntry} removeEntry={id => void removeEntry(id)} period={period} />}
+        {tab === 'per-resident'  && <PerResidentTab  entries={entries}     period={period} />}
+        {tab === 'settings'      && <SettingsTab     period={period}       setPeriod={setPeriod} />}
       </div>
     </div>
   )
