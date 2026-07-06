@@ -10,6 +10,7 @@ import DashboardPage from './features/dashboard/DashboardPage'
 import ResidentsPage from './features/residents/ResidentsPage'
 import ResidentProfilePage from './features/residents/ResidentProfilePage'
 import MenuPage from './features/menu/MenuPage'
+import WeeklyMenuView from './features/frontdesk/WeeklyMenuView'
 import ProductionPage from './features/production/ProductionPage'
 import AdminPage from './features/admin/AdminPage'
 import RecipeBookPage from './features/recipes/RecipeBookPage'
@@ -36,7 +37,8 @@ const DemoBootstrap = FEATURES.demoSeed
   ? lazy(() => import('./demo/DemoBootstrap'))
   : ({ children }: { children: React.ReactNode }) => <>{children}</>
 
-// ── Layout helpers ────────────────────────────────────────────────────────────
+// ── Layout helpers ────────────────────────────────────────────────────────────────
+
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
@@ -59,7 +61,7 @@ function RoleGate({
   )
 }
 
-// ── Setup guards (local-only) ─────────────────────────────────────────────────
+// ── Setup guards (local-only) ───────────────────────────────────────────────
 /**
  * In LOCAL mode: redirect to /setup if first-run setup is not complete.
  * In DEMO / WEB mode: setup is never required — pass through immediately.
@@ -83,7 +85,8 @@ function SetupRoute() {
   )
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
+// ── App ─────────────────────────────────────────────────────────────────────────────────
+
 export default function App() {
   return (
     <Suspense fallback={null}>
@@ -102,23 +105,25 @@ export default function App() {
           <Route path="/login"   element={<SetupGuard><LoginPage /></SetupGuard>} />
           <Route path="/offline" element={<OfflinePage />} />
 
-          {/* ── All-staff routes ───────────────────────────────────────── */}
+          {/* ── All-staff routes ────────────────────────────────────────── */}
           <Route path="/"                element={<SetupGuard><AuthedLayout><DashboardPage /></AuthedLayout></SetupGuard>} />
           <Route path="/change-password" element={<SetupGuard><AuthedLayout><ChangePasswordPage /></AuthedLayout></SetupGuard>} />
           <Route path="/residents"       element={<SetupGuard><AuthedLayout><ResidentsPage /></AuthedLayout></SetupGuard>} />
           <Route path="/residents/:id"   element={<SetupGuard><AuthedLayout><ResidentProfilePage /></AuthedLayout></SetupGuard>} />
           <Route path="/menu"            element={<SetupGuard><AuthedLayout><MenuPage /></AuthedLayout></SetupGuard>} />
+          {/* Front desk read-only weekly view — no role gate, all staff */}
+          <Route path="/menu/weekly"     element={<SetupGuard><AuthedLayout><WeeklyMenuView /></AuthedLayout></SetupGuard>} />
           <Route path="/production"      element={<SetupGuard><AuthedLayout><ProductionPage /></AuthedLayout></SetupGuard>} />
           <Route path="/recipes"         element={<SetupGuard><AuthedLayout><RecipeBookPage /></AuthedLayout></SetupGuard>} />
           <Route path="/inventory"       element={<SetupGuard><AuthedLayout><InventoryPage /></AuthedLayout></SetupGuard>} />
           <Route path="/communications"  element={<SetupGuard><AuthedLayout><CommunicationsPage /></AuthedLayout></SetupGuard>} />
 
-          {/* ── Timecards (local only) ─────────────────────────────────── */}
+          {/* ── Timecards (local only) ──────────────────────────────────────── */}
           {FEATURES.timeclock && (
             <Route path="/timecards" element={<SetupGuard><AuthedLayout><TimecardPage /></AuthedLayout></SetupGuard>} />
           )}
 
-          {/* ── Manager+ routes ────────────────────────────────────────── */}
+          {/* ── Manager+ routes ────────────────────────────────────────────── */}
           <Route
             path="/budget"
             element={
@@ -144,7 +149,7 @@ export default function App() {
             }
           />
 
-          {/* ── Admin-only routes ──────────────────────────────────────── */}
+          {/* ── Admin-only routes ──────────────────────────────────────────────── */}
           <Route
             path="/admin"
             element={
