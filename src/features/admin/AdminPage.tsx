@@ -14,6 +14,7 @@ import { readAuditLog, exportAuditLog } from '../../security/auditLog'
 import { exportBackup, importBackup, getBackupHistory } from '../../lib/backupManager'
 import { validatePassword } from '../../security/passwordPolicy'
 import type { UserRole } from '../../types/roles'
+import { ROLE_LABEL, USER_ROLES } from '../../types/roles'
 
 type Tab = 'compliance' | 'users' | 'sessions' | 'audit' | 'backup'
 
@@ -23,6 +24,12 @@ const STATUS_COLOR: Record<string, string> = {
   red: 'bg-red-50 border-red-200 text-red-800',
 }
 const STATUS_ICON: Record<string, string> = { green: '✓', amber: '⚠️', red: '✗' }
+
+// Roles available in the Create User dropdown — excludes 'admin' (only admins
+// can exist, and self-creation is prevented) and 'readonly' (rarely needed).
+const CREATABLE_ROLES: UserRole[] = USER_ROLES.filter(
+  r => r !== 'admin' && r !== 'readonly'
+) as UserRole[]
 
 export default function AdminPage() {
   const { user, logout } = useAuth()
@@ -248,7 +255,7 @@ export default function AdminPage() {
                     <td className="py-2.5 pr-4 text-gray-600">{u.email}</td>
                     <td className="py-2.5 pr-4">
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                        {u.role}
+                        {ROLE_LABEL[u.role] ?? u.role}
                       </span>
                     </td>
                     <td className="py-2.5 pr-4">
@@ -308,11 +315,14 @@ export default function AdminPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={newRole} onChange={e => setNewRole(e.target.value as UserRole)}>
-                  <option value="staff">Staff</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={newRole}
+                  onChange={e => setNewRole(e.target.value as UserRole)}
+                >
+                  {CREATABLE_ROLES.map(r => (
+                    <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -355,7 +365,7 @@ export default function AdminPage() {
               {sessions.map(s => (
                 <div key={s.id} className="border border-gray-200 rounded-xl p-4 flex items-start justify-between gap-4">
                   <div className="text-sm">
-                    <p className="font-medium text-gray-900">{s.userName} <span className="text-xs font-normal text-gray-500">({s.role})</span></p>
+                    <p className="font-medium text-gray-900">{s.userName} <span className="text-xs font-normal text-gray-500">({ROLE_LABEL[s.role as UserRole] ?? s.role})</span></p>
                     <p className="text-xs text-gray-500 mt-0.5">Started: {new Date(s.startedAt).toLocaleString()}</p>
                     <p className="text-xs text-gray-500">Last activity: {new Date(s.lastActivity).toLocaleString()}</p>
                     <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{s.userAgent}</p>
