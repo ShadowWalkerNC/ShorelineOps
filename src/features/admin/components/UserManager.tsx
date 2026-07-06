@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { useAdminStore } from '../../../state/adminStore'
 import type { UserRole } from '../../../security/AuthContext'
 
-// Must cover all 7 values of UserRole
+// Must cover all 8 values of UserRole
 const ROLE_LABELS: Record<UserRole, string> = {
   admin:      'Admin',
   manager:    'Manager',
+  frontdesk:  'Office Assistant',
   dietary:    'Dietary',
   activities: 'Activities',
   server:     'Server',
@@ -16,6 +17,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 const ROLE_COLORS: Record<UserRole, string> = {
   admin:      'bg-red-100 text-red-700',
   manager:    'bg-orange-100 text-orange-700',
+  frontdesk:  'bg-teal-100 text-teal-700',
   dietary:    'bg-green-100 text-green-700',
   activities: 'bg-purple-100 text-purple-700',
   server:     'bg-yellow-100 text-yellow-700',

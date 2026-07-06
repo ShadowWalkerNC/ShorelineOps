@@ -12,7 +12,13 @@ function useClock() {
   return now
 }
 
-const NAV_OPERATIONS = [
+const NAV_OPERATIONS: {
+  label: string
+  to: string
+  icon: React.ReactNode
+  end?: boolean
+  minRole?: 'dietary' | 'manager'
+}[] = [
   {
     label: 'Dashboard', to: '/',
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
@@ -23,7 +29,6 @@ const NAV_OPERATIONS = [
   },
   {
     label: 'Weekly Menu Planner', to: '/menu',
-    // end=true so this does NOT stay highlighted when on /menu/weekly
     end: true,
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
     minRole: 'dietary' as const,
@@ -31,7 +36,6 @@ const NAV_OPERATIONS = [
   {
     label: 'Weekly Menu View', to: '/menu/weekly',
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M2 12h20M2 6h20M2 18h20"/><circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>,
-    // All roles — no minRole
   },
   {
     label: 'Recipe Book', to: '/recipes',
@@ -277,8 +281,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
         <div style={{ padding: '8px 10px' }}>
           {allNavItems.map(item => (
-            <NavLink key={item.to} to={item.to} end={'end' in item && item.end !== undefined ? item.end : item.to === '/'} onClick={() => setNavOpen(false)}
-              style={({ isActive }) => ({ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 15, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--color-primary)' : 'var(--text-primary)', background: isActive ? 'var(--color-primary-light)' : 'transparent', marginBottom: 2, minHeight: 52 })}>
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={'end' in item ? (item.end ?? item.to === '/') : item.to === '/'}
+              onClick={() => setNavOpen(false)}
+              style={({ isActive }) => ({ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 15, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--color-primary)' : 'var(--text-primary)', background: isActive ? 'var(--color-primary-light)' : 'transparent', marginBottom: 2, minHeight: 52 })}
+            >
               <span style={{ color: 'inherit', opacity: 0.8 }}>{item.icon}</span>
               {item.label}
             </NavLink>
