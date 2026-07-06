@@ -23,7 +23,15 @@ const NAV_OPERATIONS = [
   },
   {
     label: 'Weekly Menu Planner', to: '/menu',
+    // end=true so this does NOT stay highlighted when on /menu/weekly
+    end: true,
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
+    minRole: 'dietary' as const,
+  },
+  {
+    label: 'Weekly Menu View', to: '/menu/weekly',
+    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M2 12h20M2 6h20M2 18h20"/><circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>,
+    // All roles — no minRole
   },
   {
     label: 'Recipe Book', to: '/recipes',
@@ -62,10 +70,12 @@ const NAV_ADMIN = {
   icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
 }
 
-function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void }) {
+function NavItem({ to, icon, label, end: endProp, onClick }: { to: string; icon: React.ReactNode; label: string; end?: boolean; onClick?: () => void }) {
   return (
     <NavLink
-      to={to} end={to === '/'} onClick={onClick}
+      to={to}
+      end={endProp !== undefined ? endProp : to === '/'}
+      onClick={onClick}
       style={({ isActive }) => ({
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 16px', borderRadius: 'var(--radius-md)',
@@ -186,6 +196,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const roleDisplay =
     user?.role === 'admin'      ? 'Administrator' :
     user?.role === 'manager'    ? 'Manager' :
+    user?.role === 'frontdesk'  ? 'Office Assistant' :
     user?.role === 'dietary'    ? 'Dietary Staff' :
     user?.role === 'activities' ? 'Activities Dir.' :
     user?.role === 'server'     ? 'Server' :
@@ -205,9 +216,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         style={{
           display: 'none',
           position: 'fixed', top: 0, left: 0, right: 0,
-          // Total height: content (56px) + iOS status bar
           height: 'var(--mobile-header)',
-          // Push content below the notch/Dynamic Island
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingLeft: 'max(14px, env(safe-area-inset-left, 14px))',
           paddingRight: 'max(14px, env(safe-area-inset-right, 14px))',
@@ -268,7 +277,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
         <div style={{ padding: '8px 10px' }}>
           {allNavItems.map(item => (
-            <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={() => setNavOpen(false)}
+            <NavLink key={item.to} to={item.to} end={'end' in item && item.end !== undefined ? item.end : item.to === '/'} onClick={() => setNavOpen(false)}
               style={({ isActive }) => ({ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 15, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--color-primary)' : 'var(--text-primary)', background: isActive ? 'var(--color-primary-light)' : 'transparent', marginBottom: 2, minHeight: 52 })}>
               <span style={{ color: 'inherit', opacity: 0.8 }}>{item.icon}</span>
               {item.label}

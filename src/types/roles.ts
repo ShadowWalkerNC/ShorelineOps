@@ -13,6 +13,7 @@
 export const USER_ROLES = [
   'admin',
   'manager',
+  'frontdesk',
   'dietary',
   'activities',
   'server',
@@ -26,16 +27,18 @@ export const ROLE_RANK: Record<UserRole, number> = {
   readonly:   0,
   staff:      1,
   server:     2,
-  dietary:    3,
-  activities: 4,
-  manager:    5,
-  admin:      6,
+  activities: 3,
+  dietary:    4,
+  frontdesk:  5,   // Office Assistant — near-manager, below manager
+  manager:    6,
+  admin:      7,
 }
 
 /** Human-readable labels for display */
 export const ROLE_LABEL: Record<UserRole, string> = {
   admin:      'Administrator',
   manager:    'Manager',
+  frontdesk:  'Office Assistant',
   dietary:    'Dietary Staff',
   activities: 'Activities Director',
   server:     'Server',
@@ -123,6 +126,23 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'view:approvals', 'action:approvals',
     'view:audit',
     'manage:checklists', 'manage:preplist_templates',
+  ],
+
+  // Office Assistant — near-manager access.
+  // Can view and coordinate almost everything; cannot approve budget,
+  // approve menu changes, manage roles/settings, or view the audit log.
+  frontdesk: [
+    'view:residents', 'edit:residents',
+    'view:staff',
+    'view:callouts', 'file:callouts',
+    'view:inventory',
+    'view:menu', 'request:menu_change',
+    'view:production',
+    'view:budget',
+    'view:truck', 'create:truck_order',
+    'send:notifications',
+    'view:communications', 'create:communications', 'distribute:communications',
+    'view:approvals', 'action:approvals',
   ],
 
   dietary: [
