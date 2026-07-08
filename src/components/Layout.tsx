@@ -74,6 +74,11 @@ const NAV_ADMIN = {
   icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
 }
 
+const NAV_LEGAL = {
+  label: 'Legal & Compliance', to: '/legal',
+  icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+}
+
 function NavItem({ to, icon, label, end: endProp, onClick }: { to: string; icon: React.ReactNode; label: string; end?: boolean; onClick?: () => void }) {
   return (
     <NavLink
@@ -195,6 +200,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const allNavItems = [
     ...visibleOps,
     ...(isAdmin ? [NAV_ADMIN] : []),
+    NAV_LEGAL,
   ]
 
   const roleDisplay =
@@ -214,7 +220,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div onClick={() => setNavOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(13,27,42,0.4)', backdropFilter: 'blur(2px)' }} />
       )}
 
-      {/* MOBILE HEADER — height grows with iOS safe area */}
+      {/* MOBILE HEADER */}
       <header
         className="mobile-header"
         style={{
@@ -254,7 +260,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <img src="/icon-192.png" alt="Shoreline" style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Shoreline</div>
-          <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>iMPAC Operations</div>
+          <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Operations Platform</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <NotificationBell />
@@ -311,7 +317,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <img src="/icon-192.png" alt="Shoreline" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.4px', lineHeight: 1.15, fontFamily: 'Outfit, sans-serif' }}>Shoreline</div>
-            <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.6px', textTransform: 'uppercase' }}>iMPAC Operations</div>
+            <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.6px', textTransform: 'uppercase' }}>Operations Platform</div>
           </div>
         </div>
         <div style={{ padding: '7px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'var(--color-primary-light)', flexShrink: 0 }}>
@@ -327,6 +333,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <NavItem {...NAV_ADMIN} />
             </>
           )}
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '14px 16px 4px' }}>Compliance</div>
+          <NavItem {...NAV_LEGAL} />
         </nav>
         <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
           {user && (

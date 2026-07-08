@@ -16,6 +16,7 @@ import CommunicationsPage from './features/communications/CommunicationsPage'
 import BudgetPage from './features/budget/BudgetPage'
 import TimecardPage from './features/timecard/TimecardPage'
 import OfflinePage from './features/offline/OfflinePage'
+import LegalPage from './pages/Legal'
 import Layout from './components/Layout'
 import PwaBanner from './components/PwaBanner'
 
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/inventory"       element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
         <Route path="/timecards"       element={<AuthedLayout><TimecardPage /></AuthedLayout>} />
         <Route path="/communications"  element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />
+        <Route path="/legal"           element={<AuthedLayout><LegalPage /></AuthedLayout>} />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
         <Route
