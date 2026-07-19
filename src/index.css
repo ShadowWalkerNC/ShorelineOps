@@ -1073,3 +1073,286 @@ button, input, select, textarea {
   #root header { display: none !important; }
   #root main   { padding: 0 !important; }
 }
+
+/* ── Kitchen Tally & Sheet Styling Extensions ── */
+:root {
+  --c1-bg:            #eff6ff;
+  --c1-border:        #bfdbfe;
+  --c1-text:          #1e40af;
+  --c2-bg:            #faf5ff;
+  --c2-border:        #e9d5ff;
+  --c2-text:          #6b21a8;
+  --alt-bg:           #fef2f2;
+  --alt-border:       #fca5a5;
+  --alt-text:         #991b1b;
+  --declined-bg:      #f9fafb;
+  --declined-border:  #d1d5db;
+  --declined-text:    #4b5563;
+}
+
+/* Semantic state colors */
+.badge-alt      { background: var(--alt-bg); color: var(--alt-text); border: 1px solid var(--alt-border); }
+.badge-c1       { background: var(--c1-bg);  color: var(--c1-text);  border: 1px solid var(--c1-border); }
+.badge-c2       { background: var(--c2-bg);  color: var(--c2-text);  border: 1px solid var(--c2-border); }
+.badge-declined { background: var(--declined-bg); color: var(--declined-text); border: 1px solid var(--declined-border); }
+
+.ks-c1 { color: var(--c1-text); }
+.ks-c2 { color: var(--c2-text); }
+
+/* Table overrides */
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table .room-cell {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* Order Grid entries */
+.order-grid-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+.order-grid {
+  border-collapse: collapse;
+  width: 100%;
+}
+.order-grid th {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+}
+.order-grid th.day-header {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--color-primary);
+}
+.order-grid th.resident-header {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: var(--bg-elevated);
+  min-width: 150px;
+  width: 150px;
+  text-align: left;
+  padding-left: 16px;
+  border-right: 2px solid var(--border-color);
+}
+.order-grid td.resident-cell {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--bg-card);
+  padding: 8px 12px 8px 16px;
+  min-width: 150px;
+  width: 150px;
+  border-right: 2px solid var(--border-color);
+}
+.order-cell-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.order-select {
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 6px;
+}
+.order-select.is-c1       { border-color: var(--c1-border); color: var(--c1-text); background: var(--c1-bg); }
+.order-select.is-c2       { border-color: var(--c2-border); color: var(--c2-text); background: var(--c2-bg); }
+.order-select.is-alt      { border-color: var(--alt-border); color: var(--alt-text); background: var(--alt-bg); }
+.order-select.is-declined { border-color: var(--declined-border); color: var(--declined-text); background: var(--declined-bg); }
+
+.order-modifier {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 0.72rem;
+}
+.order-modifier:focus {
+  border-color: var(--border-color);
+  background: var(--bg-app);
+}
+
+/* Kitchen sheet structures */
+.ks-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.ks-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 22px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+}
+.ks-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+.ks-label-tally    { background: var(--c1-bg); color: var(--c1-text); border: 1px solid var(--c1-border); }
+.ks-label-mod      { background: rgba(255,201,77,0.15); color: #854d0e; border: 1px solid rgba(255,201,77,0.35); }
+.ks-label-alt      { background: var(--alt-bg); color: var(--alt-text); border: 1px solid var(--alt-border); }
+.ks-label-declined { background: var(--declined-bg); color: var(--declined-text); border: 1px solid var(--declined-border); }
+
+.ks-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.tally-display {
+  display: flex;
+  gap: 24px;
+  padding: 28px 30px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tally-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tally-count {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.tally-dish {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  max-width: 200px;
+}
+.tally-divider {
+  width: 1px;
+  height: 80px;
+  background: var(--border-color);
+}
+
+/* Print Overrides */
+@media print {
+  #root .sidebar-aside,
+  #root header,
+  .no-print { display: none !important; }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .main-scroll { overflow-y: visible !important; height: auto !important; }
+  .main-content { padding: 0 !important; }
+
+  .ks-print-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12pt;
+    border-bottom: 2pt solid #000;
+    padding-bottom: 6pt;
+  }
+  .ks-print-title { font-size: 18pt; font-weight: 800; }
+  .ks-print-meta  { font-size: 10pt; color: #444; }
+
+  .ks-section {
+    background: #fff !important;
+    border: 1pt solid #ccc !important;
+    border-radius: 0 !important;
+    margin-bottom: 12pt !important;
+    page-break-inside: avoid;
+    width: 100% !important;
+  }
+  .ks-section-header {
+    background: #f5f5f5 !important;
+    border-bottom: 1pt solid #ccc !important;
+    padding: 6pt 10pt !important;
+  }
+  .ks-section-title { font-size: 11pt !important; color: #000 !important; }
+
+  .tally-display { padding: 10pt 15pt !important; gap: 20pt !important; }
+  .tally-count   { font-size: 36pt !important; color: #000 !important; }
+  .tally-dish    { font-size: 10pt !important; color: #333 !important; }
+  .tally-divider { background: #666 !important; height: 40pt !important; }
+
+  .table-wrap {
+    border: none !important;
+    overflow-x: visible !important;
+    width: 100% !important;
+  }
+  table.data-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .data-table th {
+    background: #e5e7eb !important;
+    color: #000 !important;
+    border: 1px solid #9ca3af !important;
+    font-size: 9pt !important;
+    padding: 6px 8px !important;
+  }
+  .data-table td {
+    color: #000 !important;
+    border: 1px solid #d1d5db !important;
+    font-size: 10pt !important;
+    padding: 6px 8px !important;
+    word-wrap: break-word !important;
+  }
+  .data-table td.room-cell {
+    font-size: 11pt !important;
+    color: #000 !important;
+    width: 60px !important;
+  }
+  .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 55px !important; }
+  .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 140px !important; }
+  .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 85px !important; }
+
+  .ks-alt-item {
+    font-size: 11pt !important;
+    border-bottom: 0.5pt solid #ddd !important;
+    page-break-inside: avoid;
+  }
+  .ks-alt-room { font-weight: 700 !important; }
+  .ks-alt-desc { font-style: italic !important; color: #333 !important; }
+}
+

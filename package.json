@@ -2,11 +2,14 @@
   "name": "shoreline-v5",
   "version": "5.0.0",
   "private": true,
+  "main": "electron-main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"electron .\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.4",
@@ -26,6 +29,8 @@
     "typescript": "^5.4.5",
     "vite": "^5.3.1",
     "vite-plugin-pwa": "^0.20.0",
-    "workbox-window": "^7.1.0"
+    "workbox-window": "^7.1.0",
+    "electron": "^29.1.0",
+    "concurrently": "^8.2.2"
   }
 }

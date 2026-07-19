@@ -12,6 +12,7 @@ import { menuRouter } from './routes/menu'
 import { productionRouter } from './routes/production'
 import { adminRouter } from './routes/admin'
 import { timecardRouter } from './routes/timecard'
+import { kitchenRouter } from './routes/kitchen'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 import { runMigrations } from './db/migrate'
@@ -54,6 +55,7 @@ app.use('/api/menu',       requireAuth, menuRouter)
 app.use('/api/production', requireAuth, productionRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
 app.use('/api/timecard',   timecardRouter)
+app.use('/api/kitchen',    requireAuth, kitchenRouter)
 
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))

@@ -156,6 +156,38 @@ const migrations: { name: string; sql: string }[] = [
       CREATE INDEX IF NOT EXISTS idx_timecard_punches_punched_at ON timecard_punches(punched_at DESC);
     `,
   },
+  {
+    name: '005_kitchen_orders',
+    sql: `
+      ALTER TABLE residents
+        ADD COLUMN IF NOT EXISTS standing_modifiers TEXT DEFAULT '',
+        ADD COLUMN IF NOT EXISTS has_standing_alternative INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS alternative_description TEXT DEFAULT '';
+
+      CREATE TABLE IF NOT EXISTS meal_options (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        week_start_date TEXT NOT NULL,
+        day_of_week     TEXT NOT NULL,
+        meal_type       TEXT NOT NULL,
+        choice_number   INTEGER NOT NULL,
+        dish_name       TEXT NOT NULL,
+        UNIQUE(week_start_date, day_of_week, meal_type, choice_number)
+      );
+
+      CREATE TABLE IF NOT EXISTS weekly_orders (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        resident_id     UUID NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+        week_start_date TEXT NOT NULL,
+        day_of_week     TEXT NOT NULL,
+        meal_type       TEXT NOT NULL,
+        choice_selected INTEGER,
+        modifier_text   TEXT DEFAULT '',
+        is_alternative  INTEGER DEFAULT 0,
+        is_declined     INTEGER DEFAULT 0,
+        UNIQUE(resident_id, week_start_date, day_of_week, meal_type)
+      );
+    `,
+  },
 ]
 
 export async function runMigrations() {

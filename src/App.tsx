@@ -19,6 +19,8 @@ import OfflinePage from './features/offline/OfflinePage'
 import LegalPage from './pages/Legal'
 import Layout from './components/Layout'
 import PwaBanner from './components/PwaBanner'
+import OrderEntryPage from './features/kitchen/OrderEntryPage'
+import KitchenSheetPage from './features/kitchen/KitchenSheetPage'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -59,6 +61,8 @@ export default function App() {
         <Route path="/timecards"       element={<AuthedLayout><TimecardPage /></AuthedLayout>} />
         <Route path="/communications"  element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />
         <Route path="/legal"           element={<AuthedLayout><LegalPage /></AuthedLayout>} />
+        <Route path="/kitchen/orders"  element={<AuthedLayout><OrderEntryPage /></AuthedLayout>} />
+        <Route path="/kitchen/sheet"   element={<AuthedLayout><KitchenSheetPage /></AuthedLayout>} />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
         <Route
