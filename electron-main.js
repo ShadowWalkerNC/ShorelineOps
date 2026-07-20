@@ -6,16 +6,14 @@ let mainWindow = null
 let backendProcess = null
 
 function startBackend() {
-  console.log('[Electron] Launching Express API Backend child process...')
+  console.log('[Electron] Launching Express API Backend using npm run dev in server directory...')
   
-  // Launch Express backend using node
-  // Points to Shoreline-rebuild's Express server entry point.
-  // In development it runs via server build or directly node.
-  // In production it launches compiled js
-  const backendPath = path.join(__dirname, 'server', 'src', 'index.ts')
-  
-  backendProcess = spawn('npx', ['ts-node', backendPath], {
-    cwd: __dirname,
+  // Spawn npm run dev (npm.cmd on Windows, npm on Unix)
+  const isWindows = process.platform === 'win32'
+  const npmCmd = isWindows ? 'npm.cmd' : 'npm'
+
+  backendProcess = spawn(npmCmd, ['run', 'dev'], {
+    cwd: path.join(__dirname, 'server'),
     shell: true,
     env: {
       ...process.env,
@@ -46,15 +44,15 @@ function createWindow() {
     icon: path.join(__dirname, 'public', 'icon-192.png')
   })
 
-  // In dev mode, point to Vite dev server port
-  const startUrl = process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : `file://${path.join(__dirname, 'dist', 'index.html')}`
+  // In dev mode, point to Vite dev server port. Default to development unless production explicitly specified.
+  const startUrl = process.env.NODE_ENV === 'production'
+    ? `file://${path.join(__dirname, 'dist', 'index.html')}`
+    : 'http://localhost:3000'
 
   mainWindow.loadURL(startUrl)
 
   // DevTools in dev mode
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV !== 'production') {
     mainWindow.webContents.openDevTools()
   }
 

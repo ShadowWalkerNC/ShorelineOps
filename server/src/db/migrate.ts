@@ -159,10 +159,9 @@ const migrations: { name: string; sql: string }[] = [
   {
     name: '005_kitchen_orders',
     sql: `
-      ALTER TABLE residents
-        ADD COLUMN IF NOT EXISTS standing_modifiers TEXT DEFAULT '',
-        ADD COLUMN IF NOT EXISTS has_standing_alternative INTEGER DEFAULT 0,
-        ADD COLUMN IF NOT EXISTS alternative_description TEXT DEFAULT '';
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS standing_modifiers TEXT DEFAULT '';
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS has_standing_alternative INTEGER DEFAULT 0;
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS alternative_description TEXT DEFAULT '';
 
       CREATE TABLE IF NOT EXISTS meal_options (
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
