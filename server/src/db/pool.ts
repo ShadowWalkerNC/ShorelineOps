@@ -88,8 +88,10 @@ function translateQuery(sql: string, params: any[] = []): { sql: string; params:
     .replace(/ADD COLUMN\s+IF\s+NOT\s+EXISTS/gi, 'ADD COLUMN')
     // Replace PG insert default values with SQLite compatible insert or ignore
     .replace(/INSERT INTO system_settings DEFAULT VALUES/gi, 'INSERT OR IGNORE INTO system_settings DEFAULT VALUES')
-    // Remove conflict blocks for SQLite since we use OR IGNORE
-    .replace(/ON CONFLICT\s*\(?\w*\)?\s*DO\s*NOTHING/gi, '')
+    // Remove default values conflict blocks specifically, but keep other conflict handlers (e.g. ON CONFLICT (email))
+    .replace(/DEFAULT VALUES\s+ON CONFLICT\s*\(?\w*\)?\s*DO\s*NOTHING/gi, 'DEFAULT VALUES')
+    // SQLite uses ON CONFLICT(email) DO NOTHING (without space in Postgres format)
+    .replace(/ON CONFLICT\s*\(([^)]+)\)\s*DO\s*NOTHING/gi, 'ON CONFLICT($1) DO NOTHING')
 
   // Translate parameter types (e.g. convert arrays to strings/JSON)
   const translatedParams = params.map(p => {
@@ -172,6 +174,14 @@ export const pool = {
             // Map rows back to resemble standard PG result structure
             const mappedRows = (rows || []).map((row: any) => {
               const mapped = { ...row }
+              
+              // Map count columns to lowercase 'count'
+              for (const key of Object.keys(mapped)) {
+                if (key.toLowerCase().startsWith('count(')) {
+                  mapped.count = mapped[key]
+                }
+              }
+
               // Parse JSON columns back into arrays if needed (matching postgres TEXT[] mapping)
               for (const [key, val] of Object.entries(mapped)) {
                 if (typeof val === 'string' && val.startsWith('[') && val.endsWith(']')) {
