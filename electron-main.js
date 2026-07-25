@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
+const http = require('http')
 
 let mainWindow = null
 let backendProcess = null
@@ -17,7 +18,7 @@ function startBackend() {
     shell: true,
     env: {
       ...process.env,
-      PORT: '4000', // Port matches the frontend proxy target
+      PORT: '4000',
       NODE_ENV: process.env.NODE_ENV || 'development',
       DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/shoreline'
     }
@@ -32,7 +33,27 @@ function startBackend() {
   })
 }
 
-function createWindow() {
+// Poll until Vite dev server responds, then resolve
+function waitForVite(url, retries = 30, delay = 500) {
+  return new Promise((resolve, reject) => {
+    const attempt = (remaining) => {
+      http.get(url, (res) => {
+        console.log(`[Electron] Vite is ready (HTTP ${res.statusCode})`)
+        resolve()
+      }).on('error', () => {
+        if (remaining <= 0) {
+          reject(new Error('[Electron] Timed out waiting for Vite dev server'))
+        } else {
+          console.log(`[Electron] Waiting for Vite... (${retries - remaining + 1}/${retries})`)
+          setTimeout(() => attempt(remaining - 1), delay)
+        }
+      })
+    }
+    attempt(retries)
+  })
+}
+
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -41,15 +62,29 @@ function createWindow() {
       contextIsolation: true,
     },
     title: 'Shoreline Care Center',
-    icon: path.join(__dirname, 'public', 'icon-192.png')
+    // Show window only once content is ready to prevent blank flash
+    show: false,
   })
 
-  // In dev mode, point to Vite dev server port. Default to development unless production explicitly specified.
+  // In dev mode, wait for Vite to be ready before loading
   const startUrl = process.env.NODE_ENV === 'production'
     ? `file://${path.join(__dirname, 'dist', 'index.html')}`
     : 'http://localhost:3000'
 
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      await waitForVite(startUrl)
+    } catch (err) {
+      console.error(err.message)
+    }
+  }
+
   mainWindow.loadURL(startUrl)
+
+  // Show window once page is loaded (no blank flash)
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
+  })
 
   // DevTools in dev mode
   if (process.env.NODE_ENV !== 'production') {
@@ -69,7 +104,6 @@ app.on('ready', () => {
 app.on('window-all-closed', () => {
   console.log('[Electron] All windows closed, cleaning up child processes...')
   if (backendProcess) {
-    // Gracefully terminate the backend process
     backendProcess.kill()
   }
   if (process.platform !== 'darwin') {

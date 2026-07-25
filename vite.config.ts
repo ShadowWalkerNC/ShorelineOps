@@ -79,7 +79,7 @@ export default defineConfig({
       },
 
       devOptions: {
-        enabled: true,
+        enabled: false,   // Disable SW in dev — prevents workbox from caching stale bundles
         type: 'module',
         navigateFallback: '/',
       },
@@ -94,6 +94,7 @@ export default defineConfig({
 
   server: {
     port: 3000,
+    hmr: false,   // Disable HMR — Electron's renderer blocks the WS upgrade (HTTP 400)
     proxy: {
       '/api': {
         target: 'http://localhost:4000',
