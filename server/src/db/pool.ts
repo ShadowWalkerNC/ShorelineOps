@@ -220,7 +220,11 @@ export const pool = {
     }
   },
 
-  on(event: string, callback: (...args: any[]) => void) {
+  on(event: 'connect' | 'error' | 'release' | 'acquire' | 'remove', callback: (...args: any[]) => void) {
     if (pgPool) pgPool.on(event, callback)
+  },
+
+  async end() {
+    if (pgPool) await pgPool.end()
   }
 }

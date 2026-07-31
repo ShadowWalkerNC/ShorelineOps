@@ -66,7 +66,7 @@ export const useCommunicationsStore = create<CommState>((set, get) => ({
     const { data, error } = await supabase
       .from('communications').select('*').order('created_at', { ascending: false })
     if (error) { set({ error: error.message, loading: false, isLoading: false }); return }
-    set({ threads: (data ?? []).map(r => toThread(r as Record<string, unknown>)), loading: false, isLoading: false })
+    set({ threads: (data ?? []).map((r: any) => toThread(r as Record<string, unknown>)), loading: false, isLoading: false })
   },
 
   addThread: (data) => {

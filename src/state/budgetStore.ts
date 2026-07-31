@@ -142,10 +142,10 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       if (pp) {
         const { data: pe2 } = await supabase
           .from('budget_entries').select('*').eq('period_id', prevPeriod.id).order('date')
-        prevEntries = (pe2 ?? []).map(r => toEntry(r as Record<string, unknown>))
+        prevEntries = (pe2 ?? []).map((r: any) => toEntry(r as Record<string, unknown>))
       }
 
-      set({ period, prevPeriod, entries: (er ?? []).map(r => toEntry(r as Record<string, unknown>)), prevEntries, loading: false })
+      set({ period, prevPeriod, entries: (er ?? []).map((r: any) => toEntry(r as Record<string, unknown>)), prevEntries, loading: false })
     } catch (e: unknown) { set({ error: (e as Error).message, loading: false }) }
   },
 
@@ -153,14 +153,14 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     const { data, error } = await supabase
       .from('budget_periods').select('*').order('year', { ascending: false }).order('month', { ascending: false })
     if (error) { set({ error: error.message }); return }
-    set({ periods: (data ?? []).map(r => toPeriod(r as Record<string, unknown>)) })
+    set({ periods: (data ?? []).map((r: any) => toPeriod(r as Record<string, unknown>)) })
   },
 
   fetchEntries: async (periodId) => {
     const { data, error } = await supabase
       .from('budget_entries').select('*').eq('period_id', periodId).order('date')
     if (error) { set({ error: error.message }); return }
-    set({ entries: (data ?? []).map(r => toEntry(r as Record<string, unknown>)) })
+    set({ entries: (data ?? []).map((r: any) => toEntry(r as Record<string, unknown>)) })
   },
 
   setPeriod: (p) => set({ period: p }),

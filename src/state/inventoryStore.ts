@@ -144,7 +144,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ loading: true, error: null })
     const { data, error } = await supabase.from('inventory').select('*').order('item')
     if (error) { set({ error: error.message, loading: false }); return }
-    const stock = (data ?? []).map(r => toStock(r as Record<string, unknown>))
+    const stock = (data ?? []).map((r: any) => toStock(r as Record<string, unknown>))
     set({ stockItems: stock, items: stock, loading: false })
   },
 

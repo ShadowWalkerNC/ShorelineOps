@@ -68,7 +68,7 @@ export const useResidentsStore = create<ResidentsState>((set, get) => ({
       if (search) q = q.or(`name.ilike.%${search}%,room.ilike.%${search}%`)
       const { data, error } = await q
       if (error) throw new Error(error.message)
-      set({ residents: (data ?? []).map(r => toResident(r as Record<string, unknown>)), loading: false })
+      set({ residents: (data ?? []).map((r: any) => toResident(r as Record<string, unknown>)), loading: false })
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false })
     }

@@ -49,7 +49,7 @@ export const useProductionStore = create<ProductionState>((set, get) => ({
     const { data, error } = await supabase
       .from('production_sheets').select('*').order('date', { ascending: false })
     if (error) { set({ error: error.message, loading: false }); return }
-    set({ sheets: (data ?? []).map(r => toSheet(r as Record<string, unknown>)), loading: false })
+    set({ sheets: (data ?? []).map((r: any) => toSheet(r as Record<string, unknown>)), loading: false })
   },
 
   addSheet: async (data) => {

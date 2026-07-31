@@ -94,7 +94,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ loading: true, error: null })
     const { data, error } = await supabase.from('menu_weeks').select('*').order('created_at')
     if (error) { set({ error: error.message, loading: false }); return }
-    set({ weeks: (data ?? []).map(w => rowToWeek(w as Record<string, unknown>)), loading: false })
+    set({ weeks: (data ?? []).map((w: any) => rowToWeek(w as Record<string, unknown>)), loading: false })
   },
 
   addWeek: async (label) => {
@@ -148,7 +148,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   fetchItems: async () => {
     const { data, error } = await supabase.from('menu_items').select('*').order('name')
     if (error) { set({ error: error.message }); return }
-    set({ items: (data ?? []).map(r => rowToItem(r as Record<string, unknown>)) })
+    set({ items: (data ?? []).map((r: any) => rowToItem(r as Record<string, unknown>)) })
   },
 
   addItem: async (data) => {

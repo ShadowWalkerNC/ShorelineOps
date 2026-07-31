@@ -144,8 +144,8 @@ export const useStaffStore = create<StaffState>((set, get) => ({
       if (profilesRes.error) throw new Error(profilesRes.error.message)
       if (callOutsRes.error) throw new Error(callOutsRes.error.message)
       set({
-        profiles:  (profilesRes.data ?? []).map(r => toProfile(r as Record<string, unknown>)),
-        callOuts:  (callOutsRes.data  ?? []).map(r => toCallOut(r as Record<string, unknown>)),
+        profiles:  (profilesRes.data ?? []).map((r: any) => toProfile(r as Record<string, unknown>)),
+        callOuts:  (callOutsRes.data  ?? []).map((r: any) => toCallOut(r as Record<string, unknown>)),
         isLoading: false,
       })
     } catch (e: unknown) {
