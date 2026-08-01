@@ -187,6 +187,26 @@ const migrations: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    name: '006_facility_config_and_hipaa',
+    sql: `
+      CREATE TABLE IF NOT EXISTS facility_config (
+        id                       TEXT PRIMARY KEY DEFAULT 'default',
+        facility_name            TEXT NOT NULL,
+        npi_license              TEXT DEFAULT '',
+        address                  TEXT DEFAULT '',
+        primary_contact_email    TEXT NOT NULL,
+        facility_type            TEXT NOT NULL DEFAULT 'Assisted Living',
+        wings                    TEXT DEFAULT '["West Wing","Memory Care","Rehab Unit"]',
+        dining_rooms             TEXT DEFAULT '["Main Dining Room","Tray Delivery"]',
+        is_initialized           BOOLEAN NOT NULL DEFAULT false,
+        baa_accepted_at          TIMESTAMPTZ,
+        baa_signee_name          TEXT DEFAULT '',
+        created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `,
+  },
 ]
 
 export async function runMigrations() {

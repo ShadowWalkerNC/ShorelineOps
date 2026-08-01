@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react'
 
 const DOCS = [
   {
@@ -36,73 +36,153 @@ const DOCS = [
     icon: '🤝',
     description: 'Template BAA for vendors who process PHI on behalf of Shoreline Operations LLC.',
   },
-];
+]
 
 export default function Legal() {
-  const [active, setActive] = useState<string | null>(null);
-
-  const activeDoc = DOCS.find((d) => d.id === active);
+  const [active, setActive] = useState<string | null>(null)
+  const activeDoc = DOCS.find((d) => d.id === active)
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Legal & Compliance
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Shoreline Operations LLC — Effective July 8, 2026
-        </p>
+    <div className="sl-page">
+
+      {/* ── Page header ── */}
+      <div className="sl-page-header">
+        <h1 className="sl-page-title">Legal &amp; Compliance</h1>
+        <p className="sl-page-subtitle">Shoreline Operations LLC — Effective July 8, 2026</p>
       </div>
 
       {!active ? (
-        <div className="grid gap-4">
+        /* ── Document index ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {DOCS.map((doc) => (
             <button
               key={doc.id}
               onClick={() => setActive(doc.id)}
-              className="flex items-start gap-4 p-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-left hover:border-teal-500 dark:hover:border-teal-400 hover:shadow-md transition-all"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 16,
+                padding: '18px 20px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-lg)',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'all 0.18s ease',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+              onMouseEnter={e => {
+                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-primary)'
+                ;(e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--shadow-md)'
+              }}
+              onMouseLeave={e => {
+                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-color)'
+                ;(e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--shadow-sm)'
+              }}
             >
-              <span className="text-2xl mt-0.5">{doc.icon}</span>
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+              <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
+                {doc.icon}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 'var(--text-base)',
+                  fontWeight: 'var(--weight-bold)',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-display)',
+                  marginBottom: 4,
+                }}>
                   {doc.title}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 'var(--leading-snug)' }}>
                   {doc.description}
                 </div>
               </div>
-              <span className="ml-auto text-gray-400 dark:text-gray-500 self-center text-lg">›</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 20, alignSelf: 'center', flexShrink: 0 }}>›</span>
             </button>
           ))}
         </div>
       ) : (
+        /* ── Document view ── */
         <div>
           <button
             onClick={() => setActive(null)}
-            className="flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:underline mb-6"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semi)',
+              color: 'var(--color-primary)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              marginBottom: 20,
+              textDecoration: 'none',
+            }}
           >
             ‹ Back to Legal Documents
           </button>
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-2xl">{activeDoc?.icon}</span>
+
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-sm)',
+            overflow: 'hidden',
+          }}>
+            {/* Doc header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              padding: '20px 24px',
+              borderBottom: '1px solid var(--border-color)',
+              background: 'var(--color-primary-light)',
+            }}>
+              <span style={{ fontSize: 28 }}>{activeDoc?.icon}</span>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                <h2 style={{
+                  fontSize: 'var(--text-xl)',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 'var(--weight-bold)',
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                  letterSpacing: 'var(--tracking-tight)',
+                }}>
                   {activeDoc?.title}
                 </h2>
-                <p className="text-xs text-gray-400 dark:text-gray-500">
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 3 }}>
                   Shoreline Operations LLC · Effective July 8, 2026
                 </p>
               </div>
             </div>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <p className="text-gray-500 dark:text-gray-400 text-sm italic">
-                View the full document in the repository: <code>{activeDoc?.file}</code>
+
+            {/* Doc body */}
+            <div style={{ padding: '24px' }}>
+              <p style={{
+                fontSize: 'var(--text-sm)',
+                color: 'var(--text-muted)',
+                fontStyle: 'italic',
+                marginBottom: 12,
+              }}>
+                View the full document in the repository: <code style={{
+                  fontFamily: 'monospace',
+                  fontSize: 'var(--text-xs)',
+                  background: 'var(--bg-app)',
+                  padding: '2px 6px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-color)',
+                }}>{activeDoc?.file}</code>
               </p>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 'var(--leading-normal)' }}>
                 All legal documents are maintained in the project repository root. Contact the
                 Privacy Officer at{' '}
-                <span className="font-mono text-teal-700 dark:text-teal-400">
+                <span style={{
+                  fontFamily: 'monospace',
+                  color: 'var(--color-primary)',
+                  fontWeight: 'var(--weight-semi)',
+                }}>
                   [LEGAL_CONTACT_EMAIL_PLACEHOLDER]
                 </span>{' '}
                 with any questions.
@@ -112,5 +192,5 @@ export default function Legal() {
         </div>
       )}
     </div>
-  );
+  )
 }

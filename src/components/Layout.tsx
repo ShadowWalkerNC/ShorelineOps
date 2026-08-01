@@ -64,6 +64,11 @@ const NAV_OPERATIONS: {
     minRole: 'manager' as const,
   },
   {
+    label: 'Dietary Tray Cards', to: '/kitchen/traycards',
+    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m8 14 2 2 4-4"/></svg>,
+    minRole: 'dietary' as const,
+  },
+  {
     label: 'Dietary Tally Entry', to: '/kitchen/orders',
     icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>,
     minRole: 'dietary' as const,
@@ -371,7 +376,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* MAIN CONTENT */}
-      <div className="main-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh', overflowY: 'auto' }}>
+      <div className="main-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh', overflowY: 'auto', overflowX: 'hidden' }}>
         <header className="desktop-header" style={{ height: 58, padding: '0 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-card)', position: 'sticky', top: 0, zIndex: 90, boxShadow: 'var(--shadow-sm)', flexShrink: 0 }}>
           {user && (
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', background: 'var(--color-primary-light)', border: '1px solid var(--color-primary)', padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>

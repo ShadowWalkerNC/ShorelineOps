@@ -84,7 +84,7 @@ export default function KitchenSheetPage() {
   const choice2Name = mealOptions.find(o => o.choice_number === 2)?.dish_name || 'Choice 2'
 
   return (
-    <>
+    <div className="sl-page">
       {/* Printable Sheet Header (hidden on screen) */}
       <div className="ks-print-header" style={{ display: 'none' }}>
         <div>
@@ -292,6 +292,6 @@ export default function KitchenSheetPage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

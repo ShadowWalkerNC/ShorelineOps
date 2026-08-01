@@ -65,16 +65,18 @@ export default function ResidentsPage() {
   const totalCount    = residents.length
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="sl-page">
 
       {/* ── Page header ── */}
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.4px', margin: 0 }}>Residents</h1>
-        {!loading && totalCount > 0 && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
-            {totalCount} total &middot; {activeCount} active
-          </p>
-        )}
+      <div className="sl-page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div>
+          <h1 className="sl-page-title">Residents</h1>
+          {!loading && totalCount > 0 && (
+            <p className="sl-page-subtitle">
+              {totalCount} total &middot; {activeCount} active
+            </p>
+          )}
+        </div>
       </div>
 
       {/* ── Toolbar ── */}

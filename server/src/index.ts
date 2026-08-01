@@ -13,6 +13,7 @@ import { productionRouter } from './routes/production'
 import { adminRouter } from './routes/admin'
 import { timecardRouter } from './routes/timecard'
 import { kitchenRouter } from './routes/kitchen'
+import { setupRouter } from './routes/setup'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 import { runMigrations } from './db/migrate'
@@ -48,6 +49,7 @@ app.use('/api', limiter)
 app.use('/api/auth', authLimiter)
 
 // Routes
+app.use('/api/setup',      setupRouter)
 app.use('/api/auth',       authRouter)
 app.use('/api/residents',  requireAuth, residentsRouter)
 app.use('/api/audit',      requireAuth, auditRouter)

@@ -241,7 +241,7 @@ export default function OrderEntryPage() {
   const hasOrders = residents.some(r => orderMap[r.id])
 
   return (
-    <>
+    <div className="sl-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Dietary Tally Entry</h1>
@@ -428,6 +428,6 @@ export default function OrderEntryPage() {
       )}
 
       <Toast toasts={toasts} />
-    </>
+    </div>
   )
 }

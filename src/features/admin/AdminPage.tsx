@@ -35,7 +35,7 @@ export default function AdminPage() {
 
   return (
     <RequireRole role="admin">
-      <div style={{ maxWidth: 1100, margin: '0 auto' }} className="fade-in">
+      <div className="sl-page fade-in">
 
         {/* Header */}
         <div style={{ marginBottom: 20 }}>

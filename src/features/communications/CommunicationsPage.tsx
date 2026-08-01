@@ -662,7 +662,7 @@ export default function CommunicationsPage() {
   ]
 
   return (
-    <div>
+    <div className="sl-page">
       {/* Page header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0, letterSpacing: '-0.4px' }}>Communications</h1>

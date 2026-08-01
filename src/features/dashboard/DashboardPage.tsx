@@ -361,7 +361,7 @@ export default function DashboardPage() {
   const isManager  = atLeast('manager')
 
   return (
-    <div className="fade-in" style={{ maxWidth: 1400, margin: '0 auto' }}>
+    <div className="sl-page fade-in">
       <InjectDashStyles />
 
       {/* ── Greeting ── */}

@@ -392,7 +392,7 @@ export default function TimecardPage() {
   })
 
   return (
-    <div className="fade-in" style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="sl-page fade-in">
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.4px', margin: 0 }}>
           ⏱ Time Clock
