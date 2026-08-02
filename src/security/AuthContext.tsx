@@ -138,6 +138,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }, [])
 
+  // 10-minute inactivity auto-logout tracker (HIPAA §164.312(a)(2)(iii))
+  useEffect(() => {
+    if (!user) return
+
+    const IDLE_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        logout('idle_timeout')
+      }, IDLE_TIMEOUT_MS)
+    }
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
+    events.forEach(evt => window.addEventListener(evt, resetTimer))
+    resetTimer()
+
+    return () => {
+      clearTimeout(timeoutId)
+      events.forEach(evt => window.removeEventListener(evt, resetTimer))
+    }
+  }, [user, logout])
+
   const can = useCallback((permission: Permission): boolean => {
     if (!user) return false
     return hasPermission(user.role, permission)

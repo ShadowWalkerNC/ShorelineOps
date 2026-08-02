@@ -207,6 +207,27 @@ const migrations: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    name: '007_audit_log_immutability',
+    sql: `
+      CREATE OR REPLACE FUNCTION prevent_audit_log_alteration()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        RAISE EXCEPTION 'audit_log table is append-only for HIPAA/SOC2 compliance';
+      END;
+      $$ LANGUAGE plpgsql;
+
+      DROP TRIGGER IF EXISTS trg_prevent_audit_log_update ON audit_log;
+      CREATE TRIGGER trg_prevent_audit_log_update
+      BEFORE UPDATE ON audit_log
+      FOR EACH ROW EXECUTE FUNCTION prevent_audit_log_alteration();
+
+      DROP TRIGGER IF EXISTS trg_prevent_audit_log_delete ON audit_log;
+      CREATE TRIGGER trg_prevent_audit_log_delete
+      BEFORE DELETE ON audit_log
+      FOR EACH ROW EXECUTE FUNCTION prevent_audit_log_alteration();
+    `,
+  },
 ]
 
 export async function runMigrations() {

@@ -23,7 +23,29 @@ const app = express()
 const PORT = process.env.PORT ?? 3001
 
 // Security middleware
-app.use(helmet())
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    frameguard: { action: 'deny' },
+    noSniff: true,
+  })
+)
 app.use(compression())
 app.use(cors({
   origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',

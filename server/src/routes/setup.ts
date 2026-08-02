@@ -46,7 +46,13 @@ setupRouter.post('/initialize', async (req, res, next) => {
       diningRooms: z.array(z.string()).min(1),
       adminName: z.string().min(2),
       adminEmail: z.string().email(),
-      adminPassword: z.string().min(8),
+      adminPassword: z
+        .string()
+        .min(12, 'Password must be at least 12 characters long')
+        .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+        .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+        .regex(/[0-9]/, 'Password must contain at least one number')
+        .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
       baaSigneeName: z.string().min(2),
       initMode: z.enum(['clean', 'sample']),
     }).parse(req.body)
