@@ -10,6 +10,8 @@ import { safeRedirectPath } from '@/lib/safeRedirect'
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 type Step = 'credentials' | 'mfa' | 'enroll'
 
+type Step = 'credentials' | 'mfa' | 'enroll'
+
 export default function LoginPage() {
   const {
     login,
@@ -73,6 +75,9 @@ export default function LoginPage() {
             : 'Invalid email or password.')
           : 'Invalid authentication code.'
       )
+    } finally {
+      setLoading(false)
+    }
       setLoading(false)
     }
   }
@@ -262,9 +267,6 @@ export default function LoginPage() {
                   <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{acct.password}</span>
                 </button>
               ))}
-            </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 10, lineHeight: 1.5 }}>
-              Demo mode only — never enable VITE_DEMO_MODE with real PHI.
             </div>
           </div>
         )}
