@@ -98,6 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         if (!cancelled) setIsLoading(false)
       }
+    void restore()
+    return () => {
+      cancelled = true
+    }
     }
 
     void restore()
@@ -180,7 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Enrollment did not return a session')
     }
   }, [applySession])
-
   const logout = useCallback(async (reason = 'user_initiated') => {
     const uid = user?.id
     try {

@@ -29,6 +29,18 @@ function makeTokens(userId: string, role: ApiRole, mfaVerified: boolean) {
     getJwtSecret(),
     { expiresIn: JWT_EXPIRES }
   )
+
+  const refreshToken = jwt.sign(
+    { sub: userId, role, mfa: mfaVerified, type: 'refresh' },
+    getJwtSecret(),
+    { expiresIn: `${REFRESH_EXPIRES_DAYS}d` as jwt.SignOptions['expiresIn'] }
+  )
+
+  return { accessToken, refreshToken }
+}
+    getJwtSecret(),
+    { expiresIn: JWT_EXPIRES }
+  )
   const refreshToken = crypto.randomBytes(48).toString('hex')
   return { accessToken, refreshToken }
 }
@@ -48,7 +60,6 @@ function verifyMfaPendingToken(token: string, purpose: 'mfa_verify' | 'mfa_enrol
   }
   return payload.sub
 }
-
 function asApiRole(role: string): ApiRole {
   return (API_ROLES as readonly string[]).includes(role) ? (role as ApiRole) : 'readonly'
 }
@@ -107,7 +118,6 @@ async function issueSession(user: { id: string; name: string; email: string; rol
     },
   }
 }
-
 // ─────────────────────────────────────────────
 // POST /api/auth/login
 // ─────────────────────────────────────────────
@@ -138,6 +148,53 @@ authRouter.post('/login', async (req, res, next) => {
 
     const globalMfa = await isMfaRequiredGlobally()
     const userMfaEnabled = !!user.mfa_enabled && !!user.mfa_secret
+    const role = asApiRole(user.role)
+
+    if (userMfaEnabled) {
+      const mfaToken = makeMfaPendingToken(user.id, 'mfa_verify')
+      return res.json({
+        mfaRequired: true,
+        mfaToken,
+        user: { id: user.id, name: user.name, email: user.email, role },
+      })
+    }
+
+    if (globalMfa && !userMfaEnabled) {
+      const mfaToken = makeMfaPendingToken(user.id, 'mfa_enroll')
+      return res.json({
+        mfaEnrollmentRequired: true,
+        mfaToken,
+        user: { id: user.id, name: user.name, email: user.email, role },
+      })
+    }
+
+    const { accessToken, refreshToken } = makeTokens(user.id, role, false)
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
+    const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
+
+    await pool.query(
+      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3)`,
+      [user.id, tokenHash, expiresAt]
+    )
+    await pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id])
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
+       VALUES ('LOGIN', $1, 'auth', 'success', $2)`,
+      [user.id, JSON.stringify({ mfaVerified: false })]
+    )
+
+    res.json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role,
+        mfaVerified: false,
+      },
+    })
 
     if (userMfaEnabled) {
       const mfaToken = makeMfaPendingToken(user.id, 'mfa_verify')
@@ -239,6 +296,8 @@ authRouter.post('/mfa/setup/begin', async (req, res, next) => {
 
     // Store pending secret (not enabled until confirmed)
     await pool.query(
+    // Store pending secret (not enabled until confirmed)
+    await pool.query(
       `UPDATE users SET mfa_secret = $1, mfa_enabled = false, updated_at = NOW() WHERE id = $2`,
       [secret.base32, userId]
     )
@@ -248,6 +307,9 @@ authRouter.post('/mfa/setup/begin', async (req, res, next) => {
       otpauthUrl: totp.toString(),
       issuer: ISSUER,
       account: user.email,
+      mfaEnrollmentRequired: true,
+      mfaToken: pendingToken,
+    })
     })
   } catch (err) { next(err) }
 })
