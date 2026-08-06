@@ -242,6 +242,15 @@ const migrations: { name: string; sql: string }[] = [
         ));
     `,
   },
+  {
+    name: '009_mfa_secret',
+    sql: `
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS mfa_secret TEXT;
+
+      COMMENT ON COLUMN users.mfa_secret IS 'Base32 TOTP secret; null when MFA not enrolled';
+    `,
+  },
 ]
 
 export async function runMigrations() {

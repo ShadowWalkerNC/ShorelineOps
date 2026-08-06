@@ -23,7 +23,14 @@ interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<
+    | { status: 'authenticated' }
+    | { status: 'mfa_required'; mfaToken: string; email: string; name: string }
+    | { status: 'mfa_enrollment_required'; mfaToken: string; email: string; name: string }
+  >
+  completeMfaLogin: (mfaToken: string, code: string) => Promise<void>
+  completeMfaEnrollment: (mfaToken: string, code: string) => Promise<void>
+  beginMfaEnrollment: (mfaToken: string) => Promise<{ secret: string; otpauthUrl: string }>
   logout: (reason?: string) => Promise<void>
   can: (permission: Permission) => boolean
   atLeast: (role: UserRole) => boolean
@@ -99,6 +106,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const applySession = useCallback((data: { accessToken: string; refreshToken: string; user: AuthUser }) => {
+    tokenManager.set(data.accessToken, data.refreshToken)
+    const authUser: AuthUser = {
+      id: data.user.id,
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role,
+      mfaVerified: !!data.user.mfaVerified,
+    }
+    setUser(authUser)
+    auditLog('LOGIN', { outcome: 'success' })
+  }, [])
+
   const login = useCallback(async (email: string, password: string) => {
     if (DEMO_MODE) {
       const { DEMO_USERS } = await import('./demoCredentials')
@@ -111,21 +131,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
       setUser(authUser)
       auditLog('LOGIN', { userId: authUser.id, outcome: 'success' })
-      return
+      return { status: 'authenticated' as const }
     }
 
     const { data } = await authApi.login(email, password)
-    tokenManager.set(data.accessToken, data.refreshToken)
-    const authUser: AuthUser = {
-      id: data.user.id,
-      name: data.user.name,
-      email: data.user.email,
-      role: data.user.role,
-      mfaVerified: !!data.user.mfaVerified,
+
+    if ('mfaRequired' in data && data.mfaRequired) {
+      return {
+        status: 'mfa_required' as const,
+        mfaToken: data.mfaToken,
+        email: data.user.email,
+        name: data.user.name,
+      }
     }
-    setUser(authUser)
-    auditLog('LOGIN', { outcome: 'success' })
+
+    if ('mfaEnrollmentRequired' in data && data.mfaEnrollmentRequired) {
+      return {
+        status: 'mfa_enrollment_required' as const,
+        mfaToken: data.mfaToken,
+        email: data.user.email,
+        name: data.user.name,
+      }
+    }
+
+    if (!('accessToken' in data)) {
+      throw new Error('Unexpected login response')
+    }
+
+    applySession(data)
+    return { status: 'authenticated' as const }
+  }, [applySession])
+
+  const completeMfaLogin = useCallback(async (mfaToken: string, code: string) => {
+    const { data } = await authApi.verifyMfa(mfaToken, code)
+    applySession(data)
+  }, [applySession])
+
+  const beginMfaEnrollment = useCallback(async (mfaToken: string) => {
+    const { data } = await authApi.beginMfaSetup(mfaToken)
+    return { secret: data.secret, otpauthUrl: data.otpauthUrl }
   }, [])
+
+  const completeMfaEnrollment = useCallback(async (mfaToken: string, code: string) => {
+    const { data } = await authApi.confirmMfaSetup(code, mfaToken)
+    if ('accessToken' in data) {
+      applySession(data)
+    } else {
+      throw new Error('Enrollment did not return a session')
+    }
+  }, [applySession])
 
   const logout = useCallback(async (reason = 'user_initiated') => {
     const uid = user?.id
@@ -187,7 +241,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user])
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, can, atLeast }}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      completeMfaLogin,
+      completeMfaEnrollment,
+      beginMfaEnrollment,
+      logout,
+      can,
+      atLeast,
+    }}>
       {children}
     </AuthContext.Provider>
   )

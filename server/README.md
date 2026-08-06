@@ -17,9 +17,14 @@ npm run dev            # starts on :3001
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/login` | None | Login, returns JWT + refresh token |
+| POST | `/api/auth/login` | None | Login — may return MFA challenge/enrollment |
+| POST | `/api/auth/mfa/verify` | MFA pending | Complete login with TOTP |
+| POST | `/api/auth/mfa/setup/begin` | MFA enroll token or JWT | Start TOTP enrollment |
+| POST | `/api/auth/mfa/setup/confirm` | MFA enroll token or JWT | Confirm TOTP and enable MFA |
+| POST | `/api/auth/mfa/disable` | JWT | Disable MFA with current TOTP |
 | POST | `/api/auth/refresh` | None | Rotate refresh token |
 | POST | `/api/auth/logout` | None | Revoke refresh token |
+| GET  | `/api/auth/me` | JWT | Current user |
 | GET | `/api/residents` | JWT | List all residents |
 | GET | `/api/residents/:id` | JWT | Get single resident |
 | POST | `/api/residents` | JWT (staff+) | Create resident |

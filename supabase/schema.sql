@@ -228,17 +228,21 @@ begin
   end loop;
 end $$;
 
+-- ── profiles (auth role source of truth for RLS) ─────────────
+create table if not exists public.profiles (
+  id         uuid primary key references auth.users(id) on delete cascade,
+  name       text not null,
+  role       text not null default 'staff'
+             check (role in (
+               'admin','manager','frontdesk','dietary',
+               'activities','server','staff','readonly'
+             )),
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
 -- ── Row Level Security ────────────────────────────────────────
--- RLS enabled on all tables.
--- staff_profiles: all authenticated users can read profiles
---   (needed for name resolution across the app).
---   Only manager/admin should write — enforce via app role checks
---   and tighten these policies when Supabase Auth roles are wired.
--- call_outs: authenticated users can read/write EXCEPT a staff
---   member must not see their own records. Add a per-row policy
---   here once auth.uid() → staff_profiles.auth_user_id is live:
---     using (staff_id != (select id from staff_profiles where auth_user_id = auth.uid()))
---   For now, the JS store layer enforces this filter.
 alter table public.residents         enable row level security;
 alter table public.inventory         enable row level security;
 alter table public.menu_items        enable row level security;
@@ -251,33 +255,168 @@ alter table public.communications    enable row level security;
 alter table public.staff_profiles    enable row level security;
 alter table public.call_outs         enable row level security;
 
--- Authenticated users can read and write all tables BY DEFAULT.
--- ⚠️  Tighten before go-live: replace auth_all with least-privilege policies
--- (e.g. role claims from JWT / profiles.role). PHI tables must not use using(true).
+-- Helper: current user's app role from profiles
+create or replace function public.current_app_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role from public.profiles where id = auth.uid()
+$$;
+
+create or replace function public.role_at_least(min_role text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select case public.current_app_role()
+        when 'admin' then 7
+        when 'manager' then 6
+        when 'frontdesk' then 5
+        when 'dietary' then 4
+        when 'activities' then 3
+        when 'server' then 2
+        when 'staff' then 1
+        when 'readonly' then 0
+        else -1
+      end
+    ) >= (
+      case min_role
+        when 'admin' then 7
+        when 'manager' then 6
+        when 'frontdesk' then 5
+        when 'dietary' then 4
+        when 'activities' then 3
+        when 'server' then 2
+        when 'staff' then 1
+        when 'readonly' then 0
+        else 99
+      end
+    ),
+    false
+  )
+$$;
+
+-- Drop legacy permissive policies if present
 do $$ declare
   t text;
+  p text;
 begin
   foreach t in array array[
     'residents','inventory','menu_items','menu_weeks',
     'budget_periods','budget_entries','time_punches',
     'production_sheets','communications',
-    'staff_profiles','call_outs'
+    'staff_profiles','call_outs','profiles'
   ] loop
-    execute format('drop policy if exists "auth_all" on public.%I', t);
-    -- Temporary scaffolding policy — DENY by default until real policies are added.
-    -- Uncomment the permissive policy only for local prototyping:
-    -- execute format(
-    --   'create policy "auth_all" on public.%I
-    --    for all to authenticated using (true) with check (true)',
-    --   t
-    -- );
-    execute format(
-      'create policy "authenticated_select" on public.%I
-       for select to authenticated using (auth.role() = ''authenticated'')',
-      t
-    );
+    foreach p in array array['auth_all','authenticated_select'] loop
+      execute format('drop policy if exists %I on public.%I', p, t);
+    end loop;
   end loop;
 end $$;
 
--- Write policies intentionally omitted until role-aware RLS is implemented.
--- Without INSERT/UPDATE/DELETE policies, the anon/authenticated roles cannot mutate rows.
+-- profiles: users read self; managers+ manage all
+create policy "profiles_select_self_or_manager"
+  on public.profiles for select to authenticated
+  using (id = auth.uid() or public.role_at_least('manager'));
+
+create policy "profiles_update_self"
+  on public.profiles for update to authenticated
+  using (id = auth.uid())
+  with check (id = auth.uid() and role = (select role from public.profiles where id = auth.uid()));
+
+create policy "profiles_admin_write"
+  on public.profiles for all to authenticated
+  using (public.role_at_least('admin'))
+  with check (public.role_at_least('admin'));
+
+-- PHI / operational tables: authenticated read for readonly+; write for staff+
+create policy "residents_select" on public.residents
+  for select to authenticated using (public.role_at_least('readonly'));
+create policy "residents_write" on public.residents
+  for all to authenticated
+  using (public.role_at_least('staff'))
+  with check (public.role_at_least('staff'));
+
+create policy "inventory_select" on public.inventory
+  for select to authenticated using (public.role_at_least('readonly'));
+create policy "inventory_write" on public.inventory
+  for all to authenticated
+  using (public.role_at_least('dietary'))
+  with check (public.role_at_least('dietary'));
+
+create policy "menu_items_select" on public.menu_items
+  for select to authenticated using (public.role_at_least('readonly'));
+create policy "menu_items_write" on public.menu_items
+  for all to authenticated
+  using (public.role_at_least('staff'))
+  with check (public.role_at_least('staff'));
+
+create policy "menu_weeks_select" on public.menu_weeks
+  for select to authenticated using (public.role_at_least('readonly'));
+create policy "menu_weeks_write" on public.menu_weeks
+  for all to authenticated
+  using (public.role_at_least('staff'))
+  with check (public.role_at_least('staff'));
+
+create policy "budget_periods_select" on public.budget_periods
+  for select to authenticated using (public.role_at_least('manager'));
+create policy "budget_periods_write" on public.budget_periods
+  for all to authenticated
+  using (public.role_at_least('manager'))
+  with check (public.role_at_least('manager'));
+
+create policy "budget_entries_select" on public.budget_entries
+  for select to authenticated using (public.role_at_least('manager'));
+create policy "budget_entries_write" on public.budget_entries
+  for all to authenticated
+  using (public.role_at_least('manager'))
+  with check (public.role_at_least('manager'));
+
+create policy "time_punches_select" on public.time_punches
+  for select to authenticated using (public.role_at_least('staff'));
+create policy "time_punches_write" on public.time_punches
+  for insert to authenticated
+  with check (public.role_at_least('staff'));
+
+create policy "production_sheets_select" on public.production_sheets
+  for select to authenticated using (public.role_at_least('readonly'));
+create policy "production_sheets_write" on public.production_sheets
+  for all to authenticated
+  using (public.role_at_least('dietary'))
+  with check (public.role_at_least('dietary'));
+
+create policy "communications_select" on public.communications
+  for select to authenticated using (public.role_at_least('readonly'));
+create policy "communications_write" on public.communications
+  for all to authenticated
+  using (public.role_at_least('staff'))
+  with check (public.role_at_least('staff'));
+
+-- staff_profiles: all authenticated can read; manager+ write
+create policy "staff_profiles_select" on public.staff_profiles
+  for select to authenticated using (public.role_at_least('readonly'));
+create policy "staff_profiles_write" on public.staff_profiles
+  for all to authenticated
+  using (public.role_at_least('manager'))
+  with check (public.role_at_least('manager'));
+
+-- call_outs: never visible to the subject staff member; managers file/read others
+create policy "call_outs_select" on public.call_outs
+  for select to authenticated
+  using (
+    public.role_at_least('manager')
+    and staff_id <> (
+      select id from public.staff_profiles where auth_user_id = auth.uid() limit 1
+    )
+  );
+create policy "call_outs_write" on public.call_outs
+  for all to authenticated
+  using (public.role_at_least('manager'))
+  with check (public.role_at_least('manager'));
+

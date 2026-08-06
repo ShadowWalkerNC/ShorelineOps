@@ -1,24 +1,41 @@
 /**
- * Login page — JWT auth by default.
+ * Login page — JWT auth by default, with MFA challenge / enrollment steps.
  * Demo credential panel only when VITE_DEMO_MODE=true.
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
+import { safeRedirectPath } from '@/lib/safeRedirect'
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
+type Step = 'credentials' | 'mfa' | 'enroll'
+
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth()
-  const navigate  = useNavigate()
-  const location  = useLocation()
-  const [email, setEmail]       = useState('')
+  const {
+    login,
+    completeMfaLogin,
+    completeMfaEnrollment,
+    beginMfaEnrollment,
+    isAuthenticated,
+  } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaToken, setMfaToken] = useState('')
+  const [otpauthUrl, setOtpauthUrl] = useState('')
+  const [mfaSecret, setMfaSecret] = useState('')
+  const [step, setStep] = useState<Step>('credentials')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const [demoAccounts, setDemoAccounts] = useState<Array<{ role: string; email: string; password: string }>>([])
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
+  const from = safeRedirectPath(
+    (location.state as { from?: { pathname: string } })?.from?.pathname
+  )
+
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true })
   }, [isAuthenticated, navigate, from])
@@ -33,11 +50,32 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
+      if (step === 'credentials') {
+        const result = await login(email, password)
+        if (result.status === 'mfa_required') {
+          setMfaToken(result.mfaToken)
+          setStep('mfa')
+        } else if (result.status === 'mfa_enrollment_required') {
+          setMfaToken(result.mfaToken)
+          const setup = await beginMfaEnrollment(result.mfaToken)
+          setOtpauthUrl(setup.otpauthUrl)
+          setMfaSecret(setup.secret)
+          setStep('enroll')
+        }
+      } else if (step === 'mfa') {
+        await completeMfaLogin(mfaToken, mfaCode.trim())
+      } else if (step === 'enroll') {
+        await completeMfaEnrollment(mfaToken, mfaCode.trim())
+      }
     } catch {
-      setError(DEMO_MODE
-        ? 'Invalid email or password. Use the demo credentials below.'
-        : 'Invalid email or password.')
+      setError(
+        step === 'credentials'
+          ? (DEMO_MODE
+            ? 'Invalid email or password. Use the demo credentials below.'
+            : 'Invalid email or password.')
+          : 'Invalid authentication code.'
+      )
+    } finally {
       setLoading(false)
     }
   }
@@ -46,6 +84,7 @@ export default function LoginPage() {
     setEmail(acct.email)
     setPassword(acct.password)
     setError('')
+    setStep('credentials')
   }
 
   const inp: React.CSSProperties = {
@@ -90,20 +129,87 @@ export default function LoginPage() {
               fontSize: 11, color: 'var(--text-muted)',
               fontWeight: 600, letterSpacing: '0.5px',
               textTransform: 'uppercase',
-            }}>Operations Platform</div>
+            }}>
+              {step === 'credentials' && 'Operations Platform'}
+              {step === 'mfa' && 'Multi-Factor Authentication'}
+              {step === 'enroll' && 'Set Up Authenticator'}
+            </div>
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                required autoComplete="email" style={inp} />
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required autoComplete="current-password" style={inp} />
-            </div>
+            {step === 'credentials' && (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                    required autoComplete="email" style={inp} />
+                </div>
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                    required autoComplete="current-password" style={inp} />
+                </div>
+              </>
+            )}
+
+            {step === 'mfa' && (
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                  Enter the 6-digit code from your authenticator app.
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  value={mfaCode}
+                  onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  style={{ ...inp, letterSpacing: '0.3em', fontFamily: 'monospace', textAlign: 'center' }}
+                />
+                <button type="button" onClick={() => { setStep('credentials'); setMfaCode(''); setError('') }}
+                  style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: 12 }}>
+                  ← Back to sign in
+                </button>
+              </div>
+            )}
+
+            {step === 'enroll' && (
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                  MFA is required for this facility. Add this account in your authenticator app, then enter a code to confirm.
+                </p>
+                {otpauthUrl && (
+                  <div style={{
+                    marginBottom: 12, padding: 12, borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-app)', border: '1px solid var(--border-color)',
+                    fontSize: 11, wordBreak: 'break-all', color: 'var(--text-muted)',
+                  }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>otpauth URI</div>
+                    {otpauthUrl}
+                  </div>
+                )}
+                {mfaSecret && (
+                  <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Manual key: <code style={{ fontFamily: 'monospace' }}>{mfaSecret}</code>
+                  </div>
+                )}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  value={mfaCode}
+                  onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  style={{ ...inp, letterSpacing: '0.3em', fontFamily: 'monospace', textAlign: 'center' }}
+                />
+              </div>
+            )}
 
             {error && (
               <div style={{
@@ -122,11 +228,19 @@ export default function LoginPage() {
               fontSize: 14, fontWeight: 600,
               cursor: loading ? 'not-allowed' : 'pointer',
               minHeight: 44, transition: 'background 0.2s ease',
-            }}>{loading ? 'Signing in...' : 'Sign in'}</button>
+            }}>
+              {loading
+                ? 'Please wait...'
+                : step === 'credentials'
+                  ? 'Sign in'
+                  : step === 'mfa'
+                    ? 'Verify code'
+                    : 'Enable MFA & continue'}
+            </button>
           </form>
         </div>
 
-        {DEMO_MODE && demoAccounts.length > 0 && (
+        {DEMO_MODE && demoAccounts.length > 0 && step === 'credentials' && (
           <div style={{
             background: 'rgba(255,255,255,0.04)',
             border: '1px dashed rgba(255,255,255,0.15)',
@@ -151,9 +265,6 @@ export default function LoginPage() {
                   <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{acct.password}</span>
                 </button>
               ))}
-            </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 10, lineHeight: 1.5 }}>
-              Demo mode only — never enable VITE_DEMO_MODE with real PHI.
             </div>
           </div>
         )}
