@@ -1,9 +1,21 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+
+const RoleEnum = z.enum([
+  'admin',
+  'manager',
+  'frontdesk',
+  'dietary',
+  'activities',
+  'server',
+  'staff',
+  'readonly',
+])
 
 export const adminRouter = Router()
 
@@ -70,12 +82,12 @@ adminRouter.post('/users', requireRole('admin'), async (req: AuthRequest, res, n
     const data = z.object({
       name: z.string().min(1),
       email: z.string().email(),
-      role: z.enum(['admin', 'staff', 'readonly']),
+      role: RoleEnum,
       password: z.string().min(12).optional(),
     }).parse(req.body)
 
-    // Generate a random initial password if one is not supplied
-    const plainPassword = data.password ?? (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2))
+    // Generate a cryptographically strong initial password if one is not supplied
+    const plainPassword = data.password ?? (crypto.randomBytes(18).toString('base64url') + 'A1!')
     const passwordHash = await bcrypt.hash(plainPassword, 12)
 
     const { rows } = await pool.query(
@@ -98,7 +110,7 @@ adminRouter.post('/users', requireRole('admin'), async (req: AuthRequest, res, n
 adminRouter.patch('/users/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
   try {
     const data = z.object({
-      role:     z.enum(['admin', 'staff', 'readonly']).optional(),
+      role:     RoleEnum.optional(),
       active:   z.boolean().optional(),
       password: z.string().min(12).optional(),
     }).parse(req.body)

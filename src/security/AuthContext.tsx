@@ -1,26 +1,17 @@
 /**
- * ============================================================
- * AUTH CONTEXT — DEMO MODE
- * ============================================================
- * Uses hardcoded local credentials so the app works as a
- * fully self-contained demo with NO backend required.
- *
- * ⚠️  DEMO ONLY — Do NOT use in production.
- *     Replace with Supabase auth + RLS in production.
- *     See DEMO.md for migration guide.
- *
- * Roles (lowest → highest privilege):
- *   readonly → staff → server → dietary → activities → manager → admin
- * ============================================================
+ * Auth context — JWT-backed by default.
+ * Demo credentials are only available when VITE_DEMO_MODE=true (never for PHI).
  */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { UserRole, Permission } from '../types/roles'
 import { ROLE_PERMISSIONS, ROLE_RANK, hasPermission } from '../types/roles'
+import { authApi } from '../api/auth'
+import { tokenManager } from './tokenManager'
+import { auditLog } from './auditLog'
 
 export type { UserRole }
 
 export interface AuthUser {
-  /** Matches the staffProfile.authUserId for linking */
   id: string
   name: string
   email: string
@@ -32,133 +23,210 @@ interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<
+    | { status: 'authenticated' }
+    | { status: 'mfa_required'; mfaToken: string; email: string; name: string }
+    | { status: 'mfa_enrollment_required'; mfaToken: string; email: string; name: string }
+  >
+  completeMfaLogin: (mfaToken: string, code: string) => Promise<void>
+  completeMfaEnrollment: (mfaToken: string, code: string) => Promise<void>
+  beginMfaEnrollment: (mfaToken: string) => Promise<{ secret: string; otpauthUrl: string }>
   logout: (reason?: string) => Promise<void>
-  /** Returns true if the current user has the given permission */
   can: (permission: Permission) => boolean
-  /** Returns true if the current user's role is at least as privileged as the given role */
   atLeast: (role: UserRole) => boolean
 }
 
-// ── Demo credential store ─────────────────────────────────────────────────────
-// Seven accounts cover all role levels for demo/review purposes.
-// Replace this block with Supabase auth.signInWithPassword() in production.
-const DEMO_USERS: (AuthUser & { password: string })[] = [
-  {
-    id: 'demo-admin-1',
-    name: 'Alex Rivera',
-    email: 'admin@shoreline.demo',
-    password: 'Admin1234!',
-    role: 'admin',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-manager-1',
-    name: 'Morgan Ellis',
-    email: 'manager@shoreline.demo',
-    password: 'Manager1234!',
-    role: 'manager',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-dietary-1',
-    name: 'Jamie Torres',
-    email: 'dietary@shoreline.demo',
-    password: 'Dietary1234!',
-    role: 'dietary',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-activities-1',
-    name: 'Casey Nguyen',
-    email: 'activities@shoreline.demo',
-    password: 'Activities1234!',
-    role: 'activities',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-server-1',
-    name: 'Jordan Lee',
-    email: 'server@shoreline.demo',
-    password: 'Server1234!',
-    role: 'server',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-staff-1',
-    name: 'Staff User',
-    email: 'staff@shoreline.demo',
-    password: 'Staff1234!',
-    role: 'staff',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-readonly-1',
-    name: 'Read-Only User',
-    email: 'readonly@shoreline.demo',
-    password: 'Readonly1234!',
-    role: 'readonly',
-    mfaVerified: true,
-  },
-]
-
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 const SESSION_KEY = 'shoreline_demo_user'
+const IDLE_TIMEOUT_MS = Number(import.meta.env.VITE_SESSION_TIMEOUT_MS ?? 15 * 60 * 1000)
 
-// ── Context ───────────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+function isAuthUser(value: unknown): value is AuthUser {
+  if (!value || typeof value !== 'object') return false
+  const u = value as Record<string, unknown>
+  return (
+    typeof u.id === 'string' &&
+    typeof u.name === 'string' &&
+    typeof u.email === 'string' &&
+    typeof u.role === 'string'
+  )
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(SESSION_KEY)
-      if (stored) setUser(JSON.parse(stored))
-    } catch {
-      // ignore bad stored value
-    } finally {
-      setIsLoading(false)
+    let cancelled = false
+
+    async function restore() {
+      try {
+        if (DEMO_MODE) {
+          const stored = sessionStorage.getItem(SESSION_KEY)
+          if (stored) {
+            const parsed = JSON.parse(stored) as unknown
+            if (isAuthUser(parsed)) {
+              if (!cancelled) setUser({ ...parsed, mfaVerified: !!parsed.mfaVerified })
+            }
+          }
+          return
+        }
+
+        if (!tokenManager.hasRefreshToken()) return
+
+        try {
+          await tokenManager.refresh()
+        } catch {
+          tokenManager.clear()
+          return
+        }
+
+        const { data } = await authApi.me()
+        if (!cancelled && isAuthUser(data)) {
+          setUser({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            mfaVerified: !!data.mfaVerified,
+          })
+        }
+      } catch {
+        tokenManager.clear()
+        sessionStorage.removeItem(SESSION_KEY)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
     }
+
+    void restore()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const applySession = useCallback((data: { accessToken: string; refreshToken: string; user: AuthUser }) => {
+    tokenManager.set(data.accessToken, data.refreshToken)
+    const authUser: AuthUser = {
+      id: data.user.id,
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role,
+      mfaVerified: !!data.user.mfaVerified,
+    }
+    setUser(authUser)
+    auditLog('LOGIN', { outcome: 'success' })
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    await new Promise(r => setTimeout(r, 400))
-    const match = DEMO_USERS.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    )
-    if (!match) throw new Error('Invalid email or password')
-    const { password: _pw, ...authUser } = match
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
-    setUser(authUser)
+    if (DEMO_MODE) {
+      const { DEMO_USERS } = await import('./demoCredentials')
+      await new Promise((r) => setTimeout(r, 200))
+      const match = DEMO_USERS.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      )
+      if (!match) throw new Error('Invalid email or password')
+      const { password: _pw, ...authUser } = match
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
+      setUser(authUser)
+      auditLog('LOGIN', { userId: authUser.id, outcome: 'success' })
+      return { status: 'authenticated' as const }
+    }
+
+    const { data } = await authApi.login(email, password)
+
+    if ('mfaRequired' in data && data.mfaRequired) {
+      return {
+        status: 'mfa_required' as const,
+        mfaToken: data.mfaToken,
+        email: data.user.email,
+        name: data.user.name,
+      }
+    }
+
+    if ('mfaEnrollmentRequired' in data && data.mfaEnrollmentRequired) {
+      return {
+        status: 'mfa_enrollment_required' as const,
+        mfaToken: data.mfaToken,
+        email: data.user.email,
+        name: data.user.name,
+      }
+    }
+
+    if (!('accessToken' in data)) {
+      throw new Error('Unexpected login response')
+    }
+
+    applySession(data)
+    return { status: 'authenticated' as const }
+  }, [applySession])
+
+  const completeMfaLogin = useCallback(async (mfaToken: string, code: string) => {
+    const { data } = await authApi.verifyMfa(mfaToken, code)
+    applySession(data)
+  }, [applySession])
+
+  const beginMfaEnrollment = useCallback(async (mfaToken: string) => {
+    const { data } = await authApi.beginMfaSetup(mfaToken)
+    return { secret: data.secret, otpauthUrl: data.otpauthUrl }
   }, [])
 
-  const logout = useCallback(async (_reason = 'user_initiated') => {
-    sessionStorage.removeItem(SESSION_KEY)
-    setUser(null)
-  }, [])
+  const completeMfaEnrollment = useCallback(async (mfaToken: string, code: string) => {
+    const { data } = await authApi.confirmMfaSetup(code, mfaToken)
+    if ('accessToken' in data) {
+      applySession(data)
+    } else {
+      throw new Error('Enrollment did not return a session')
+    }
+  }, [applySession])
 
-  // 10-minute inactivity auto-logout tracker (HIPAA §164.312(a)(2)(iii))
+  const logout = useCallback(async (reason = 'user_initiated') => {
+    const uid = user?.id
+    try {
+      if (!DEMO_MODE) {
+        const refreshToken = sessionStorage.getItem('_rt')
+        if (refreshToken) {
+          // Ship audit while access token is still valid
+          auditLog(reason === 'idle_timeout' ? 'SESSION_TIMEOUT' : 'LOGOUT', {
+            userId: uid,
+            outcome: 'success',
+            details: { reason },
+          })
+          await authApi.logout(refreshToken).catch(() => undefined)
+        }
+      } else {
+        auditLog(reason === 'idle_timeout' ? 'SESSION_TIMEOUT' : 'LOGOUT', {
+          userId: uid,
+          outcome: 'success',
+          details: { reason },
+        })
+      }
+    } finally {
+      tokenManager.clear()
+      sessionStorage.removeItem(SESSION_KEY)
+      setUser(null)
+    }
+  }, [user?.id])
+
   useEffect(() => {
     if (!user) return
 
-    const IDLE_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes
     let timeoutId: ReturnType<typeof setTimeout>
-
     const resetTimer = () => {
       clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {
-        logout('idle_timeout')
+        void logout('idle_timeout')
       }, IDLE_TIMEOUT_MS)
     }
 
-    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
-    events.forEach(evt => window.addEventListener(evt, resetTimer))
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'] as const
+    events.forEach((evt) => window.addEventListener(evt, resetTimer))
     resetTimer()
 
     return () => {
       clearTimeout(timeoutId)
-      events.forEach(evt => window.removeEventListener(evt, resetTimer))
+      events.forEach((evt) => window.removeEventListener(evt, resetTimer))
     }
   }, [user, logout])
 
@@ -173,7 +241,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user])
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, can, atLeast }}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      completeMfaLogin,
+      completeMfaEnrollment,
+      beginMfaEnrollment,
+      logout,
+      can,
+      atLeast,
+    }}>
       {children}
     </AuthContext.Provider>
   )
@@ -185,11 +264,6 @@ export function useAuth(): AuthContextValue {
   return ctx
 }
 
-// ── Role guard component ──────────────────────────────────────────────────────
-/**
- * Renders children only if the current user has AT LEAST the given role.
- * Renders fallback (or null) otherwise.
- */
 export function RequireRole({
   role,
   children,
@@ -204,9 +278,6 @@ export function RequireRole({
   return <>{children}</>
 }
 
-/**
- * Renders children only if the current user has the given permission.
- */
 export function RequirePermission({
   permission,
   children,
@@ -221,6 +292,5 @@ export function RequirePermission({
   return <>{children}</>
 }
 
-// Re-export for consumers that imported from here previously
 export type UserRoleType = UserRole
 export { ROLE_PERMISSIONS }

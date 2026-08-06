@@ -1,8 +1,6 @@
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { pool } from './pool'
-
-const ADMIN_EMAIL = 'admin@shoreline.app'
-const ADMIN_PASSWORD = 'Shoreline2026!'
 
 const RESIDENTS = [
   { name: 'Margaret Holloway', room: '101', status: 'Active', diet_type: 'Diabetic', texture: 'Regular', portion_size: 'Small', ensure_per_day: 1, allergies: ['Nuts'], beverages: ['Coffee', 'Water Only'], birthday_month: 'March', birthday_day: 14, serving_location: 'Dining Room', table_assignment: 'Table 2', likes: 'Oatmeal, classical music', dislikes: 'Spicy food', special_instructions: 'Needs assistance with utensils' },
@@ -16,44 +14,67 @@ const RESIDENTS = [
 ]
 
 export async function runSeed() {
+  const isProd = process.env.NODE_ENV === 'production'
+  if (isProd && process.env.ALLOW_AUTO_SEED !== 'true') {
+    console.log('[seed] Skipping auto-seed in production (set ALLOW_AUTO_SEED=true to override)')
+    return
+  }
+
   const { rows } = await pool.query('SELECT COUNT(*) FROM users')
   if (parseInt(rows[0].count) > 0) {
     console.log('[seed] Users already exist — skipping seed')
     return
   }
 
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL || 'admin@shoreline.local').toLowerCase()
+  let adminPassword = process.env.SEED_ADMIN_PASSWORD
+  let generated = false
+  if (!adminPassword || adminPassword.length < 12) {
+    adminPassword = crypto.randomBytes(18).toString('base64url') + 'A1!'
+    generated = true
+  }
+
   console.log('[seed] Empty database detected — seeding...')
 
-  const hash = await bcrypt.hash(ADMIN_PASSWORD, 12)
+  const hash = await bcrypt.hash(adminPassword, 12)
   await pool.query(
     `INSERT INTO users (name, email, password, role)
      VALUES ('Admin User', $1, $2, 'admin')
      ON CONFLICT (email) DO NOTHING`,
-    [ADMIN_EMAIL, hash]
+    [adminEmail, hash]
   )
-  console.log(`[seed] Admin created: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
 
-  for (const r of RESIDENTS) {
-    await pool.query(
-      `INSERT INTO residents
-        (name, room, status, diet_type, texture, portion_size, ensure_per_day,
-         allergies, beverages, birthday_month, birthday_day, serving_location,
-         table_assignment, likes, dislikes, special_instructions)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-       ON CONFLICT DO NOTHING`,
-      [
-        r.name, r.room, r.status, r.diet_type, r.texture, r.portion_size,
-        r.ensure_per_day, r.allergies, r.beverages, r.birthday_month,
-        r.birthday_day, r.serving_location, r.table_assignment,
-        r.likes, r.dislikes, r.special_instructions,
-      ]
-    )
+  if (generated) {
+    console.log(`[seed] Admin created: ${adminEmail}`)
+    console.log('[seed] Generated password written once below — store it securely and rotate immediately:')
+    console.log(`[seed] SEED_ADMIN_PASSWORD=${adminPassword}`)
+  } else {
+    console.log(`[seed] Admin created: ${adminEmail} (password from SEED_ADMIN_PASSWORD)`)
   }
-  console.log(`[seed] ${RESIDENTS.length} residents inserted`)
+
+  if (process.env.SEED_SAMPLE_RESIDENTS === 'true') {
+    for (const r of RESIDENTS) {
+      await pool.query(
+        `INSERT INTO residents
+          (name, room, status, diet_type, texture, portion_size, ensure_per_day,
+           allergies, beverages, birthday_month, birthday_day, serving_location,
+           table_assignment, likes, dislikes, special_instructions)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         ON CONFLICT DO NOTHING`,
+        [
+          r.name, r.room, r.status, r.diet_type, r.texture, r.portion_size,
+          r.ensure_per_day, r.allergies, r.beverages, r.birthday_month,
+          r.birthday_day, r.serving_location, r.table_assignment,
+          r.likes, r.dislikes, r.special_instructions,
+        ]
+      )
+    }
+    console.log(`[seed] ${RESIDENTS.length} sample residents inserted`)
+  }
+
   console.log('[seed] Done.')
 }
 
-// Allow running directly: npx tsx src/db/seed.ts
 if (require.main === module) {
   import('dotenv/config').then(() =>
     runSeed()

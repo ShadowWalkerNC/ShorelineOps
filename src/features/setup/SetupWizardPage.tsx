@@ -19,6 +19,7 @@ export default function SetupWizardPage() {
     adminEmail: '',
     adminPassword: '',
     adminPasswordConfirm: '',
+    setupSecret: '',
     baaSigneeName: '',
     baaAccepted: false,
     initMode: 'sample' as 'clean' | 'sample',
@@ -55,6 +56,14 @@ export default function SetupWizardPage() {
       setError('Admin passwords do not match.')
       return
     }
+    if (formData.adminPassword.length < 12) {
+      setError('Admin password must be at least 12 characters and include upper, lower, number, and special character.')
+      return
+    }
+    if (!formData.setupSecret || formData.setupSecret.length < 16) {
+      setError('Setup bootstrap secret is required (must match server SETUP_BOOTSTRAP_SECRET).')
+      return
+    }
     if (!formData.baaAccepted) {
       setError('You must read and accept the Business Associate Agreement (BAA) to proceed.')
       return
@@ -64,7 +73,10 @@ export default function SetupWizardPage() {
     try {
       const res = await fetch('/api/setup/initialize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Setup-Secret': formData.setupSecret,
+        },
         body: JSON.stringify({
           facilityName: formData.facilityName,
           npiLicense: formData.npiLicense,
@@ -426,7 +438,7 @@ export default function SetupWizardPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semi)', marginBottom: 6, color: 'var(--text-primary)' }}>
-                    Password (min 8 chars) <span style={{ color: 'var(--color-danger)' }}>*</span>
+                    Password (min 12 chars, mixed case, number, special) <span style={{ color: 'var(--color-danger)' }}>*</span>
                   </label>
                   <input
                     type="password"
@@ -661,6 +673,32 @@ export default function SetupWizardPage() {
                     Every login, diet order change, resident record view, and timecard punch is logged with IP address and user ID.
                   </p>
                 </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semi)', marginBottom: 6, color: 'var(--text-primary)' }}>
+                  Setup Bootstrap Secret <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </label>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Must match the server environment variable <code>SETUP_BOOTSTRAP_SECRET</code> (min 16 characters).
+                </p>
+                <input
+                  type="password"
+                  placeholder="Enter setup secret from server env"
+                  value={formData.setupSecret}
+                  onChange={(e) => setFormData({ ...formData, setupSecret: e.target.value })}
+                  autoComplete="off"
+                  style={{
+                    width: '100%',
+                    height: 'var(--input-height)',
+                    padding: '0 14px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    fontSize: 'var(--text-base)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
               </div>
             </div>
           )}

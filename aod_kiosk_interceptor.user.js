@@ -12,10 +12,15 @@
 (function() {
     'use strict';
 
-    // Shoreline-Rebuild API configuration (Replace with your actual production domain)
+    // Shoreline API configuration — set at deploy time; never commit real secrets
     const SHORELINE_API_URL = "http://localhost:3001/api";
-    const KIOSK_API_SECRET = "YOUR_SHARED_KIOSK_SECRET"; // Match KIOSK_API_SECRET env var on server
+    // Must match server KIOSK_API_SECRET (≥16 chars). Leave placeholder empty until configured.
+    const KIOSK_API_SECRET = "";
 
+    if (!KIOSK_API_SECRET || KIOSK_API_SECRET.length < 16) {
+        console.warn("[Shoreline Interceptor] KIOSK_API_SECRET not configured — punches will not be forwarded.");
+        return;
+    }
     function initializeHook() {
         if (typeof window.submitEntry === 'function' && !window.submitEntry.__isHooked) {
             const originalSubmitEntry = window.submitEntry;

@@ -21,6 +21,16 @@ import { runSeed } from './db/seed'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
+const isProd = process.env.NODE_ENV === 'production'
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  if (isProd) {
+    console.error('[Shoreline API] JWT_SECRET must be set (≥32 chars) in production')
+    process.exit(1)
+  }
+  console.warn('[Shoreline API] JWT_SECRET missing or short — set a strong secret before production use')
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'dev-only-insecure-jwt-secret-change-me!!'
+}
 
 // Security middleware
 app.use(

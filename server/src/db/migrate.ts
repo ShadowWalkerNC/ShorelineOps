@@ -11,7 +11,10 @@ const migrations: { name: string; sql: string }[] = [
         name        TEXT NOT NULL,
         email       TEXT UNIQUE NOT NULL,
         password    TEXT NOT NULL,
-        role        TEXT NOT NULL CHECK (role IN ('admin', 'staff', 'readonly')),
+        role        TEXT NOT NULL CHECK (role IN (
+          'admin', 'manager', 'frontdesk', 'dietary',
+          'activities', 'server', 'staff', 'readonly'
+        )),
         mfa_enabled BOOLEAN NOT NULL DEFAULT false,
         active      BOOLEAN NOT NULL DEFAULT true,
         created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -226,6 +229,26 @@ const migrations: { name: string; sql: string }[] = [
       CREATE TRIGGER trg_prevent_audit_log_delete
       BEFORE DELETE ON audit_log
       FOR EACH ROW EXECUTE FUNCTION prevent_audit_log_alteration();
+    `,
+  },
+  {
+    name: '008_expand_user_roles',
+    sql: `
+      ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+      ALTER TABLE users ADD CONSTRAINT users_role_check
+        CHECK (role IN (
+          'admin', 'manager', 'frontdesk', 'dietary',
+          'activities', 'server', 'staff', 'readonly'
+        ));
+    `,
+  },
+  {
+    name: '009_mfa_secret',
+    sql: `
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS mfa_secret TEXT;
+
+      COMMENT ON COLUMN users.mfa_secret IS 'Base32 TOTP secret; null when MFA not enrolled';
     `,
   },
 ]

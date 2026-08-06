@@ -1,6 +1,17 @@
 .env
 .env.local
 .env.*.local
+server/.env
+server/.env.local
 node_modules
+server/node_modules
 dist
+server/dist
 .DS_Store
+*.db
+*.sqlite
+*.sqlite3
+.netlify
+.vercel
+coverage
+*.log
