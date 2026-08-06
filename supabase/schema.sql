@@ -251,8 +251,9 @@ alter table public.communications    enable row level security;
 alter table public.staff_profiles    enable row level security;
 alter table public.call_outs         enable row level security;
 
--- Authenticated users can read and write all tables
--- Tighten call_outs and staff_profiles policies before go-live
+-- Authenticated users can read and write all tables BY DEFAULT.
+-- ⚠️  Tighten before go-live: replace auth_all with least-privilege policies
+-- (e.g. role claims from JWT / profiles.role). PHI tables must not use using(true).
 do $$ declare
   t text;
 begin
@@ -262,10 +263,21 @@ begin
     'production_sheets','communications',
     'staff_profiles','call_outs'
   ] loop
+    execute format('drop policy if exists "auth_all" on public.%I', t);
+    -- Temporary scaffolding policy — DENY by default until real policies are added.
+    -- Uncomment the permissive policy only for local prototyping:
+    -- execute format(
+    --   'create policy "auth_all" on public.%I
+    --    for all to authenticated using (true) with check (true)',
+    --   t
+    -- );
     execute format(
-      'create policy "auth_all" on public.%I
-       for all to authenticated using (true) with check (true)',
+      'create policy "authenticated_select" on public.%I
+       for select to authenticated using (auth.role() = ''authenticated'')',
       t
     );
   end loop;
 end $$;
+
+-- Write policies intentionally omitted until role-aware RLS is implemented.
+-- Without INSERT/UPDATE/DELETE policies, the anon/authenticated roles cannot mutate rows.

@@ -1,14 +1,36 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
 
 export const setupRouter = Router()
 
-// GET /api/setup/status
-setupRouter.get('/status', async (req, res, next) => {
+function requireSetupSecret(req: { headers: Record<string, unknown> }, res: { status: (n: number) => { json: (b: unknown) => unknown } }): boolean {
+  const expected = process.env.SETUP_BOOTSTRAP_SECRET
+  if (!expected || expected.length < 16) {
+    res.status(503).json({
+      error: 'Setup is disabled. Set SETUP_BOOTSTRAP_SECRET (min 16 chars) to enable first-time initialization.',
+    })
+    return false
+  }
+  const header = req.headers['x-setup-secret'] ?? req.headers['authorization']
+  const provided = typeof header === 'string'
+    ? (header.startsWith('Bearer ') ? header.slice(7) : header)
+    : ''
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    res.status(401).json({ error: 'Invalid setup secret.' })
+    return false
+  }
+  return true
+}
+
+// GET /api/setup/status — public, minimal disclosure
+setupRouter.get('/status', async (_req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM facility_config WHERE id = $1', ['default'])
+    const { rows } = await pool.query('SELECT is_initialized, facility_name, facility_type FROM facility_config WHERE id = $1', ['default'])
     const config = rows[0]
     if (!config || !config.is_initialized) {
       return res.json({ isInitialized: false })
@@ -17,20 +39,17 @@ setupRouter.get('/status', async (req, res, next) => {
       isInitialized: true,
       facilityName: config.facility_name,
       facilityType: config.facility_type,
-      primaryContactEmail: config.primary_contact_email,
-      wings: typeof config.wings === 'string' ? JSON.parse(config.wings) : config.wings,
-      diningRooms: typeof config.dining_rooms === 'string' ? JSON.parse(config.dining_rooms) : config.dining_rooms,
-      baaAcceptedAt: config.baa_accepted_at,
     })
-  } catch (err) {
-    // If table doesn't exist yet, return uninitialized
+  } catch {
     res.json({ isInitialized: false })
   }
 })
 
-// POST /api/setup/initialize
+// POST /api/setup/initialize — requires SETUP_BOOTSTRAP_SECRET
 setupRouter.post('/initialize', async (req, res, next) => {
   try {
+    if (!requireSetupSecret(req as any, res as any)) return
+
     const { rows: existing } = await pool.query('SELECT is_initialized FROM facility_config WHERE id = $1', ['default'])
     if (existing[0]?.is_initialized) {
       return res.status(400).json({ error: 'Facility setup has already been completed and locked.' })
@@ -59,7 +78,6 @@ setupRouter.post('/initialize', async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(body.adminPassword, 12)
 
-    // Insert or update facility config
     await pool.query(
       `INSERT INTO facility_config (
         id, facility_name, npi_license, address, primary_contact_email,
@@ -90,7 +108,6 @@ setupRouter.post('/initialize', async (req, res, next) => {
       ]
     )
 
-    // Create Super Admin Account
     await pool.query(
       `INSERT INTO users (name, email, password, role, mfa_enabled, active)
        VALUES ($1, $2, $3, 'admin', true, true)
@@ -102,7 +119,6 @@ setupRouter.post('/initialize', async (req, res, next) => {
       [body.adminName, body.adminEmail.toLowerCase(), hashedPassword]
     )
 
-    // Audit Log for HIPAA compliance tracking
     await pool.query(
       `INSERT INTO audit_log (action, resource_type, outcome, details)
        VALUES ('SETUP_INITIALIZE', 'facility_config', 'success', $1)`,

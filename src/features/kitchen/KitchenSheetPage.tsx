@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { tokenManager } from '@/security/tokenManager'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MEALS = ['Lunch', 'Supper']
@@ -27,7 +28,7 @@ export default function KitchenSheetPage() {
   const [dish1, setDish1] = useState('')
   const [dish2, setDish2] = useState('')
 
-  const token = localStorage.getItem('token')
+  const token = tokenManager.getAccessToken()
 
   const loadData = async () => {
     setLoading(true)

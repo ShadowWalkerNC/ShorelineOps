@@ -7,16 +7,16 @@ import type { AuthRequest } from '../middleware/requireAuth'
 export const auditRouter = Router()
 
 const AuditEventSchema = z.object({
-  action: z.string(),
-  userId: z.string().optional(),
+  action: z.string().min(1).max(64),
   resourceId: z.string().optional(),
   resourceType: z.string().optional(),
   outcome: z.enum(['success', 'failure']),
   userAgent: z.string().optional(),
   details: z.record(z.unknown()).optional(),
+  // Client-supplied userId is intentionally ignored — always use req.userId
 })
 
-// POST /api/audit  — receives events from the frontend auditLog utility
+// POST /api/audit — authenticated; actor taken from JWT only
 auditRouter.post('/', async (req: AuthRequest, res, next) => {
   try {
     const event = AuditEventSchema.parse(req.body)
@@ -26,7 +26,7 @@ auditRouter.post('/', async (req: AuthRequest, res, next) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         event.action,
-        event.userId ?? req.userId ?? null,
+        req.userId ?? null,
         event.resourceId ?? null,
         event.resourceType ?? null,
         event.outcome,
@@ -39,7 +39,7 @@ auditRouter.post('/', async (req: AuthRequest, res, next) => {
   } catch (err) { next(err) }
 })
 
-// GET /api/audit  — admin only, view audit log
+// GET /api/audit — admin only
 auditRouter.get('/', requireRole('admin'), async (_req, res, next) => {
   try {
     const { rows } = await pool.query(

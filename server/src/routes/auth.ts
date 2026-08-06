@@ -4,19 +4,34 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
-import { requireAuth } from '../middleware/requireAuth'
-import type { AuthRequest } from '../middleware/requireAuth'
+import { requireAuth, API_ROLES } from '../middleware/requireAuth'
+import type { AuthRequest, ApiRole } from '../middleware/requireAuth'
 
 export const authRouter = Router()
 
-const JWT_SECRET = process.env.JWT_SECRET!
-const JWT_EXPIRES = (process.env.JWT_EXPIRES_IN ?? '15m') as any
-const REFRESH_EXPIRES_DAYS = 7
+const JWT_EXPIRES = (process.env.JWT_EXPIRES_IN ?? '15m') as jwt.SignOptions['expiresIn']
+const REFRESH_EXPIRES_DAYS = Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7)
 
-function makeTokens(userId: string) {
-  const accessToken = jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret || secret.length < 32) {
+    throw new Error('JWT_SECRET must be set to a value at least 32 characters long')
+  }
+  return secret
+}
+
+function makeTokens(userId: string, role: ApiRole) {
+  const accessToken = jwt.sign(
+    { sub: userId, role },
+    getJwtSecret(),
+    { expiresIn: JWT_EXPIRES }
+  )
   const refreshToken = crypto.randomBytes(48).toString('hex')
   return { accessToken, refreshToken }
+}
+
+function asApiRole(role: string): ApiRole {
+  return (API_ROLES as readonly string[]).includes(role) ? (role as ApiRole) : 'readonly'
 }
 
 // ─────────────────────────────────────────────
@@ -48,7 +63,8 @@ authRouter.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid email or password.' })
     }
 
-    const { accessToken, refreshToken } = makeTokens(user.id)
+    const role = asApiRole(user.role)
+    const { accessToken, refreshToken } = makeTokens(user.id, role)
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
     const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
 
@@ -56,6 +72,10 @@ authRouter.post('/login', async (req, res, next) => {
       `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
        VALUES ($1, $2, $3)`,
       [user.id, tokenHash, expiresAt]
+    )
+    await pool.query(
+      `UPDATE users SET last_login_at = NOW() WHERE id = $1`,
+      [user.id]
     )
     await pool.query(
       `INSERT INTO audit_log (action, user_id, resource_type, outcome)
@@ -70,7 +90,7 @@ authRouter.post('/login', async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role,
         mfaVerified: false,
       },
     })
@@ -94,9 +114,10 @@ authRouter.post('/refresh', async (req, res, next) => {
     )
     if (!rows[0]) return res.status(401).json({ error: 'Invalid or expired refresh token.' })
 
-    // Rotate: delete old, issue new
+    // Rotate: delete old, issue new (include current role from DB)
     await pool.query('DELETE FROM refresh_tokens WHERE id = $1', [rows[0].id])
-    const { accessToken, refreshToken: newRefreshToken } = makeTokens(rows[0].uid)
+    const role = asApiRole(rows[0].role)
+    const { accessToken, refreshToken: newRefreshToken } = makeTokens(rows[0].uid, role)
     const newHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex')
     const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
 
@@ -111,7 +132,7 @@ authRouter.post('/refresh', async (req, res, next) => {
 })
 
 // ─────────────────────────────────────────────
-// GET /api/auth/me  — restore session after page reload
+// GET /api/auth/me
 // ─────────────────────────────────────────────
 authRouter.get('/me', requireAuth, async (req: AuthRequest, res, next) => {
   try {
@@ -124,7 +145,7 @@ authRouter.get('/me', requireAuth, async (req: AuthRequest, res, next) => {
       id: rows[0].id,
       name: rows[0].name,
       email: rows[0].email,
-      role: rows[0].role,
+      role: asApiRole(rows[0].role),
       mfaVerified: false,
     })
   } catch (err) { next(err) }

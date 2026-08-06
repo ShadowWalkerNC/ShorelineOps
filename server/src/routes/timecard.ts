@@ -6,41 +6,43 @@ import { requireAuth } from '../middleware/requireAuth'
 export const timecardRouter = Router()
 
 const PunchSchema = z.object({
-  badge_id: z.string(),
-  operation: z.string(), // 'In' or 'Out'
+  badge_id: z.string().min(1).max(64),
+  operation: z.string(),
   kiosk_id: z.string().optional().default('Default'),
   punched_at: z.string().optional(),
 })
 
-// Function to forward punch to live Attendance on Demand server
 async function forwardPunchToAoD(badgeId: string, operation: 'In' | 'Out'): Promise<{ success: boolean; message: string }> {
+  const aodUrl = process.env.AOD_KIOSK_URL
+  if (!aodUrl) {
+    // Local logging only when AoD bridge is not configured
+    return { success: true, message: 'Punch accepted (local only — AOD_KIOSK_URL not set)' }
+  }
+
   try {
-    const url = 'https://firstatlantic.attendanceondemand.com/kiosk/MAINPAGE'
-    
-    // Map operation to AOD params
-    // 1 = Clock In, 2 = Clock Out
     const opCode = operation === 'In' ? '1' : '2'
     const btnIndex = operation === 'In' ? '0' : '1'
+    const kioskId = process.env.AOD_KIOSK_IDENTIFIER || 'Default'
 
     const params = new URLSearchParams()
-    params.append('AE_KioskIdentifier', 'Default')
-    params.append('AE_TZ', '240')
+    params.append('AE_KioskIdentifier', kioskId)
+    params.append('AE_TZ', process.env.AOD_TZ || '240')
     params.append('AE_DS', '0')
     params.append('AE_InDS', '0')
     params.append('AE_Operation', opCode)
     params.append('AE_ButtonIndex', btnIndex)
     params.append('AE_DataValue', badgeId)
 
-    console.log(`[AOD Bridge] Forwarding punch for Badge ${badgeId} (${operation}) to AOD...`)
+    console.log(`[AOD Bridge] Forwarding punch for Badge ${badgeId} (${operation})`)
 
-    const response = await fetch(url, {
+    const response = await fetch(aodUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+        'User-Agent': 'ShorelineOps/1.0',
+        Accept: 'text/html,application/xhtml+xml',
       },
-      body: params.toString()
+      body: params.toString(),
     })
 
     if (!response.ok) {
@@ -48,10 +50,6 @@ async function forwardPunchToAoD(badgeId: string, operation: 'In' | 'Out'): Prom
     }
 
     const html = await response.text()
-
-    // Analyze HTML response for success or error indicators
-    // AOD kiosk typically shows "Invalid Badge" or similar errors in the markup.
-    // If it contains "Invalid" or "not found" or "error", we fail.
     if (html.toLowerCase().includes('invalid badge') || html.toLowerCase().includes('error')) {
       return { success: false, message: 'Invalid Badge ID or unrecognized credential on Attendance on Demand' }
     }
@@ -63,30 +61,29 @@ async function forwardPunchToAoD(badgeId: string, operation: 'In' | 'Out'): Prom
   }
 }
 
-// POST /api/timecard/webhook - Receives punch and pushes it to AoD and saves it locally
+// POST /api/timecard/webhook — requires KIOSK_API_SECRET
 timecardRouter.post('/webhook', async (req, res, next) => {
   try {
     const secret = process.env.KIOSK_API_SECRET
-    if (secret) {
-      const authHeader = req.headers.authorization
-      if (!authHeader || authHeader !== `Bearer ${secret}`) {
-        return res.status(401).json({ error: 'Unauthorized kiosk access' })
-      }
+    if (!secret || secret.length < 16) {
+      return res.status(503).json({ error: 'Kiosk webhook disabled — set KIOSK_API_SECRET (min 16 chars)' })
+    }
+
+    const authHeader = req.headers.authorization
+    if (!authHeader || authHeader !== `Bearer ${secret}`) {
+      return res.status(401).json({ error: 'Unauthorized kiosk access' })
     }
 
     const payload = PunchSchema.parse(req.body)
     const operation = payload.operation === 'In' || payload.operation === 'Out' ? payload.operation : 'In'
 
-    // Forward the punch to the real Attendance on Demand server first
     const aodResult = await forwardPunchToAoD(payload.badge_id, operation)
-
     if (!aodResult.success) {
       return res.status(400).json({ error: aodResult.message })
     }
 
     const punchedAt = payload.punched_at ? new Date(payload.punched_at) : new Date()
 
-    // Write to our local PostgreSQL database
     const { rows } = await pool.query(
       `INSERT INTO timecard_punches (badge_id, operation, kiosk_id, punched_at)
        VALUES ($1, $2, $3, $4)
@@ -94,13 +91,13 @@ timecardRouter.post('/webhook', async (req, res, next) => {
       [payload.badge_id, operation, payload.kiosk_id, punchedAt]
     )
 
-    res.status(201).json({ success: true, punch: rows[0], message: 'Punch logged on AoD and Shoreline database.' })
+    res.status(201).json({ success: true, punch: rows[0], message: aodResult.message })
   } catch (err) {
     next(err)
   }
 })
 
-// GET /api/timecard - Authenticated query endpoint to fetch recent punches
+// GET /api/timecard — authenticated
 timecardRouter.get('/', requireAuth, async (_req, res, next) => {
   try {
     const { rows } = await pool.query(

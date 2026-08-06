@@ -1,17 +1,12 @@
 /**
- * Login page — Demo Mode
- * Shows demo credentials on screen so reviewers can log in immediately.
- * Remove the demo hint panel before going to production.
+ * Login page — JWT auth by default.
+ * Demo credential panel only when VITE_DEMO_MODE=true.
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
 
-const DEMO_ACCOUNTS = [
-  { role: 'Admin',     email: 'admin@shoreline.demo',    password: 'Admin1234!' },
-  { role: 'Staff',     email: 'staff@shoreline.demo',     password: 'Staff1234!' },
-  { role: 'Read-Only', email: 'readonly@shoreline.demo',  password: 'Readonly1234!' },
-]
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth()
@@ -21,13 +16,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
+  const [demoAccounts, setDemoAccounts] = useState<Array<{ role: string; email: string; password: string }>>([])
 
-  // Redirect to Dashboard (/) after successful login, or back to the page
-  // they were trying to reach before being sent to /login
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true })
   }, [isAuthenticated, navigate, from])
+
+  useEffect(() => {
+    if (!DEMO_MODE) return
+    void import('../../security/demoCredentials').then((m) => setDemoAccounts(m.DEMO_ACCOUNTS))
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,12 +35,14 @@ export default function LoginPage() {
     try {
       await login(email, password)
     } catch {
-      setError('Invalid email or password. Use the demo credentials below.')
+      setError(DEMO_MODE
+        ? 'Invalid email or password. Use the demo credentials below.'
+        : 'Invalid email or password.')
       setLoading(false)
     }
   }
 
-  function fillDemo(acct: typeof DEMO_ACCOUNTS[number]) {
+  function fillDemo(acct: { email: string; password: string }) {
     setEmail(acct.email)
     setPassword(acct.password)
     setError('')
@@ -67,7 +68,6 @@ export default function LoginPage() {
     }}>
       <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* Login card */}
         <div style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
@@ -126,36 +126,37 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Demo credentials panel — remove before production */}
-        <div style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px dashed rgba(255,255,255,0.15)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 16px',
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'rgba(255,255,255,0.35)', marginBottom: 10 }}>
-            🔑 Demo Accounts — click to fill
+        {DEMO_MODE && demoAccounts.length > 0 && (
+          <div style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px dashed rgba(255,255,255,0.15)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '14px 16px',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'rgba(255,255,255,0.35)', marginBottom: 10 }}>
+              Demo Accounts — click to fill
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {demoAccounts.map(acct => (
+                <button key={acct.email} onClick={() => fillDemo(acct)} type="button" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '8px 12px', cursor: 'pointer',
+                  textAlign: 'left', gap: 12,
+                }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', minWidth: 72 }}>{acct.role}</span>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', flex: 1 }}>{acct.email}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{acct.password}</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 10, lineHeight: 1.5 }}>
+              Demo mode only — never enable VITE_DEMO_MODE with real PHI.
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {DEMO_ACCOUNTS.map(acct => (
-              <button key={acct.role} onClick={() => fillDemo(acct)} type="button" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 'var(--radius-md)',
-                padding: '8px 12px', cursor: 'pointer',
-                textAlign: 'left', gap: 12,
-              }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', minWidth: 72 }}>{acct.role}</span>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', flex: 1 }}>{acct.email}</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{acct.password}</span>
-              </button>
-            ))}
-          </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 10, lineHeight: 1.5 }}>
-            ⚠ Demo mode — all data is static. See DEMO.md for production setup.
-          </div>
-        </div>
+        )}
       </div>
 
       <style>{`

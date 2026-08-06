@@ -6,30 +6,32 @@ Shoreline is designed to meet the requirements of **HIPAA**, **SOC 2 Type II**, 
 
 | Control | Standard | Implementation |
 |---|---|---|
-| Encryption in transit (TLS 1.2+) | HIPAA, SOC2, ISO | Enforced by Render (HTTPS only) + HSTS header |
+| Encryption in transit (TLS 1.2+) | HIPAA, SOC2, ISO | Hosting HTTPS + HSTS (`public/_headers`) |
 | HTTP security headers | SOC2, ISO | `public/_headers` — CSP, HSTS, X-Frame-Options, etc. |
-| Session auto-logout (15 min) | HIPAA §164.312(a)(2)(iii) | `useSessionTimeout` hook |
-| Audit logging | HIPAA §164.312(b), SOC2 CC7 | `auditLog` utility → POST `/api/audit` |
-| Input sanitization / XSS prevention | SOC2, ISO 27002 8.28 | `sanitize.ts` utility |
-| Role-based access control (RBAC) | HIPAA minimum necessary, SOC2 CC6.3 | `RequireRole` component + `UserRole` type |
-| No PHI in localStorage | HIPAA | `secureStorage` guard in `sanitize.ts` |
-| Auth context with MFA-ready scaffold | HIPAA, SOC2 | `AuthContext.tsx` |
+| Session auto-logout (15 min default) | HIPAA §164.312(a)(2)(iii) | `AuthContext` idle timer (`VITE_SESSION_TIMEOUT_MS`) |
+| Audit logging | HIPAA §164.312(b), SOC2 CC7 | Authenticated `POST /api/audit` — actor from JWT only |
+| Input sanitization / XSS prevention | SOC2, ISO 27002 8.28 | `sanitize.ts` + safe quantity parsing (no `eval`) |
+| Role-based access control (RBAC) | HIPAA minimum necessary, SOC2 CC6.3 | JWT `role` claim + `requireRole` + frontend `RequireRole` |
+| No PHI in localStorage | HIPAA | Tokens in memory / sessionStorage refresh only |
+| Setup bootstrap lock | SOC2 CC6 | `SETUP_BOOTSTRAP_SECRET` required for `/api/setup/initialize` |
+| Kiosk webhook auth | SOC2 CC6 | `KIOSK_API_SECRET` required for `/api/timecard/webhook` |
+| Dependency scanning | SOC2 | Dependabot + `.github/workflows/security-audit.yml` |
 
-## Pending (requires backend)
+## Demo mode
 
-- [ ] JWT short-lived tokens (15–60 min) + refresh token rotation
+Set `VITE_DEMO_MODE=true` only for non-PHI demos. Production / PHI deployments must leave this unset or `false` and use the Express JWT API.
+
+## Pending
+
 - [ ] MFA enforcement (TOTP / SMS)
-- [ ] Audit log persistence (append-only, 6-year retention)
-- [ ] Database encryption at rest (AES-256)
-- [ ] Penetration testing (annual — SOC 2 / ISO requirement)
-- [ ] BAA signed with Render and all PHI-touching vendors
-- [ ] Written policies: Privacy Policy, Incident Response Plan, Access Control Policy
-- [ ] Vulnerability scanning in CI (Dependabot / Snyk)
+- [ ] Audit log retention automation (6-year)
+- [ ] Penetration testing (annual)
+- [ ] BAA signed with all PHI-touching vendors
+- [ ] Role-aware Supabase RLS (if/when Supabase path is used)
 
 ## Dependency Vulnerabilities
 
-Run `npm audit` and resolve all high/critical findings before handling real PHI.
-Current known: 1 moderate, 1 high — must be resolved before production PHI use.
+Run `npm audit` in `/` and `/server` and resolve high/critical findings before handling real PHI.
 
 ## Reporting a Vulnerability
 
