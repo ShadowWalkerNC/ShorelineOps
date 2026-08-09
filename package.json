@@ -12,7 +12,7 @@
     "electron:dev": "concurrently \"npm run dev\" \"electron .\""
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.43.4",
+    "@supabase/supabase-js": "^2.112.2",
     "axios": "^1.7.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
