@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRecipesStore } from '@/state/recipesStore'
 import { RECIPE_CATEGORIES, RECIPE_ALLERGENS } from '@/types/recipe'
 import type { Recipe, RecipeCategory, RecipeAllergen, RecipeIngredient, RecipeStep } from '@/types/recipe'
+import { parseQuantity } from '@/lib/parseQuantity'
 
 // ────────────────────────────────────────────────────────────────────────────
 // ALLERGEN COLOURS
@@ -49,8 +50,8 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
   function scaleQty(raw: string): string {
     const match = raw.match(/^([\d./]+)(.*)$/)
     if (!match) return raw
-    // eslint-disable-next-line no-eval
-    const num    = eval(match[1]) as number
+    const num = parseQuantity(match[1])
+    if (num === null) return raw
     const scaled = +(num * ratio).toFixed(2)
     return `${scaled}${match[2]}`
   }

@@ -2,34 +2,47 @@ import { Pool } from 'pg'
 import path from 'path'
 import sqlite3 from 'sqlite3'
 import crypto from 'crypto'
+import bcrypt from 'bcryptjs'
 
-// Use PostgreSQL by default if DATABASE_URL is set, but test connection first.
-const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/shoreline'
-let pgPool: Pool | null = new Pool({
-  connectionString: dbUrl,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10,
-  idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 2_000,
-})
+const isProd = process.env.NODE_ENV === 'production'
+const dbUrl = process.env.DATABASE_URL
 
-let useSqlite = false
+if (isProd && !dbUrl) {
+  throw new Error('[DB] DATABASE_URL is required in production')
+}
+
+let pgPool: Pool | null = dbUrl
+  ? new Pool({
+      connectionString: dbUrl,
+      // Verify TLS certificates in production unless explicitly overridden for managed DBs
+      // that provide self-signed certs via DATABASE_SSL_REJECT_UNAUTHORIZED=false
+      ssl: isProd
+        ? {
+            rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
+          }
+        : false,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 2_000,
+    })
+  : null
+
+let useSqlite = !dbUrl
 let sqliteDb: sqlite3.Database | null = null
 
-// Fallback SQLite Database path
 const sqlitePath = path.join(__dirname, '..', '..', 'shoreline.db')
 
 function getSqlite() {
+  if (isProd) {
+    throw new Error('[DB] SQLite fallback is not allowed in production. Configure DATABASE_URL.')
+  }
   if (!sqliteDb) {
     console.log(`[DB] Using local offline SQLite database at ${sqlitePath}`)
     sqliteDb = new sqlite3.Database(sqlitePath)
-    
-    // Enable foreign keys
+
     sqliteDb.serialize(() => {
       sqliteDb?.run('PRAGMA foreign_keys = ON')
-      
-      // Seed initial mock user admin account if users table is empty
-      // User: admin@shoreline.com / admin123
+
       sqliteDb?.run(`
         CREATE TABLE IF NOT EXISTS users (
           id          TEXT PRIMARY KEY,
@@ -43,79 +56,78 @@ function getSqlite() {
           updated_at  TEXT DEFAULT CURRENT_TIMESTAMP
         )
       `)
-      
+
       sqliteDb?.get('SELECT COUNT(*) as cnt FROM users', (err, row: any) => {
-        if (!err && row && row.cnt === 0) {
-          console.log('[DB] Seeding default SQLite admin account (admin@shoreline.com / admin123)')
-          // bcrypt hash for 'admin123'
-          const passHash = '$2a$10$tZ2M9m8i4v0wXw5Bw84l2em.e6gC6j6Uoq5h9wQdKx5r0b5J3a2mK'
-          sqliteDb?.run(`
-            INSERT INTO users (id, name, email, password, role)
-            VALUES (?, ?, ?, ?, ?)
-          `, [crypto.randomUUID(), 'Administrator', 'admin@shoreline.com', passHash, 'admin'])
+        if (err || !row || row.cnt !== 0) return
+
+        const email = process.env.SEED_ADMIN_EMAIL
+        const password = process.env.SEED_ADMIN_PASSWORD
+        if (!email || !password || password.length < 12) {
+          console.warn(
+            '[DB] SQLite users table empty. Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD (min 12 chars) to create a local admin.'
+          )
+          return
         }
+
+        const passHash = bcrypt.hashSync(password, 12)
+        sqliteDb?.run(
+          `INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)`,
+          [crypto.randomUUID(), 'Administrator', email.toLowerCase(), passHash, 'admin'],
+          (insertErr) => {
+            if (insertErr) {
+              console.error('[DB] Failed to seed SQLite admin:', insertErr.message)
+            } else {
+              console.log(`[DB] Seeded local SQLite admin: ${email}`)
+            }
+          }
+        )
       })
     })
   }
   return sqliteDb
 }
 
-// Translate PostgreSQL query logic to SQLite
 function translateQuery(sql: string, params: any[] = []): { sql: string; params: any[] } {
   let translatedSql = sql
-    // Replace $1, $2, ... with ?
     .replace(/\$(\d+)/g, '?')
-    // Remove PG extension commands
     .replace(/CREATE EXTENSION IF NOT EXISTS.*/gi, '')
-    // Replace GIN index lines entirely to prevent syntax issues
     .replace(/CREATE INDEX\s+IF\s+NOT\s+EXISTS\s+\w+\s+ON\s+\w+\s+USING\s+GIN.*/gi, '-- GIN index ignored')
-    // Replace serial / uuid defaults
     .replace(/UUID PRIMARY KEY DEFAULT uuid_generate_v4\(\)/gi, 'TEXT PRIMARY KEY')
     .replace(/UUID PRIMARY KEY/gi, 'TEXT PRIMARY KEY')
     .replace(/DEFAULT uuid_generate_v4\(\)/gi, '')
-    // Replace data types
     .replace(/\bTIMESTAMPTZ\b/gi, 'TEXT')
     .replace(/\bJSONB\b/gi, 'TEXT')
     .replace(/\bTEXT\[\]\b/gi, 'TEXT')
     .replace(/\bUUID\b/gi, 'TEXT')
-    // Replace ILIKE with LIKE
     .replace(/\bILIKE\b/gi, 'LIKE')
-    // Replace NOW()
     .replace(/\bNOW\(\)/gi, 'CURRENT_TIMESTAMP')
-    // Replace check role constraints that might mismatch
     .replace(/CHECK \(role IN .*\)/gi, '')
-    // Replace PG alter table ADD COLUMN IF NOT EXISTS for SQLite
     .replace(/ADD COLUMN\s+IF\s+NOT\s+EXISTS/gi, 'ADD COLUMN')
-    // Replace PG insert default values with SQLite compatible insert or ignore
     .replace(/INSERT INTO system_settings DEFAULT VALUES/gi, 'INSERT OR IGNORE INTO system_settings DEFAULT VALUES')
-    // Remove default values conflict blocks specifically, but keep other conflict handlers (e.g. ON CONFLICT (email))
     .replace(/DEFAULT VALUES\s+ON CONFLICT\s*\(?\w*\)?\s*DO\s*NOTHING/gi, 'DEFAULT VALUES')
-    // SQLite uses ON CONFLICT(email) DO NOTHING (without space in Postgres format)
     .replace(/ON CONFLICT\s*\(([^)]+)\)\s*DO\s*NOTHING/gi, 'ON CONFLICT($1) DO NOTHING')
+    // Postgres trigger syntax not supported in SQLite
+    .replace(/CREATE OR REPLACE FUNCTION[\s\S]*?\$\$ LANGUAGE plpgsql;/gi, '')
+    .replace(/DROP TRIGGER IF EXISTS[\s\S]*?;/gi, '')
+    .replace(/CREATE TRIGGER[\s\S]*?EXECUTE FUNCTION[\s\S]*?;/gi, '')
 
-  // Translate parameter types (e.g. convert arrays to strings/JSON)
-  const translatedParams = params.map(p => {
-    if (Array.isArray(p)) {
-      return JSON.stringify(p)
-    }
-    if (typeof p === 'boolean') {
-      return p ? 1 : 0
-    }
+  const translatedParams = params.map((p) => {
+    if (Array.isArray(p)) return JSON.stringify(p)
+    if (typeof p === 'boolean') return p ? 1 : 0
     return p
   })
 
   return { sql: translatedSql, params: translatedParams }
 }
 
-// Transparent wrapper that implements the pg Pool interface
 export const pool = {
   async query(sql: string, params: any[] = []): Promise<{ rows: any[] }> {
     if (!useSqlite && pgPool) {
       try {
         return await pgPool.query(sql, params)
       } catch (err: any) {
-        if (err.code === 'ECONNREFUSED' || err.message.includes('connect')) {
-          console.warn('[DB] PostgreSQL connection refused. Switching whole app to SQLite mode.')
+        if (!isProd && (err.code === 'ECONNREFUSED' || err.message?.includes('connect'))) {
+          console.warn('[DB] PostgreSQL connection refused. Switching to SQLite for local development only.')
           useSqlite = true
           pgPool = null
         } else {
@@ -124,18 +136,15 @@ export const pool = {
       }
     }
 
-    // Run query in SQLite
     const db = getSqlite()
     const { sql: sQuery, params: sParams } = translateQuery(sql, params)
 
     return new Promise((resolve, reject) => {
-      // Check if query is empty or comments-only after removing comments
       const sqlCleaned = sQuery.replace(/--.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '').trim()
       if (sqlCleaned.length === 0) {
         return resolve({ rows: [] })
       }
 
-      // If it is a modification statement (INSERT, UPDATE, DELETE, CREATE)
       const isWrite = /^\s*(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|PRAGMA)\b/i.test(sQuery)
 
       if (isWrite) {
@@ -153,7 +162,7 @@ export const pool = {
             }
           })
         } else {
-          db.run(sQuery, sParams, function(err) {
+          db.run(sQuery, sParams, function (err) {
             if (err) {
               if (err.message.includes('duplicate column name') || err.message.includes('already exists')) {
                 return resolve({ rows: [] })
@@ -171,23 +180,18 @@ export const pool = {
             console.error('[SQLite Read Error]', err.message, '\nQuery:', sQuery)
             reject(err)
           } else {
-            // Map rows back to resemble standard PG result structure
             const mappedRows = (rows || []).map((row: any) => {
               const mapped = { ...row }
-              
-              // Map count columns to lowercase 'count'
               for (const key of Object.keys(mapped)) {
                 if (key.toLowerCase().startsWith('count(')) {
                   mapped.count = mapped[key]
                 }
               }
-
-              // Parse JSON columns back into arrays if needed (matching postgres TEXT[] mapping)
               for (const [key, val] of Object.entries(mapped)) {
                 if (typeof val === 'string' && val.startsWith('[') && val.endsWith(']')) {
                   try {
                     mapped[key] = JSON.parse(val)
-                  } catch {}
+                  } catch { /* keep string */ }
                 }
               }
               return mapped
@@ -199,13 +203,12 @@ export const pool = {
     })
   },
 
-  // Mock connection client for transaction blocks
   async connect(): Promise<any> {
     if (!useSqlite && pgPool) {
       try {
         return await pgPool.connect()
       } catch (err: any) {
-        if (err.code === 'ECONNREFUSED' || err.message.includes('connect')) {
+        if (!isProd && (err.code === 'ECONNREFUSED' || err.message?.includes('connect'))) {
           useSqlite = true
           pgPool = null
         } else {
@@ -216,7 +219,7 @@ export const pool = {
 
     return {
       query: (sql: string, params: any[] = []) => this.query(sql, params),
-      release: () => {}
+      release: () => {},
     }
   },
 
@@ -226,5 +229,5 @@ export const pool = {
 
   async end() {
     if (pgPool) await pgPool.end()
-  }
+  },
 }

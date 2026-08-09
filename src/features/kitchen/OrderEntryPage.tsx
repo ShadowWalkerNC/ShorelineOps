@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { tokenManager } from '@/security/tokenManager'
 
 const DAYS  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 const MEALS = ['Lunch','Supper']
@@ -170,7 +171,7 @@ export default function OrderEntryPage() {
   const [initBusy,    setInitBusy]    = useState(false)
   const toastId = useRef(0)
 
-  const token = localStorage.getItem('token') // Fetch auth token from localStorage if required
+  const token = tokenManager.getAccessToken()
 
   function addToast(msg: string, type: 'success' | 'error' = 'success') {
     const id = ++toastId.current

@@ -4,6 +4,7 @@ import { useResidentsStore } from '../../state/residentsStore'
 import { useRecipesStore }   from '../../state/recipesStore'
 import type { Resident }     from '@/types/resident'
 import type { DayOfWeek }    from '@/types/menu'
+import { parseQuantity } from '@/lib/parseQuantity'
 
 // ── Constants ─────────────────────────────────────────────────────────────────────
 type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists'
@@ -644,8 +645,9 @@ function OptionResult({ slot, opt, label, dessert, residents, isSplit, total, re
   function scaleQty(raw:string):string {
     const m=raw.match(/^([\d./]+)(.*)/)
     if(!m) return raw
-    // eslint-disable-next-line no-eval
-    return `${+(eval(m[1])*ratio).toFixed(2)}${m[2]}`
+    const num = parseQuantity(m[1])
+    if (num === null) return raw
+    return `${+(num*ratio).toFixed(2)}${m[2]}`
   }
   const isExpanded = expandedRecipe===`${slot}-${opt}`
   return (

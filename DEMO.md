@@ -1,18 +1,26 @@
 # Shoreline — Demo Mode & Production Setup Guide
 
-> **Current deployment:** Static demo hosted on Render.  
-> **Auth:** Hardcoded local credentials (no backend required).  
-> **Data:** All resident, menu, and production data is static/in-memory and resets on page refresh.
+> **Default auth:** JWT against the Express API (`/api/auth/*`).  
+> **Demo auth:** Only when `VITE_DEMO_MODE=true` (never enable with real PHI).  
+> **Data (demo):** Resident/menu/production state is in-memory and resets on refresh.
 
 ---
 
-## Demo Credentials
+## Enabling Demo Mode
 
-Three accounts are available on the login screen. Click any row to auto-fill.
+```bash
+# .env.local
+VITE_DEMO_MODE=true
+```
+
+Without this flag, the login page talks to the backend and does **not** show demo passwords.
+
+## Demo Credentials (VITE_DEMO_MODE=true only)
 
 | Role      | Email                        | Password        | Access Level                          |
 |-----------|------------------------------|-----------------|---------------------------------------|
 | Admin     | admin@shoreline.demo         | Admin1234!      | Full access — all features + settings |
+| Manager   | manager@shoreline.demo       | Manager1234!    | Manager features                      |
 | Staff     | staff@shoreline.demo         | Staff1234!      | Residents, menu, production, recipes  |
 | Read-Only | readonly@shoreline.demo      | Readonly1234!   | View-only, no edits                   |
 
@@ -22,16 +30,25 @@ Three accounts are available on the login screen. Click any row to auto-fill.
 
 - Login is validated locally — no network call is made.
 - Resident and menu records exist only in React state; they reset on refresh.
-- Audit logging calls are no-ops.
-- Session timeout is disabled.
-- The `src/api/` folder still exists but is **not called** in demo mode.
+- Demo credentials are dynamically imported and must not be used for PHI.
+- Idle session timeout still applies (default 15 minutes).
+
+---
+
+## Production (JWT API)
+
+1. Leave `VITE_DEMO_MODE` unset/false.
+2. Set `VITE_API_URL` to your API.
+3. Configure server secrets: `JWT_SECRET`, `SETUP_BOOTSTRAP_SECRET`, `KIOSK_API_SECRET`, `DATABASE_URL`.
+4. Complete `/setup` once with the bootstrap secret, then use real accounts.
 
 ---
 
 ## Migrating to Production with Supabase
 
-This section documents the intended production architecture so the demo can be
-upgraded to a live system without a full rewrite.
+This section documents an alternate intended architecture so the demo can be
+upgraded to a live system without a full rewrite. The primary path is the
+Express + PostgreSQL API in `/server`.
 
 ### 1. Create a Supabase Project
 

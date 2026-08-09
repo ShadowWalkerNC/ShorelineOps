@@ -1,10 +1,9 @@
 /**
  * Audit logging utility — HIPAA requires audit logs for all PHI access.
- * SOC 2 CC7.2 / ISO 27002 8.15 require tamper-evident logging.
- *
- * In production these events POST to the backend which writes to an
- * immutable append-only log store (e.g. AWS CloudTrail, Datadog).
+ * Events are shipped with the authenticated JWT; server ignores client userId.
  */
+import { api } from '../api/client'
+import { tokenManager } from './tokenManager'
 
 export type AuditAction =
   | 'VIEW_RESIDENT'
@@ -25,23 +24,32 @@ export interface AuditEvent {
   resourceId?: string
   resourceType?: string
   timestamp: string
-  ipAddress?: string  // populated server-side
+  ipAddress?: string
   userAgent: string
   outcome: 'success' | 'failure'
   details?: Record<string, unknown>
 }
 
 async function postAuditEvent(event: AuditEvent): Promise<void> {
+  // Audit route requires auth — only ship when we have a token
+  if (!tokenManager.getAccessToken() && !tokenManager.hasRefreshToken()) {
+    if (import.meta.env.DEV) {
+      console.info('[AuditLog] skipped (unauthenticated):', event.action)
+    }
+    return
+  }
+
   try {
-    await fetch('/api/audit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event),
+    await api.post('/audit', {
+      action: event.action,
+      resourceId: event.resourceId,
+      resourceType: event.resourceType,
+      outcome: event.outcome,
+      userAgent: event.userAgent,
+      details: event.details,
     })
   } catch {
-    // Fail open — never block UI due to audit log failure,
-    // but do log to console so it's visible in monitoring.
-    console.error('[AuditLog] Failed to ship event:', event)
+    console.error('[AuditLog] Failed to ship event:', event.action)
   }
 }
 
@@ -52,16 +60,14 @@ export function auditLog(
   const event: AuditEvent = {
     action,
     timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
     outcome: options.outcome ?? 'success',
     ...options,
   }
 
-  // Always log to console in dev for visibility
   if (import.meta.env.DEV) {
     console.info('[AuditLog]', event)
   }
 
-  // Ship to backend in all environments
   void postAuditEvent(event)
 }
