@@ -41,7 +41,7 @@ export default function LoginPage() {
   }, [isAuthenticated, navigate, from])
 
   useEffect(() => {
-    if (!DEMO_MODE) return
+    if (!DEMO_MODE && !import.meta.env.DEV) return
     void import('../../security/demoCredentials').then((m) => setDemoAccounts(m.DEMO_ACCOUNTS))
   }, [])
 
@@ -240,7 +240,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {DEMO_MODE && demoAccounts.length > 0 && step === 'credentials' && (
+        {(DEMO_MODE || import.meta.env.DEV) && demoAccounts.length > 0 && step === 'credentials' && (
           <div style={{
             background: 'rgba(255,255,255,0.04)',
             border: '1px dashed rgba(255,255,255,0.15)',

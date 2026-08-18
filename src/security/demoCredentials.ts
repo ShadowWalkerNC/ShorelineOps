@@ -16,34 +16,10 @@ export interface DemoUser {
 export const DEMO_USERS: DemoUser[] = [
   {
     id: 'demo-admin-1',
-    name: 'Alex Rivera',
+    name: 'Shoreline Demo Admin',
     email: 'admin@shoreline.demo',
     password: 'Admin1234!',
     role: 'admin',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-manager-1',
-    name: 'Morgan Ellis',
-    email: 'manager@shoreline.demo',
-    password: 'Manager1234!',
-    role: 'manager',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-staff-1',
-    name: 'Staff User',
-    email: 'staff@shoreline.demo',
-    password: 'Staff1234!',
-    role: 'staff',
-    mfaVerified: true,
-  },
-  {
-    id: 'demo-readonly-1',
-    name: 'Read-Only User',
-    email: 'readonly@shoreline.demo',
-    password: 'Readonly1234!',
-    role: 'readonly',
     mfaVerified: true,
   },
 ]

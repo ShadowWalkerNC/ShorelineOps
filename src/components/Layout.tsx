@@ -12,107 +12,102 @@ function useClock() {
   return now
 }
 
-const NAV_OPERATIONS: {
+interface NavItemDef {
   label: string
   to: string
-  icon: React.ReactNode
+  color: string
   end?: boolean
   minRole?: 'dietary' | 'manager'
-}[] = [
+}
+
+interface NavSection {
+  title: string
+  items: NavItemDef[]
+}
+
+const NAV_SECTIONS: NavSection[] = [
   {
-    label: 'Dashboard', to: '/',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+    title: 'Core Operations',
+    items: [
+      { label: 'Dashboard', to: '/', color: '#3B82F6', end: true },
+      { label: 'Residents & Diets', to: '/residents', color: '#10B981' },
+      { label: 'Communications', to: '/communications', color: '#8B5CF6' },
+    ],
   },
   {
-    label: 'Residents & Diet Orders', to: '/residents',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    title: 'Dietary & Kitchen',
+    items: [
+      { label: 'Kitchen Tablet Mode', to: '/kitchen/tablet', color: '#EF4444', minRole: 'dietary' },
+      { label: 'Menu Planner', to: '/menu', color: '#F59E0B', minRole: 'dietary', end: true },
+      { label: 'Tray Cards', to: '/kitchen/traycards', color: '#EC4899', minRole: 'dietary' },
+      { label: 'Recipe Book', to: '/recipes', color: '#6366F1' },
+      { label: 'Production Sheets', to: '/production', color: '#06B6D4' },
+      { label: 'Meal Tally Entry', to: '/kitchen/orders', color: '#14B8A6', minRole: 'dietary' },
+    ],
   },
   {
-    label: 'Weekly Menu Planner', to: '/menu',
-    end: true,
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
-    minRole: 'dietary' as const,
+    title: 'Purchasing & Cost',
+    items: [
+      { label: 'Purchasing & Orders', to: '/purchasing', color: '#2563EB', minRole: 'dietary' },
+      { label: 'Distributor Portal', to: '/distributor', color: '#7C3AED' },
+      { label: 'Cost & Compliance', to: '/reporting', color: '#059669', minRole: 'dietary' },
+      { label: 'Inventory & Stock', to: '/inventory', color: '#D97706' },
+      { label: 'Budget & Spend', to: '/budget', color: '#4F46E5', minRole: 'manager' },
+    ],
   },
   {
-    label: 'Weekly Menu View', to: '/menu/weekly',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M2 12h20M2 6h20M2 18h20"/><circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>,
-  },
-  {
-    label: 'Recipe Book', to: '/recipes',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
-  },
-  {
-    label: 'Production & Service', to: '/production',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>,
-  },
-  {
-    label: 'Inventory & Waste', to: '/inventory',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
-  },
-  {
-    label: 'Budget & Spending', to: '/budget',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
-    minRole: 'manager' as const,
-  },
-  {
-    label: 'Communications', to: '/communications',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-  },
-  {
-    label: 'Staff', to: '/staff',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-    minRole: 'manager' as const,
-  },
-  {
-    label: 'Dietary Tray Cards', to: '/kitchen/traycards',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m8 14 2 2 4-4"/></svg>,
-    minRole: 'dietary' as const,
-  },
-  {
-    label: 'Dietary Tally Entry', to: '/kitchen/orders',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>,
-    minRole: 'dietary' as const,
-  },
-  {
-    label: 'Daily Kitchen Sheet', to: '/kitchen/sheet',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m8 14 2 2 4-4"/></svg>,
-    minRole: 'dietary' as const,
-  },
-  {
-    label: 'Time Clock Logs', to: '/timecards',
-    icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    title: 'Facility & Team',
+    items: [
+      { label: 'Staff Roster', to: '/staff', color: '#0284C7', minRole: 'manager' },
+      { label: 'Timecard Clock', to: '/timecards', color: '#64748B' },
+    ],
   },
 ]
 
-const NAV_ADMIN = {
-  label: 'Administration', to: '/admin',
-  icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
+const NAV_ADMIN: NavItemDef = {
+  label: 'Administration',
+  to: '/admin',
+  color: '#DC2626',
 }
 
-const NAV_LEGAL = {
-  label: 'Legal & Compliance', to: '/legal',
-  icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+const NAV_LEGAL: NavItemDef = {
+  label: 'Legal & BAA',
+  to: '/legal',
+  color: '#6B7280',
 }
 
-function NavItem({ to, icon, label, end: endProp, onClick }: { to: string; icon: React.ReactNode; label: string; end?: boolean; onClick?: () => void }) {
+function NavItem({ to, color, label, end: endProp, onClick }: { to: string; color: string; label: string; end?: boolean; onClick?: () => void }) {
   return (
     <NavLink
       to={to}
       end={endProp !== undefined ? endProp : to === '/'}
       onClick={onClick}
       style={({ isActive }) => ({
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 16px', borderRadius: 'var(--radius-md)',
-        textDecoration: 'none', fontSize: 14,
-        fontWeight: isActive ? 600 : 500,
-        color: isActive ? 'var(--color-primary)' : 'var(--text-secondary)',
-        background: isActive ? 'var(--color-primary-light)' : 'transparent',
-        boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
-        transition: 'all 0.2s ease', minHeight: 44,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '9px 14px',
+        borderRadius: 'var(--radius-md)',
+        textDecoration: 'none',
+        fontSize: 13.5,
+        fontWeight: isActive ? 700 : 500,
+        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+        background: isActive ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+        borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
+        transition: 'all 0.15s ease',
+        minHeight: 38,
       })}
     >
-      {icon}
-      <span style={{ flex: 1, lineHeight: 1.3 }}>{label}</span>
+      <span
+        style={{
+          width: 9,
+          height: 9,
+          borderRadius: '50%',
+          backgroundColor: color,
+          flexShrink: 0,
+        }}
+      />
+      <span style={{ flex: 1, lineHeight: 1.25 }}>{label}</span>
     </NavLink>
   )
 }
@@ -207,25 +202,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 
-  const visibleOps = NAV_OPERATIONS.filter(item => {
-    if (!item.minRole) return true
-    return atLeast(item.minRole)
-  })
-
-  const allNavItems = [
-    ...visibleOps,
-    ...(isAdmin ? [NAV_ADMIN] : []),
-    NAV_LEGAL,
-  ]
-
   const roleDisplay =
-    user?.role === 'admin'      ? 'Administrator' :
-    user?.role === 'manager'    ? 'Manager' :
-    user?.role === 'frontdesk'  ? 'Office Assistant' :
-    user?.role === 'dietary'    ? 'Dietary Staff' :
-    user?.role === 'activities' ? 'Activities Dir.' :
-    user?.role === 'server'     ? 'Server' :
-    user?.role === 'staff'      ? 'Staff' : 'Read-Only'
+    user?.role === 'admin'       ? 'Administrator' :
+    user?.role === 'manager'     ? 'Manager' :
+    user?.role === 'dietitian'   ? 'Registered Dietitian (RD)' :
+    user?.role === 'frontdesk'   ? 'Office Assistant' :
+    user?.role === 'dietary'     ? 'Dietary Staff' :
+    user?.role === 'distributor' ? 'Distributor Partner' :
+    user?.role === 'activities'  ? 'Activities Dir.' :
+    user?.role === 'server'      ? 'Server' :
+    user?.role === 'staff'       ? 'Staff' : 'Read-Only'
 
   return (
     <div style={{ display: 'flex', height: '100dvh', width: '100%', background: 'var(--bg-app)', overflow: 'hidden' }}>
@@ -301,22 +287,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <div style={{ padding: '8px 10px' }}>
-          {allNavItems.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={'end' in item ? (item.end ?? item.to === '/') : item.to === '/'}
-              onClick={() => setNavOpen(false)}
-              style={({ isActive }) => ({ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 15, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--color-primary)' : 'var(--text-primary)', background: isActive ? 'var(--color-primary-light)' : 'transparent', marginBottom: 2, minHeight: 52 })}
-            >
-              <span style={{ color: 'inherit', opacity: 0.8 }}>{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
+          {NAV_SECTIONS.map((section, sIdx) => {
+            const items = section.items.filter(item => !item.minRole || atLeast(item.minRole))
+            if (items.length === 0) return null
+            return (
+              <div key={sIdx} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '6px 14px 4px' }}>
+                  {section.title}
+                </div>
+                {items.map(item => (
+                  <NavItem key={item.to} {...item} onClick={() => setNavOpen(false)} />
+                ))}
+              </div>
+            )
+          })}
+          {isAdmin && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '6px 14px 4px' }}>
+                Administration
+              </div>
+              <NavItem {...NAV_ADMIN} onClick={() => setNavOpen(false)} />
+            </div>
+          )}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '6px 14px 4px' }}>
+              Compliance
+            </div>
+            <NavItem {...NAV_LEGAL} onClick={() => setNavOpen(false)} />
+          </div>
         </div>
         <div style={{ padding: '12px 16px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-app)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Logout
           </button>
           <div style={{ textAlign: 'right' }}>
@@ -328,28 +329,36 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* DESKTOP SIDEBAR */}
       <aside className="sidebar-aside" style={{ width: 'var(--sidebar-width)', flexShrink: 0, background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100dvh', zIndex: 200, overflowY: 'auto', overflowX: 'hidden' }}>
-        <div style={{ padding: '20px 20px 18px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <img src="/icon-192.png" alt="Shoreline" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
+        <div style={{ padding: '18px 20px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <img src="/icon-192.png" alt="Shoreline" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.4px', lineHeight: 1.15, fontFamily: 'Outfit, sans-serif' }}>Shoreline</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', lineHeight: 1.15, fontFamily: 'Outfit, sans-serif' }}>Shoreline</div>
             <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.6px', textTransform: 'uppercase' }}>Operations Platform</div>
           </div>
         </div>
-        <div style={{ padding: '7px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'var(--color-primary-light)', flexShrink: 0 }}>
-          <div className="status-dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }} />
-          LAN Server Mode — data synced across all devices
-        </div>
-        <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '8px 16px 4px' }}>Operations</div>
-          {visibleOps.map(item => <NavItem key={item.to} {...item} />)}
+        <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1, overflowY: 'auto' }}>
+          {NAV_SECTIONS.map((section, sIdx) => {
+            const items = section.items.filter(item => !item.minRole || atLeast(item.minRole))
+            if (items.length === 0) return null
+            return (
+              <div key={sIdx} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '4px 14px 4px' }}>
+                  {section.title}
+                </div>
+                {items.map(item => <NavItem key={item.to} {...item} />)}
+              </div>
+            )
+          })}
           {isAdmin && (
-            <>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '14px 16px 4px' }}>Administration</div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '4px 14px 4px' }}>Administration</div>
               <NavItem {...NAV_ADMIN} />
-            </>
+            </div>
           )}
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '14px 16px 4px' }}>Compliance</div>
-          <NavItem {...NAV_LEGAL} />
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '4px 14px 4px' }}>Compliance</div>
+            <NavItem {...NAV_LEGAL} />
+          </div>
         </nav>
         <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
           {user && (

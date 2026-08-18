@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
+import { runSeed } from '../db/seed'
 
 export const setupRouter = Router()
 
@@ -124,6 +125,10 @@ setupRouter.post('/initialize', async (req, res, next) => {
        VALUES ('SETUP_INITIALIZE', 'facility_config', 'success', $1)`,
       [JSON.stringify({ facilityName: body.facilityName, adminEmail: body.adminEmail, mode: body.initMode })]
     )
+
+    if (body.initMode === 'sample') {
+      await runSeed()
+    }
 
     res.json({ success: true, message: 'Facility setup successfully completed.' })
   } catch (err) { next(err) }
