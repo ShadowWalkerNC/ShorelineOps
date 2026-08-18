@@ -95,6 +95,31 @@ app.use('/api/kitchen',    requireAuth, kitchenRouter)
 app.use('/api/purchasing', requireAuth, purchasingRouter)
 app.use('/api/reporting',  requireAuth, reportingRouter)
 
+// Root API landing page
+app.get('/', (_req, res) => {
+  res.json({
+    service: 'Shoreline Operations Platform API',
+    status: 'online',
+    version: '5.0.0',
+    documentation: '/api/docs',
+    health: '/health',
+    frontend: 'http://localhost:3000',
+    endpoints: [
+      '/api/setup',
+      '/api/auth',
+      '/api/residents',
+      '/api/menu',
+      '/api/production',
+      '/api/purchasing',
+      '/api/reporting',
+      '/api/distributor',
+      '/api/kitchen',
+      '/api/timecard',
+      '/api/admin',
+    ],
+  })
+})
+
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
 
