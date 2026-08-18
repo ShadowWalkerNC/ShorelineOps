@@ -104,12 +104,33 @@ reportingRouter.get('/summary', async (req: Request, res: Response, next: NextFu
     )
     const specialDietCount = parseInt(mismatchRows[0].cnt, 10)
 
+    // Dietary labor hours and estimated spend from timecard_punches
+    const { rows: laborRows } = await pool.query(
+      `SELECT
+         COUNT(*) AS total_punches
+       FROM timecard_punches
+       WHERE timestamp >= $1 AND timestamp <= $2`,
+      [startDate, endDate]
+    )
+    const totalPunches = parseInt(laborRows[0]?.total_punches || '0', 10)
+    // Estimate 8 hours per clock-in/out pair at standard $18.50/hr dietary rate
+    const estimatedLaborHours = +(totalPunches * 4.0).toFixed(1)
+    const estimatedLaborCost = +(estimatedLaborHours * 18.50).toFixed(2)
+    const totalOperatingCost = +(totalFoodCost + estimatedLaborCost).toFixed(2)
+    const totalOperatingCostPerResidentDay = totalResidentDays > 0
+      ? (totalOperatingCost / totalResidentDays).toFixed(2)
+      : null
+
     res.json({
       dateRange: { start: startDate, end: endDate },
       activeResidents,
       totalFoodCost: totalFoodCost.toFixed(2),
       totalResidentDays,
       costPerResidentDay: costPerResidentDay !== null ? costPerResidentDay.toFixed(2) : null,
+      estimatedLaborHours,
+      estimatedLaborCost: estimatedLaborCost.toFixed(2),
+      totalOperatingCost: totalOperatingCost.toFixed(2),
+      totalOperatingCostPerResidentDay,
       substitutions,
       allergyFlagCount,
       specialDietCount,

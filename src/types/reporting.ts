@@ -4,6 +4,10 @@ export interface ReportingSummary {
   totalFoodCost: string
   totalResidentDays: number
   costPerResidentDay: string | null
+  estimatedLaborHours?: number
+  estimatedLaborCost?: string
+  totalOperatingCost?: string
+  totalOperatingCostPerResidentDay?: string | null
   substitutions: number
   allergyFlagCount: number
   specialDietCount: number
