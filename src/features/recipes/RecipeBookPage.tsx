@@ -181,7 +181,26 @@ function RecipeFormModal({
   function toggleAllergen(a: RecipeAllergen) {
     setAllergens(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
   }
+
+  function detectAllergen(itemName: string) {
+    const lower = itemName.toLowerCase()
+    const detected: RecipeAllergen[] = []
+    if (lower.includes('milk') || lower.includes('cheese') || lower.includes('butter') || lower.includes('cream') || lower.includes('dairy')) detected.push('Dairy')
+    if (lower.includes('flour') || lower.includes('wheat') || lower.includes('bread') || lower.includes('gluten') || lower.includes('oat')) detected.push('Gluten')
+    if (lower.includes('egg')) detected.push('Eggs')
+    if (lower.includes('peanut') || lower.includes('walnut') || lower.includes('almond') || lower.includes('nut') || lower.includes('pecan')) detected.push('Nuts')
+    if (lower.includes('soy') || lower.includes('tofu') || lower.includes('edamame')) detected.push('Soy')
+    if (lower.includes('sesame') || lower.includes('seed') || lower.includes('flax')) detected.push('Seeds')
+
+    if (detected.length > 0) {
+      setAllergens(prev => Array.from(new Set([...prev, ...detected])))
+    }
+  }
+
   function updateIngredient(i: number, field: keyof RecipeIngredient, val: string) {
+    if (field === 'item') {
+      detectAllergen(val)
+    }
     setIngredients(prev => prev.map((ing, idx) => idx === i ? { ...ing, [field]: val } : ing))
   }
   function updateStep(i: number, val: string) {
