@@ -13,8 +13,10 @@
 export const USER_ROLES = [
   'admin',
   'manager',
+  'dietitian',
   'frontdesk',
   'dietary',
+  'distributor',
   'activities',
   'server',
   'staff',
@@ -24,26 +26,30 @@ export type UserRole = typeof USER_ROLES[number]
 
 /** Numeric rank — higher = more privileged. Used for ≥ comparisons. */
 export const ROLE_RANK: Record<UserRole, number> = {
-  readonly:   0,
-  staff:      1,
-  server:     2,
-  activities: 3,
-  dietary:    4,
-  frontdesk:  5,   // Office Assistant — near-manager, below manager
-  manager:    6,
-  admin:      7,
+  readonly:    0,
+  distributor: 1,   // External distributor partner (Catalog & items portal)
+  staff:       2,
+  server:      3,
+  activities:  4,
+  dietary:     5,
+  dietitian:   6,   // Clinical Dietitian — nutrition, diet orders, clinical sign-offs
+  frontdesk:   7,   // Office Assistant — administrative
+  manager:     8,
+  admin:       9,
 }
 
 /** Human-readable labels for display */
 export const ROLE_LABEL: Record<UserRole, string> = {
-  admin:      'Administrator',
-  manager:    'Manager',
-  frontdesk:  'Office Assistant',
-  dietary:    'Dietary Staff',
-  activities: 'Activities Director',
-  server:     'Server',
-  staff:      'Staff',
-  readonly:   'Read-Only',
+  admin:       'Administrator',
+  manager:     'Manager',
+  dietitian:   'Registered Dietitian (RD)',
+  frontdesk:   'Office Assistant',
+  dietary:     'Dietary Staff',
+  distributor: 'Distributor Partner',
+  activities:  'Activities Director',
+  server:      'Server',
+  staff:       'Staff',
+  readonly:    'Read-Only',
 }
 
 // ── Departments ───────────────────────────────────────────────────────────────
@@ -100,6 +106,9 @@ export const PERMISSIONS = [
   // Approvals
   'view:approvals',
   'action:approvals',
+  // Vendor / Distributor
+  'manage:vendor_catalog',
+  'view:vendor_catalog',
   // Admin
   'view:audit',
   'manage:settings',
@@ -121,6 +130,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'view:production', 'edit:production',
     'view:budget',
     'view:truck', 'create:truck_order', 'approve:truck_order', 'receive:truck_order',
+    'manage:vendor_catalog', 'view:vendor_catalog',
     'send:notifications',
     'view:communications', 'create:communications', 'approve:communications', 'distribute:communications',
     'view:approvals', 'action:approvals',
@@ -128,9 +138,17 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'manage:checklists', 'manage:preplist_templates',
   ],
 
+  dietitian: [
+    'view:residents', 'edit:residents',
+    'view:menu', 'edit:menu', 'request:menu_change', 'approve:menu_change',
+    'view:production',
+    'view:inventory',
+    'view:truck',
+    'manage:vendor_catalog', 'view:vendor_catalog',
+    'view:communications', 'create:communications',
+  ],
+
   // Office Assistant — near-manager access.
-  // Can view and coordinate almost everything; cannot approve budget,
-  // approve menu changes, manage roles/settings, or view the audit log.
   frontdesk: [
     'view:residents', 'edit:residents',
     'view:staff',
@@ -151,7 +169,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'view:menu',
     'view:production', 'edit:production',
     'view:truck', 'create:truck_order',
+    'view:vendor_catalog',
     'view:communications',
+  ],
+
+  distributor: [
+    'manage:vendor_catalog',
+    'view:vendor_catalog',
   ],
 
   activities: [

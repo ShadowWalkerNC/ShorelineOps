@@ -106,10 +106,13 @@ function translateQuery(sql: string, params: any[] = []): { sql: string; params:
     .replace(/INSERT INTO system_settings DEFAULT VALUES/gi, 'INSERT OR IGNORE INTO system_settings DEFAULT VALUES')
     .replace(/DEFAULT VALUES\s+ON CONFLICT\s*\(?\w*\)?\s*DO\s*NOTHING/gi, 'DEFAULT VALUES')
     .replace(/ON CONFLICT\s*\(([^)]+)\)\s*DO\s*NOTHING/gi, 'ON CONFLICT($1) DO NOTHING')
-    // Postgres trigger syntax not supported in SQLite
     .replace(/CREATE OR REPLACE FUNCTION[\s\S]*?\$\$ LANGUAGE plpgsql;/gi, '')
     .replace(/DROP TRIGGER IF EXISTS[\s\S]*?;/gi, '')
     .replace(/CREATE TRIGGER[\s\S]*?EXECUTE FUNCTION[\s\S]*?;/gi, '')
+    .replace(/ALTER TABLE \w+ DROP CONSTRAINT[\s\S]*?;/gi, '')
+    .replace(/ALTER TABLE \w+ ADD CONSTRAINT[\s\S]*?;/gi, '')
+    .replace(/COMMENT ON COLUMN[\s\S]*?;/gi, '')
+    .replace(/GENERATED ALWAYS AS[\s\S]*?STORED/gi, '')
 
   const translatedParams = params.map((p) => {
     if (Array.isArray(p)) return JSON.stringify(p)

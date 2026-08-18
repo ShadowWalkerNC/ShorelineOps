@@ -37,6 +37,7 @@ interface AuthContextValue {
 }
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
+const IS_DEV = import.meta.env.DEV
 const SESSION_KEY = 'shoreline_demo_user'
 const IDLE_TIMEOUT_MS = Number(import.meta.env.VITE_SESSION_TIMEOUT_MS ?? 15 * 60 * 1000)
 
@@ -124,18 +125,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    if (DEMO_MODE) {
-      const { DEMO_USERS } = await import('./demoCredentials')
-      await new Promise((r) => setTimeout(r, 200))
-      const match = DEMO_USERS.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-      )
-      if (!match) throw new Error('Invalid email or password')
-      const { password: _pw, ...authUser } = match
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
-      setUser(authUser)
-      auditLog('LOGIN', { userId: authUser.id, outcome: 'success' })
-      return { status: 'authenticated' as const }
+    if (DEMO_MODE || IS_DEV) {
+      try {
+        const { DEMO_USERS } = await import('./demoCredentials')
+        const match = DEMO_USERS.find(
+          (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+        )
+        if (match) {
+          const { password: _pw, ...authUser } = match
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
+          setUser(authUser)
+          auditLog('LOGIN', { userId: authUser.id, outcome: 'success' })
+          return { status: 'authenticated' as const }
+        }
+      } catch {
+        /* fallback to backend API */
+      }
     }
 
     const { data } = await authApi.login(email, password)

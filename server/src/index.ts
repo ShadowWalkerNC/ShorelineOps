@@ -13,6 +13,8 @@ import { productionRouter } from './routes/production'
 import { adminRouter } from './routes/admin'
 import { timecardRouter } from './routes/timecard'
 import { kitchenRouter } from './routes/kitchen'
+import { purchasingRouter } from './routes/purchasing'
+import { reportingRouter } from './routes/reporting'
 import { setupRouter } from './routes/setup'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
@@ -90,6 +92,8 @@ app.use('/api/production', requireAuth, productionRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
 app.use('/api/timecard',   timecardRouter)
 app.use('/api/kitchen',    requireAuth, kitchenRouter)
+app.use('/api/purchasing', requireAuth, purchasingRouter)
+app.use('/api/reporting',  requireAuth, reportingRouter)
 
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))

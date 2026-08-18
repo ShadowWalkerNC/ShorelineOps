@@ -5,8 +5,10 @@ import jwt from 'jsonwebtoken'
 export const API_ROLES = [
   'admin',
   'manager',
+  'dietitian',
   'frontdesk',
   'dietary',
+  'distributor',
   'activities',
   'server',
   'staff',
@@ -16,14 +18,16 @@ export const API_ROLES = [
 export type ApiRole = (typeof API_ROLES)[number]
 
 const ROLE_RANK: Record<ApiRole, number> = {
-  readonly: 0,
-  staff: 1,
-  server: 2,
-  activities: 3,
-  dietary: 4,
-  frontdesk: 5,
-  manager: 6,
-  admin: 7,
+  readonly:    0,
+  distributor: 1,
+  staff:       2,
+  server:      3,
+  activities:  4,
+  dietary:     5,
+  dietitian:   6,
+  frontdesk:   7,
+  manager:     8,
+  admin:       9,
 }
 
 export interface AuthRequest extends Request {

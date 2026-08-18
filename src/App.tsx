@@ -23,6 +23,10 @@ import PwaBanner from './components/PwaBanner'
 import OrderEntryPage from './features/kitchen/OrderEntryPage'
 import KitchenSheetPage from './features/kitchen/KitchenSheetPage'
 import TrayCardGeneratorPage from './features/kitchen/TrayCardGeneratorPage'
+import KitchenTabletPage from './features/kitchen/KitchenTabletPage'
+import PurchasingPage from './features/purchasing/PurchasingPage'
+import ReportingPage from './features/reporting/ReportingPage'
+import DistributorPortalPage from './features/distributor/DistributorPortalPage'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -67,6 +71,10 @@ export default function App() {
         <Route path="/kitchen/orders"    element={<AuthedLayout><OrderEntryPage /></AuthedLayout>} />
         <Route path="/kitchen/sheet"     element={<AuthedLayout><KitchenSheetPage /></AuthedLayout>} />
         <Route path="/kitchen/traycards" element={<AuthedLayout><TrayCardGeneratorPage /></AuthedLayout>} />
+        <Route path="/kitchen/tablet"    element={<AuthedLayout><KitchenTabletPage /></AuthedLayout>} />
+        <Route path="/purchasing"        element={<AuthedLayout><PurchasingPage /></AuthedLayout>} />
+        <Route path="/reporting"         element={<AuthedLayout><ReportingPage /></AuthedLayout>} />
+        <Route path="/distributor"       element={<AuthedLayout><DistributorPortalPage /></AuthedLayout>} />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
         <Route

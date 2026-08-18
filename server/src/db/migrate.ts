@@ -237,8 +237,8 @@ const migrations: { name: string; sql: string }[] = [
       ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
       ALTER TABLE users ADD CONSTRAINT users_role_check
         CHECK (role IN (
-          'admin', 'manager', 'frontdesk', 'dietary',
-          'activities', 'server', 'staff', 'readonly'
+          'admin', 'manager', 'dietitian', 'frontdesk', 'dietary',
+          'distributor', 'activities', 'server', 'staff', 'readonly'
         ));
     `,
   },
@@ -249,6 +249,138 @@ const migrations: { name: string; sql: string }[] = [
         ADD COLUMN IF NOT EXISTS mfa_secret TEXT;
 
       COMMENT ON COLUMN users.mfa_secret IS 'Base32 TOTP secret; null when MFA not enrolled';
+    `,
+  },
+  {
+    name: '010_purchasing_schema',
+    sql: `
+      -- Vendors (distributor-agnostic; Dennis Food Service is the first example)
+      CREATE TABLE IF NOT EXISTS vendors (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name        TEXT NOT NULL,
+        code        TEXT UNIQUE NOT NULL,
+        phone       TEXT DEFAULT '',
+        email       TEXT DEFAULT '',
+        website     TEXT DEFAULT '',
+        notes       TEXT DEFAULT '',
+        active      BOOLEAN NOT NULL DEFAULT true,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- Vendor catalog items (broadline SKUs, pack sizes, UOMs)
+      CREATE TABLE IF NOT EXISTS vendor_items (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        vendor_sku      TEXT NOT NULL,
+        name            TEXT NOT NULL,
+        brand           TEXT DEFAULT '',
+        pack_size       TEXT DEFAULT '',
+        uom             TEXT DEFAULT 'case',
+        category        TEXT DEFAULT '',
+        unit_cost       NUMERIC(10,4) DEFAULT 0,
+        active          BOOLEAN NOT NULL DEFAULT true,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(vendor_id, vendor_sku)
+      );
+
+      -- Maps facility ingredients to preferred vendor items (many-to-one preferred)
+      CREATE TABLE IF NOT EXISTS facility_item_maps (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id         UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        ingredient_name     TEXT NOT NULL,
+        vendor_item_id      UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
+        preferred           BOOLEAN NOT NULL DEFAULT true,
+        conversion_factor   NUMERIC(10,4) DEFAULT 1.0,
+        notes               TEXT DEFAULT '',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- Standing order guide entries: par levels and on-hand counts per vendor item
+      CREATE TABLE IF NOT EXISTS order_guides (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        vendor_item_id  UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
+        par_level       NUMERIC(10,2) NOT NULL DEFAULT 0,
+        on_hand         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        avg_usage       NUMERIC(10,2),
+        sort_group      TEXT DEFAULT '',
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(facility_id, vendor_item_id)
+      );
+
+      -- Purchase orders (header)
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','submitted','received','cancelled')),
+        order_date      DATE NOT NULL DEFAULT CURRENT_DATE,
+        expected_date   DATE,
+        notes           TEXT DEFAULT '',
+        created_by      UUID REFERENCES users(id),
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- Purchase order line items
+      CREATE TABLE IF NOT EXISTS purchase_order_lines (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        purchase_order_id   UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+        vendor_item_id      UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
+        qty_ordered         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        qty_received        NUMERIC(10,2),
+        unit_cost           NUMERIC(10,4),
+        notes               TEXT DEFAULT '',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- Seed Dennis Food Service as first vendor
+      INSERT INTO vendors (name, code, website, notes)
+      VALUES (
+        'Dennis Food Service',
+        'dennis',
+        'https://dennisfoodservice.com',
+        'Broadline distributor — primary V1 reference. Supports online ordering and order guide maintenance.'
+      )
+      ON CONFLICT (code) DO NOTHING;
+    `,
+  },
+  {
+    name: '011_reporting_tables',
+    sql: `
+      -- Substitution log: tracks when a menu item is swapped for a resident
+      CREATE TABLE IF NOT EXISTS substitution_log (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        resident_id     UUID REFERENCES residents(id) ON DELETE SET NULL,
+        meal_date       DATE NOT NULL,
+        meal_type       TEXT NOT NULL DEFAULT '',
+        original_item   TEXT NOT NULL DEFAULT '',
+        substitute_item TEXT NOT NULL DEFAULT '',
+        reason          TEXT DEFAULT '',
+        logged_by       UUID REFERENCES users(id),
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- Daily cost snapshot (optional manual entry; reports can also be computed live)
+      CREATE TABLE IF NOT EXISTS daily_cost_log (
+        id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id           UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        log_date              DATE NOT NULL,
+        resident_count        INT NOT NULL DEFAULT 0,
+        food_cost             NUMERIC(10,2) NOT NULL DEFAULT 0,
+        cost_per_resident_day NUMERIC(10,4) GENERATED ALWAYS AS (
+          CASE WHEN resident_count > 0 THEN food_cost / resident_count ELSE 0 END
+        ) STORED,
+        notes                 TEXT DEFAULT '',
+        created_by            UUID REFERENCES users(id),
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(facility_id, log_date)
+      );
     `,
   },
 ]
