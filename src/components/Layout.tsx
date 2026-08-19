@@ -39,6 +39,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Kitchen Tablet Mode', to: '/kitchen/tablet', color: '#EF4444', minRole: 'dietary' },
       { label: 'Menu Planner', to: '/menu', color: '#F59E0B', minRole: 'dietary', end: true },
+      { label: 'Daily Cook Sheet', to: '/kitchen/sheet', color: '#F97316', minRole: 'dietary' },
       { label: 'Tray Cards', to: '/kitchen/traycards', color: '#EC4899', minRole: 'dietary' },
       { label: 'Recipe Book', to: '/recipes', color: '#6366F1' },
       { label: 'Production Sheets', to: '/production', color: '#06B6D4' },
