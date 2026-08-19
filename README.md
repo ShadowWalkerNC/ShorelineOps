@@ -7,7 +7,11 @@
 **Shoreline Operations Platform (ShorelineOps)** — An open-source, HIPAA/SOC 2-compliant internal care coordination, dietary management, and facility operations system for healthcare and senior living environments.
 
 ### 📚 Documentation Hub
-- **💼 [Product & Marketing Overview](PRODUCT_MARKETING.md)** — Executive pitch, problem/solution breakdown, value propositions, and resident safety.
+- **💼 [Executive Pitch & Commercial Kit](SALES_PITCH.md)** — Facility pitch deck, ROI savings model ($1.50–$3.00/day), pricing tiers, and distributor value proposition.
+- **📄 [Commercial Services Agreement](COMMERCIAL_AGREEMENT.md)** — Master Software License Agreement, BAA integration, data ownership, and SLA terms.
+- **🎬 [5-Minute Live Sales Demo Script](DEMO_SCRIPT.md)** — Step-by-step presentation script for Executive Directors and Dietary Managers.
+- **📥 [Facility Onboarding Templates](ONBOARDING_TEMPLATES.md)** — Ready-to-use CSV/Excel templates for 10-minute resident census and Dennis order guide imports.
+- **💼 [Product Marketing Guide](PRODUCT_MARKETING.md)** — Problem/solution breakdown, clinical safety, and feature deep-dives.
 - **💻 [Developer & API Guide](DEVELOPERS.md)** — Tech stack, folder structure, 10-tier RBAC matrix, and connector contracts.
 - **🚚 [Distributor Onboarding Guide](DISTRIBUTORS.md)** — Integration manual for food distributors (Dennis Food Service) & item master setup.
 - **🏗️ [System Architecture](ARCHITECTURE.md)** — High-level system topology, module boundaries, and security safeguards.
