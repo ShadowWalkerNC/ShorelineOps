@@ -1,0 +1,104 @@
+---
+interface Props {
+  title: string
+  description?: string
+}
+
+const { title, description = 'The open-source dietary operations and care coordination platform for senior living facilities.' } = Astro.props
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — ShorelineOps</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-blue-500 selection:text-white flex flex-col min-h-screen">
+    <!-- Navigation -->
+    <header class="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-3 group">
+          <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-display font-black text-xl text-white shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform">
+            S
+          </div>
+          <div>
+            <span class="font-display font-bold text-lg text-white tracking-tight">ShorelineOps</span>
+            <span class="hidden sm:inline-block ml-2 text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">Dietary OS</span>
+          </div>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+          <a href="/#features" class="hover:text-white transition-colors">Features</a>
+          <a href="/distributors" class="hover:text-white transition-colors">For Distributors (Dennis)</a>
+          <a href="/pricing" class="hover:text-white transition-colors">Pricing</a>
+          <a href="/story" class="hover:text-white transition-colors">Founder Story</a>
+        </nav>
+
+        <div class="flex items-center gap-4">
+          <a href="https://github.com/ShadowWalkerNC/ShorelineOps" target="_blank" rel="noreferrer" class="text-sm font-semibold text-slate-300 hover:text-white hidden sm:block">
+            GitHub
+          </a>
+          <a href="http://localhost:3000" class="inline-flex items-center justify-center px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-all shadow-md shadow-blue-600/30">
+            Live Demo
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-950 py-12 text-slate-400 text-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div>
+          <div class="font-display font-bold text-lg text-white mb-2">ShorelineOps</div>
+          <p class="text-xs text-slate-400 leading-relaxed mb-4">
+            The open-source dietary operations system built by a senior living chef. Designed for assisted living, memory care, and skilled nursing.
+          </p>
+          <div class="text-xs text-slate-500">Built in Maine 🌲</div>
+        </div>
+
+        <div>
+          <div class="font-bold text-white text-xs uppercase tracking-wider mb-3">Product</div>
+          <ul class="space-y-2 text-xs">
+            <li><a href="/#features" class="hover:text-white">Kitchen Tablet Mode</a></li>
+            <li><a href="/#features" class="hover:text-white">IDDSI & Dysphagia Tracking</a></li>
+            <li><a href="/#features" class="hover:text-white">Dennis Purchasing Sync</a></li>
+            <li><a href="/#features" class="hover:text-white">Cost Per Resident Day ($/CPD)</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="font-bold text-white text-xs uppercase tracking-wider mb-3">Partners</div>
+          <ul class="space-y-2 text-xs">
+            <li><a href="/distributors" class="hover:text-white">Dennis Food Service Reps</a></li>
+            <li><a href="/distributors" class="hover:text-white">Vendor Portal Link</a></li>
+            <li><a href="/pricing" class="hover:text-white">Self-Hosted vs Hosted</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="font-bold text-white text-xs uppercase tracking-wider mb-3">Legal & HIPAA</div>
+          <ul class="space-y-2 text-xs">
+            <li><a href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/COMMERCIAL_AGREEMENT.md" class="hover:text-white">Master Services Agreement</a></li>
+            <li><a href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/BAA.md" class="hover:text-white">Business Associate Agreement (BAA)</a></li>
+            <li><a href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/HIPAA_NOTICE.md" class="hover:text-white">HIPAA Notice of Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/60 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+        <div>© 2026 Shoreline Operations LLC. Open-source under MIT License.</div>
+        <div class="mt-2 sm:mt-0">Zero vendor lock-in. Real kitchen accountability.</div>
+      </div>
+    </footer>
+  </body>
+</html>
