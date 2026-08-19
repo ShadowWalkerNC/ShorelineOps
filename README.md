@@ -1,95 +1,154 @@
-# ShorelineOps (Shoreline Care Operations)
+<div align="center">
 
-> **The Open-Source Dietary Operations & Care Coordination Platform for Senior Living Facilities.**  
-> Built for Assisted Living, Memory Care, and Skilled Nursing kitchen teams.
+# 🍽️ ShorelineOps
+### The Open-Source Dietary Operations & Care Coordination Platform for Senior Living
 
----
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Security: HIPAA & SOC 2 Ready](https://img.shields.io/badge/Compliance-HIPAA%20%26%20SOC%202%20Ready-emerald.svg)](#-security--compliance-hipaa--soc-2)
+[![Stack: React 18 / Node / Postgres](https://img.shields.io/badge/Stack-React%20%7C%20Node%20%7C%20Postgres-blueviolet.svg)](#%EF%B8%8F-tech-stack)
+[![Astro Marketing Site](https://img.shields.io/badge/Marketing%20Site-Astro%20%2B%20Tailwind-orange.svg)](marketing)
 
-## 🍽️ What is ShorelineOps?
+**Built by a senior living chef, not a VC.**  
+*Bridging clinical resident diets, kitchen batch cooking, tray cards, and food distributor purchasing without proprietary vendor lock-in.*
 
-**ShorelineOps** is a complete software application that runs the daily dietary, food production, and purchasing operations for senior living communities.
+[🚀 Live Demo Sandbox](http://localhost:3000) • [💼 Commercial Pitch](SALES_PITCH.md) • [📄 Legal Agreement](COMMERCIAL_AGREEMENT.md) • [🎬 5-Min Demo Script](DEMO_SCRIPT.md) • [🚚 Dennis Guide](DISTRIBUTORS.md)
 
-In senior living, foodservice is not just cooking—it is **clinical care**. Kitchens must prepare specialized textures for residents with swallowing disorders (dysphagia), eliminate deadly allergens, provide tray cards for meal delivery, balance food budgets, and order supplies from broadline distributors (like **Dennis Food Service**).
-
-ShorelineOps replaces scattered binders, dry-erase boards, and outdated legacy software with a **single, easy-to-use digital system**.
-
----
-
-## 🌟 What Can You Do with ShorelineOps?
-
-### 1. 📋 Manage Resident Diets & Prevent Allergen Errors
-- Maintain digital resident profiles with **therapeutic diet orders** (Low Sodium/NAS, Diabetic/NCS, Renal, Cardiac).
-- Track **IDDSI texture modifications** (Regular, Mechanical Soft, Pureed, Minced & Moist, Nectar Thick liquids).
-- Auto-flag allergies with **bold visual alerts** so the kitchen never serves the wrong ingredient to an allergic resident.
-- Assign residents to specific dining room tables or room tray delivery carts.
-
-### 2. 📱 Kitchen Tablet Mode (Built for Line Cooks & Prep Staff)
-- A **touch-optimized, big-button interface** (`/kitchen/tablet`) designed specifically for kitchen iPads or wall-mounted touchscreens:
-  - **🍳 Cook Worksheets**: View batch recipes scaled to today's census, track cooking temps (165°F), and check off prep items (`pending` ➔ `prepping` ➔ `completed`).
-  - **📋 Digital Tray Card Line**: Step through resident meal tickets one-by-one during meal service with bold red allergy warnings and one-tap cart dispatch.
-  - **📦 Quick Par Counter**: Conduct 2-minute morning walk-through inventory counts using simple `+` and `-` buttons without needing a keyboard.
-
-### 3. 🛒 Distributor-Agnostic Purchasing & Dennis Food Service Ordering
-- Establish **standing order guides** with minimum par levels and on-hand inventory counts.
-- **Automated Suggested Order Generator**: One click calculates exactly what to order (`Par Level - On Hand`).
-- **Drag-and-Drop CSV Ingestion**: Drop in Dennis Food Service order guides or catalog updates in seconds.
-- **Instant Dennis Order Export**: Download ready-to-send electronic order files formatted specifically for Dennis Food Service.
-- **Distributor Partner Portal (`/distributor`)**: Give your distributor sales rep secure access to update item SKUs and contract pricing without exposing resident medical data.
-
-### 4. 📊 Food Cost per Resident Day ($/CPD) & State Compliance
-- Track real-time **Food Cost per Resident Day ($/CPD)** and total operating costs (including dietary labor).
-- Maintain an audit trail of **meal substitutions** with clinical justifications.
-- Generate a one-click **Printable Dietary Compliance Summary** for state health inspection surveys.
-
-### 5. 📅 Cycle Menu Planning & Recipe Book
-- Build 4-to-5 week cycle menus with Choice A and Choice B entrees.
-- **Smart Recipe Book**: Automatically scans ingredient names to detect allergens (`milk` ➔ `Dairy`, `flour` ➔ `Gluten`, `eggs` ➔ `Eggs`, `peanut/walnut` ➔ `Nuts`).
-- Link recipe ingredients directly to distributor catalog SKUs for live cost-per-serving calculations.
+</div>
 
 ---
 
-## 🖥️ Screen-by-Screen Application Tour
+## 🧭 System Overview: How Shoreline Coordinates the Daily Kitchen
 
-| Navigation Section | What It Does | Who Uses It |
-|---|---|---|
-| 🔵 **Dashboard (`/`)** | Daily overview of resident census, meal tallies, active diet alerts, and fast shortcuts. | Everyone |
-| 🟢 **Residents & Diets (`/residents`)** | Manage resident admissions, dietary restrictions, textures, allergies, and table seats. | Dietitians & Care Staff |
-| 🔴 **Kitchen Tablet (`/kitchen/tablet`)** | High-contrast touch display for batch cook worksheets, tray card dispatch, and quick inventory steppers. | Line Cooks & Kitchen Staff |
-| 🟡 **Menu Planner (`/menu`)** | Multi-week cycle menu calendar with meal slots and alternative options. | Dietary Directors |
-| 🟣 **Purchasing & Orders (`/purchasing`)** | Standing order guide par levels, suggested purchase order generator, Dennis CSV sync, and order history. | Dietary Managers |
-| 🟣 **Distributor Portal (`/distributor`)** | Vendor self-service portal to update product SKUs, pack sizes, and contract unit prices. | Food Distributor Reps |
-| 🟢 **Cost & Compliance (`/reporting`)** | Food cost analytics ($/CPD), substitution logs, allergen safety audits, and state inspection sheets. | Executive Directors & DONs |
-| 🟣 **Recipe Book (`/recipes`)** | Master recipe catalog with automatic allergen tagging and batch portion scaling. | Chefs & Dietary Staff |
-| ⚪ **Staff & Timecards (`/staff`, `/timecards`)** | Staff schedule directory and punch clock log with kiosk support. | Managers |
-
----
-
-## 🔒 Healthcare Privacy & Security (HIPAA Ready)
-
-- **10-Minute Idle Auto-Logout**: Protects resident Protected Health Information (PHI) on shared dining and kitchen computers.
-- **Append-Only Audit Log**: Database triggers prevent alteration or deletion of audit records for non-repudiation during state compliance surveys.
-- **10 Role Access Levels**: Fine-grained permissions separating Super Admins, Registered Dietitians, Dietary Staff, Distributor Partners, and Read-Only users.
-- **Vendor PHI Isolation**: Distributor reps can manage catalog pricing without access to resident names, medical charts, or timecards.
+```
+                                  ┌───────────────────────────────┐
+                                  │ 1. CLINICAL DIET ORDERS       │
+                                  │ • Pureed, Minced, NAS, Renal  │
+                                  │ • Bold Allergen Exclusions    │
+                                  │ • Thickened Nectar Liquids    │
+                                  └───────────────┬───────────────┘
+                                                  │
+                                                  ▼
+┌───────────────────────────────┐ ┌───────────────────────────────┐ ┌───────────────────────────────┐
+│ 2. MENU & RECIPE PLANNING     │ │ 3. KITCHEN TABLET SERVICE     │ │ 4. DISTRIBUTOR PURCHASING     │
+│ • 4-Week Cycle Menus          │ │ • Large-Touch Cook Worksheets │ │ • Suggested POs (Par - Count) │
+│ • Auto-Allergen Detection     │─┼▶ • 1-Tap Tray Card Dispatch   │─┼▶ • Dennis Food Service CSV Sync │
+│ • Dennis SKU Cost Linking     │ │ • 2-Minute Par Count Walk     │ │ • Real-Time $/CPD Cost Audit  │
+└───────────────────────────────┘ └───────────────────────────────┘ └───────────────────────────────┘
+```
 
 ---
 
-## 🚀 How to Run & Try ShorelineOps
+## 🌟 Core Modules at a Glance
 
-### Try the Demo in 2 Minutes:
-1. Open the application in your browser at **[http://localhost:3000](http://localhost:3000)** (or your deployed URL).
-2. Sign in with the evaluation admin account:
+### 1. 🔴 Kitchen Tablet Mode (`/kitchen/tablet`)
+> *Designed specifically for wall-mounted kitchen touchscreens or handheld iPads.*
+
+- 🍳 **Batch Cook Worksheets**: Live portion scaling based on today's census, internal temperature guidelines (165°F), and one-tap status toggling (`pending` ➔ `prepping` ➔ `completed`).
+- 📋 **Digital Tray Card Line**: Step-through resident meal tickets displaying bold, high-contrast red allergen alerts and required thickened beverages.
+- 📦 **Quick Par Counter**: Stepper `+` and `-` buttons for cooks to record physical inventory counts during morning walk-throughs without typing.
+
+### 2. 🟢 Clinical Resident & Diet Safety (`/residents`)
+> *Eliminates dangerous meal delivery mistakes and guarantees 100% IDDSI compliance.*
+
+- 🥗 **Therapeutic Diet Orders**: No Added Salt (NAS), No Concentrated Sweets (NCS/Diabetic), Renal, Cardiac, and Low Fat.
+- 🥣 **IDDSI Texture Modifications**: Regular, Mechanical Soft, Ground / Minced & Moist, Pureed, and Nectar Thick.
+- ⚠️ **Visual Allergy Guard**: Auto-highlights allergen conflicts (Gluten, Dairy, Nuts, Eggs, Shellfish, Soy, Seeds) directly on recipes and tray tickets.
+- 🪑 **Dining Seating & Delivery**: Table assignments by dining room or room tray delivery carts.
+
+### 3. 🟣 Purchasing, Dennis Food Service & Distributor Portal (`/purchasing`)
+> *Distributor-agnostic purchasing that cuts food spend by $1.50–$3.00 per resident day.*
+
+- 🤖 **Suggested Purchase Order Generator**: Calculates exact order quantities in 1 click using `Par Level - On Hand`.
+- 📥 **Dennis CSV Drag-and-Drop**: Drop in your Dennis Food Service order guide or broadline catalog for instant par synchronization.
+- 📄 **Instant Dennis Order Export**: Generates electronic CSV purchase orders formatted directly for Dennis Food Service.
+- 🚚 **Dedicated Distributor Partner Portal (`/distributor`)**: Sales reps update contract unit pricing and pack sizes without viewing resident PHI.
+
+### 4. 📊 Food Cost ($/CPD) & State Survey Compliance (`/reporting`)
+> *Real-time financial control and stress-free annual health inspections.*
+
+- 💵 **Cost Per Resident Day ($/CPD)**: Real-time dashboard comparing daily food spend against your target budget (e.g. $10.86/day).
+- ⏱️ **Total Dietary Operating Spend**: Combined food spend + dietary labor hours pulled directly from punch logs.
+- 📝 **Substitution Log**: Clinical audit trail of all meal substitutions and justifications.
+- 🖨️ **Printable Compliance Summary**: One-click print-ready report for state health surveyors.
+
+---
+
+## 🖥️ Screen-by-Screen Map
+
+| Module | Route | What You Do Here | Primary Users |
+|---|---|---|---|
+| 🔵 **Dashboard** | `/` | Census overview, meal tallies, active diet alerts, and fast shortcuts. | Executive Directors & All Staff |
+| 🟢 **Residents & Diets** | `/residents` | Manage medical profiles, textures, allergies, and table seats. | Dietitians, RDs, DONs |
+| 🔴 **Kitchen Tablet** | `/kitchen/tablet` | Touch display for batch cook worksheets, tray card dispatch, and quick par counts. | Line Cooks & Prep Staff |
+| 🟡 **Menu Planner** | `/menu` | 4-week cycle menu calendar with Choice A / Choice B slots. | Dietary Directors |
+| 🟣 **Purchasing & Orders** | `/purchasing` | Order guide par levels, suggested PO generator, and Dennis CSV export. | Dietary Managers |
+| 🟣 **Distributor Portal** | `/distributor` | Vendor portal to update catalog SKUs, pack sizes, and contract unit pricing. | Food Distributor Reps |
+| 🟢 **Cost & Compliance** | `/reporting` | $/CPD analytics, substitution logs, allergen safety audits, and survey sheets. | Administrators & Inspectors |
+| 🟣 **Smart Recipe Book** | `/recipes` | Master recipe book with automatic allergen detection and yield scaling. | Chefs & Cooks |
+| ⚪ **Facility Setup** | `/setup` | 6-step onboarding wizard to configure wings, dining rooms, and BAA sign-off. | Super Administrators |
+
+---
+
+## ⚡ Quickstart: Try the Demo in 60 Seconds
+
+The application includes an instant evaluation mode with zero backend setup required:
+
+1. **Launch the web application**:
+   ```bash
+   npm install
+   npm run dev
+   ```
+2. **Open in Browser**: Navigate to **[http://localhost:3000](http://localhost:3000)**.
+3. **Sign In**:
    - **Email**: `admin@shoreline.demo`
    - **Password**: `Admin1234!`
-3. Test **Kitchen Tablet Mode** (`/kitchen/tablet`), check **Resident Diets** (`/residents`), or generate a suggested order in **Purchasing** (`/purchasing`).
+4. **Explore**:
+   - Tap through **Kitchen Tablet Mode** at `/kitchen/tablet`.
+   - Test **Dennis CSV Auto-Ordering** at `/purchasing`.
+   - View **Cost per Resident Day Analytics** at `/reporting`.
 
-### Self-Hosting / Full Installation:
-For full deployment instructions (Node.js, PostgreSQL, or One-Click Docker Compose), see:
-- 💻 **[Developer & API Guide](DEVELOPERS.md)** — Complete tech stack, database schemas, and API documentation.
-- 💼 **[Commercial Sales & ROI Guide](SALES_PITCH.md)** — Cost savings math ($1.50–$3.00/day), pricing tiers, and ROI breakdown.
-- 📄 **[Commercial Services Agreement](COMMERCIAL_AGREEMENT.md)** — Software license agreement and HIPAA Business Associate Agreement (BAA).
+---
+
+## 🐳 One-Click Production Docker Deployment
+
+Deploy the entire production stack (Nginx Frontend + Express API + PostgreSQL 15) with automated healthchecks:
+
+```bash
+# Clone the repository
+git clone https://github.com/ShadowWalkerNC/ShorelineOps.git
+cd ShorelineOps
+
+# Start production containers
+docker-compose up -d --build
+```
+
+- **Frontend App**: `http://localhost:80`
+- **Backend API**: `http://localhost:3001`
+- **Automated Backup**: Run `bash scripts/backup.sh` (Linux/macOS) or `powershell scripts/backup.ps1` (Windows) for timestamped backups with 30-day auto-rotation.
+
+---
+
+## 🔒 Security, Privacy & HIPAA Compliance
+
+ShorelineOps includes comprehensive healthcare safeguards:
+- **10-Minute Idle Auto-Logout**: Protects resident health data on shared kitchen computers (`AuthContext.tsx`).
+- **Append-Only Audit Immutability**: PostgreSQL triggers prevent alteration or deletion of audit logs for non-repudiation during state surveys.
+- **10-Tier Granular RBAC**: Strict role boundaries separating Super Admins, Registered Dietitians, Dietary Staff, Distributor Partners, and Read-Only users.
+- **Distributor PHI Isolation**: Food vendor logins are cryptographically restricted from viewing resident medical records or dietary orders.
+- **HTTP Security Headers**: Strict CSP, HSTS preload, `X-Frame-Options: DENY`, and `X-Content-Type-Options: nosniff` via Helmet.
+
+---
+
+## 📚 Complete Commercial & Technical Hub
+
+- 💼 **[Executive Pitch & Commercial Kit](SALES_PITCH.md)** — Cost savings math ($1.50–$3.00/day), pricing tiers, and ROI breakdown.
+- 📄 **[Commercial Services Agreement](COMMERCIAL_AGREEMENT.md)** — Master software license agreement and HIPAA Business Associate Agreement (BAA).
 - 🎬 **[Live Sales Demo Script](DEMO_SCRIPT.md)** — 5-minute walkthrough script for facility leadership.
 - 📥 **[Onboarding Templates](ONBOARDING_TEMPLATES.md)** — CSV/Excel templates for 10-minute census and order guide imports.
 - 🚚 **[Distributor Onboarding Guide](DISTRIBUTORS.md)** — Food distributor partner manual for Dennis Food Service.
+- 💻 **[Developer & API Guide](DEVELOPERS.md)** — Complete tech stack, database schemas, and API documentation.
+- 🏗️ **[System Architecture](ARCHITECTURE.md)** — System design, module boundaries, and security safeguards.
+- 📋 **[Development Roadmap](TODO.md)** — Track completed V1 deliverables and V2–V4 milestones.
 
 ---
 
