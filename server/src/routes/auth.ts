@@ -29,18 +29,6 @@ function makeTokens(userId: string, role: ApiRole, mfaVerified: boolean) {
     getJwtSecret(),
     { expiresIn: JWT_EXPIRES }
   )
-
-  const refreshToken = jwt.sign(
-    { sub: userId, role, mfa: mfaVerified, type: 'refresh' },
-    getJwtSecret(),
-    { expiresIn: `${REFRESH_EXPIRES_DAYS}d` as jwt.SignOptions['expiresIn'] }
-  )
-
-  return { accessToken, refreshToken }
-}
-    getJwtSecret(),
-    { expiresIn: JWT_EXPIRES }
-  )
   const refreshToken = crypto.randomBytes(48).toString('hex')
   return { accessToken, refreshToken }
 }
@@ -60,6 +48,7 @@ function verifyMfaPendingToken(token: string, purpose: 'mfa_verify' | 'mfa_enrol
   }
   return payload.sub
 }
+
 function asApiRole(role: string): ApiRole {
   return (API_ROLES as readonly string[]).includes(role) ? (role as ApiRole) : 'readonly'
 }
@@ -118,6 +107,7 @@ async function issueSession(user: { id: string; name: string; email: string; rol
     },
   }
 }
+
 // ─────────────────────────────────────────────
 // POST /api/auth/login
 // ─────────────────────────────────────────────
@@ -148,151 +138,6 @@ authRouter.post('/login', async (req, res, next) => {
 
     const globalMfa = await isMfaRequiredGlobally()
     const userMfaEnabled = !!user.mfa_enabled && !!user.mfa_secret
-    const role = asApiRole(user.role)
-
-    if (userMfaEnabled) {
-      const mfaToken = makeMfaPendingToken(user.id, 'mfa_verify')
-      return res.json({
-        mfaRequired: true,
-        mfaToken,
-        user: { id: user.id, name: user.name, email: user.email, role },
-      })
-    }
-
-    if (globalMfa && !userMfaEnabled) {
-      const mfaToken = makeMfaPendingToken(user.id, 'mfa_enroll')
-      return res.json({
-        mfaEnrollmentRequired: true,
-        mfaToken,
-        user: { id: user.id, name: user.name, email: user.email, role },
-      })
-    }
-
-    const { accessToken, refreshToken } = makeTokens(user.id, role, false)
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
-    const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
-
-    if (userMfaEnabled) {
-      const mfaToken = makeMfaPendingToken(user.id, 'mfa_verify')
-      return res.json({
-        mfaRequired: true,
-        mfaToken,
-        user: { id: user.id, email: user.email, name: user.name },
-      })
-    }
-
-    if (globalMfa && !userMfaEnabled) {
-      const mfaToken = makeMfaPendingToken(user.id, 'mfa_enroll')
-      return res.json({
-        mfaEnrollmentRequired: true,
-        mfaToken,
-        user: { id: user.id, email: user.email, name: user.name },
-      })
-    }
-
-    res.json(await issueSession(user, false))
-  } catch (err) { next(err) }
-})
-
-// ─────────────────────────────────────────────
-// POST /api/auth/mfa/verify — complete login with TOTP
-// ─────────────────────────────────────────────
-authRouter.post('/mfa/verify', async (req, res, next) => {
-  try {
-    const { mfaToken, code } = z.object({
-      mfaToken: z.string().min(1),
-      code: z.string().regex(/^\d{6}$/),
-    }).parse(req.body)
-
-    const userId = verifyMfaPendingToken(mfaToken, 'mfa_verify')
-    const { rows } = await pool.query(
-      'SELECT * FROM users WHERE id = $1 AND active = true', [userId]
-    )
-    const user = rows[0]
-    if (!user) return res.status(401).json({ error: 'User not found.' })
-
-    if (!user?.mfa_secret || !user.mfa_enabled) {
-      return res.status(400).json({ error: 'MFA is not enabled for this account.' })
-    }
-
-    if (!verifyTotp(user.mfa_secret, code)) {
-      await pool.query(
-        `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
-         VALUES ('LOGIN', $1, 'auth', 'failure', $2)`,
-        [user.id, JSON.stringify({ reason: 'mfa_invalid' })]
-      )
-      return res.status(401).json({ error: 'Invalid authentication code.' })
-    }
-
-    // Successful MFA: update last login and record success
-    await pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id])
-    await pool.query(
-      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
-       VALUES ('LOGIN', $1, 'auth', 'success', $2)`,
-      [user.id, JSON.stringify({ mfaVerified: true })]
-    )
-
-    res.json(await issueSession(user, true))
-  } catch (err) { next(err) }
-})
-
-// ─────────────────────────────────────────────
-// POST /api/auth/mfa/setup/begin — start enrollment (pending or authenticated)
-// ─────────────────────────────────────────────
-authRouter.post('/mfa/setup/begin', async (req, res, next) => {
-  try {
-    const body = z.object({
-      mfaToken: z.string().optional(),
-    }).parse(req.body)
-
-    let userId: string | undefined
-
-    if (body.mfaToken) {
-      userId = verifyMfaPendingToken(body.mfaToken, 'mfa_enroll')
-    } else {
-      const header = req.headers.authorization
-      if (!header?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized' })
-      }
-      const payload = jwt.verify(header.slice(7), getJwtSecret()) as { sub?: string }
-      userId = payload.sub
-    }
-
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    const { rows } = await pool.query(
-      'SELECT id, email, name, mfa_enabled FROM users WHERE id = $1 AND active = true',
-      [userId]
-    )
-    const user = rows[0]
-    if (!user) return res.status(401).json({ error: 'User not found.' })
-    if (user.mfa_enabled) {
-      return res.status(400).json({ error: 'MFA is already enabled. Disable it before re-enrolling.' })
-    }
-
-    const secret = new OTPAuth.Secret({ size: 20 })
-    const totp = new OTPAuth.TOTP({
-      issuer: ISSUER,
-      label: user.email,
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret,
-    })
-
-    // Store pending secret (not enabled until confirmed)
-    await pool.query(
-      `UPDATE users SET mfa_secret = $1, mfa_enabled = false, updated_at = NOW() WHERE id = $2`,
-      [secret.base32, userId]
-    )
-    )
-
-    res.json({
-      secret: secret.base32,
-      otpauthUrl: totp.toString(),
-      issuer: ISSUER,
-      account: user.email,
-    })
 
     if (userMfaEnabled) {
       const mfaToken = makeMfaPendingToken(user.id, 'mfa_verify')
@@ -394,8 +239,6 @@ authRouter.post('/mfa/setup/begin', async (req, res, next) => {
 
     // Store pending secret (not enabled until confirmed)
     await pool.query(
-    // Store pending secret (not enabled until confirmed)
-    await pool.query(
       `UPDATE users SET mfa_secret = $1, mfa_enabled = false, updated_at = NOW() WHERE id = $2`,
       [secret.base32, userId]
     )
@@ -405,97 +248,7 @@ authRouter.post('/mfa/setup/begin', async (req, res, next) => {
       otpauthUrl: totp.toString(),
       issuer: ISSUER,
       account: user.email,
-      mfaEnrollmentRequired: true,
-      mfaToken: pendingToken,
     })
-    })
-  } catch (err) { next(err) }
-})
-
-// ─────────────────────────────────────────────
-// POST /api/auth/mfa/setup/confirm — enable MFA after verifying first code
-// ─────────────────────────────────────────────
-authRouter.post('/mfa/setup/confirm', async (req, res, next) => {
-  try {
-    const { mfaToken, code } = z.object({
-      mfaToken: z.string().optional(),
-      code: z.string().regex(/^\d{6}$/),
-    }).parse(req.body)
-
-    let userId: string | undefined
-    let fromEnrollment = false
-
-    if (mfaToken) {
-      userId = verifyMfaPendingToken(mfaToken, 'mfa_enroll')
-      fromEnrollment = true
-    } else {
-      const header = req.headers.authorization
-      if (!header?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized' })
-      }
-      const payload = jwt.verify(header.slice(7), getJwtSecret()) as { sub?: string }
-      userId = payload.sub
-    }
-
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    const { rows } = await pool.query(
-      'SELECT * FROM users WHERE id = $1 AND active = true', [userId]
-    )
-    const user = rows[0]
-    if (!user?.mfa_secret) {
-      return res.status(400).json({ error: 'Call /mfa/setup/begin first.' })
-    }
-    if (!verifyTotp(user.mfa_secret, code)) {
-      return res.status(401).json({ error: 'Invalid authentication code.' })
-    }
-
-    await pool.query(
-      `UPDATE users SET mfa_enabled = true, updated_at = NOW() WHERE id = $1`,
-      [userId]
-    )
-    await pool.query(
-      `INSERT INTO audit_log (action, user_id, resource_type, outcome)
-       VALUES ('MFA_ENABLE', $1, 'auth', 'success')`,
-      [userId]
-    )
-
-    if (fromEnrollment) {
-      // Complete login after forced enrollment
-      return res.json(await issueSession(user, true))
-    }
-
-    res.json({ success: true, mfaEnabled: true })
-  } catch (err) { next(err) }
-})
-
-// ─────────────────────────────────────────────
-// POST /api/auth/mfa/disable — admin/self with current TOTP
-// ─────────────────────────────────────────────
-authRouter.post('/mfa/disable', requireAuth, async (req: AuthRequest, res, next) => {
-  try {
-    const { code } = z.object({ code: z.string().regex(/^\d{6}$/) }).parse(req.body)
-    const { rows } = await pool.query(
-      'SELECT * FROM users WHERE id = $1 AND active = true', [req.userId]
-    )
-    const user = rows[0]
-    if (!user?.mfa_enabled || !user.mfa_secret) {
-      return res.status(400).json({ error: 'MFA is not enabled.' })
-    }
-    if (!verifyTotp(user.mfa_secret, code)) {
-      return res.status(401).json({ error: 'Invalid authentication code.' })
-    }
-
-    await pool.query(
-      `UPDATE users SET mfa_enabled = false, mfa_secret = NULL, updated_at = NOW() WHERE id = $1`,
-      [req.userId]
-    )
-    await pool.query(
-      `INSERT INTO audit_log (action, user_id, resource_type, outcome)
-       VALUES ('MFA_DISABLE', $1, 'auth', 'success')`,
-      [req.userId]
-    )
-    res.json({ success: true, mfaEnabled: false })
   } catch (err) { next(err) }
 })
 

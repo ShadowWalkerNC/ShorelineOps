@@ -8,7 +8,6 @@ import { useAuth } from '../../security/AuthContext'
 import { safeRedirectPath } from '@/lib/safeRedirect'
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
-type Step = 'credentials' | 'mfa' | 'enroll'
 
 type Step = 'credentials' | 'mfa' | 'enroll'
 
@@ -36,6 +35,7 @@ export default function LoginPage() {
   const from = safeRedirectPath(
     (location.state as { from?: { pathname: string } })?.from?.pathname
   )
+
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true })
   }, [isAuthenticated, navigate, from])
@@ -76,8 +76,6 @@ export default function LoginPage() {
           : 'Invalid authentication code.'
       )
     } finally {
-      setLoading(false)
-    }
       setLoading(false)
     }
   }

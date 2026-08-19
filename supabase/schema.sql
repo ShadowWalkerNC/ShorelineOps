@@ -419,3 +419,4 @@ create policy "call_outs_write" on public.call_outs
   for all to authenticated
   using (public.role_at_least('manager'))
   with check (public.role_at_least('manager'));
+
