@@ -16,6 +16,7 @@ import { kitchenRouter } from './routes/kitchen'
 import { purchasingRouter } from './routes/purchasing'
 import { reportingRouter } from './routes/reporting'
 import { setupRouter } from './routes/setup'
+import { ehrRouter } from './routes/ehr'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 import { runMigrations } from './db/migrate'
@@ -94,6 +95,7 @@ app.use('/api/timecard',   timecardRouter)
 app.use('/api/kitchen',    requireAuth, kitchenRouter)
 app.use('/api/purchasing', requireAuth, purchasingRouter)
 app.use('/api/reporting',  requireAuth, reportingRouter)
+app.use('/api/ehr',        ehrRouter)
 
 // Root API landing page
 app.get('/', (_req, res) => {
@@ -115,6 +117,7 @@ app.get('/', (_req, res) => {
       '/api/distributor',
       '/api/kitchen',
       '/api/timecard',
+      '/api/ehr',
       '/api/admin',
     ],
   })

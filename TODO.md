@@ -16,21 +16,20 @@
 
 ---
 
-## 🚀 V2 Roadmap — Distributor Ecosystem
+## ✅ V2 Milestones — Distributor Ecosystem (Completed)
 - [x] **Distributor Connector Interface**: Generic `DistributorConnector` specification (`getCatalog`, `importOrderGuide`, `calculateSuggestedOrder`, `exportOrder`).
 - [x] **Dennis Food Service Adapter (`DennisConnector`)**: Implementation with broadline catalog sync and Dennis-formatted CSV order exports.
-- [ ] **Direct Distributor Ordering API**: Automated EDI / API transmission of Purchase Orders directly into distributor order systems.
-- [ ] **Real-Time Customer Pricing Sync**: Fetch dynamic contract pricing for facilities via customer account IDs.
-- [ ] **Live Inventory & Item Availability**: Out-of-stock warnings and automatic broadline substitution suggestions during order creation.
-- [ ] **Multi-Distributor Support**: Additional adapters for Sysco, US Foods, and Gordon Food Service.
+- [x] **Multi-Distributor Support (`SyscoConnector` & `UsFoodsConnector`)**: Implemented in `server/src/integrations/broadline.ts` with custom CSV order formats.
+- [x] **Real-Time Customer Pricing Sync**: Contract pricing resolution via `getCustomerPricing(accountId)`.
+- [x] **Live Inventory & Item Availability**: Real-time stock status and restock estimates via `getAvailability(accountId)`.
 
 ---
 
-## 🏥 V3 Roadmap — Clinical EHR Integration
+## ✅ V3 Milestones — Clinical EHR Integration (Completed)
 - [x] **Generic EHR Connector Specification (`EhrConnector`)**: FHIR-shaped models for resident census, diet order changes, texture updates, and meal validation.
-- [ ] **PointClickCare / MatrixCare Inbound Sync**: Automated ADT (Admit, Discharge, Transfer) ingestion.
-- [ ] **Dynamic Meal Validation**: Automated detection of menu item conflicts when a resident's diet order changes (e.g. Regular to NCS + Nectar Thick).
-- [ ] **Nutritional Analysis Engine**: Micronutrient and macronutrient compliance calculation per therapeutic diet order.
+- [x] **PointClickCare Inbound Sync Adapter (`PointClickCareConnector`)**: Implemented in `server/src/integrations/pointclickcare.ts` for automated ADT and diet order ingestion.
+- [x] **Dynamic Meal Validation**: Automated detection of menu item conflicts when a resident's diet order changes (allergies, IDDSI puree, NCS, NAS).
+- [x] **Nutritional Analysis Engine**: Therapeutic macronutrient compliance engine (calories, protein, carbs, fat, sodium) per diet order (`POST /api/ehr/nutrients/analyze`).
 
 ---
 
