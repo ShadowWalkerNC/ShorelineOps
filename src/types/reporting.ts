@@ -4,6 +4,12 @@ export interface ReportingSummary {
   totalFoodCost: string
   totalResidentDays: number
   costPerResidentDay: string | null
+  breakdown?: {
+    perishableFoodCost: number
+    dryGroceryCost: number
+    paperGoodsCost: number
+    chemicalSanitationCost: number
+  }
   estimatedLaborHours?: number
   estimatedLaborCost?: string
   totalOperatingCost?: string
