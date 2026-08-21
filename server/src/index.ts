@@ -97,31 +97,46 @@ app.use('/api/purchasing', requireAuth, purchasingRouter)
 app.use('/api/reporting',  requireAuth, reportingRouter)
 app.use('/api/ehr',        ehrRouter)
 
-// Root API landing page
-app.get('/', (_req, res) => {
-  res.json({
-    service: 'Shoreline Operations Platform API',
-    status: 'online',
-    version: '5.0.0',
-    documentation: '/api/docs',
-    health: '/health',
-    frontend: 'http://localhost:3000',
-    endpoints: [
-      '/api/setup',
-      '/api/auth',
-      '/api/residents',
-      '/api/menu',
-      '/api/production',
-      '/api/purchasing',
-      '/api/reporting',
-      '/api/distributor',
-      '/api/kitchen',
-      '/api/timecard',
-      '/api/ehr',
-      '/api/admin',
-    ],
+import path from 'path'
+import fs from 'fs'
+
+// Check if frontend build exists to serve single-port container
+const clientDistPath = path.resolve(__dirname, '../../dist')
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath))
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health') {
+      return next()
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'))
   })
-})
+} else {
+  // Root API landing page
+  app.get('/', (_req, res) => {
+    res.json({
+      service: 'Shoreline Operations Platform API',
+      status: 'online',
+      version: '5.0.0',
+      documentation: '/api/docs',
+      health: '/health',
+      frontend: 'http://localhost:3000',
+      endpoints: [
+        '/api/setup',
+        '/api/auth',
+        '/api/residents',
+        '/api/menu',
+        '/api/production',
+        '/api/purchasing',
+        '/api/reporting',
+        '/api/distributor',
+        '/api/kitchen',
+        '/api/timecard',
+        '/api/ehr',
+        '/api/admin',
+      ],
+    })
+  })
+}
 
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
