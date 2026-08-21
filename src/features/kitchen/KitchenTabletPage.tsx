@@ -138,7 +138,8 @@ export default function KitchenTabletPage() {
             gap: 10
           }}
         >
-          <span>🍳</span> Cook Worksheets
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444' }}></span>
+          Cook Worksheets
         </button>
 
         <button
@@ -158,7 +159,8 @@ export default function KitchenTabletPage() {
             gap: 10
           }}
         >
-          <span>📋</span> Tray Card Line ({trayCards.filter(t => t.dispatched).length}/{trayCards.length})
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#3B82F6' }}></span>
+          Tray Card Line ({trayCards.filter(t => t.dispatched).length}/{trayCards.length})
         </button>
 
         <button
@@ -178,7 +180,8 @@ export default function KitchenTabletPage() {
             gap: 10
           }}
         >
-          <span>📦</span> Quick Par Counter
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10B981' }}></span>
+          Quick Par Counter
         </button>
       </div>
 
@@ -205,29 +208,27 @@ export default function KitchenTabletPage() {
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                    <span style={{
-                      padding: '4px 12px',
-                      borderRadius: 20,
-                      background: isCompleted ? '#10B981' : isPrepping ? '#60A5FA' : '#475569',
-                      color: isCompleted ? '#064E3B' : isPrepping ? '#1E3A8A' : '#F1F5F9',
-                      fontWeight: 800,
-                      fontSize: 13,
-                      textTransform: 'uppercase'
-                    }}>
-                      {item.status}
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 13, fontWeight: 700, textTransform: 'uppercase' }}>
+                      {item.category}
                     </span>
-                    <span style={{ fontSize: 15, color: '#94A3B8', fontWeight: 600 }}>{item.category}</span>
+                    <span style={{ fontSize: 14, color: isCompleted ? '#6EE7B7' : '#93C5FD', fontWeight: 700 }}>
+                      STATUS: {item.status.toUpperCase()}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>{item.name}</div>
-                  <div style={{ fontSize: 16, color: '#CBD5E1', marginTop: 4 }}>💡 {item.prepNotes}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, marginTop: 6, color: '#fff' }}>
+                    {item.name}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#94A3B8', marginTop: 4 }}>
+                    {item.prepNotes}
+                  </div>
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 14, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Batch Yield</div>
-                  <div style={{ fontSize: 36, fontWeight: 900, color: '#38BDF8' }}>
-                    {item.batchCount} <span style={{ fontSize: 18, color: '#94A3B8' }}>portions</span>
+                  <div style={{ fontSize: 36, fontWeight: 900, color: '#F8FAFC' }}>
+                    {item.batchCount}
                   </div>
+                  <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 600 }}>SERVINGS</div>
                 </div>
               </div>
             )
@@ -235,7 +236,7 @@ export default function KitchenTabletPage() {
         </div>
       )}
 
-      {/* Tab: Tray Card Dispatch Line */}
+      {/* Tab: Tray Card Line Dispatch */}
       {activeTab === 'traycards' && (
         <div>
           {currentCard ? (
@@ -268,8 +269,9 @@ export default function KitchenTabletPage() {
 
               {/* High-Contrast Allergy Warning Banner */}
               <div style={{ background: '#7F1D1D', border: '2px solid #EF4444', borderRadius: 14, padding: 18, marginBottom: 24 }}>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#FCA5A5', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  ⚠️ CRITICAL ALLERGEN ALERTS
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#FCA5A5', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }}></span>
+                  CRITICAL ALLERGEN ALERTS
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginTop: 4 }}>
                   {currentCard.allergies.join(', ') || 'No Known Allergies'}
@@ -304,13 +306,13 @@ export default function KitchenTabletPage() {
                   boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.4)'
                 }}
               >
-                <span>✅</span> VERIFY & DISPATCH TRAY TO CART
+                VERIFY & DISPATCH TRAY TO CART
               </button>
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: 60, background: '#1E293B', borderRadius: 20 }}>
-              <div style={{ fontSize: 60, marginBottom: 16 }}>🎉</div>
-              <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: 0 }}>All Trays Dispatched!</h2>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#10B981', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 900 }}>✓</div>
+              <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: 0 }}>All Trays Dispatched</h2>
               <p style={{ fontSize: 18, color: '#94A3B8', marginTop: 8 }}>The meal service line for {mealFilter} is complete.</p>
               <button
                 onClick={() => setTrayCards(prev => prev.map(t => ({ ...t, dispatched: false })))}

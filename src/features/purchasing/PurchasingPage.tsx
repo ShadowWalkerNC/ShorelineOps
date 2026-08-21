@@ -244,7 +244,7 @@ export default function PurchasingPage() {
             cursor: 'pointer'
           }}
         >
-          📋 Standing Order Guide
+          Standing Order Guide
         </button>
         <button
           onClick={() => setActiveTab('suggested')}
@@ -259,7 +259,7 @@ export default function PurchasingPage() {
             cursor: 'pointer'
           }}
         >
-          🛒 Suggested Order Generator
+          Suggested Order Generator
         </button>
         <button
           onClick={() => setActiveTab('catalog')}
@@ -274,7 +274,7 @@ export default function PurchasingPage() {
             cursor: 'pointer'
           }}
         >
-          📦 Distributor Catalog & SKUs
+          Distributor Catalog & SKUs
         </button>
         <button
           onClick={() => setActiveTab('orders')}
@@ -289,7 +289,7 @@ export default function PurchasingPage() {
             cursor: 'pointer'
           }}
         >
-          📄 Purchase Orders History
+          Purchase Orders History
         </button>
       </div>
 
@@ -314,7 +314,7 @@ export default function PurchasingPage() {
                   cursor: 'pointer'
                 }}
               >
-                📥 Import Dennis CSV Guide
+                Import Dennis CSV Guide
               </button>
               <button
                 onClick={() => setShowAddGuideModal(true)}

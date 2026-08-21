@@ -212,7 +212,7 @@ export default function ReportingPage() {
               cursor: 'pointer'
             }}
           >
-            🖨️ Print Compliance Summary
+            Print Compliance Summary
           </button>
         </div>
       </div>
@@ -271,17 +271,21 @@ export default function ReportingPage() {
       {/* Dietary Budget Category Allocation Breakdown (Perishable Food vs Dry Grocery vs Paper Goods vs Chemicals) */}
       <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-            📊 Dietary Spend Allocation by Category (Food vs. Dry Goods vs. Supplies)
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-primary)' }}></span>
+            Dietary Spend Allocation by Category (Food vs. Dry Goods vs. Supplies)
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            Benchmark: 60% Fresh Food • 25% Dry Goods • 10% Paper • 5% Sanitation
+            Benchmark: 60% Fresh Food | 25% Dry Goods | 10% Paper | 5% Sanitation
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
           <div style={{ padding: 12, background: 'rgba(59, 130, 246, 0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#2563EB' }}>🥩 Fresh / Perishable Food (60%)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#2563EB', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563EB' }}></span>
+              Fresh / Perishable Food (60%)
+            </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
               ${summary?.breakdown?.perishableFoodCost || '360.00'}
             </div>
@@ -289,7 +293,10 @@ export default function ReportingPage() {
           </div>
 
           <div style={{ padding: 12, background: 'rgba(245, 158, 11, 0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#D97706' }}>🥫 Dry Grocery & Canned (25%)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#D97706', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#D97706' }}></span>
+              Dry Grocery & Canned (25%)
+            </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
               ${summary?.breakdown?.dryGroceryCost || '150.00'}
             </div>
@@ -297,7 +304,10 @@ export default function ReportingPage() {
           </div>
 
           <div style={{ padding: 12, background: 'rgba(16, 185, 129, 0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#059669' }}>🧻 Paper & Dry Goods (10%)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669' }}></span>
+              Paper & Dry Goods (10%)
+            </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
               ${summary?.breakdown?.paperGoodsCost || '60.00'}
             </div>
@@ -305,7 +315,10 @@ export default function ReportingPage() {
           </div>
 
           <div style={{ padding: 12, background: 'rgba(139, 92, 246, 0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#7C3AED' }}>🧼 Sanitation & Chemicals (5%)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#7C3AED', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#7C3AED' }}></span>
+              Sanitation & Chemicals (5%)
+            </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
               ${summary?.breakdown?.chemicalSanitationCost || '30.00'}
             </div>
