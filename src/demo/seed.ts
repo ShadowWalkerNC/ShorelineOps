@@ -289,6 +289,79 @@ export const SEED_RECIPES: Recipe[] = [
     notes: 'For pureed texture: blend all ingredients and strain. Thicken with cornstarch if needed.',
     createdAt: '2026-02-01T00:00:00Z', updatedAt: '2026-04-15T00:00:00Z',
   },
+  {
+    id: 'rec5', name: 'Herb-Roasted Turkey Breast', category: 'Mains', allergens: [],
+    baseServings: 20,
+    ingredients: [
+      { qty: '8 lbs',   item: 'boneless turkey breast' },
+      { qty: '3 tbsp',  item: 'olive oil' },
+      { qty: '1 tbsp',  item: 'dried thyme' },
+      { qty: '1 tbsp',  item: 'dried rosemary' },
+      { qty: '1 tsp',   item: 'garlic powder' },
+      { qty: '1 tsp',   item: 'paprika' },
+      { qty: '1 tsp',   item: 'black pepper' },
+    ],
+    steps: [
+      { step: 1, instruction: 'Rub turkey breast with olive oil, herbs, and spices.' },
+      { step: 2, instruction: 'Roast at 350°F until internal temperature reaches 165°F (approx 75 mins).' },
+      { step: 3, instruction: 'Rest 15 minutes before carving across the grain.' },
+      { step: 4, instruction: 'Serve with low-sodium poultry gravy.' },
+    ],
+    notes: 'Low-sodium compliant (NAS). For mechanical soft: finely dice and moisten with warm broth.',
+    createdAt: '2026-02-10T00:00:00Z', updatedAt: '2026-02-10T00:00:00Z',
+  },
+  {
+    id: 'rec6', name: 'Steamed Green Beans Almandine (Nut-Free Option)', category: 'Vegetables', allergens: [],
+    baseServings: 20,
+    ingredients: [
+      { qty: '6 lbs',   item: 'fresh green beans, trimmed' },
+      { qty: '3 tbsp',  item: 'butter or olive oil' },
+      { qty: '1 tsp',   item: 'lemon juice' },
+      { qty: '1 tsp',   item: 'garlic powder' },
+      { qty: '½ tsp',   item: 'black pepper' },
+    ],
+    steps: [
+      { step: 1, instruction: 'Steam green beans for 6-8 minutes until crisp-tender.' },
+      { step: 2, instruction: 'Toss immediately with melted butter, lemon juice, and seasonings.' },
+      { step: 3, instruction: 'Hold warm at 145°F for service.' },
+    ],
+    notes: 'For IDDSI Level 4 Pureed: steam until very soft, puree with vegetable broth in commercial blender.',
+    createdAt: '2026-02-15T00:00:00Z', updatedAt: '2026-02-15T00:00:00Z',
+  },
+  {
+    id: 'rec7', name: 'Baked Atlantic Salmon with Dill', category: 'Mains', allergens: [],
+    baseServings: 20,
+    ingredients: [
+      { qty: '20 (4oz)',item: 'salmon fillets' },
+      { qty: '¼ cup',   item: 'lemon juice' },
+      { qty: '2 tbsp',  item: 'fresh dill, chopped' },
+      { qty: '2 tbsp',  item: 'olive oil' },
+      { qty: '½ tsp',   item: 'garlic powder' },
+    ],
+    steps: [
+      { step: 1, instruction: 'Arrange salmon fillets on parchment-lined sheet pans.' },
+      { step: 2, instruction: 'Drizzle with olive oil, lemon juice, and season with dill and garlic.' },
+      { step: 3, instruction: 'Bake at 375°F for 12-15 minutes until internal temp reaches 145°F.' },
+    ],
+    notes: 'Naturally cardiac and renal friendly. Flakes easily for soft diet modifications.',
+    createdAt: '2026-03-01T00:00:00Z', updatedAt: '2026-03-01T00:00:00Z',
+  },
+  {
+    id: 'rec8', name: 'Sugar-Free Vanilla Bean Pudding', category: 'Desserts', allergens: ['Dairy'],
+    baseServings: 20,
+    ingredients: [
+      { qty: '2 pkgs',  item: 'sugar-free instant vanilla pudding mix' },
+      { qty: '2 quarts',item: 'cold whole milk (or fortified soy milk)' },
+      { qty: '1 tsp',   item: 'pure vanilla extract' },
+    ],
+    steps: [
+      { step: 1, instruction: 'Whisk pudding mix into cold milk and vanilla for 2 minutes.' },
+      { step: 2, instruction: 'Portion ½ cup into individual chilled dessert dishes.' },
+      { step: 3, instruction: 'Refrigerate at 38°F for at least 30 minutes before meal service.' },
+    ],
+    notes: 'No Concentrated Sweets (NCS) / Diabetic approved. Suitable for all dysphagia levels.',
+    createdAt: '2026-03-12T00:00:00Z', updatedAt: '2026-03-12T00:00:00Z',
+  },
 ]
 
 // ── Production sheet ───────────────────────────────────────────────────────────────

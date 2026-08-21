@@ -239,7 +239,7 @@ function BudgetStrip() {
     <Link to="/budget" style={{ display: 'block', textDecoration: 'none' }}>
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', boxShadow: 'var(--shadow-sm)', marginBottom: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>💰 {period.label} Budget</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{period.label} Dietary Operating Budget</span>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Spent: <b style={{ color: 'var(--text-primary)' }}>{fmt(totalSpent)}</b></span>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Budget: <b style={{ color: 'var(--text-primary)' }}>{fmt(totalBudget)}</b></span>
