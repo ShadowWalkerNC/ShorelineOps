@@ -34,3 +34,7 @@ jobs:
       - name: Typecheck & Build Backend API
         working-directory: ./server
         run: npm run build
+
+      - name: Run Backend Integration & Compliance Test Suite
+        working-directory: ./server
+        run: npm test
