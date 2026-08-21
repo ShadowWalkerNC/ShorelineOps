@@ -290,7 +290,7 @@ export const SEED_RECIPES: Recipe[] = [
     createdAt: '2026-02-01T00:00:00Z', updatedAt: '2026-04-15T00:00:00Z',
   },
   {
-    id: 'rec5', name: 'Herb-Roasted Turkey Breast', category: 'Mains', allergens: [],
+    id: 'rec5', name: 'Herb-Roasted Turkey Breast', category: 'Proteins', allergens: [],
     baseServings: 20,
     ingredients: [
       { qty: '8 lbs',   item: 'boneless turkey breast' },
@@ -311,7 +311,7 @@ export const SEED_RECIPES: Recipe[] = [
     createdAt: '2026-02-10T00:00:00Z', updatedAt: '2026-02-10T00:00:00Z',
   },
   {
-    id: 'rec6', name: 'Steamed Green Beans Almandine (Nut-Free Option)', category: 'Vegetables', allergens: [],
+    id: 'rec6', name: 'Steamed Green Beans Almandine (Nut-Free Option)', category: 'Veggies', allergens: [],
     baseServings: 20,
     ingredients: [
       { qty: '6 lbs',   item: 'fresh green beans, trimmed' },
@@ -329,7 +329,7 @@ export const SEED_RECIPES: Recipe[] = [
     createdAt: '2026-02-15T00:00:00Z', updatedAt: '2026-02-15T00:00:00Z',
   },
   {
-    id: 'rec7', name: 'Baked Atlantic Salmon with Dill', category: 'Mains', allergens: [],
+    id: 'rec7', name: 'Baked Atlantic Salmon with Dill', category: 'Proteins', allergens: [],
     baseServings: 20,
     ingredients: [
       { qty: '20 (4oz)',item: 'salmon fillets' },
