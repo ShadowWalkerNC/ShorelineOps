@@ -2,6 +2,33 @@ import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext'
 import NotificationBell from './NotificationBell'
+import {
+  LayoutDashboard,
+  Users,
+  MessageSquare,
+  Tablet,
+  Calendar,
+  ChefHat,
+  Receipt,
+  BookOpen,
+  ClipboardList,
+  CheckSquare,
+  ShoppingCart,
+  Truck,
+  TrendingUp,
+  Boxes,
+  DollarSign,
+  UserCheck,
+  Clock,
+  Shield,
+  FileText,
+  LogOut,
+  Menu as MenuIcon,
+  X as CloseIcon,
+  Search,
+  CheckCircle2,
+  type LucideIcon,
+} from 'lucide-react'
 
 function useClock() {
   const [now, setNow] = useState(new Date())
@@ -16,6 +43,7 @@ interface NavItemDef {
   label: string
   to: string
   color: string
+  icon: LucideIcon
   end?: boolean
   minRole?: 'dietary' | 'manager'
 }
@@ -29,38 +57,38 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Core Operations',
     items: [
-      { label: 'Dashboard', to: '/', color: '#3B82F6', end: true },
-      { label: 'Residents & Diets', to: '/residents', color: '#10B981' },
-      { label: 'Communications', to: '/communications', color: '#8B5CF6' },
+      { label: 'Dashboard', to: '/', color: '#3B82F6', icon: LayoutDashboard, end: true },
+      { label: 'Residents & Diets', to: '/residents', color: '#10B981', icon: Users },
+      { label: 'Communications', to: '/communications', color: '#8B5CF6', icon: MessageSquare },
     ],
   },
   {
     title: 'Dietary & Kitchen',
     items: [
-      { label: 'Kitchen Tablet Mode', to: '/kitchen/tablet', color: '#EF4444', minRole: 'dietary' },
-      { label: 'Menu Planner', to: '/menu', color: '#F59E0B', minRole: 'dietary', end: true },
-      { label: 'Daily Cook Sheet', to: '/kitchen/sheet', color: '#F97316', minRole: 'dietary' },
-      { label: 'Tray Cards', to: '/kitchen/traycards', color: '#EC4899', minRole: 'dietary' },
-      { label: 'Recipe Book', to: '/recipes', color: '#6366F1' },
-      { label: 'Production Sheets', to: '/production', color: '#06B6D4' },
-      { label: 'Meal Tally Entry', to: '/kitchen/orders', color: '#14B8A6', minRole: 'dietary' },
+      { label: 'Kitchen Tablet Mode', to: '/kitchen/tablet', color: '#EF4444', icon: Tablet, minRole: 'dietary' },
+      { label: 'Menu Planner', to: '/menu', color: '#F59E0B', icon: Calendar, minRole: 'dietary', end: true },
+      { label: 'Daily Cook Sheet', to: '/kitchen/sheet', color: '#F97316', icon: ChefHat, minRole: 'dietary' },
+      { label: 'Tray Cards', to: '/kitchen/traycards', color: '#EC4899', icon: Receipt, minRole: 'dietary' },
+      { label: 'Recipe Book', to: '/recipes', color: '#6366F1', icon: BookOpen },
+      { label: 'Production Sheets', to: '/production', color: '#06B6D4', icon: ClipboardList },
+      { label: 'Meal Tally Entry', to: '/kitchen/orders', color: '#14B8A6', icon: CheckSquare, minRole: 'dietary' },
     ],
   },
   {
     title: 'Purchasing & Cost',
     items: [
-      { label: 'Purchasing & Orders', to: '/purchasing', color: '#2563EB', minRole: 'dietary' },
-      { label: 'Distributor Portal', to: '/distributor', color: '#7C3AED' },
-      { label: 'Cost & Compliance', to: '/reporting', color: '#059669', minRole: 'dietary' },
-      { label: 'Inventory & Stock', to: '/inventory', color: '#D97706' },
-      { label: 'Budget & Spend', to: '/budget', color: '#4F46E5', minRole: 'manager' },
+      { label: 'Purchasing & Orders', to: '/purchasing', color: '#2563EB', icon: ShoppingCart, minRole: 'dietary' },
+      { label: 'Distributor Portal', to: '/distributor', color: '#7C3AED', icon: Truck },
+      { label: 'Cost & Compliance', to: '/reporting', color: '#059669', icon: TrendingUp, minRole: 'dietary' },
+      { label: 'Inventory & Stock', to: '/inventory', color: '#D97706', icon: Boxes },
+      { label: 'Budget & Spend', to: '/budget', color: '#4F46E5', icon: DollarSign, minRole: 'manager' },
     ],
   },
   {
     title: 'Facility & Team',
     items: [
-      { label: 'Staff Roster', to: '/staff', color: '#0284C7', minRole: 'manager' },
-      { label: 'Timecard Clock', to: '/timecards', color: '#64748B' },
+      { label: 'Staff Roster', to: '/staff', color: '#0284C7', icon: UserCheck, minRole: 'manager' },
+      { label: 'Timecard Clock', to: '/timecards', color: '#64748B', icon: Clock },
     ],
   },
 ]
@@ -69,15 +97,17 @@ const NAV_ADMIN: NavItemDef = {
   label: 'Administration',
   to: '/admin',
   color: '#DC2626',
+  icon: Shield,
 }
 
 const NAV_LEGAL: NavItemDef = {
   label: 'Legal & BAA',
   to: '/legal',
   color: '#6B7280',
+  icon: FileText,
 }
 
-function NavItem({ to, color, label, end: endProp, onClick }: { to: string; color: string; label: string; end?: boolean; onClick?: () => void }) {
+function NavItem({ to, color, label, icon: Icon, end: endProp, onClick }: { to: string; color: string; label: string; icon: LucideIcon; end?: boolean; onClick?: () => void }) {
   return (
     <NavLink
       to={to}
@@ -86,12 +116,12 @@ function NavItem({ to, color, label, end: endProp, onClick }: { to: string; colo
       style={({ isActive }) => ({
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        padding: '9px 14px',
+        gap: 10,
+        padding: '9px 12px',
         borderRadius: 'var(--radius-md)',
         textDecoration: 'none',
         fontSize: 13.5,
-        fontWeight: isActive ? 700 : 500,
+        fontWeight: isActive ? 600 : 500,
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
         background: isActive ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
         borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
@@ -99,15 +129,7 @@ function NavItem({ to, color, label, end: endProp, onClick }: { to: string; colo
         minHeight: 38,
       })}
     >
-      <span
-        style={{
-          width: 9,
-          height: 9,
-          borderRadius: '50%',
-          backgroundColor: color,
-          flexShrink: 0,
-        }}
-      />
+      <Icon size={16} style={{ color: color, flexShrink: 0 }} />
       <span style={{ flex: 1, lineHeight: 1.25 }}>{label}</span>
     </NavLink>
   )
@@ -255,9 +277,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease',
           }}
         >
-          {navOpen
-            ? <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            : <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>}
+          {navOpen ? <CloseIcon size={20} /> : <MenuIcon size={20} />}
         </button>
         <img src="/icon-192.png" alt="Shoreline" style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -304,55 +324,44 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
           {isAdmin && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '6px 14px 4px' }}>
-                Administration
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '6px 14px 4px' }}>Admin</div>
               <NavItem {...NAV_ADMIN} onClick={() => setNavOpen(false)} />
             </div>
           )}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '6px 14px 4px' }}>
-              Compliance
-            </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '6px 14px 4px' }}>Compliance</div>
             <NavItem {...NAV_LEGAL} onClick={() => setNavOpen(false)} />
-          </div>
-        </div>
-        <div style={{ padding: '12px 16px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-app)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
-            Logout
-          </button>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>{timeStr}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{dateStr}</div>
           </div>
         </div>
       </div>
 
       {/* DESKTOP SIDEBAR */}
-      <aside className="sidebar-aside" style={{ width: 'var(--sidebar-width)', flexShrink: 0, background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100dvh', zIndex: 200, overflowY: 'auto', overflowX: 'hidden' }}>
-        <div style={{ padding: '18px 20px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <img src="/icon-192.png" alt="Shoreline" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
+      <aside className="sidebar-aside" style={{ width: 'var(--sidebar-width)', height: '100dvh', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'relative', zIndex: 100 }}>
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <img src="/icon-192.png" alt="Shoreline" style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', lineHeight: 1.15, fontFamily: 'Outfit, sans-serif' }}>Shoreline</div>
-            <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.6px', textTransform: 'uppercase' }}>Operations Platform</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Shoreline</div>
+            <div style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Operations Platform</div>
           </div>
         </div>
-        <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1, overflowY: 'auto' }}>
+        <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
           {NAV_SECTIONS.map((section, sIdx) => {
             const items = section.items.filter(item => !item.minRole || atLeast(item.minRole))
             if (items.length === 0) return null
             return (
-              <div key={sIdx} style={{ marginBottom: 14 }}>
+              <div key={sIdx} style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '4px 14px 4px' }}>
                   {section.title}
                 </div>
-                {items.map(item => <NavItem key={item.to} {...item} />)}
+                {items.map(item => (
+                  <NavItem key={item.to} {...item} />
+                ))}
               </div>
             )
           })}
           {isAdmin && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '4px 14px 4px' }}>Administration</div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '4px 14px 4px' }}>Admin</div>
               <NavItem {...NAV_ADMIN} />
             </div>
           )}
@@ -374,7 +383,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44 }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <LogOut size={14} />
             Logout
           </button>
           <div style={{ textAlign: 'center' }}>
@@ -395,7 +404,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '7px 14px', flex: 1, maxWidth: 400 }}>
-            <svg width="13" height="13" fill="none" stroke="var(--text-muted)" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <Search size={14} style={{ color: 'var(--text-muted)' }} />
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Search residents...</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto', flexShrink: 0 }}>
