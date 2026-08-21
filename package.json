@@ -5,7 +5,10 @@
   "main": "electron-main.js",
   "scripts": {
     "dev": "vite",
+    "dev:all": "concurrently \"npm run dev\" \"npm --prefix server run dev\"",
     "build": "tsc && vite build",
+    "build:all": "npm run build && npm --prefix server run build",
+    "start": "node server/dist/index.js",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "electron": "electron .",
