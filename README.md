@@ -11,7 +11,7 @@
 **Built by a senior living chef, not a VC.**  
 *Bridging clinical resident diets, kitchen batch cooking, tray cards, and food distributor purchasing without proprietary vendor lock-in.*
 
-[🚀 Live Demo Sandbox](http://localhost:3000) • [💼 Commercial Pitch & ROI Guide](SALES_PITCH.md) • [📄 Commercial Agreement (Sample)](COMMERCIAL_AGREEMENT.md) • [🎬 5-Min Demo Script](DEMO_SCRIPT.md) • [🚚 Dennis Guide](DISTRIBUTORS.md)
+[🚀 Live Demo Sandbox](http://localhost:3000) • [💼 Commercial Pitch & ROI Guide](SALES_PITCH.md) • [⚔️ Competitive Strategy Playbook](COMPETITIVE_STRATEGY.md) • [📄 Commercial Agreement (Sample)](COMMERCIAL_AGREEMENT.md) • [🎬 5-Min Demo Script](DEMO_SCRIPT.md) • [🚚 Dennis Guide](DISTRIBUTORS.md)
 
 </div>
 
@@ -155,6 +155,7 @@ ShorelineOps includes the following technical safeguards. *(Facilities remain re
 
 ## 📚 Commercial, Technical & Legal Resources
 
+- ⚔️ **[Competitive Strategy & Objection Handling Playbook](COMPETITIVE_STRATEGY.md)** — Tactical playbook for winning against MealSuite, DiningRD, CBORD, and paper binders.
 - 💼 **[Executive Pitch & Commercial ROI Model](SALES_PITCH.md)** — Projected cost savings model ($1.50–$3.00/day benchmarked against industry food waste), pricing tiers, and distributor value proposition.
 - 📄 **[Master Services & Software License Agreement (Sample)](COMMERCIAL_AGREEMENT.md)** — Commercial agreement template *(legal review recommended prior to execution)*.
 - 🎬 **[Live Sales Demo Script](DEMO_SCRIPT.md)** — 5-minute walkthrough script for facility leadership.
