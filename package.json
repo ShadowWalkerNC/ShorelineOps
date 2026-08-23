@@ -3,12 +3,17 @@
   "version": "5.0.0",
   "private": true,
   "main": "electron-main.js",
+  "workspaces": [
+    "server",
+    "marketing"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently \"npm run dev\" \"npm --prefix server run dev\"",
     "build": "tsc && vite build",
-    "build:all": "npm run build && npm --prefix server run build",
+    "build:all": "npm run build && npm --prefix server run build && npm --prefix marketing run build",
     "start": "node server/dist/index.js",
+    "test": "node server/dist/system.test.js",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "electron": "electron .",

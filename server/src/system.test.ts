@@ -400,6 +400,28 @@ async function runAllTests() {
   const mcpBomResult = await executeMcpTool('shoreline_explode_mrp_bom', { portionsNeeded: 40 })
   assert(mcpBomResult.explodedBOM !== undefined && mcpBomResult.suggestedPurchaseOrders.length > 0, 'McpServer: explodes BOM and returns suggested distributor purchase orders')
 
+  // --- 13. CMS-2567 Dietary Survey Ready Cross-Walk & Federal F-Tags ---
+  console.log('\n--- 13. CMS-2567 Dietary Survey Ready Cross-Walk & Federal F-Tags ---')
+  const { CmsDietarySurveyEngine } = await import('./engine/cmsSurvey')
+  const surveyPack = CmsDietarySurveyEngine.generateSurveyAuditPack({
+    facilityName: 'Shoreline Healthcare Community',
+    residents: [
+      { id: 'R1', name: 'Alice Smith', dietType: 'NAS', texture: 'Pureed', allergies: ['Dairy'] },
+      { id: 'R2', name: 'Bob Jones', dietType: 'NCS', texture: 'Regular', allergies: ['Gluten'] },
+      { id: 'R3', name: 'Charlie Brown', dietType: 'Regular', texture: 'Regular', allergies: [] },
+    ],
+    temperatureLogs: [
+      { itemName: 'Roast Turkey', temperature: 165, loggedAt: '2026-08-23T12:00:00Z', isCompliant: true },
+    ],
+    cycleMenuWeeksCount: 4,
+  })
+
+  assert(surveyPack.surveyReadinessLevel === 'INSPECTION_READY', 'CmsSurveyEngine: generates INSPECTION_READY survey audit status')
+  assert(surveyPack.fTags.length >= 7, 'CmsSurveyEngine: audits all required Federal F-Tags (F800 - F812)')
+  assert(surveyPack.fTags.some(t => t.fTag === 'F804' && t.complianceStatus === 'COMPLIANT'), 'CmsSurveyEngine: validates F804 IDDSI texture compliance')
+  assert(surveyPack.fTags.some(t => t.fTag === 'F808' && t.complianceStatus === 'COMPLIANT'), 'CmsSurveyEngine: validates F808 therapeutic diet order fulfillment')
+  assert(surveyPack.overallComplianceScorePct >= 95, 'CmsSurveyEngine: achieves ≥95% composite regulatory survey compliance')
+
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)
   console.log('=======================================================\n')

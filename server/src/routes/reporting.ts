@@ -376,3 +376,32 @@ reportingRouter.get('/compliance-summary', async (req: Request, res: Response, n
     })
   } catch (e) { next(e) }
 })
+
+import { CmsDietarySurveyEngine } from '../engine/cmsSurvey'
+
+/**
+ * GET /api/reporting/cms-survey-export
+ * 
+ * Generates official CMS-2567 Dietary Survey Audit Pack (Federal F-Tags F800 - F814)
+ */
+reportingRouter.get('/cms-survey-export', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows: residents } = await pool.query(
+      'SELECT id, name, diet_type as "dietType", texture, allergies FROM residents'
+    )
+
+    const auditPack = CmsDietarySurveyEngine.generateSurveyAuditPack({
+      facilityName: 'Shoreline Healthcare Community',
+      residents: residents.map(r => ({
+        id: r.id,
+        name: r.name,
+        dietType: r.dietType || 'Regular',
+        texture: r.texture || 'Regular',
+        allergies: Array.isArray(r.allergies) ? r.allergies : [],
+      })),
+      cycleMenuWeeksCount: 4,
+    })
+
+    res.json(auditPack)
+  } catch (e) { next(e) }
+})
