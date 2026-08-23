@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../../api/client'
 import { VendorItem } from '../../types/purchasing'
+import CommunityPluginRegistry from './CommunityPluginRegistry'
 
 export default function DistributorPortalPage() {
   const [items, setItems] = useState<VendorItem[]>([])
@@ -300,6 +301,9 @@ export default function DistributorPortalPage() {
           </div>
         </div>
       )}
+
+      {/* Community Open Connector Marketplace */}
+      <CommunityPluginRegistry />
     </div>
   )
 }
