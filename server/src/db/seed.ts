@@ -72,6 +72,112 @@ export async function runSeed() {
     console.log(`[seed] ${RESIDENTS.length} sample residents inserted`)
   }
 
+  // Seed sample Master Recipes
+  const { rows: recipeCount } = await pool.query('SELECT COUNT(*) FROM recipes')
+  if (parseInt(recipeCount[0].count) === 0) {
+    const recipesToSeed = [
+      {
+        name: 'Oven Herb Roasted Chicken Breast',
+        category: 'Proteins',
+        baseServings: 20,
+        prepTimeMins: 15,
+        cookTimeMins: 35,
+        haccpTempF: 165,
+        iddsiLevel: 7,
+        allergens: [],
+        ingredients: [
+          { qty: '10 lbs', item: 'chicken breast', vendorSku: 'DNS-1001', estimatedCost: 32.50 },
+          { qty: '0.5 cup', item: 'oil', vendorSku: 'DNS-OIL', estimatedCost: 1.20 },
+        ],
+        steps: [
+          { step: 1, instruction: 'Preheat convection oven to 375°F.' },
+          { step: 2, instruction: 'Season chicken with garlic, rosemary, thyme, and black pepper (no added salt).' },
+          { step: 3, instruction: 'Bake for 35 mins until internal core temperature reaches 165°F on calibrated thermometer.' },
+        ],
+        notes: 'NAS & NCS compliant. Low sodium base.',
+      },
+      {
+        name: 'Steamed Broccoli with Lemon Butter',
+        category: 'Veggies',
+        baseServings: 20,
+        prepTimeMins: 10,
+        cookTimeMins: 12,
+        haccpTempF: 140,
+        iddsiLevel: 6,
+        allergens: ['Dairy'],
+        ingredients: [
+          { qty: '6 lbs', item: 'broccoli florets', vendorSku: 'DNS-BROC', estimatedCost: 12.00 },
+          { qty: '0.5 cup', item: 'butter', vendorSku: 'DNS-BTR', estimatedCost: 2.00 },
+        ],
+        steps: [
+          { step: 1, instruction: 'Steam broccoli florets until tender-crisp (8-10 mins).' },
+          { step: 2, instruction: 'Toss gently with melted butter and fresh lemon juice.' },
+        ],
+        notes: 'Can be pureed with thickener for IDDSI Level 4.',
+      },
+      {
+        name: 'Homestyle Mashed Potatoes',
+        category: 'Starches',
+        baseServings: 20,
+        prepTimeMins: 15,
+        cookTimeMins: 25,
+        haccpTempF: 140,
+        iddsiLevel: 5,
+        allergens: ['Dairy'],
+        ingredients: [
+          { qty: '8 lbs', item: 'russet potatoes', vendorSku: 'DNS-POT', estimatedCost: 8.50 },
+          { qty: '2 cups', item: 'whole milk', vendorSku: 'DNS-MLK', estimatedCost: 1.50 },
+          { qty: '1 cup', item: 'butter', vendorSku: 'DNS-BTR', estimatedCost: 4.00 },
+        ],
+        steps: [
+          { step: 1, instruction: 'Peel and boil potatoes in unsalted water until fork tender.' },
+          { step: 2, instruction: 'Drain and mash with warm milk and butter until smooth.' },
+        ],
+        notes: 'Suitable for Mechanical Soft. Blend with milk for Pureed.',
+      },
+      {
+        name: 'IDDSI Pureed Beef & Root Veggie Medley',
+        category: 'Proteins',
+        baseServings: 15,
+        prepTimeMins: 20,
+        cookTimeMins: 40,
+        haccpTempF: 165,
+        iddsiLevel: 4,
+        allergens: [],
+        ingredients: [
+          { qty: '5 lbs', item: 'ground beef 80/20', vendorSku: 'DNS-BEEF', estimatedCost: 18.00 },
+          { qty: '3 lbs', item: 'russet potatoes', vendorSku: 'DNS-POT', estimatedCost: 3.50 },
+          { qty: '0.5 cup', item: 'food thickener', vendorSku: 'DNS-THICK', estimatedCost: 2.50 },
+        ],
+        steps: [
+          { step: 1, instruction: 'Brown ground beef thoroughly to 165°F and simmer with root vegetables.' },
+          { step: 2, instruction: 'Transfer to Robot Coupe commercial food processor with warm broth.' },
+          { step: 3, instruction: 'Process until completely smooth, cohesive, holding shape on spoon (IDDSI Level 4 test).' },
+        ],
+        notes: 'Formulated specifically for Dysphagia & Pureed diet orders.',
+      },
+    ]
+
+    for (const rec of recipesToSeed) {
+      const { rows: [inserted] } = await pool.query(`
+        INSERT INTO recipes (name, category, base_servings, prep_time_mins, cook_time_mins, haccp_temp_f, iddsi_level, allergens, ingredients, steps, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING id
+      `, [
+        rec.name, rec.category, rec.baseServings, rec.prepTimeMins, rec.cookTimeMins,
+        rec.haccpTempF, rec.iddsiLevel, rec.allergens,
+        JSON.stringify(rec.ingredients), JSON.stringify(rec.steps), rec.notes
+      ])
+
+      await pool.query(`
+        INSERT INTO recipe_nutrients (recipe_id, calories, protein_g, carbs_g, fat_g, sat_fat_g, sodium_mg, potassium_mg, phosphorus_mg, fiber_g, sugar_g)
+        VALUES ($1, 240, 22, 14, 8, 2.5, 180, 340, 160, 2.5, 1.2)
+        ON CONFLICT DO NOTHING
+      `, [inserted.id])
+    }
+    console.log(`[seed] ${recipesToSeed.length} master institutional recipes seeded`)
+  }
+
   console.log('[seed] Done.')
 }
 

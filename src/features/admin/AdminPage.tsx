@@ -11,12 +11,14 @@ import SystemSettingsPanel from './components/SystemSettings'
 import DocumentsTemplates  from './components/DocumentsTemplates'
 import AuditLogViewer      from './components/AuditLogViewer'
 import MaintenanceWorkOrders from './components/MaintenanceWorkOrders'
+import HealerBotPanel      from './components/HealerBotPanel'
 
 type AdminTab =
-  | 'scheduling' | 'council' | 'bottle' | 'users' | 'callouts'
+  | 'healer' | 'scheduling' | 'council' | 'bottle' | 'users' | 'callouts'
   | 'budget' | 'tasks' | 'data' | 'docs' | 'maintenance' | 'audit'
 
 const TABS: { id: AdminTab; label: string }[] = [
+  { id: 'healer',      label: '🤖 Self-Healing & Health' },
   { id: 'scheduling',  label: 'Staff Scheduling' },
   { id: 'council',     label: 'Council Notes' },
   { id: 'bottle',      label: 'Bottle Drive' },
@@ -79,6 +81,7 @@ export default function AdminPage() {
           padding: 24,
           boxShadow: 'var(--shadow-sm)',
         }}>
+          {tab === 'healer'      && <HealerBotPanel />}
           {tab === 'scheduling'  && <StaffScheduling />}
           {tab === 'council'     && <CouncilNotes />}
           {tab === 'bottle'      && <BottleDrive />}

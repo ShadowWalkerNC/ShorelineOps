@@ -38,6 +38,7 @@ import { Router, Request, Response, NextFunction } from 'express'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { MrpDemandForecastEngine, ScheduledMealDemand, InventoryItemStock } from '../engine/mrp'
 
 export const purchasingRouter = Router()
 
@@ -314,6 +315,9 @@ purchasingRouter.post('/import-guide', async (req: Request, res: Response, next:
 // SUGGESTED ORDER
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { DietaryDemandEngine } from '../integrations/dietaryDemand'
+const demandEngine = new DietaryDemandEngine()
+
 /**
  * POST /api/purchasing/suggested-order
  * Generates a suggested purchase order from the order guide.
@@ -349,6 +353,127 @@ purchasingRouter.post('/suggested-order', async (req: Request, res: Response, ne
       category:     r.category,
     }))
     res.json({ vendorId, lines, generatedAt: new Date().toISOString() })
+  } catch (e) { next(e) }
+})
+
+/**
+ * POST /api/purchasing/clinical-suggested-order
+ * Dynamic clinical ordering: Combines live resident census, texture requirements (puree/thickener),
+ * and special diet ratios (NAS/NCS) to produce clinically optimized order recommendations.
+ */
+purchasingRouter.post('/clinical-suggested-order', async (req: Request, res: Response, next: NextFunction) => {
+  const { vendorId } = req.body
+  if (!vendorId) return err(res, 400, 'vendorId required')
+  try {
+    // 1. Fetch live active resident profiles
+    const { rows: residentRows } = await pool.query(
+      `SELECT status, diet_type AS "dietType", texture, allergies, beverages FROM residents WHERE status = 'Active'`
+    )
+    const census = demandEngine.calculateCensusMetrics(residentRows)
+
+    // 2. Fetch vendor items and order guide pars
+    const { rows: guideRows } = await pool.query(
+      `SELECT og.*,
+              vi.name AS item_name, vi.vendor_sku, vi.pack_size, vi.uom, vi.unit_cost, vi.category,
+              v.name  AS vendor_name
+       FROM order_guides og
+       JOIN vendor_items vi ON vi.id = og.vendor_item_id
+       JOIN vendors v ON v.id = og.vendor_id
+       WHERE og.vendor_id = $1
+       ORDER BY vi.category, vi.name`,
+      [vendorId]
+    )
+
+    const guideItems = guideRows.map(r => ({
+      vendorSku: r.vendor_sku,
+      itemName: r.item_name,
+      category: r.category || '',
+      unitCost: parseFloat(r.unit_cost ?? 0),
+      parLevel: parseFloat(r.par_level ?? 0),
+      onHand: parseFloat(r.on_hand ?? 0),
+      packSize: r.pack_size || '',
+      uom: r.uom || 'case',
+    }))
+
+    const lines = demandEngine.calculateClinicalDemandOrder(census, guideItems)
+
+    res.json({
+      vendorId,
+      census,
+      generatedAt: new Date().toISOString(),
+      recommendedLines: lines.filter(l => l.calculatedReorderQty > 0),
+    })
+  } catch (e) { next(e) }
+})
+
+/**
+ * POST /api/purchasing/mrp-order
+ * Full Multi-Level MRP & Bill of Materials (BOM) Explosion:
+ * Explodes active cycle menu recipes across resident census headcounts,
+ * projects inventory depletion, and calculates exact distributor case-pack purchase orders.
+ */
+purchasingRouter.post('/mrp-order', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { vendorId } = req.body
+
+    // 1. Fetch active resident census
+    const { rows: residentRows } = await pool.query(
+      `SELECT count(*) as total FROM residents WHERE status = 'Active'`
+    )
+    const activeHeadcount = parseInt(residentRows[0]?.total || '50', 10)
+
+    // 2. Fetch master recipes
+    const { rows: recipeRows } = await pool.query(`SELECT * FROM recipes`)
+    
+    // Build scheduled meals from active cycle or defaults
+    const scheduledMeals: ScheduledMealDemand[] = recipeRows.map(r => ({
+      dayOfWeek: 'Monday',
+      mealSlot: 'lunchOpt1Meat',
+      projectedPortions: activeHeadcount,
+      recipeLink: {
+        menuItemId: r.id,
+        menuItemName: r.name,
+        recipeId: r.id,
+        recipeName: r.name,
+        baseServings: parseFloat(r.base_servings || 10),
+        portionMultiplier: 1.0,
+        ingredients: r.ingredients || [],
+      },
+    }))
+
+    // 3. Explode BOM
+    const exploded = MrpDemandForecastEngine.explodeBillOfMaterials(scheduledMeals)
+
+    // 4. Fetch vendor inventory and order guide stock
+    const { rows: guideRows } = await pool.query(`
+      SELECT og.*, vi.name AS item_name, vi.vendor_sku, vi.pack_size, vi.uom, vi.unit_cost, vi.category, v.name AS vendor_name
+      FROM order_guides og
+      JOIN vendor_items vi ON vi.id = og.vendor_item_id
+      JOIN vendors v ON v.id = og.vendor_id
+      WHERE ($1::uuid IS NULL OR og.vendor_id = $1)
+    `, [vendorId || null])
+
+    const stockItems: InventoryItemStock[] = guideRows.map(g => ({
+      vendorSku: g.vendor_sku,
+      itemName: g.item_name,
+      category: g.category || 'Dry Goods',
+      onHandGrams: parseFloat(g.on_hand || 0) * 453.592, // convert lbs to grams
+      parLevelGrams: parseFloat(g.par_level || 5) * 453.592,
+      packSizeDesc: g.pack_size || 'Case',
+      packUnitGrams: 453.592 * 10, // ~10 lbs per case
+      unitCostPerPack: parseFloat(g.unit_cost || 35),
+      vendorName: g.vendor_name,
+    }))
+
+    const recommendations = MrpDemandForecastEngine.calculateMaterialRequirements(exploded, stockItems)
+
+    res.json({
+      activeResidentHeadcount: activeHeadcount,
+      totalExplodedIngredients: Object.keys(exploded).length,
+      explodedDemands: exploded,
+      purchaseOrderRecommendations: recommendations,
+      generatedAt: new Date().toISOString(),
+    })
   } catch (e) { next(e) }
 })
 

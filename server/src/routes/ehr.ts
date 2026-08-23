@@ -7,10 +7,12 @@
 
 import { Router, Request, Response } from 'express'
 import { PointClickCareConnector } from '../integrations/pointclickcare'
+import { USDAFoodDataConnector } from '../integrations/usda'
 import { requireAuth } from '../middleware/requireAuth'
 
 export const ehrRouter = Router()
 const pcc = new PointClickCareConnector()
+const usda = new USDAFoodDataConnector()
 
 /**
  * GET /api/ehr/census
@@ -56,5 +58,19 @@ ehrRouter.post('/nutrients/analyze', requireAuth, (req: Request, res: Response) 
     res.json({ dietOrder, breakdown })
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Nutrient analysis failed' })
+  }
+})
+
+/**
+ * POST /api/ehr/nutrients/usda
+ * Comprehensive USDA FoodData Central meal breakdown & clinical compliance flags
+ */
+ehrRouter.post('/nutrients/usda', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { dietOrder = 'Regular', items = [] } = req.body
+    const analysis = await usda.analyzeMeal(items, dietOrder)
+    res.json(analysis)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'USDA nutrient analysis failed' })
   }
 })

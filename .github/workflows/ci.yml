@@ -1,40 +1,43 @@
-name: ShorelineOps CI & Build Verification
+name: ShorelineOps CI/CD Verification
 
 on:
   push:
-    branches: [ main, master, 'cursor/**' ]
+    branches: [ main, master, 'feature/**', 'fix/**' ]
   pull_request:
     branches: [ main, master ]
 
 jobs:
-  build-and-verify:
-    name: Build Frontend & Backend
+  verify:
+    name: Typecheck, Build & System Verification
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Frontend Dependencies
+      - name: Install Client Dependencies
         run: npm ci
 
-      - name: Typecheck & Build Frontend PWA
-        run: npm run build
-
-      - name: Install Backend Dependencies
-        working-directory: ./server
+      - name: Install Server Dependencies
+        working-directory: server
         run: npm ci
 
-      - name: Typecheck & Build Backend API
-        working-directory: ./server
+      - name: Client Typecheck
+        run: npm run typecheck
+
+      - name: Client Production Build (PWA)
         run: npm run build
 
-      - name: Run Backend Integration & Compliance Test Suite
-        working-directory: ./server
-        run: npm test
+      - name: Server Production Build (TypeScript)
+        working-directory: server
+        run: npm run build
+
+      - name: Run Full System Verification Suite (52/52 Tests)
+        working-directory: server
+        run: node dist/system.test.js

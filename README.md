@@ -84,6 +84,15 @@ ShorelineOps is designed to replace scattered binders, dry-erase boards, and rig
 - 📝 **Substitution Log**: Structured audit trail of meal substitutions and documented justifications.
 - 🖨️ **Printable Compliance Summary**: One-click print-ready report to assist during state health inspection reviews.
 
+### 5. 🧠 Automated Dietary, Recipe MRP & Tray Service Engine
+> *Algorithmic bridge from menu creation to kitchen batch worksheets and tray delivery.*
+
+- 📐 **Universal Culinary Unit Conversion**: Bidirectional conversions across mass, volume, and foodservice counts (#10 cans, cases, bags) with ingredient density awareness.
+- 🥗 **Automated Nutritional & Allergen Engine**: Instant macro/micronutrient breakdowns (Calories, Protein, Carbs, Fat, Sodium, Potassium, Phosphorus, Fiber) and Big 9 allergen scanning.
+- ⚖️ **Clinical Constraint Solver**: Real-time compliance checking for NAS (≤600mg sodium), Low Sodium, NCS (≤60g carbs), Renal, and IDDSI Dysphagia levels 3-7.
+- 🏭 **Material Requirements Planning (MRP) BOM Explosion**: Explodes cycle menus × resident census into exact raw ingredient demand and distributor case-pack purchase orders.
+- ⚡ **Multi-Tier Caching & Circuit Breakers**: In-memory LRU cache, conditional ETags (`304 Not Modified`), request deduplication, and hybrid SWR IndexedDB persistence for 0ms offline tablet performance.
+
 ---
 
 ## 🖥️ Screen-by-Screen Map
@@ -93,11 +102,11 @@ ShorelineOps is designed to replace scattered binders, dry-erase boards, and rig
 | 🔵 **Dashboard** | `/` | Census overview, meal tallies, active diet alerts, and fast shortcuts. | Executive Directors & All Staff |
 | 🟢 **Residents & Diets** | `/residents` | Manage resident profiles, textures, allergies, and table seats. | Dietitians, RDs, DONs |
 | 🔴 **Kitchen Tablet** | `/kitchen/tablet` | Touch display for batch cook worksheets, tray card dispatch, and quick par counts. | Line Cooks & Prep Staff |
-| 🟡 **Menu Planner** | `/menu` | Multi-week cycle menu calendar with Choice A / Choice B slots. | Dietary Directors |
-| 🟣 **Purchasing & Orders** | `/purchasing` | Order guide par levels, suggested PO generator, and Dennis CSV export. | Dietary Managers |
+| 🟡 **Menu Planner** | `/menu` | Multi-week cycle menu calendar with Choice A / Choice B slots and nutritional audit. | Dietary Directors |
+| 🟣 **Smart Recipe Book** | `/recipes` | Master recipe book with automatic allergen detection, USDA nutrition, and batch yield scaling. | Chefs & Cooks |
+| 🟣 **Purchasing & MRP** | `/purchasing` | Order guide par levels, BOM suggested PO generator, and Dennis/Sysco CSV export. | Dietary Managers |
 | 🟣 **Distributor Portal** | `/distributor` | Vendor portal to update catalog SKUs, pack sizes, and contract unit pricing. | Food Distributor Reps |
 | 🟢 **Cost & Compliance** | `/reporting` | $/CPD analytics, substitution logs, allergen safety audits, and survey sheets. | Administrators & Inspectors |
-| 🟣 **Smart Recipe Book** | `/recipes` | Master recipe book with automatic allergen detection and yield scaling. | Chefs & Cooks |
 | ⚪ **Facility Setup** | `/setup` | 6-step onboarding wizard to configure wings, dining rooms, and BAA sign-off. | Super Administrators |
 
 ---

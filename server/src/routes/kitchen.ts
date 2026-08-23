@@ -277,3 +277,71 @@ kitchenRouter.post('/meals/batch', async (req, res, next) => {
     res.json({ success: true, count: options.length })
   } catch (err) { next(err) }
 })
+
+import { KitchenProductionEngine, ResidentServiceProfile } from '../engine/production'
+
+/**
+ * GET /api/kitchen/traycards-generated
+ * Dynamically generates full high-contrast clinical tray cards with resident room,
+ * table assignment, diet orders, bold red allergy alerts, and IDDSI texture banners.
+ */
+kitchenRouter.get('/traycards-generated', async (req, res, next) => {
+  try {
+    const { mealSlot = 'Dinner', serviceDate = new Date().toISOString().slice(0, 10), entree = 'Roasted Chicken Breast', sides = 'Steamed Broccoli, Mashed Potatoes' } = req.query
+
+    const { rows: residentRows } = await pool.query(`
+      SELECT id, name, room, table_assignment, serving_location, diet_type, texture, portion_size, allergies, beverages, special_instructions, dislikes
+      FROM residents
+      ORDER BY room ASC
+    `)
+
+    const profiles: ResidentServiceProfile[] = residentRows.map(r => ({
+      id: r.id,
+      name: r.name,
+      room: r.room,
+      tableAssignment: r.table_assignment,
+      servingLocation: r.serving_location,
+      dietType: r.diet_type,
+      texture: r.texture,
+      portionSize: r.portion_size as any,
+      allergies: r.allergies || [],
+      beverages: r.beverages || [],
+      specialInstructions: r.special_instructions,
+      dislikes: r.dislikes,
+    }))
+
+    const sideArray = typeof sides === 'string' ? sides.split(',').map(s => s.trim()) : []
+
+    const cards = KitchenProductionEngine.generateTrayCards(profiles, {
+      mealSlot: String(mealSlot),
+      serviceDate: String(serviceDate),
+      entreeName: String(entree),
+      sideNames: sideArray,
+    })
+
+    res.json({
+      serviceDate,
+      mealSlot,
+      totalCards: cards.length,
+      trayCards: cards,
+    })
+  } catch (err) { next(err) }
+})
+
+/**
+ * POST /api/kitchen/batch-scale
+ * Scales a master recipe for kitchen batch worksheets
+ */
+kitchenRouter.post('/batch-scale', (req, res) => {
+  try {
+    const { recipe, portions = 50, texture = 'Regular' } = req.body
+    if (!recipe || !recipe.ingredients) {
+      return res.status(400).json({ error: 'recipe object with ingredients required' })
+    }
+
+    const scaled = KitchenProductionEngine.scaleRecipeForBatch(recipe, portions, texture)
+    res.json(scaled)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Batch scale failed' })
+  }
+})

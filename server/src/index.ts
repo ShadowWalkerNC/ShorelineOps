@@ -17,8 +17,10 @@ import { purchasingRouter } from './routes/purchasing'
 import { reportingRouter } from './routes/reporting'
 import { setupRouter } from './routes/setup'
 import { ehrRouter } from './routes/ehr'
+import { recipesRouter } from './routes/recipes'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
+import { pool } from './db/pool'
 import { runMigrations } from './db/migrate'
 import { runSeed } from './db/seed'
 
@@ -83,19 +85,30 @@ const authLimiter = rateLimit({
 app.use('/api', limiter)
 app.use('/api/auth', authLimiter)
 
+import { httpCacheMiddleware } from './middleware/cache'
+
+import { mcpRouter } from './routes/mcp'
+import { globalHealerBot } from './agent/healer'
+
 // Routes
 app.use('/api/setup',      setupRouter)
 app.use('/api/auth',       authRouter)
-app.use('/api/residents',  requireAuth, residentsRouter)
+app.use('/api/residents',  requireAuth, httpCacheMiddleware(30, 'residents'), residentsRouter)
 app.use('/api/audit',      requireAuth, auditRouter)
-app.use('/api/menu',       requireAuth, menuRouter)
+app.use('/api/menu',       requireAuth, httpCacheMiddleware(60, 'menu'), menuRouter)
+app.use('/api/recipes',    requireAuth, httpCacheMiddleware(60, 'recipes'), recipesRouter)
 app.use('/api/production', requireAuth, productionRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
-app.use('/api/timecard',   timecardRouter)
 app.use('/api/kitchen',    requireAuth, kitchenRouter)
 app.use('/api/purchasing', requireAuth, purchasingRouter)
 app.use('/api/reporting',  requireAuth, reportingRouter)
 app.use('/api/ehr',        ehrRouter)
+app.use('/api/mcp',        mcpRouter)
+
+// Optional Pluggable Modules
+if (process.env.ENABLE_TIMECARD_PLUGIN !== 'false') {
+  app.use('/api/timecard', timecardRouter)
+}
 
 import path from 'path'
 import fs from 'fs'
@@ -138,8 +151,36 @@ if (fs.existsSync(clientDistPath)) {
   })
 }
 
-// Health check
-app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
+// Health and Readiness Probes for Kubernetes / Docker / Cloud Load Balancers
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'ShorelineOps API',
+    version: '6.0.0',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  })
+})
+
+app.get('/ready', async (_req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT 1 as ready')
+    if (rows && rows.length > 0) {
+      return res.json({
+        status: 'ready',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+      })
+    }
+    return res.status(503).json({ status: 'unready', database: 'no_rows' })
+  } catch (err: any) {
+    return res.status(503).json({
+      status: 'unready',
+      database: 'disconnected',
+      error: err.message,
+    })
+  }
+})
 
 // Global error handler
 app.use(errorHandler)
@@ -150,6 +191,7 @@ runMigrations()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
+      globalHealerBot.startDaemon(300000) // Run self-healing background checks every 5 minutes
     })
   })
   .catch((err) => {

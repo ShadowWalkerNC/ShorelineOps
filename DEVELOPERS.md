@@ -145,4 +145,33 @@ cd server && npm run build
 
 # Marketing site static build
 cd marketing && npm run build
+
+# Run Full 12-Section Verification Test Suite (64 Tests)
+cd server && node dist/system.test.js
 ```
+
+---
+
+## 🤖 6. Model Context Protocol (MCP) & CulinaryOS Integration
+
+ShorelineOps exposes native Model Context Protocol (MCP) tools for AI agents and the CulinaryOS suite:
+
+- **Discovery Endpoint**: `GET /api/mcp/tools`
+- **Execution Endpoint**: `POST /api/mcp/execute`
+
+### Available Tools
+1. `shoreline_get_facility_profile`: Query active operational profile (Senior Living, Hospital, K-12, Catering).
+2. `shoreline_get_census_diets`: Retrieve resident headcounts, textures, and therapeutic diet orders.
+3. `shoreline_validate_recipe_dietary`: Validate ingredient lists against clinical restrictions (NAS ≤600mg, NCS ≤60g carb, Renal) and Big 9 allergens.
+4. `shoreline_explode_mrp_bom`: Explode cycle menus into raw ingredient demand and distributor purchase orders.
+5. `shoreline_run_self_healing_audit`: Execute automated system diagnostics and self-healing remediations.
+
+---
+
+## 🩺 7. Autonomous Self-Healing Bot Daemon
+
+The background healer daemon (`server/src/agent/healer.ts`) continuously monitors system health and automatically remediates operational drift:
+
+- **Health Checks**: Database pool latency, LRU cache memory, HACCP core temperature logging compliance (165°F hot line check), clinical census integrity, and vendor price variance.
+- **Diagnostics API**: `GET /api/mcp/diagnostics/self-healing`
+- **Manual Trigger**: `POST /api/mcp/diagnostics/self-healing/run`

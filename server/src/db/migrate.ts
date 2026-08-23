@@ -383,15 +383,79 @@ const migrations: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    name: '012_recipes_and_mrp_schema',
+    sql: `
+      -- Master Recipes Table
+      CREATE TABLE IF NOT EXISTS recipes (
+        id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name              TEXT NOT NULL,
+        category          TEXT NOT NULL DEFAULT 'Other',
+        base_servings     NUMERIC(10,2) NOT NULL DEFAULT 10,
+        prep_time_mins    INTEGER DEFAULT 15,
+        cook_time_mins    INTEGER DEFAULT 30,
+        haccp_temp_f      NUMERIC(5,1) DEFAULT 165.0,
+        iddsi_level       INTEGER DEFAULT 7,
+        allergens         TEXT[] DEFAULT '{}',
+        ingredients       JSONB NOT NULL DEFAULT '[]',
+        steps             JSONB NOT NULL DEFAULT '[]',
+        notes             TEXT DEFAULT '',
+        cost_per_serving  NUMERIC(10,4) DEFAULT 0,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_recipes_category ON recipes(category);
+
+      -- Recipe Nutritional Breakdown
+      CREATE TABLE IF NOT EXISTS recipe_nutrients (
+        recipe_id         UUID PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE,
+        calories          NUMERIC(8,2) NOT NULL DEFAULT 0,
+        protein_g         NUMERIC(8,2) NOT NULL DEFAULT 0,
+        carbs_g           NUMERIC(8,2) NOT NULL DEFAULT 0,
+        fat_g             NUMERIC(8,2) NOT NULL DEFAULT 0,
+        sat_fat_g         NUMERIC(8,2) NOT NULL DEFAULT 0,
+        sodium_mg         NUMERIC(8,2) NOT NULL DEFAULT 0,
+        potassium_mg      NUMERIC(8,2) NOT NULL DEFAULT 0,
+        phosphorus_mg     NUMERIC(8,2) NOT NULL DEFAULT 0,
+        fiber_g           NUMERIC(8,2) NOT NULL DEFAULT 0,
+        sugar_g           NUMERIC(8,2) NOT NULL DEFAULT 0,
+        calculated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- Menu Item to Recipe Mapping
+      CREATE TABLE IF NOT EXISTS menu_item_recipes (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        menu_item_id        UUID REFERENCES menu_items(id) ON DELETE CASCADE,
+        recipe_id           UUID REFERENCES recipes(id) ON DELETE CASCADE,
+        portion_multiplier  NUMERIC(6,2) NOT NULL DEFAULT 1.0,
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `,
+  },
 ]
 
-export async function runMigrations() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      name       TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `)
+export async function runMigrations(maxRetries = 5, retryDelayMs = 2000) {
+  let attempt = 0
+  while (attempt < maxRetries) {
+    try {
+      attempt++
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS _migrations (
+          name       TEXT PRIMARY KEY,
+          applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `)
+      break
+    } catch (err: any) {
+      if (attempt >= maxRetries) {
+        console.error(`[migrate] Failed to connect to database after ${maxRetries} attempts:`, err.message)
+        throw err
+      }
+      console.warn(`[migrate] Database connection attempt ${attempt}/${maxRetries} failed (${err.message}). Retrying in ${retryDelayMs}ms...`)
+      await new Promise(r => setTimeout(r, retryDelayMs))
+    }
+  }
 
   for (const { name, sql } of migrations) {
     const { rows } = await pool.query(
