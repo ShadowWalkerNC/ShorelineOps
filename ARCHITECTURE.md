@@ -4,9 +4,9 @@
 
 **ShorelineOps** is an open-source dietary operations, clinical nutrition, and healthcare foodservice coordination platform designed specifically for assisted living, memory care, and skilled nursing communities.
 
-Its core operational philosophy is **distributor independence, clinical safety, and real-time operational resilience**:
+Its core operational philosophy is **distributor independence, deterministic clinical safety, and real-time operational resilience**:
 1. Facilities should never be locked into a single food distributor ERP.
-2. Resident diet orders, IDDSI texture requirements, and allergen exclusions drive production, purchasing, and tray delivery.
+2. Resident diet orders, IDDSI texture requirements, and allergen exclusions drive production, purchasing, and tray delivery with deterministic non-overridable safety hard-blocks.
 3. Clinical EHR integrations and distributor ordering are decoupled via standard adapter interfaces.
 4. Multi-tier caching, conditional ETags, request deduplication, and circuit breakers ensure 0ms offline-first kitchen tablet performance.
 
@@ -40,43 +40,48 @@ Its core operational philosophy is **distributor independence, clinical safety, 
 | Module | Core Responsibilities | Routes / APIs | Primary Users |
 |---|---|---|---|
 | **Resident Manager** | Profile, diet orders (NAS, NCS, Renal), IDDSI textures, allergies, beverages, dining room table assignments | `/residents`, `/api/residents` | Dietitians, RDs, DONs |
-| **Kitchen Tablet Mode** | Touch worksheets, batch yield scaling, temp logs (165°F), tray line dispatch, quick par count steppers | `/kitchen/tablet`, `/api/kitchen` | Line Cooks & Prep Staff |
+| **EHR Triage Queue** | RD reconciliation gate for conflicting inbound EHR diet/texture updates and unverified allergens | `/residents`, `/api/ehr/reconciliation-queue` | Registered Dietitians |
+| **Kitchen Tablet Mode** | Touch worksheets, batch yield scaling, temp logs (165°F), tray line dispatch, quick par count steppers, QR line scanner | `/kitchen/tablet`, `/api/kitchen` | Line Cooks & Prep Staff |
 | **Menu Planner** | 4-week cycle menus, Choice A/Choice B, active cycle week, weekly nutritional audit, print view | `/menu`, `/api/menu` | Dietary Directors |
 | **Smart Recipe Book** | Master recipe catalog with automatic Big 9 allergen detection, USDA nutrient calculation, and vendor SKU costing | `/recipes`, `/api/recipes` | Chefs & Kitchen Staff |
 | **Dietary & Nutrition Engine** | Macro/micronutrient aggregation (Calories, Protein, Carbs, Fat, Sodium, Potassium, Phosphorus, Fiber) and clinical diet order constraint solver | `/api/recipes/analyze-nutrition`, `/api/ehr/nutrients/usda` | Clinical Dietitians & RDs |
-| **MRP & BOM Purchasing** | Multi-level Bill of Materials explosion, on-hand inventory depletion, distributor case-pack purchase orders | `/purchasing`, `/api/purchasing/mrp-order` | Dietary Managers |
+| **MRP & BOM Purchasing** | Multi-level Bill of Materials explosion, on-hand inventory depletion, multi-distributor lowest-cost split order generator | `/purchasing`, `/api/purchasing/mrp-order` | Dietary Managers |
+| **3-Way Invoice Match** | PO vs Dock Receiving vs Invoiced price/quantity variance detection and automated vendor credit memos | `/purchasing`, `/api/purchasing/invoices/match` | Dietary Managers & AP |
 | **Daily Cook Sheets** | Real-time meal tallies, modifiers, alternatives, and station prep worksheets | `/kitchen/sheet`, `/api/kitchen/sheet` | Line Cooks |
 | **Production Sheets** | Station batch scaling (Hot Line, Cold Prep, Puree Station, Bakery) with HACCP temperature limits | `/production`, `/api/production` | Cooks & Managers |
-| **Tray Cards & Service** | High-contrast resident meal tickets with red allergen alert banners and IDDSI texture color banners | `/kitchen/traycards`, `/api/kitchen/traycards-generated` | Dietary Servers |
+| **Tray Cards & Service** | High-contrast resident meal tickets with signed QR tokens, red allergen alert banners, and IDDSI texture color banners | `/kitchen/traycards`, `/api/kitchen/traycards-generated` | Dietary Servers |
 | **Distributor Portal** | Vendor portal for distributor sales reps to update SKUs and contract pricing without PHI access | `/distributor`, `/api/distributor` | Food Distributor Reps |
 | **Cost & Compliance** | Food cost ($/CPD), total dietary operating cost (food + labor), substitution log, and 1-click survey print sheet | `/reporting`, `/api/reporting` | Administrators & Inspectors |
+| **CMS-2567 Survey Binder** | Automated compliance cross-walk auditing Federal F-Tags (F800–F812), 14-hr meal timing spans, 90-day HACCP logs | `/reporting`, `/api/reporting/cms-survey-export` | State Surveyors & RDs |
 
 ---
 
 ## 4. Algorithmic Engines
 
-### 4.1 Unit Conversion & Standard Density Engine (`server/src/engine/units.ts`)
+### 4.1 Deterministic Clinical Safety Rules Engine (`server/src/engine/safetyEvaluator.ts`)
+- **Strict NPO Lockout**: Non-overridable `BLOCK` on any oral food or beverage dispatch when resident is designated NPO.
+- **Canonical Allergen Intersection**: Scans Big 9 allergens (Gluten, Dairy, Eggs, Peanuts, Tree Nuts, Soy, Fish, Shellfish, Sesame) and flags cross-contact risk.
+- **IDDSI Food & Liquid Texture Compatibility**: Strict matrix enforcement between resident prescription (Pureed L4, Minced L5, Soft L6, Regular L7) and recipe textures.
+- **Therapeutic Nutrient Ceilings**: Hard limits for NAS Sodium ($\le 600\text{mg}$), Diabetic Carbs ($\le 60\text{g}$), and Renal Potassium/Phosphorus.
+
+### 4.2 Universal Culinary Unit Conversion Engine (`server/src/engine/units.ts`)
 - **Universal Matrix**: Exact bidirectional conversions across Mass (`g`, `kg`, `oz`, `lb`), Volume (`ml`, `l`, `tsp`, `tbsp`, `fl oz`, `cup`, `pt`, `qt`, `gal`), and Foodservice Counts (`#10 can`, `case`, `pack`, `bag`, `slice`, `portion`).
 - **Density Awareness**: Volume-to-mass conversions based on ingredient specific gravities (flours, sugars, butter, liquids, purees).
 
-### 4.2 Dietary Nutritional Calculation & Clinical Constraint Solver (`server/src/engine/nutrition.ts`)
-- **Nutritional Calculation**: Computes Calories, Protein, Carbs, Fat, Sat Fat, Sodium, Potassium, Phosphorus, Fiber, and Sugar.
-- **Clinical Constraint Solver**:
-  - **NAS (No Added Salt)**: $\le 600\text{mg}$ sodium/meal, $\le 2000\text{mg}$/day.
-  - **Low Sodium Strict**: $\le 500\text{mg}$ sodium/meal, $\le 1500\text{mg}$/day.
-  - **NCS (Diabetic)**: $\le 60\text{g}$ carbohydrates/meal.
-  - **Renal Diet**: Constrains Sodium, Potassium ($\le 700\text{mg}$), and Phosphorus ($\le 350\text{mg}$).
-  - **IDDSI Textures**: Level 4 Pureed, Level 5 Minced & Moist, Level 6 Soft & Bite-Sized, Level 7 Regular.
-  - **Allergens**: Scans Big 9 allergens (Gluten, Dairy, Eggs, Nuts, Soy, Fish, Shellfish, Sesame).
-
-### 4.3 Material Requirements Planning (MRP) & BOM Explosion (`server/src/engine/mrp.ts`)
+### 4.3 Multi-Distributor Split MRP Engine (`server/src/engine/mrp.ts`)
 - **BOM Multi-Level Explosion**:
   $$\text{Ingredient Requirement (g)} = \sum_{\text{Meals}} \left( \text{Resident Headcount} \times \text{Choice \%} \times \frac{\text{Scaled Portions}}{\text{Base Yield}} \times \text{Ingredient Base Qty (g)} \right)$$
-- **Distributor Case Rounding**: Calculates net deficit against on-hand stock and par levels, packaging reorders into whole distributor case units.
+- **Multi-Vendor Pricing Comparator**: Compares competing catalog quotes across Dennis, Sysco, and US Foods, computes effective unit costs ($/\text{lb}$ or $/\text{g}$), and generates optimal split PO proposals aligned with delivery lead times.
 
-### 4.4 Kitchen Batch Production & Station Routing (`server/src/engine/production.ts`)
-- Station worksheets partitioned for `Hot Line` ($165^\circ\text{F}$ HACCP target), `Cold Prep` ($41^\circ\text{F}$), `Puree Station`, and `Bakery`.
-- Automatic resident tray card generator with high-contrast clinical safety flags.
+### 4.4 Three-Way Invoice Match Engine (`server/src/engine/invoicing.ts`)
+- **Price Creep Detection**: Identifies unit price inflation exceeding purchase order contract rates.
+- **Short-Shipment Calculation**: Evaluates receiving dock verified counts against billed quantities.
+- **Automated Credit Memos**: Generates formal vendor credit deduction claims for immediate accounting processing.
+
+### 4.5 CMS-2567 Survey Compliance Cross-Walk (`server/src/engine/cmsSurvey.ts`)
+- **Federal F-Tag Audit**: Cross-walks operations against F800, F801, F803, F804, F805, F808, F809, and F812.
+- **14-Hour Span Rule (F809)**: Audits elapsed hours between evening dinner service and next morning breakfast ($\le 14\text{h}$, or $\le 16\text{h}$ with bedtime snack).
+- **90-Day Temperature Integrity**: Verifies HACCP hot ($\ge 140^\circ\text{F}$) and cold ($\le 41^\circ\text{F}$) holding log compliance.
 
 ---
 

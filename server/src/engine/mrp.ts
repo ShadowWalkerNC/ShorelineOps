@@ -1,12 +1,14 @@
 /**
- * Material Requirements Planning (MRP) & Bill of Materials (BOM) Demand Engine
+ * Material Requirements Planning (MRP) & Multi-Distributor Procurement Engine
+ * Sysco IMPAC / FOOD-TRAK Parity
  * 
  * Explodes scheduled multi-week cycle menus across the active resident census,
  * calculates net raw ingredient requirements, evaluates on-hand inventory levels,
+ * compares multi-distributor quotes (Dennis vs Sysco vs US Foods) to select lowest-cost offers,
  * and generates optimized purchase orders packed in distributor case sizes.
  */
 
-import { UnitConversionEngine, CulinaryUnit } from './units'
+import { UnitConversionEngine } from './units'
 
 export interface ResidentDemandCensus {
   totalCensus: number
@@ -59,6 +61,34 @@ export interface BomExplodedIngredientDemand {
     portions: number
     ingredientGrams: number
   }>
+}
+
+export interface DistributorOffer {
+  vendorName: string
+  vendorSku: string
+  packSizeDesc: string
+  packUnitGrams: number
+  pricePerPack: number
+  deliveryDays: string[] // e.g. ['Monday', 'Thursday']
+  orderCutoffLeadDays: number
+}
+
+export interface LowestCostSplitOrderProposal {
+  ingredientName: string
+  requiredGrams: number
+  optimalVendor: string
+  selectedOffer: DistributorOffer
+  packsToOrder: number
+  totalCost: number
+  unitCostPerPound: number
+  alternativeOffers: Array<{
+    vendorName: string
+    pricePerPack: number
+    totalCost: number
+    priceVariancePercent: number
+  }>
+  costSavings: number
+  nextAvailableDelivery: string
 }
 
 export interface MrpPurchaseOrderRecommendation {
@@ -130,6 +160,70 @@ export class MrpDemandForecastEngine {
     }
 
     return demandMap
+  }
+
+  /**
+   * Compare multi-distributor quotes to select lowest-cost supplier for an ingredient demand
+   */
+  static evaluateMultiDistributorLowestCost(
+    ingredientName: string,
+    netDemandGrams: number,
+    offers: DistributorOffer[],
+    targetServiceDay: string = 'Monday'
+  ): LowestCostSplitOrderProposal {
+    if (!offers || offers.length === 0) {
+      throw new Error(`No distributor offers provided for ${ingredientName}`)
+    }
+
+    // Calculate total cost for each offer
+    const evaluatedOffers = offers.map(offer => {
+      const packGrams = offer.packUnitGrams > 0 ? offer.packUnitGrams : 453.592
+      const packsNeeded = Math.ceil(netDemandGrams / packGrams)
+      const totalCost = Math.round(packsNeeded * offer.pricePerPack * 100) / 100
+      const unitCostPerGram = offer.pricePerPack / packGrams
+      const unitCostPerLb = Math.round(unitCostPerGram * 453.592 * 100) / 100
+
+      // Match delivery schedule
+      const hasDirectDelivery = offer.deliveryDays.some(
+        d => d.toLowerCase() === targetServiceDay.toLowerCase()
+      )
+      const nextDelivery = hasDirectDelivery ? targetServiceDay : offer.deliveryDays[0] || 'Standard Route'
+
+      return {
+        offer,
+        packsNeeded,
+        totalCost,
+        unitCostPerLb,
+        nextDelivery,
+      }
+    })
+
+    // Sort by lowest total cost
+    evaluatedOffers.sort((a, b) => a.totalCost - b.totalCost)
+    const winning = evaluatedOffers[0]
+    const nextBest = evaluatedOffers[1] || winning
+
+    const costSavings = Math.round((nextBest.totalCost - winning.totalCost) * 100) / 100
+
+    const alternativeOffers = evaluatedOffers.slice(1).map(alt => ({
+      vendorName: alt.offer.vendorName,
+      pricePerPack: alt.offer.pricePerPack,
+      totalCost: alt.totalCost,
+      priceVariancePercent: Math.round(((alt.totalCost - winning.totalCost) / winning.totalCost) * 1000) / 10,
+    }))
+
+    return {
+      ingredientName,
+      requiredGrams: Math.round(netDemandGrams),
+      optimalVendor: winning.offer.vendorName,
+      selectedOffer: winning.offer,
+      packsToOrder: winning.packsNeeded,
+      totalCost: winning.totalCost,
+      unitCostPerPound: winning.unitCostPerLb,
+      alternativeOffers,
+      costSavings,
+      nextAvailableDelivery: winning.nextDelivery,
+    }
   }
 
   /**

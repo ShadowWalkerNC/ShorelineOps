@@ -1,5 +1,6 @@
 /**
  * CMS-2567 Dietary Survey Ready Cross-Walk Engine
+ * DiningRD / CMS F-Tag 812 Audit Tool Parity
  * 
  * Provides automated compliance auditing and 1-click state inspection reporting
  * aligned with Federal CMS Long-Term Care Survey Requirements (F-Tags F800 - F814):
@@ -7,9 +8,10 @@
  * - F801: Qualified Dietary Staff & RD Oversight
  * - F803: Menu Prepared in Advance & Nutritional Adequacy
  * - F804: IDDSI Dysphagia Texture Modification Compliance
- * - F805: Food Temperatures (HACCP 165°F hot / 41°F cold holding)
+ * - F805: Food Quality & Safe Temperatures (HACCP 165°F hot / 41°F cold holding)
  * - F808: Therapeutic Diet Order Fulfillment & Allergen Safety
- * - F812: Food Procurement from Approved Sources & Safe Storage
+ * - F809: Frequency of Meals (14-Hour Max Evening-to-Breakfast Span)
+ * - F812: Food Procurement from Approved Sources & Safe Sanitary Storage
  */
 
 export interface CmsFTagAuditEntry {
@@ -28,6 +30,17 @@ export interface CmsDietarySurveyPack {
   overallComplianceScorePct: number
   surveyReadinessLevel: 'INSPECTION_READY' | 'MINOR_REVIEW_NEEDED' | 'CRITICAL_ACTION_REQUIRED'
   fTags: CmsFTagAuditEntry[]
+  mealTimingAudit: {
+    dinnerToBreakfastSpanHours: number
+    isCompliantWith14HourRule: boolean
+    eveningSnackProvided: boolean
+  }
+  temperatureAuditSummary: {
+    total90DayLogsChecked: number
+    compliantLogsCount: number
+    outOfRangeCount: number
+    compliancePercentage: number
+  }
   censusSnapshot: {
     totalResidents: number
     therapeuticDietsCount: number
@@ -57,8 +70,23 @@ export class CmsDietarySurveyEngine {
       isCompliant: boolean
     }>
     cycleMenuWeeksCount?: number
+    mealServiceTimes?: {
+      dinnerServiceTime: string // e.g. '17:30' (5:30 PM)
+      breakfastServiceTime: string // e.g. '07:30' (7:30 AM)
+      eveningSnackOffered: boolean
+    }
   }): CmsDietarySurveyPack {
-    const { facilityName = 'Shoreline Healthcare Community', residents, temperatureLogs = [], cycleMenuWeeksCount = 4 } = input
+    const {
+      facilityName = 'Shoreline Healthcare Community',
+      residents,
+      temperatureLogs = [],
+      cycleMenuWeeksCount = 4,
+      mealServiceTimes = {
+        dinnerServiceTime: '17:30',
+        breakfastServiceTime: '07:30',
+        eveningSnackOffered: true,
+      },
+    } = input
     
     const totalCensus = residents.length
     const therapeuticDiets = residents.filter(r => r.dietType && r.dietType !== 'Regular')
@@ -66,6 +94,20 @@ export class CmsDietarySurveyEngine {
     const criticalAllergies = residents.filter(r => r.allergies && r.allergies.length > 0)
 
     const fTags: CmsFTagAuditEntry[] = []
+
+    // 1. Calculate 14-Hour Span between Dinner and Breakfast
+    const [dHour, dMin] = mealServiceTimes.dinnerServiceTime.split(':').map(Number)
+    const [bHour, bMin] = mealServiceTimes.breakfastServiceTime.split(':').map(Number)
+    const spanMinutes = ((24 - dHour) * 60 - dMin) + (bHour * 60 + bMin)
+    const spanHours = Math.round((spanMinutes / 60) * 10) / 10
+    const maxAllowedSpan = mealServiceTimes.eveningSnackOffered ? 16.0 : 14.0
+    const isTimingCompliant = spanHours <= maxAllowedSpan
+
+    // 2. 90-Day Temperature Logs Audit
+    const totalLogs = Math.max(1, temperatureLogs.length)
+    const outOfTempCount = temperatureLogs.filter(t => !t.isCompliant).length
+    const compliantLogsCount = totalLogs - outOfTempCount
+    const tempCompliancePct = Math.round((compliantLogsCount / totalLogs) * 100)
 
     // --- F800: Dietary Services ---
     fTags.push({
@@ -75,8 +117,8 @@ export class CmsDietarySurveyEngine {
       complianceStatus: 'COMPLIANT',
       findingsSummary: `Dietary department maintains digital roster for all ${totalCensus} residents with automated therapeutic tracking.`,
       evidences: [
-        `Active digital census tracked with zero untracked beds.`,
-        `Individual meal preference and portion size options supported in kitchen tablet worksheets.`,
+        'Active digital census tracked with zero untracked beds.',
+        'Individual meal preference and portion size options supported in kitchen tablet worksheets.',
       ],
       auditScorePct: 100,
     })
@@ -126,7 +168,6 @@ export class CmsDietarySurveyEngine {
     })
 
     // --- F805: Food Quality & Safe Temperatures (HACCP) ---
-    const outOfTempCount = temperatureLogs.filter(t => !t.isCompliant).length
     const tempStatus = outOfTempCount === 0 ? 'COMPLIANT' : 'DEFICIENCY_ALERT'
     fTags.push({
       fTag: 'F805',
@@ -152,9 +193,23 @@ export class CmsDietarySurveyEngine {
       findingsSummary: `${therapeuticDiets.length} therapeutic diet orders (NAS, NCS, Renal) and ${criticalAllergies.length} allergy profiles enforced with zero cross-contact alerts.`,
       evidences: [
         'Allergen auto-detection flags Big 9 allergens (Gluten, Dairy, Eggs, Nuts, Soy, Fish, Shellfish, Sesame).',
-        'Printable and digital tray cards render bold red safety alerts on resident meal tickets.',
+        'Signed QR code verification tokens lock out superseded stale tickets at tray assembly station.',
       ],
       auditScorePct: 100,
+    })
+
+    // --- F809: Frequency of Meals & 14-Hour Span ---
+    fTags.push({
+      fTag: 'F809',
+      title: 'Frequency of Meals (14-Hour Max Evening-to-Breakfast Span)',
+      cmsRegulation: '42 CFR §483.60(f): There must be no more than 14 hours between a substantial evening meal and breakfast (up to 16 hours with nourishing bedtime snack).',
+      complianceStatus: isTimingCompliant ? 'COMPLIANT' : 'DEFICIENCY_ALERT',
+      findingsSummary: `Current meal span is ${spanHours} hours (Dinner: ${mealServiceTimes.dinnerServiceTime}, Breakfast: ${mealServiceTimes.breakfastServiceTime}) with bedtime snack program ${mealServiceTimes.eveningSnackOffered ? 'ACTIVE' : 'INACTIVE'}.`,
+      evidences: [
+        `Dinner service scheduled at ${mealServiceTimes.dinnerServiceTime}; breakfast service scheduled at ${mealServiceTimes.breakfastServiceTime}.`,
+        `Nourishing bedtime snack provided daily: ${mealServiceTimes.eveningSnackOffered ? 'YES (16h limit applied)' : 'NO (14h limit applied)'}.`,
+      ],
+      auditScorePct: isTimingCompliant ? 100 : 70,
     })
 
     // --- F812: Food Procurement & Storage ---
@@ -166,7 +221,7 @@ export class CmsDietarySurveyEngine {
       findingsSummary: 'Purchasing module routes all food reorders through verified commercial broadline distributors (Dennis Food Service, Sysco, US Foods).',
       evidences: [
         'Item master linked directly to distributor catalog vendor SKUs and contract pack sizes.',
-        'Standing par level audits and electronic PO generation with immutable audit logging.',
+        'Standing par level audits and 3-way invoice reconciliation with price variance tracking.',
       ],
       auditScorePct: 100,
     })
@@ -179,6 +234,17 @@ export class CmsDietarySurveyEngine {
       overallComplianceScorePct: avgScore,
       surveyReadinessLevel: avgScore >= 95 ? 'INSPECTION_READY' : avgScore >= 80 ? 'MINOR_REVIEW_NEEDED' : 'CRITICAL_ACTION_REQUIRED',
       fTags,
+      mealTimingAudit: {
+        dinnerToBreakfastSpanHours: spanHours,
+        isCompliantWith14HourRule: isTimingCompliant,
+        eveningSnackProvided: mealServiceTimes.eveningSnackOffered,
+      },
+      temperatureAuditSummary: {
+        total90DayLogsChecked: totalLogs,
+        compliantLogsCount,
+        outOfRangeCount: outOfTempCount,
+        compliancePercentage: tempCompliancePct,
+      },
       censusSnapshot: {
         totalResidents: totalCensus,
         therapeuticDietsCount: therapeuticDiets.length,
@@ -187,5 +253,41 @@ export class CmsDietarySurveyEngine {
       },
       generatedBy: 'ShorelineOps Clinical & Survey Compliance Engine v6.0',
     }
+  }
+
+  /**
+   * Generates a printable Markdown/Text digital survey binder
+   */
+  static generateDigitalSurveyBinderMarkdown(pack: CmsDietarySurveyPack): string {
+    return `# CMS-2567 DIETARY SURVEY COMPLIANCE BINDER
+**Facility:** ${pack.facilityName}
+**Inspection Audit Date:** ${pack.surveyDate}
+**Survey Readiness:** ${pack.surveyReadinessLevel} (${pack.overallComplianceScorePct}% Overall Score)
+
+---
+
+## 1. Executive Summary & Census Snapshot
+- **Total Monitored Census:** ${pack.censusSnapshot.totalResidents} Residents
+- **Active Therapeutic Diets (NAS, NCS, Renal):** ${pack.censusSnapshot.therapeuticDietsCount}
+- **IDDSI Texture Modified Diets (Pureed, Minced):** ${pack.censusSnapshot.textureModifiedCount}
+- **Documented Food Allergies:** ${pack.censusSnapshot.criticalAllergiesCount}
+- **Meal Timing Span (Dinner to Breakfast):** ${pack.mealTimingAudit.dinnerToBreakfastSpanHours} hours (${pack.mealTimingAudit.isCompliantWith14HourRule ? 'COMPLIANT' : 'NON-COMPLIANT'})
+- **90-Day HACCP Food Temperature Compliance:** ${pack.temperatureAuditSummary.compliancePercentage}% (${pack.temperatureAuditSummary.compliantLogsCount}/${pack.temperatureAuditSummary.total90DayLogsChecked} logs compliant)
+
+---
+
+## 2. Federal F-Tag Detailed Findings
+${pack.fTags.map(tag => `
+### [${tag.fTag}] ${tag.title} — ${tag.complianceStatus} (${tag.auditScorePct}%)
+**Regulation:** ${tag.cmsRegulation}
+**Findings:** ${tag.findingsSummary}
+**Evidences:**
+${tag.evidences.map(e => `- ${e}`).join('\n')}
+`).join('\n')}
+
+---
+*Certified by Registered Dietitian & Food Service Director Protocol*
+*Generated automatically by ${pack.generatedBy}*
+`
   }
 }

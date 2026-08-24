@@ -658,3 +658,96 @@ purchasingRouter.get('/orders/:id/export-csv', async (req: Request, res: Respons
     res.send(header + csvRows)
   } catch (e) { next(e) }
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE-WAY INVOICE MATCHING & VENDOR CREDIT MEMOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+import { ThreeWayInvoiceMatchingEngine, InvoiceLineItem } from '../engine/invoicing'
+
+/**
+ * POST /api/purchasing/invoices/match
+ * Executes 3-way matching (PO vs Receiving vs Invoiced), flags price variance, and generates credit memos.
+ */
+purchasingRouter.post('/invoices/match', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { invoiceNumber, vendorName, invoiceDate, poReference, lines } = req.body
+    if (!invoiceNumber || !vendorName || !lines || !Array.isArray(lines)) {
+      return err(res, 400, 'invoiceNumber, vendorName, and lines array are required')
+    }
+
+    const report = ThreeWayInvoiceMatchingEngine.evaluateThreeWayMatch({
+      invoiceNumber,
+      vendorName,
+      invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
+      poReference: poReference || 'PO-DIRECT',
+      lines: lines as InvoiceLineItem[],
+    })
+
+    // Persist invoice record
+    try {
+      await pool.query(`
+        INSERT INTO distributor_invoices 
+          (vendor_id, vendor_name, invoice_number, invoice_date, po_reference, total_amount, match_status, variance_summary, raw_items)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (invoice_number) DO UPDATE SET
+          match_status = EXCLUDED.match_status,
+          variance_summary = EXCLUDED.variance_summary,
+          total_amount = EXCLUDED.total_amount
+      `, [
+        vendorName.toLowerCase().replace(/\s+/g, '-'),
+        vendorName,
+        invoiceNumber,
+        report.invoiceDate,
+        report.poReference,
+        report.totalBilledAmount,
+        report.overallStatus,
+        JSON.stringify(report.lineVariances),
+        JSON.stringify(lines),
+      ])
+
+      if (report.creditMemo) {
+        await pool.query(`
+          INSERT INTO vendor_credit_memos (vendor_name, memo_number, credit_amount, reason, status)
+          VALUES ($1, $2, $3, $4, 'ISSUED')
+          ON CONFLICT (memo_number) DO NOTHING
+        `, [
+          vendorName,
+          report.creditMemo.memoNumber,
+          report.creditMemo.totalCreditAmount,
+          report.creditMemo.formattedMemoText,
+        ])
+      }
+    } catch (dbErr: any) {
+      console.warn('[Purchasing] DB persistence notice:', dbErr.message)
+    }
+
+    res.json(report)
+  } catch (e) { next(e) }
+})
+
+/**
+ * GET /api/purchasing/invoices
+ * Lists recent distributor invoices and their match statuses
+ */
+purchasingRouter.get('/invoices', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT * FROM distributor_invoices ORDER BY invoice_date DESC LIMIT 50
+    `)
+    res.json(rows)
+  } catch (e) { next(e) }
+})
+
+/**
+ * GET /api/purchasing/credit-memos
+ * Lists active vendor credit memos
+ */
+purchasingRouter.get('/credit-memos', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT * FROM vendor_credit_memos ORDER BY created_at DESC LIMIT 50
+    `)
+    res.json(rows)
+  } catch (e) { next(e) }
+})

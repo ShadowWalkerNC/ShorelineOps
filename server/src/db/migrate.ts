@@ -433,6 +433,80 @@ const migrations: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    name: '013_resident_profile_versions',
+    sql: `
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS profile_version INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS is_npo BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS npo_reason TEXT NOT NULL DEFAULT '';
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS fluid_restriction_ml INTEGER DEFAULT NULL;
+
+      CREATE TABLE IF NOT EXISTS resident_profile_history (
+        id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        resident_id      UUID NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+        profile_version  INTEGER NOT NULL,
+        diet_type        TEXT NOT NULL,
+        texture          TEXT NOT NULL,
+        is_npo           BOOLEAN NOT NULL DEFAULT false,
+        allergies        TEXT[] NOT NULL DEFAULT '{}',
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_profile_hist_res ON resident_profile_history(resident_id, profile_version);
+    `,
+  },
+  {
+    name: '014_invoices_and_credit_memos',
+    sql: `
+      CREATE TABLE IF NOT EXISTS distributor_invoices (
+        id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        vendor_id        TEXT NOT NULL,
+        vendor_name      TEXT NOT NULL,
+        invoice_number   TEXT NOT NULL UNIQUE,
+        invoice_date     DATE NOT NULL,
+        po_reference     TEXT,
+        total_amount     NUMERIC(10,2) NOT NULL,
+        match_status     TEXT NOT NULL DEFAULT 'PENDING' CHECK (match_status IN ('MATCHED', 'PRICE_VARIANCE', 'QUANTITY_SHORT', 'DISPUTED', 'PENDING')),
+        variance_summary JSONB NOT NULL DEFAULT '{}',
+        raw_items        JSONB NOT NULL DEFAULT '[]',
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS vendor_credit_memos (
+        id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        invoice_id       UUID REFERENCES distributor_invoices(id) ON DELETE CASCADE,
+        vendor_name      TEXT NOT NULL,
+        memo_number      TEXT NOT NULL UNIQUE,
+        credit_amount    NUMERIC(10,2) NOT NULL,
+        reason           TEXT NOT NULL,
+        status           TEXT NOT NULL DEFAULT 'ISSUED' CHECK (status IN ('ISSUED', 'SUBMITTED_TO_VENDOR', 'CREDIT_APPLIED', 'REJECTED')),
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_invoices_match ON distributor_invoices(match_status);
+    `,
+  },
+  {
+    name: '015_ehr_reconciliation_queue',
+    sql: `
+      CREATE TABLE IF NOT EXISTS ehr_reconciliation_queue (
+        id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        resident_id      TEXT,
+        resident_name    TEXT NOT NULL,
+        external_ehr_id  TEXT NOT NULL,
+        source_ehr       TEXT NOT NULL DEFAULT 'PointClickCare',
+        change_type      TEXT NOT NULL CHECK (change_type IN ('DIET_ORDER', 'TEXTURE_UPDATE', 'NEW_ALLERGEN', 'ADMISSION', 'DISCHARGE', 'NPO_ORDER')),
+        incoming_payload JSONB NOT NULL,
+        conflict_reason  TEXT NOT NULL,
+        status           TEXT NOT NULL DEFAULT 'PENDING_TRIAGE' CHECK (status IN ('PENDING_TRIAGE', 'APPROVED_BY_RD', 'REJECTED_BY_RD', 'AUTO_MERGED')),
+        resolved_by      TEXT,
+        resolved_at      TIMESTAMPTZ,
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ehr_queue_status ON ehr_reconciliation_queue(status);
+    `,
+  },
 ]
 
 export async function runMigrations(maxRetries = 5, retryDelayMs = 2000) {

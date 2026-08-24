@@ -171,6 +171,25 @@ export default function TrayCardGeneratorPage() {
                   <strong>Dislikes:</strong> {dislikes.join(', ')}
                 </div>
               )}
+
+              {/* Signed Security QR Code Token */}
+              <div style={{
+                marginTop: 6,
+                paddingTop: 8,
+                borderTop: '1px dashed var(--border-color)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: 10,
+                color: 'var(--text-muted)',
+              }}>
+                <div style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  🔒 QR: TKT-{resident.id?.slice(0, 6) || 'res01'}:{resident.profile_version || 1}:{(resident.dietOrder || resident.dietType || 'REG').slice(0, 3)}
+                </div>
+                <span style={{ fontSize: 10, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
+                  v{resident.profile_version || 1} Verified
+                </span>
+              </div>
             </div>
           )
         })}

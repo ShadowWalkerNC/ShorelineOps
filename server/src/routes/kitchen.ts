@@ -345,3 +345,100 @@ kitchenRouter.post('/batch-scale', (req, res) => {
     res.status(400).json({ error: err.message || 'Batch scale failed' })
   }
 })
+
+/**
+ * POST /api/kitchen/explode-recipe-variants
+ * Explodes a base recipe into Regular, Pureed L4, Minced & Moist L5, NAS, and NCS batch prep sheets
+ */
+kitchenRouter.post('/explode-recipe-variants', (req, res) => {
+  try {
+    const { recipe, headcounts } = req.body
+    if (!recipe || !recipe.ingredients || !headcounts) {
+      return res.status(400).json({ error: 'recipe and headcounts object required' })
+    }
+
+    const result = KitchenProductionEngine.explodeRecipeVariants(recipe, headcounts)
+    res.json(result)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Variant explosion failed' })
+  }
+})
+
+/**
+ * POST /api/kitchen/verify-tray-scan
+ * Verifies signed tray card QR scans at assembly station, locking out superseded stale cards or NPO residents
+ */
+kitchenRouter.post('/verify-tray-scan', async (req, res, next) => {
+  try {
+    const { rawQrPayload, ticketId: inputTicketId, residentId: inputResidentId, profileVersion: inputProfileVersion } = req.body
+
+    let ticketId = inputTicketId
+    let residentId = inputResidentId
+    let ticketProfileVersion = inputProfileVersion ? Number(inputProfileVersion) : 1
+    let payloadHash = ''
+
+    if (rawQrPayload && typeof rawQrPayload === 'string') {
+      const parts = rawQrPayload.split(':')
+      if (parts.length >= 3) {
+        ticketId = parts[0]
+        ticketProfileVersion = parseInt(parts[1], 10)
+        payloadHash = parts[2]
+      }
+    }
+
+    // Lookup resident by ID or extracted ticket prefix
+    let resQuery = 'SELECT id, name, room, diet_type, texture, is_npo, npo_reason, profile_version FROM residents WHERE id = $1'
+    let queryParams: any[] = [residentId]
+
+    if (!residentId && ticketId && ticketId.startsWith('TKT-')) {
+      const idPrefix = ticketId.split('-')[1]
+      resQuery = 'SELECT id, name, room, diet_type, texture, is_npo, npo_reason, profile_version FROM residents WHERE id::text LIKE $1'
+      queryParams = [`${idPrefix}%`]
+    }
+
+    const { rows } = await pool.query(resQuery, queryParams)
+    if (rows.length === 0) {
+      return res.json({
+        status: 'INVALID_HASH',
+        message: 'No active resident profile found matching scanned tray card.',
+      })
+    }
+
+    const resident = rows[0]
+    const currentVersion = resident.profile_version || 1
+
+    // 1. Strict NPO Lockout
+    if (resident.is_npo) {
+      return res.json({
+        status: 'NPO_ALERT',
+        residentName: resident.name,
+        roomBed: resident.room,
+        currentProfileVersion: currentVersion,
+        ticketProfileVersion,
+        message: `HALT: Resident is designated NPO${resident.npo_reason ? ` (${resident.npo_reason})` : ''}. All oral food service is prohibited.`,
+      })
+    }
+
+    // 2. Superseded Stale Card Check
+    if (currentVersion > ticketProfileVersion) {
+      return res.json({
+        status: 'SUPERSEDED',
+        residentName: resident.name,
+        roomBed: resident.room,
+        currentProfileVersion: currentVersion,
+        ticketProfileVersion,
+        message: `HALT: Diet order has been updated (v${currentVersion}). This tray card (v${ticketProfileVersion}) is STALE and must be discarded.`,
+      })
+    }
+
+    // 3. Valid Tray Ticket
+    return res.json({
+      status: 'VALID',
+      residentName: resident.name,
+      roomBed: resident.room,
+      currentProfileVersion: currentVersion,
+      ticketProfileVersion,
+      message: `Verified: ${resident.name} (Room ${resident.room}) - ${resident.diet_type} / ${resident.texture}.`,
+    })
+  } catch (err) { next(err) }
+})

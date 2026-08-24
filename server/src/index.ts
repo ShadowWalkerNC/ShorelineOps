@@ -185,18 +185,20 @@ app.get('/ready', async (_req, res) => {
 // Global error handler
 app.use(errorHandler)
 
-// Migrate → seed → start
-runMigrations()
-  .then(() => runSeed())
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
+const server = app.listen(PORT, () => {
+  console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
+  
+  // Non-fatal migration & seed background runner
+  runMigrations()
+    .then(() => runSeed())
+    .then(() => {
+      console.log('[Shoreline API] Database migrations & seed verified.')
       globalHealerBot.startDaemon(300000) // Run self-healing background checks every 5 minutes
     })
-  })
-  .catch((err) => {
-    console.error('[Shoreline API] Startup failed:', err)
-    process.exit(1)
-  })
+    .catch((err) => {
+      console.warn('[Shoreline API] Database initialization warning (will retry in background):', err.message)
+      globalHealerBot.startDaemon(300000)
+    })
+})
 
 export default app

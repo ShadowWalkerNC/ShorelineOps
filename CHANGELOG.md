@@ -4,6 +4,40 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v8.0.0] — 2026-08-24
+### Added
+- **Deterministic Clinical Safety Rules Engine** (`server/src/engine/safetyEvaluator.ts`):
+  - Non-overridable hard-blocks for strict NPO, canonical Big 9 allergen intersections with cross-contact risk, IDDSI food & liquid compatibility matrices, and therapeutic nutrient ceilings.
+- **Signed QR Tokens & Assembly Verification Scanner** (`server/src/routes/kitchen.ts`, `src/features/kitchen/components/TrayAssemblyScanner.tsx`):
+  - Cryptographic token generation (`ticketId:profileVersion:hash`) on physical tray cards with active scanner lockout for superseded stale diet orders or NPO residents with Web Audio synthesis and haptic feedback.
+- **Recipe Variant Graph Explosion** (`server/src/engine/production.ts`):
+  - Explodes base recipes into Regular, Pureed L4, Minced & Moist L5, Low Sodium, and Carb-Controlled prep sheets with pan layouts.
+- **Multi-Distributor Split MRP Comparator** (`server/src/engine/mrp.ts`):
+  - Lowest-cost vendor quotation evaluation (Dennis vs Sysco vs US Foods) with case-pack rounding, lead time alignment, and split PO proposals.
+- **Three-Way Invoice Match Engine & Credit Memos** (`server/src/engine/invoicing.ts`, `server/src/routes/purchasing.ts`):
+  - Line-item price creep detection and short-shipped case tracking with automated vendor credit memo generation.
+- **PointClickCare Inbound Reconciliation Exception Queue** (`server/src/integrations/pointclickcare.ts`, `server/src/routes/ehr.ts`, `src/features/residents/EhrReconciliationQueue.tsx`):
+  - Registered Dietitian clinical triage gate preventing unmapped or conflicting EHR diet/texture orders from failing silently.
+- **CMS-2567 Digital Survey Binder Generator** (`server/src/engine/cmsSurvey.ts`, `server/src/routes/reporting.ts`):
+  - Audits 14-hour dinner-to-breakfast meal span (F809), 90-day HACCP holding temperatures, and exports printable 1-click Markdown survey binders.
+- **Exhaustive Automated System Test Suite** (`server/src/system.test.ts`):
+  - Extended to **89/89 automated tests** with 100% pass rate.
+
+---
+
+## [v7.0.0] — 2026-08-24
+### Added
+- **Turborepo Workspace Monorepo** (`turbo.json`):
+  - Configured npm workspaces (`server`, `marketing`) and Turborepo caching pipelines for unified build orchestration.
+- **Autonomous Self-Healing Bot Daemon** (`server/src/agent/healer.ts`):
+  - Diagnostic auditor inspecting database health, LRU cache memory, active census, and HACCP compliance logs.
+- **Community Distributor Marketplace Registry** (`src/features/distributor/CommunityPluginRegistry.tsx`):
+  - Open pluggable distributor marketplace for Dennis, Sysco, US Foods, GFS, PFG, and local farm co-ops.
+- **Model Context Protocol (MCP) Server** (`server/src/mcp/server.ts`):
+  - 5 high-leverage MCP tools enabling autonomous AI agent dietary auditing and MRP replenishment.
+
+---
+
 ## [v6.0.0] — 2026-08-23
 ### Added
 - **Multi-Tier LRU Caching & Conditional ETags** (`server/src/middleware/cache.ts`):

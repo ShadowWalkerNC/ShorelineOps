@@ -12,6 +12,11 @@ import { DennisConnector } from './integrations/dennis'
 import { SyscoConnector, UsFoodsConnector } from './integrations/broadline'
 import { PointClickCareConnector } from './integrations/pointclickcare'
 import { USDAFoodDataConnector } from './integrations/usda'
+import { MrpDemandForecastEngine } from './engine/mrp'
+import { KitchenProductionEngine } from './engine/production'
+import { SafetyEvaluatorEngine } from './engine/safetyEvaluator'
+import { ThreeWayInvoiceMatchingEngine } from './engine/invoicing'
+import { CmsDietarySurveyEngine } from './engine/cmsSurvey'
 
 const PasswordSchema = z
   .string()
@@ -193,7 +198,6 @@ async function runAllTests() {
 
   // --- 8. MRP & Bill of Materials (BOM) Explosion ---
   console.log('\n--- 8. MRP & Bill of Materials (BOM) Explosion ---')
-  const { MrpDemandForecastEngine } = await import('./engine/mrp')
   const scheduledMeals = [
     {
       dayOfWeek: 'Monday',
@@ -237,7 +241,6 @@ async function runAllTests() {
 
   // --- 9. Kitchen Batch Production & Tray Card Generator ---
   console.log('\n--- 9. Kitchen Batch Production & Tray Card Generator ---')
-  const { KitchenProductionEngine } = await import('./engine/production')
   const batchWorksheet = KitchenProductionEngine.scaleRecipeForBatch({
     id: 'REC-01',
     name: 'Homestyle Meatloaf',
@@ -402,7 +405,6 @@ async function runAllTests() {
 
   // --- 13. CMS-2567 Dietary Survey Ready Cross-Walk & Federal F-Tags ---
   console.log('\n--- 13. CMS-2567 Dietary Survey Ready Cross-Walk & Federal F-Tags ---')
-  const { CmsDietarySurveyEngine } = await import('./engine/cmsSurvey')
   const surveyPack = CmsDietarySurveyEngine.generateSurveyAuditPack({
     facilityName: 'Shoreline Healthcare Community',
     residents: [
@@ -421,6 +423,201 @@ async function runAllTests() {
   assert(surveyPack.fTags.some(t => t.fTag === 'F804' && t.complianceStatus === 'COMPLIANT'), 'CmsSurveyEngine: validates F804 IDDSI texture compliance')
   assert(surveyPack.fTags.some(t => t.fTag === 'F808' && t.complianceStatus === 'COMPLIANT'), 'CmsSurveyEngine: validates F808 therapeutic diet order fulfillment')
   assert(surveyPack.overallComplianceScorePct >= 95, 'CmsSurveyEngine: achieves ≥95% composite regulatory survey compliance')
+  assert(surveyPack.mealTimingAudit.isCompliantWith14HourRule === true, 'CmsSurveyEngine: confirms 14-hour meal timing span compliance (F809)')
+
+  // --- 14. Deterministic Clinical Safety & Hard-Blocks ---
+  console.log('\n--- 14. Deterministic Clinical Safety & Hard-Blocks ---')
+
+  // NPO Test
+  const npoEval = SafetyEvaluatorEngine.evaluateMealSafety(
+    {
+      residentId: 'RES-NPO-1',
+      residentName: 'John Doe',
+      profileVersion: 1,
+      isNpo: true,
+      npoReason: 'Pre-Op Surgery',
+      requiredFoodTexture: 'Regular',
+      dietOrders: ['Regular'],
+      allergies: [],
+    },
+    {
+      id: 'REC-1',
+      name: 'Oatmeal',
+      foodTextureLevel: 'Regular',
+      allContainedAllergens: [],
+      nutrients: { calories: 150, sodiumMg: 50, carbsG: 25 },
+    }
+  )
+  assert(npoEval.isSafe === false, 'SafetyEvaluator: strictly blocks meal for NPO resident')
+  assert(npoEval.findings.some(f => f.ruleCode === 'NPO_VIOLATION' && f.severity === 'BLOCK'), 'SafetyEvaluator: returns NPO_VIOLATION BLOCK finding')
+
+  // Allergen Intersection Test
+  const allergenEval = SafetyEvaluatorEngine.evaluateMealSafety(
+    {
+      residentId: 'RES-ALLERGY-1',
+      residentName: 'Jane Smith',
+      profileVersion: 1,
+      isNpo: false,
+      requiredFoodTexture: 'Regular',
+      dietOrders: ['Regular'],
+      allergies: [{ id: 'a1', canonicalKey: 'peanut', commonName: 'Peanuts' }],
+    },
+    {
+      id: 'REC-2',
+      name: 'Thai Peanut Noodles',
+      foodTextureLevel: 'Regular',
+      allContainedAllergens: [{ id: 'a1', canonicalKey: 'peanut', commonName: 'Peanuts', isCrossContact: false }],
+      nutrients: { calories: 450, sodiumMg: 350, carbsG: 50 },
+    }
+  )
+  assert(allergenEval.isSafe === false, 'SafetyEvaluator: blocks meal containing resident allergen')
+  assert(allergenEval.findings.some(f => f.ruleCode === 'ALLERGEN_INTERSECTION'), 'SafetyEvaluator: returns ALLERGEN_INTERSECTION finding')
+
+  // IDDSI Texture Mismatch Test
+  const iddsiEval = SafetyEvaluatorEngine.evaluateMealSafety(
+    {
+      residentId: 'RES-IDDSI-1',
+      residentName: 'Robert Johnson',
+      profileVersion: 1,
+      isNpo: false,
+      requiredFoodTexture: 'Pureed',
+      dietOrders: ['Regular'],
+      allergies: [],
+    },
+    {
+      id: 'REC-3',
+      name: 'Whole Roast Beef',
+      foodTextureLevel: 'Regular',
+      allContainedAllergens: [],
+      nutrients: { calories: 300, sodiumMg: 200, carbsG: 0 },
+    }
+  )
+  assert(iddsiEval.isSafe === false, 'SafetyEvaluator: blocks regular texture for Pureed resident')
+  assert(iddsiEval.findings.some(f => f.ruleCode === 'IDDSI_FOOD_MISMATCH'), 'SafetyEvaluator: returns IDDSI_FOOD_MISMATCH finding')
+
+  // --- 15. Recipe Variant Graph Explosion ---
+  console.log('\n--- 15. Recipe Variant Graph Explosion ---')
+  const variantExplosion = KitchenProductionEngine.explodeRecipeVariants(
+    {
+      id: 'REC-TURKEY',
+      name: 'Roast Turkey Breast with Gravy',
+      category: 'Proteins',
+      baseServings: 20,
+      ingredients: [
+        { item: 'Turkey Breast', qty: '10 lbs' },
+        { item: 'Table Salt', qty: '2 tbsp' },
+        { item: 'Poultry Seasoning', qty: '1 tbsp' },
+      ],
+      steps: [{ step: 1, instruction: 'Roast in oven at 350F to 165F internal temp.' }],
+    },
+    {
+      regularCount: 30,
+      pureedCount: 8,
+      mincedCount: 6,
+      nasCount: 12,
+      ncsCount: 5,
+    }
+  )
+
+  assert(variantExplosion.variants.length === 5, 'ProductionEngine: explodes base recipe into 5 discrete variants')
+  assert(variantExplosion.totalPortions === 61, 'ProductionEngine: accurately aggregates 61 total portion demand')
+  assert(variantExplosion.variants.some(v => v.variantType === 'Pureed' && v.station === 'Puree Station'), 'ProductionEngine: routes Pureed variant to Puree Station')
+  assert(variantExplosion.variants.some(v => v.variantType === 'Low Sodium' && v.scaledIngredients.some(i => i.item.includes('Salt-Free'))), 'ProductionEngine: applies salt-free substitution on Low Sodium variant')
+
+  // --- 16. Multi-Distributor Lowest-Cost Split MRP ---
+  console.log('\n--- 16. Multi-Distributor Lowest-Cost Split MRP ---')
+  const multiDistProposal = MrpDemandForecastEngine.evaluateMultiDistributorLowestCost(
+    'Raw Carrots',
+    19277.66, // 42.5 lbs in grams
+    [
+      {
+        vendorName: 'Dennis Food Service',
+        vendorSku: 'DNS-12094',
+        packSizeDesc: '1 x 50 lb Bag',
+        packUnitGrams: 22679.6,
+        pricePerPack: 34.50,
+        deliveryDays: ['Monday', 'Thursday'],
+        orderCutoffLeadDays: 1,
+      },
+      {
+        vendorName: 'Sysco Broadline',
+        vendorSku: 'SY-5549102',
+        packSizeDesc: '2 x 25 lb Case',
+        packUnitGrams: 22679.6,
+        pricePerPack: 38.20,
+        deliveryDays: ['Tuesday', 'Friday'],
+        orderCutoffLeadDays: 2,
+      },
+    ],
+    'Monday'
+  )
+
+  assert(multiDistProposal.optimalVendor === 'Dennis Food Service', 'MrpEngine: selects lowest-cost vendor (Dennis Food Service at $34.50)')
+  assert(multiDistProposal.costSavings === 3.70, 'MrpEngine: accurately calculates $3.70 cost savings vs alternative')
+  assert(multiDistProposal.packsToOrder === 1, 'MrpEngine: calculates 1 bag purchase requirement for 42.5 lbs demand')
+
+  // --- 17. Three-Way Invoice Match & Vendor Credit Memos ---
+  console.log('\n--- 17. Three-Way Invoice Match & Vendor Credit Memos ---')
+  const matchReport = ThreeWayInvoiceMatchingEngine.evaluateThreeWayMatch({
+    invoiceNumber: 'INV-DNS-98214',
+    vendorName: 'Dennis Food Service',
+    invoiceDate: '2026-08-24',
+    poReference: 'PO-2026-0820-01',
+    lines: [
+      {
+        itemSku: 'DNS-1001',
+        description: 'Diced Peaches in 100% Juice (6/#10)',
+        poQty: 4,
+        receivedQty: 3, // 1 case short
+        invoicedQty: 4,
+        poContractUnitPrice: 48.50,
+        invoicedUnitPrice: 52.00, // $3.50 overcharge
+      },
+      {
+        itemSku: 'DNS-1004',
+        description: 'Chicken Breast Boneless Skinless (40/4oz)',
+        poQty: 2,
+        receivedQty: 2,
+        invoicedQty: 2,
+        poContractUnitPrice: 64.20,
+        invoicedUnitPrice: 64.20, // Clean match
+      },
+    ],
+  })
+
+  assert(matchReport.overallStatus === 'PRICE_VARIANCE' || matchReport.overallStatus === 'DISPUTED', 'InvoicingEngine: flags price variance and quantity short on invoice')
+  assert(matchReport.totalCreditDisputedAmount > 0, 'InvoicingEngine: computes positive disputed credit total')
+  assert(matchReport.creditMemo !== undefined, 'InvoicingEngine: automatically generates formal Vendor Credit Memo proposal')
+  assert(matchReport.creditMemo?.vendorName === 'Dennis Food Service', 'InvoicingEngine: vendor name set on credit memo')
+
+  // --- 18. PointClickCare Inbound Reconciliation Triage Queue ---
+  console.log('\n--- 18. PointClickCare Inbound Reconciliation Triage Queue ---')
+  const pccConnector = new PointClickCareConnector()
+
+  const triageResult = pccConnector.evaluateInboundTriage(
+    {
+      residentExternalId: 'PCC-RES-101',
+      firstName: 'Eleanor',
+      lastName: 'Vance',
+      room: '104-A',
+      status: 'active',
+      dietOrder: 'Regular',
+      texture: 'Pureed', // Texture downgraded in EHR
+      allergies: ['Shellfish'], // New allergy added
+      supplements: [],
+      effectiveAt: new Date().toISOString(),
+    },
+    {
+      id: 'res-101',
+      dietType: 'Regular',
+      texture: 'Regular',
+      allergies: [],
+      isNpo: false,
+    }
+  )
+
+  assert(triageResult !== null, 'PccConnector: catches clinical change and places in RD triage queue')
+  assert(triageResult?.status === 'PENDING_TRIAGE', 'PccConnector: marks inbound change as PENDING_TRIAGE')
 
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)

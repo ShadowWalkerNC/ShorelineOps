@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { api } from '../../api/client'
+import React, { useState } from 'react'
+import TrayAssemblyScanner from './components/TrayAssemblyScanner'
 
 interface CookWorksheetItem {
   id: string
@@ -32,7 +32,7 @@ interface QuickParItem {
 }
 
 export default function KitchenTabletPage() {
-  const [activeTab, setActiveTab] = useState<'worksheet' | 'traycards' | 'quickpar'>('worksheet')
+  const [activeTab, setActiveTab] = useState<'worksheet' | 'traycards' | 'scanner' | 'quickpar'>('worksheet')
   const [mealFilter, setMealFilter] = useState<'Breakfast' | 'Lunch' | 'Dinner'>('Lunch')
 
   // Data states
@@ -120,7 +120,7 @@ export default function KitchenTabletPage() {
       </div>
 
       {/* Main Navigation Tabs */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
         <button
           onClick={() => setActiveTab('worksheet')}
           style={{
@@ -130,7 +130,7 @@ export default function KitchenTabletPage() {
             background: activeTab === 'worksheet' ? '#1E293B' : '#0F172A',
             color: '#fff',
             fontWeight: 800,
-            fontSize: 18,
+            fontSize: 16,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -151,7 +151,7 @@ export default function KitchenTabletPage() {
             background: activeTab === 'traycards' ? '#1E293B' : '#0F172A',
             color: '#fff',
             fontWeight: 800,
-            fontSize: 18,
+            fontSize: 16,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -160,7 +160,28 @@ export default function KitchenTabletPage() {
           }}
         >
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#3B82F6' }}></span>
-          Tray Card Line ({trayCards.filter(t => t.dispatched).length}/{trayCards.length})
+          Tray Line ({trayCards.filter(t => t.dispatched).length}/{trayCards.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('scanner')}
+          style={{
+            padding: '16px',
+            borderRadius: 14,
+            border: activeTab === 'scanner' ? '3px solid #60A5FA' : '2px solid #334155',
+            background: activeTab === 'scanner' ? '#1E293B' : '#0F172A',
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: 16,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10
+          }}
+        >
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F59E0B' }}></span>
+          📸 QR Tray Scanner
         </button>
 
         <button
@@ -172,7 +193,7 @@ export default function KitchenTabletPage() {
             background: activeTab === 'quickpar' ? '#1E293B' : '#0F172A',
             color: '#fff',
             fontWeight: 800,
-            fontSize: 18,
+            fontSize: 16,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -184,6 +205,11 @@ export default function KitchenTabletPage() {
           Quick Par Counter
         </button>
       </div>
+
+      {/* Tab: QR Tray Scanner */}
+      {activeTab === 'scanner' && (
+        <TrayAssemblyScanner />
+      )}
 
       {/* Tab: Cook Worksheets */}
       {activeTab === 'worksheet' && (

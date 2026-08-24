@@ -384,11 +384,22 @@ import { CmsDietarySurveyEngine } from '../engine/cmsSurvey'
  * 
  * Generates official CMS-2567 Dietary Survey Audit Pack (Federal F-Tags F800 - F814)
  */
-reportingRouter.get('/cms-survey-export', async (_req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/cms-survey-export', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { format = 'json' } = req.query
     const { rows: residents } = await pool.query(
       'SELECT id, name, diet_type as "dietType", texture, allergies FROM residents'
     )
+
+    let tempLogs: any[] = []
+    try {
+      const { rows } = await pool.query(
+        'SELECT item_name as "itemName", temperature, logged_at as "loggedAt", is_compliant as "isCompliant" FROM food_temperatures ORDER BY logged_at DESC LIMIT 90'
+      )
+      tempLogs = rows
+    } catch {
+      // Fallback
+    }
 
     const auditPack = CmsDietarySurveyEngine.generateSurveyAuditPack({
       facilityName: 'Shoreline Healthcare Community',
@@ -399,8 +410,16 @@ reportingRouter.get('/cms-survey-export', async (_req: Request, res: Response, n
         texture: r.texture || 'Regular',
         allergies: Array.isArray(r.allergies) ? r.allergies : [],
       })),
+      temperatureLogs: tempLogs,
       cycleMenuWeeksCount: 4,
     })
+
+    if (format === 'markdown' || format === 'binder') {
+      const markdown = CmsDietarySurveyEngine.generateDigitalSurveyBinderMarkdown(auditPack)
+      res.setHeader('Content-Type', 'text/markdown')
+      res.setHeader('Content-Disposition', `attachment; filename="CMS-2567-Survey-Binder-${auditPack.surveyDate}.md"`)
+      return res.send(markdown)
+    }
 
     res.json(auditPack)
   } catch (e) { next(e) }

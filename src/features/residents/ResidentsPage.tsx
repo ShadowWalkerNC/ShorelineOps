@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useResidentsStore } from '@/state/residentsStore'
 import ResidentCardList from './components/ResidentCardList'
 import ResidentFormModal from './components/ResidentFormModal'
+import EhrReconciliationQueue from './EhrReconciliationQueue'
 import type { Resident } from '@/types/resident'
 
 // Skeleton card for loading state
@@ -78,6 +79,9 @@ export default function ResidentsPage() {
           )}
         </div>
       </div>
+
+      {/* ── EHR Triage Exception Queue ── */}
+      <EhrReconciliationQueue />
 
       {/* ── Toolbar ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
