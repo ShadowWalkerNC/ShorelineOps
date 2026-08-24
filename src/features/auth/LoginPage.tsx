@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
 import { safeRedirectPath } from '@/lib/safeRedirect'
+import { AppleButton } from '@/apple-ui'
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
@@ -220,15 +221,13 @@ export default function LoginPage() {
               }}>{error}</div>
             )}
 
-            <button type="submit" disabled={loading} style={{
-              width: '100%', padding: '12px',
-              background: loading ? 'var(--text-muted)' : 'var(--color-primary)',
-              color: 'white', border: 'none',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 14, fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              minHeight: 44, transition: 'background 0.2s ease',
-            }}>
+            <AppleButton
+              type="submit"
+              disabled={loading}
+              variant="primary"
+              size="lg"
+              fullWidth
+            >
               {loading
                 ? 'Please wait...'
                 : step === 'credentials'
@@ -236,7 +235,7 @@ export default function LoginPage() {
                   : step === 'mfa'
                     ? 'Verify code'
                     : 'Enable MFA & continue'}
-            </button>
+            </AppleButton>
           </form>
         </div>
 

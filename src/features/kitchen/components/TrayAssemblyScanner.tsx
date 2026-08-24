@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { AppleButton, AppleBadge } from '@/apple-ui'
 
 export interface ScanValidationResult {
   status: 'VALID' | 'SUPERSEDED' | 'INVALID_HASH' | 'NPO_ALERT'
@@ -132,36 +133,22 @@ export default function TrayAssemblyScanner() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
+          <AppleButton
+            type="button"
+            variant="tinted"
+            size="sm"
             onClick={() => handleScan('TKT-res101:1:validhash123')}
-            style={{
-              padding: '6px 12px',
-              fontSize: 12,
-              fontWeight: 700,
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid #10b981',
-              background: '#ecfdf5',
-              color: '#065f46',
-              cursor: 'pointer',
-            }}
           >
             🧪 Test Valid Scan
-          </button>
-          <button
+          </AppleButton>
+          <AppleButton
+            type="button"
+            variant="destructive"
+            size="sm"
             onClick={() => handleScan('TKT-res102:1:stalehash999')}
-            style={{
-              padding: '6px 12px',
-              fontSize: 12,
-              fontWeight: 700,
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid #ef4444',
-              background: '#fee2e2',
-              color: '#991b1b',
-              cursor: 'pointer',
-            }}
           >
             🧪 Test Stale Ticket
-          </button>
+          </AppleButton>
         </div>
       </div>
 
@@ -184,23 +171,14 @@ export default function TrayAssemblyScanner() {
             color: 'var(--text-primary)',
           }}
         />
-        <button
+        <AppleButton
           type="submit"
+          variant="primary"
+          size="md"
           disabled={loading || !scanInput.trim()}
-          style={{
-            padding: '12px 24px',
-            fontSize: 14,
-            fontWeight: 800,
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--color-primary, #6366f1)',
-            color: 'white',
-            border: 'none',
-            cursor: loading || !scanInput.trim() ? 'not-allowed' : 'pointer',
-            opacity: loading || !scanInput.trim() ? 0.6 : 1,
-          }}
         >
           {loading ? 'Verifying...' : '⚡ Verify Scan'}
-        </button>
+        </AppleButton>
       </form>
 
       {/* Live Scan Result Banner */}
@@ -303,10 +281,13 @@ export default function TrayAssemblyScanner() {
                   fontSize: 12,
                 }}
               >
-                <div>
-                  <span style={{ fontWeight: 800, color: h.status === 'VALID' ? '#15803d' : '#991b1b' }}>
-                    {h.status === 'VALID' ? '✅ VALID' : h.status === 'SUPERSEDED' ? '⚠️ STALE' : '⛔ NPO'}
-                  </span>{' '}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AppleBadge
+                    color={h.status === 'VALID' ? 'green' : h.status === 'SUPERSEDED' ? 'orange' : 'red'}
+                    dot
+                  >
+                    {h.status === 'VALID' ? 'VALID' : h.status === 'SUPERSEDED' ? 'STALE' : 'NPO'}
+                  </AppleBadge>
                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
                     {h.residentName || 'Card Scan'} ({h.roomBed || 'Room'})
                   </span>

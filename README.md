@@ -177,6 +177,107 @@ ShorelineOps includes the following technical safeguards. *(Facilities remain re
 
 ---
 
+## Feature Overview
+
+- **SafetyEvaluatorEngine** – deterministic clinical safety checks with hard‑blocks for NPO violations, allergen intersections, IDDSI texture mismatches, and nutrient ceilings (NAS, diabetic carbs, renal potassium, etc.).
+- **QR‑Token Tray Scanner** – `TrayAssemblyScanner` React component using `react-qr-reader` and a backend verification endpoint (`POST /api/kitchen/verify‑tray‑scan`). Generates secure QR tokens tied to resident profile version.
+- **ProductionEngine Variant Explosion** – recipe variant generation (`explodeRecipeVariants`) supporting low‑sodium, carb‑controlled, pureed, and gravy‑ratio variations.
+- **MrpDemandForecastEngine (Multi‑Distributor Split MRP)** – evaluates lowest‑cost vendor per SKU, respects lead‑time windows, and outputs optimal pack orders.
+- **InvoicingEngine (Three‑Way Invoice Match)** – matches PO, invoice, and receipt data, auto‑generates credit memos for price/quantity disputes.
+- **CmsSurveyEngine (CMS‑2567 Audit)** – validates required F‑Tags, temperature log spans, and produces a compliance audit pack.
+- **PointClickCare Reconciliation Queue** – inbound triage queue UI (`EhrReconciliationQueue`) for RD staff to resolve mismatched updates.
+- **Apple UI Guide Integration** – imported Apple design tokens and components (`AppleButton`, theming CSS) into the Tailwind design system.
+
+## Installation & Build
+
+```bash
+# Clone repository
+git clone https://github.com/ShadowWalkerNC/ShorelineOps.git
+cd ShorelineOps
+
+# Install root dependencies
+npm install
+
+# Build demo application (React/Vite)
+npm run build:demo
+
+# Build marketing site (Astro)
+npm run build:marketing
+```
+
+## Usage Examples
+
+### Safety Evaluator API
+```bash
+curl -X POST https://api.shorelineops.com/evaluate-safety \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"residentId":"R123","recipeId":"REC456"}'
+```
+Returns JSON with `hardBlocks` and `warnings`.
+
+### QR Tray Scan Verification
+```bash
+POST /api/kitchen/verify-tray-scan
+{
+  "qrToken": "ticket123:profileV2:abcd1234"
+}
+```
+Success: `200 OK`; Failure codes: `SUPERSEDED`, `NPO_ALERT`.
+
+### Multi‑Distributor MRP Split
+```bash
+POST /api/mrp/split
+{
+  "sku":"SKU-001",
+  "demandGrams":5000,
+  "vendorQuotes":[{"vendor":"Dennis","costPerGram":0.02,"leadTimeDays":2},{"vendor":"Sysco","costPerGram":0.022,"leadTimeDays":1}]
+}
+```
+Response includes `optimalVendor`, `costSavings`, and `packsToOrder`.
+
+### Three‑Way Invoice Matching
+```bash
+POST /api/invoice/match
+{
+  "invoiceNumber":"INV-789",
+  "vendorName":"Dennis",
+  "poReference":"PO-456",
+  "lines":[{"item":"Chicken Breast","qty":100,"price":2.5}]
+}
+```
+Returns `overallStatus` and optional `creditMemo`.
+
+## Deployment (Vercel)
+
+1. Add the repository to Vercel (GitHub integration).
+2. Ensure the following environment variables are set in Vercel:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `APPLE_UI_TOKEN` (optional, for premium Apple assets)
+3. Vercel will automatically run the `build:all` script defined in `package.json`.
+4. Preview URLs:
+   - Demo site: `https://<project>.vercel.app/`
+   - Marketing site: `https://<project>-marketing.vercel.app/`
+
+## Design System (Apple UI Guide)
+
+The Apple UI components are located under `src/apple-ui/`. Tailwind has been extended with Apple design tokens (`tailwind.config.cjs`). Example usage:
+
+```tsx
+import { AppleButton } from '@/apple-ui/AppleButton';
+
+function Login() {
+  return (
+    <AppleButton onClick={handleLogin}>Sign in with Apple</AppleButton>
+  );
+}
+```
+
+See `docs/AppleUIDesign.md` for full integration instructions.
+
+## License
+
 ## 📄 License
 
 Distributed under the **MIT License**. See `LICENSE` for details.
