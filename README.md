@@ -11,7 +11,7 @@
 **Built by a senior living chef, not a VC.**  
 *Bridging clinical resident diets, kitchen batch cooking, tray cards, and food distributor purchasing without proprietary vendor lock-in.*
 
-[🚀 Live Demo Sandbox](http://localhost:3000) • [📘 Core Dietary Blueprint](CORE_BLUEPRINT.md) • [💼 Commercial Pitch & ROI Guide](SALES_PITCH.md) • [⚔️ Competitive Playbook](COMPETITIVE_STRATEGY.md) • [🎬 5-Min Demo Script](DEMO_SCRIPT.md) • [🚚 Dennis Guide](DISTRIBUTORS.md)
+[🚀 Live Demo Sandbox](https://shoreline-demo.onrender.com) • [📘 Core Dietary Blueprint](CORE_BLUEPRINT.md) • [💼 Commercial Pitch & ROI Guide](SALES_PITCH.md) • [⚔️ Competitive Playbook](COMPETITIVE_STRATEGY.md) • [🎬 5-Min Demo Script](DEMO_SCRIPT.md) • [🚚 Dennis Guide](DISTRIBUTORS.md)
 
 </div>
 

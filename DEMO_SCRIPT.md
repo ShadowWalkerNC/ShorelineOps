@@ -2,7 +2,7 @@
 
 **Audience:** Executive Director, Director of Nursing (DON), and Dietary Manager  
 **Duration:** 5 to 7 Minutes  
-**Demo URL:** `http://localhost:3000` (or your live staging domain)  
+**Demo URL:** `https://shoreline-demo.onrender.com` (or local development server)  
 **Login:** `admin@shoreline.demo` / `Admin1234!`
 
 ---
