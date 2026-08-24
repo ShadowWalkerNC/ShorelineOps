@@ -322,7 +322,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Link to Marketing Site */}
+            <a
+              href="https://shoreline-marketing.onrender.com"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500/40 transition-colors flex items-center gap-1.5"
+            >
+              <span>🌐 Marketing & Docs</span>
+            </a>
+
             {/* Live Clock Pill */}
             <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full bg-slate-100/70 dark:bg-slate-800/70">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
