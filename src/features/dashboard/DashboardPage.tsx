@@ -7,6 +7,7 @@ import { useProductionStore } from '@/state/productionStore'
 import { useInventoryStore } from '@/state/inventoryStore'
 import { useBudgetStore } from '@/state/budgetStore'
 import { useAuth } from '@/security/AuthContext'
+import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import type { DayOfWeek } from '@/types'
 
 function getGreeting() {
@@ -375,6 +376,80 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-success-light)', border: '1px solid var(--color-success)', color: 'var(--color-success-hover)', fontWeight: 700, fontSize: 12, padding: '5px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }} />
           {loading ? '…' : active.length} active residents
+        </div>
+      </div>
+
+      {/* ── Enterprise Quick Action Hub ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: 12,
+        marginBottom: 18,
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(0,113,227,0.08) 0%, rgba(0,113,227,0.02) 100%)',
+          border: '1px solid rgba(0,113,227,0.2)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '14px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 16 }}>📸</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0071e3' }}>Digital Tray Scanner</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Real-time QR verification & NPO halt</div>
+          </div>
+          <Link to="/kitchen/tablet">
+            <AppleButton size="sm" variant="primary">Launch Scanner</AppleButton>
+          </Link>
+        </div>
+
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(52,199,89,0.08) 0%, rgba(52,199,89,0.02) 100%)',
+          border: '1px solid rgba(52,199,89,0.25)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '14px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 16 }}>⚡</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#248a3d' }}>Multi-Distributor MRP</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Dennis vs. Sysco lowest $/gram</div>
+          </div>
+          <Link to="/purchasing">
+            <AppleButton size="sm" variant="success">Optimize PO</AppleButton>
+          </Link>
+        </div>
+
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(175,82,222,0.08) 0%, rgba(175,82,222,0.02) 100%)',
+          border: '1px solid rgba(175,82,222,0.25)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '14px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 16 }}>📋</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#8944ab' }}>CMS-2567 Survey</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>90-Day HACCP & F-Tag binder</div>
+          </div>
+          <Link to="/reporting">
+            <AppleButton size="sm" variant="tinted">Survey Pack</AppleButton>
+          </Link>
         </div>
       </div>
 
