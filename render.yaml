@@ -36,8 +36,6 @@ services:
   - type: web
     name: shoreline-demo
     runtime: static
-    plan: free
-    region: oregon
     buildCommand: npm install && npm run build:demo
     staticPublishPath: ./dist
     autoDeploy: true
@@ -58,8 +56,6 @@ services:
   - type: web
     name: shoreline-marketing
     runtime: static
-    plan: free
-    region: oregon
     rootDir: marketing
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
