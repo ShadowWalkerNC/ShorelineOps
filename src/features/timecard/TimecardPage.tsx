@@ -1,8 +1,24 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useTimecardStore } from '@/state/timecardStore'
 import { useAuth } from '@/security/AuthContext'
+import { AppleBadge, AppleButton, AppleCard, AppleSegmentedControl } from '@/apple-ui'
+import {
+  Clock,
+  KeyRound,
+  History,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  Users,
+  Search,
+  Calendar,
+  Sparkles,
+  RefreshCw,
+  LogOut,
+  LogIn,
+} from 'lucide-react'
 
-// ─── helpers ────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────
 function fmtMins(mins: number): string {
   const h = Math.floor(mins / 60)
   const m = mins % 60
@@ -10,7 +26,7 @@ function fmtMins(mins: number): string {
 }
 
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 function fmtDateTime(iso: string): string {
@@ -20,30 +36,39 @@ function fmtDateTime(iso: string): string {
   })
 }
 
-const KIOSK_ID = 'Main Terminal'
+const KIOSK_ID = 'Main Kitchen Kiosk 1'
 
 // ─── Keypad ─────────────────────────────────────────────────
 function Keypad({ onPress }: { onPress: (v: string) => void }) {
-  const btnStyle = (color?: string): React.CSSProperties => ({
-    padding: '15px 0',
-    fontSize: 18,
-    fontWeight: 700,
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--border-color)',
-    background: 'var(--bg-card)',
-    color: color ?? 'var(--text-primary)',
-    cursor: 'pointer',
-    fontFamily: 'Outfit, sans-serif',
-    transition: 'border-color 0.15s',
-  })
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+    <div className="grid grid-cols-3 gap-2.5">
       {['1','2','3','4','5','6','7','8','9'].map(v => (
-        <button key={v} style={btnStyle()} onClick={() => onPress(v)}>{v}</button>
+        <button
+          key={v}
+          onClick={() => onPress(v)}
+          className="h-14 rounded-2xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 text-xl font-bold font-mono transition-all duration-150 border border-slate-200/50 dark:border-slate-700/50 shadow-xs"
+        >
+          {v}
+        </button>
       ))}
-      <button style={btnStyle('#dc2626')} onClick={() => onPress('CLEAR')}>CLR</button>
-      <button style={btnStyle()} onClick={() => onPress('0')}>0</button>
-      <button style={btnStyle('var(--text-muted)')} onClick={() => onPress('BACK')}>⌫</button>
+      <button
+        onClick={() => onPress('CLEAR')}
+        className="h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 active:scale-95 text-rose-600 dark:text-rose-400 text-sm font-bold transition-all duration-150 border border-rose-200/60 dark:border-rose-800/60"
+      >
+        CLR
+      </button>
+      <button
+        onClick={() => onPress('0')}
+        className="h-14 rounded-2xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 text-xl font-bold font-mono transition-all duration-150 border border-slate-200/50 dark:border-slate-700/50 shadow-xs"
+      >
+        0
+      </button>
+      <button
+        onClick={() => onPress('BACK')}
+        className="h-14 rounded-2xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-400 text-base font-bold transition-all duration-150 border border-slate-200/50 dark:border-slate-700/50 shadow-xs flex items-center justify-center"
+      >
+        ⌫
+      </button>
     </div>
   )
 }
@@ -91,92 +116,82 @@ function KioskTab() {
   }, [punchSuccess, clearMessages])
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center' }}>
-      <div style={{
-        width: '100%', maxWidth: 420,
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
-        boxShadow: 'var(--shadow-lg)',
-        padding: '24px 22px',
-      }}>
-        {/* Clock */}
-        <div style={{ textAlign: 'center', marginBottom: 18 }}>
-          <div style={{ fontSize: 34, fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--text-primary)', letterSpacing: 1 }}>
+    <div className="flex justify-center py-2">
+      <AppleCard className="w-full max-w-md p-6 border border-slate-200/80 dark:border-slate-800 rounded-3xl bg-white/90 dark:bg-slate-900/90 shadow-lg relative overflow-hidden backdrop-blur-xl">
+        
+        {/* Apple Watch style live clock */}
+        <div className="text-center mb-6">
+          <div className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white font-mono">
             {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+          <div className="text-xs font-medium text-slate-400 mt-1">
             {now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-medium text-slate-500 mt-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            {KIOSK_ID} · Ready
           </div>
         </div>
 
-        {/* Badge display */}
-        <div style={{
-          background: 'var(--bg-app)',
-          border: `2px solid ${
-            badgeId.length === 0 ? 'var(--border-color)'
-            : status === 'in'  ? '#059669'
-            : status === 'out' ? 'var(--color-primary)'
-            : 'var(--border-color)'
-          }`,
-          borderRadius: 'var(--radius-md)',
-          padding: '14px 18px',
-          textAlign: 'center',
-          fontSize: 24,
-          fontWeight: 800,
-          fontFamily: 'Outfit, sans-serif',
-          letterSpacing: 5,
-          color: badgeId ? 'var(--text-primary)' : 'var(--text-muted)',
-          marginBottom: 6,
-        }}>
-          {badgeId || 'ENTER BADGE'}
+        {/* Badge ID Input Display */}
+        <div className="mb-3">
+          <div className={`p-4 rounded-2xl text-center font-mono font-bold text-2xl tracking-widest transition-all duration-200 border-2 ${
+            badgeId.length === 0
+              ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-400'
+              : status === 'in'
+              ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-500 text-emerald-700 dark:text-emerald-300'
+              : 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-500 text-blue-700 dark:text-blue-300'
+          }`}>
+            {badgeId || 'ENTER BADGE'}
+          </div>
+
+          <div className="text-center text-xs font-semibold mt-2 min-h-5">
+            {status === 'in' ? (
+              <span className="text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Currently Clocked IN · Press to Clock OUT
+              </span>
+            ) : status === 'out' ? (
+              <span className="text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> Currently Clocked OUT · Press to Clock IN
+              </span>
+            ) : badgeId.length >= 3 ? (
+              <span className="text-slate-500">Ready for initial shift punch</span>
+            ) : (
+              <span className="text-slate-400">Enter your Employee ID or Badge #</span>
+            )}
+          </div>
         </div>
 
-        {/* Status hint */}
-        <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, marginBottom: 14,
-          color: status === 'in' ? '#059669' : status === 'out' ? 'var(--color-primary)' : 'var(--text-muted)' }}>
-          {status === 'in'  ? '🟢 Currently clocked IN — press to clock OUT'
-           : status === 'out' ? '🔵 Currently clocked OUT — press to clock IN'
-           : badgeId.length >= 3 ? '⚪ First punch for this badge'
-           : 'Enter badge ID'}
-        </div>
-
-        {/* Message */}
+        {/* Message banner */}
         {(punchSuccess || punchError) && (
-          <div style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: 13,
-            fontWeight: 600, textAlign: 'center', marginBottom: 14,
-            background: punchSuccess ? '#f0fdf4' : '#fef2f2',
-            color:      punchSuccess ? '#059669' : '#dc2626',
-            border:     `1px solid ${punchSuccess ? '#bbf7d0' : '#fecaca'}`,
-          }}>
-            {punchSuccess ?? punchError}
+          <div className={`p-3.5 rounded-2xl text-xs font-semibold text-center mb-4 flex items-center justify-center gap-2 ${
+            punchSuccess
+              ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+              : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+          }`}>
+            {punchSuccess ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+            <span>{punchSuccess ?? punchError}</span>
           </div>
         )}
 
         {/* Keypad */}
-        <div style={{ marginBottom: 16 }}>
+        <div className="mb-5">
           <Keypad onPress={handleKeypad} />
         </div>
 
-        {/* Punch button */}
-        <button
+        {/* Punch Button */}
+        <AppleButton
+          size="lg"
+          variant={nextAction === 'Out' ? 'destructive' : 'primary'}
+          className="w-full text-base font-bold tracking-wide py-4 rounded-2xl shadow-md disabled:opacity-40"
           disabled={isPunching || badgeId.length < 3}
           onClick={handlePunch}
-          style={{
-            width: '100%', padding: '15px 0', fontSize: 16, fontWeight: 800,
-            borderRadius: 'var(--radius-md)', border: 'none', cursor: badgeId.length < 3 ? 'not-allowed' : 'pointer',
-            fontFamily: 'Outfit, sans-serif', letterSpacing: 1, transition: 'opacity 0.15s',
-            opacity: badgeId.length < 3 ? 0.45 : 1,
-            background: nextAction === 'Out' ? '#059669' : 'var(--color-primary)',
-            color: '#fff',
-          }}
+          icon={nextAction === 'Out' ? <LogOut className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
         >
-          {isPunching ? 'Processing…'
-           : nextAction === 'Out' ? '🟢 CLOCK OUT'
-           : '🔵 CLOCK IN'}
-        </button>
-      </div>
+          {isPunching ? 'Verifying Punch…' : nextAction === 'Out' ? 'CLOCK OUT' : 'CLOCK IN'}
+        </AppleButton>
+
+      </AppleCard>
     </div>
   )
 }
@@ -218,162 +233,224 @@ function HistoryTab() {
     return filterBadge ? all.filter(s => s.badgeId.toLowerCase().includes(filterBadge.toLowerCase())) : all
   }, [getShiftSummaries, filterBadge])
 
-  const inputStyle: React.CSSProperties = {
-    padding: '9px 13px', background: 'var(--bg-card)',
-    border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)',
-    fontSize: 13, color: 'var(--text-primary)', outline: 'none', fontFamily: 'Outfit, sans-serif',
-  }
+  // Aggregate stats
+  const totalClockedIn = useMemo(() => summaries.filter(s => s.currentlyIn).length, [summaries])
+  const totalHoursLogged = useMemo(() => {
+    const totalMins = summaries.reduce((acc, s) => acc + s.totalMinutes, 0)
+    return (totalMins / 60).toFixed(1)
+  }, [summaries])
+  const overtimeShifts = useMemo(() => summaries.filter(s => s.overtimeMinutes > 0).length, [summaries])
 
   return (
-    <div>
-      {/* Toolbar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16, alignItems: 'center' }}>
-        <input
-          placeholder="Filter by Badge ID…"
-          value={filterBadge}
-          onChange={e => setFilterBadge(e.target.value)}
-          style={{ ...inputStyle, flex: '1 1 180px', minWidth: 120 }}
-        />
-        <select
-          value={filterDays}
-          onChange={e => setFilterDays(Number(e.target.value) as 7|14|30|0)}
-          style={{ ...inputStyle, cursor: 'pointer' }}
-        >
-          <option value={7}>Last 7 days</option>
-          <option value={14}>Last 14 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={0}>All time</option>
-        </select>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['summary', 'detail'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{
-              padding: '9px 16px', fontSize: 12, fontWeight: 700, borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-color)', cursor: 'pointer', fontFamily: 'Outfit, sans-serif',
-              background: view === v ? 'var(--color-primary)' : 'var(--bg-card)',
-              color: view === v ? '#fff' : 'var(--text-secondary)',
-            }}>
-              {v === 'summary' ? '📊 Summary' : '📋 All Punches'}
-            </button>
-          ))}
+    <div className="space-y-5">
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+        <AppleCard className="p-3.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">On Shift Now</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600">
+              <Users className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{totalClockedIn}</div>
+          <div className="text-xs text-slate-400 mt-0.5">Active badges clocked in</div>
+        </AppleCard>
+
+        <AppleCard className="p-3.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">Total Hours</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600">
+              <Clock className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{totalHoursLogged} hrs</div>
+          <div className="text-xs text-slate-400 mt-0.5">Logged across {summaries.length} staff</div>
+        </AppleCard>
+
+        <AppleCard className="p-3.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">Overtime Flags</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-600">
+              <AlertTriangle className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{overtimeShifts}</div>
+          <div className="text-xs text-slate-400 mt-0.5">Shifts &gt; 8 hours / day</div>
+        </AppleCard>
+
+        <AppleCard className="p-3.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">Total Punches</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950/50 flex items-center justify-center text-purple-600">
+              <History className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{punches.length}</div>
+          <div className="text-xs text-slate-400 mt-0.5">Total recorded punches</div>
+        </AppleCard>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-1 max-w-md">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              placeholder="Search badge ID…"
+              value={filterBadge}
+              onChange={e => setFilterBadge(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+          <select
+            value={filterDays}
+            onChange={e => setFilterDays(Number(e.target.value) as 7|14|30|0)}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none"
+          >
+            <option value={7}>Last 7 days</option>
+            <option value={14}>Last 14 days</option>
+            <option value={30}>Last 30 days</option>
+            <option value={0}>All time</option>
+          </select>
         </div>
-        <button
-          onClick={() => fetchAll()}
-          disabled={isLoading}
-          style={{ ...inputStyle, cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 700, whiteSpace: 'nowrap' }}
-        >
-          {isLoading ? 'Loading…' : '↻ Refresh'}
-        </button>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setView('summary')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                view === 'summary'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Summary
+            </button>
+            <button
+              onClick={() => setView('detail')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                view === 'detail'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              All Punches
+            </button>
+          </div>
+
+          <AppleButton
+            size="sm"
+            variant="secondary"
+            icon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+            onClick={() => fetchAll()}
+          >
+            Refresh
+          </AppleButton>
+        </div>
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-lg)', color: '#dc2626', fontSize: 13, marginBottom: 14 }}>
+        <AppleCard className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-700 dark:text-rose-300">
           {error}
-        </div>
+        </AppleCard>
       )}
 
-      {/* SUMMARY VIEW */}
+      {/* SUMMARY TABLE */}
       {view === 'summary' && (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+        <AppleCard className="p-0 overflow-hidden border border-slate-200 dark:border-slate-800 rounded-2xl">
           {summaries.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              {isLoading ? 'Loading…' : 'No punch records found.'}
+            <div className="p-12 text-center text-slate-400 text-xs">
+              {isLoading ? 'Loading records…' : 'No punch records found for this period.'}
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--color-primary-light)', borderBottom: '1px solid var(--border-color)' }}>
-                  {['Badge ID', 'Status', 'Shifts', 'Total Hours', 'Overtime', 'Last Punch'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {summaries.map((s, i) => (
-                  <tr key={s.badgeId} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-app)' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, fontFamily: 'Outfit, sans-serif', color: 'var(--text-primary)' }}>
-                      #{s.badgeId}
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                        background: s.currentlyIn ? '#f0fdf4' : 'var(--bg-app)',
-                        color: s.currentlyIn ? '#059669' : 'var(--text-muted)',
-                        border: `1px solid ${s.currentlyIn ? '#bbf7d0' : 'var(--border-color)'}`,
-                      }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.currentlyIn ? '#059669' : 'var(--text-muted)', flexShrink: 0 }} />
-                        {s.currentlyIn ? 'Clocked In' : 'Clocked Out'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{s.shiftCount}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtMins(s.totalMinutes)}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      {s.overtimeMinutes > 0 ? (
-                        <span style={{ color: '#d97706', fontWeight: 700 }}>⚠ {fmtMins(s.overtimeMinutes)}</span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>
-                      {s.lastPunchAt ? fmtDateTime(s.lastPunchAt) : '—'}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th className="py-3 px-4">Badge ID</th>
+                    <th className="py-3 px-4">Live Status</th>
+                    <th className="py-3 px-4">Shifts</th>
+                    <th className="py-3 px-4">Total Time</th>
+                    <th className="py-3 px-4">Overtime</th>
+                    <th className="py-3 px-4">Last Punch</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {summaries.map(s => (
+                    <tr key={s.badgeId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                        #{s.badgeId}
+                      </td>
+                      <td className="py-3 px-4">
+                        <AppleBadge color={s.currentlyIn ? 'green' : 'gray'} dot={s.currentlyIn}>
+                          {s.currentlyIn ? 'Clocked In' : 'Clocked Out'}
+                        </AppleBadge>
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">{s.shiftCount} shifts</td>
+                      <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">{fmtMins(s.totalMinutes)}</td>
+                      <td className="py-3 px-4">
+                        {s.overtimeMinutes > 0 ? (
+                          <span className="font-bold text-amber-600 dark:text-amber-400">
+                            ⚠ {fmtMins(s.overtimeMinutes)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
+                        {s.lastPunchAt ? fmtDateTime(s.lastPunchAt) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </AppleCard>
       )}
 
-      {/* DETAIL VIEW */}
+      {/* DETAIL TABLE */}
       {view === 'detail' && (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+        <AppleCard className="p-0 overflow-hidden border border-slate-200 dark:border-slate-800 rounded-2xl">
           {filteredPunches.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              {isLoading ? 'Loading…' : 'No punch records match this filter.'}
+            <div className="p-12 text-center text-slate-400 text-xs">
+              {isLoading ? 'Loading records…' : 'No punch records match this filter.'}
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--color-primary-light)', borderBottom: '1px solid var(--border-color)' }}>
-                  {['Badge ID', 'Action', 'Kiosk', 'Date & Time', 'Notes'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPunches.map((p, i) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-app)' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>#{p.badge_id}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{
-                        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                        background: p.operation === 'In' ? 'var(--color-primary-light)' : '#fef2f2',
-                        color: p.operation === 'In' ? 'var(--color-primary)' : '#dc2626',
-                        border: `1px solid ${p.operation === 'In' ? 'var(--color-primary)' : '#fecaca'}`,
-                      }}>
-                        {p.operation === 'In' ? '🔵 IN' : '🟠 OUT'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{p.kiosk_id}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                      {new Date(p.punched_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                      {' '}
-                      <strong style={{ color: 'var(--text-primary)' }}>{fmtTime(p.punched_at)}</strong>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{p.notes ?? '—'}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th className="py-3 px-4">Badge ID</th>
+                    <th className="py-3 px-4">Action</th>
+                    <th className="py-3 px-4">Kiosk / Location</th>
+                    <th className="py-3 px-4">Date & Time</th>
+                    <th className="py-3 px-4">Notes</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredPunches.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                        #{p.badge_id}
+                      </td>
+                      <td className="py-3 px-4">
+                        <AppleBadge color={p.operation === 'In' ? 'blue' : 'orange'}>
+                          {p.operation === 'In' ? 'CLOCK IN' : 'CLOCK OUT'}
+                        </AppleBadge>
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400">{p.kiosk_id}</td>
+                      <td className="py-3 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                        {fmtDateTime(p.punched_at)}
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">{p.notes ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
-      )}
-
-      {!isManager && (
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, textAlign: 'center' }}>
-          Full shift summaries and overtime flags are visible to managers and above.
-        </p>
+        </AppleCard>
       )}
     </div>
   )
@@ -383,28 +460,48 @@ function HistoryTab() {
 export default function TimecardPage() {
   const [tab, setTab] = useState<'terminal' | 'history'>('terminal')
 
-  const tabBtn = (id: typeof tab, label: string): React.CSSProperties => ({
-    padding: '10px 18px', background: 'none', border: 'none',
-    borderBottom: tab === id ? '2px solid var(--color-primary)' : '2px solid transparent',
-    color: tab === id ? 'var(--color-primary)' : 'var(--text-secondary)',
-    fontWeight: tab === id ? 700 : 500, fontSize: 14,
-    cursor: 'pointer', fontFamily: 'Outfit, sans-serif', transition: 'all 0.2s',
-  })
-
   return (
-    <div className="sl-page fade-in">
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.4px', margin: 0 }}>
-          ⏱ Time Clock
-        </h1>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
-          Staff clock in and out by entering their badge ID on the kiosk keypad.
-        </p>
-      </div>
+    <div className="space-y-6 max-w-5xl mx-auto px-1 sm:px-4 py-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+              Time Clock & Shifts
+            </h1>
+            <AppleBadge color="blue">
+              Digital Kiosk
+            </AppleBadge>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Institutional time & attendance badge punch station with biometric/PIN authentication.
+          </p>
+        </div>
 
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: 24, gap: 4 }}>
-        <button style={tabBtn('terminal', '')} onClick={() => setTab('terminal')}>⌨️ Kiosk Terminal</button>
-        <button style={tabBtn('history', '')} onClick={() => setTab('history')}>📊 Punch History</button>
+        {/* Apple Segmented Switcher */}
+        <div className="flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
+          <button
+            onClick={() => setTab('terminal')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              tab === 'terminal'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            Kiosk Terminal
+          </button>
+          <button
+            onClick={() => setTab('history')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              tab === 'history'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            Punch History
+          </button>
+        </div>
       </div>
 
       {tab === 'terminal' && <KioskTab />}
@@ -412,3 +509,4 @@ export default function TimecardPage() {
     </div>
   )
 }
+
