@@ -9,6 +9,7 @@ import { Router, Request, Response } from 'express'
 import { PointClickCareConnector } from '../integrations/pointclickcare'
 import { USDAFoodDataConnector } from '../integrations/usda'
 import { requireAuth } from '../middleware/requireAuth'
+import { requireTier } from '../middleware/requireTier'
 
 export const ehrRouter = Router()
 const pcc = new PointClickCareConnector()
@@ -18,7 +19,7 @@ const usda = new USDAFoodDataConnector()
  * GET /api/ehr/census
  * Pulls current active census from connected EHR
  */
-ehrRouter.get('/census', requireAuth, async (_req: Request, res: Response) => {
+ehrRouter.get('/census', requireAuth, requireTier('enterprise'), async (_req: Request, res: Response) => {
   try {
     const census = await pcc.getCensus('FAC-DEFAULT')
     res.json({ system: pcc.systemName, count: census.length, residents: census })

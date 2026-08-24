@@ -12,12 +12,14 @@ import DocumentsTemplates  from './components/DocumentsTemplates'
 import AuditLogViewer      from './components/AuditLogViewer'
 import MaintenanceWorkOrders from './components/MaintenanceWorkOrders'
 import HealerBotPanel      from './components/HealerBotPanel'
+import LicenseManagerPanel from './components/LicenseManagerPanel'
 
 type AdminTab =
-  | 'healer' | 'scheduling' | 'council' | 'bottle' | 'users' | 'callouts'
+  | 'license' | 'healer' | 'scheduling' | 'council' | 'bottle' | 'users' | 'callouts'
   | 'budget' | 'tasks' | 'data' | 'docs' | 'maintenance' | 'audit'
 
 const TABS: { id: AdminTab; label: string }[] = [
+  { id: 'license',     label: '🔑 SaaS Licensing & Entitlements' },
   { id: 'healer',      label: '🤖 Self-Healing & Health' },
   { id: 'scheduling',  label: 'Staff Scheduling' },
   { id: 'council',     label: 'Council Notes' },
@@ -81,6 +83,7 @@ export default function AdminPage() {
           padding: 24,
           boxShadow: 'var(--shadow-sm)',
         }}>
+          {tab === 'license'     && <LicenseManagerPanel />}
           {tab === 'healer'      && <HealerBotPanel />}
           {tab === 'scheduling'  && <StaffScheduling />}
           {tab === 'council'     && <CouncilNotes />}

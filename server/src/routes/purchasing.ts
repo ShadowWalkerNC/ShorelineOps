@@ -38,6 +38,7 @@ import { Router, Request, Response, NextFunction } from 'express'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { requireTier } from '../middleware/requireTier'
 import { MrpDemandForecastEngine, ScheduledMealDemand, InventoryItemStock } from '../engine/mrp'
 
 export const purchasingRouter = Router()
@@ -669,7 +670,7 @@ import { ThreeWayInvoiceMatchingEngine, InvoiceLineItem } from '../engine/invoic
  * POST /api/purchasing/invoices/match
  * Executes 3-way matching (PO vs Receiving vs Invoiced), flags price variance, and generates credit memos.
  */
-purchasingRouter.post('/invoices/match', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/invoices/match', requireTier('enterprise'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { invoiceNumber, vendorName, invoiceDate, poReference, lines } = req.body
     if (!invoiceNumber || !vendorName || !lines || !Array.isArray(lines)) {
@@ -730,7 +731,7 @@ purchasingRouter.post('/invoices/match', async (req: Request, res: Response, nex
  * GET /api/purchasing/invoices
  * Lists recent distributor invoices and their match statuses
  */
-purchasingRouter.get('/invoices', async (_req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/invoices', requireTier('enterprise'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(`
       SELECT * FROM distributor_invoices ORDER BY invoice_date DESC LIMIT 50
@@ -743,7 +744,7 @@ purchasingRouter.get('/invoices', async (_req: Request, res: Response, next: Nex
  * GET /api/purchasing/credit-memos
  * Lists active vendor credit memos
  */
-purchasingRouter.get('/credit-memos', async (_req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/credit-memos', requireTier('enterprise'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(`
       SELECT * FROM vendor_credit_memos ORDER BY created_at DESC LIMIT 50

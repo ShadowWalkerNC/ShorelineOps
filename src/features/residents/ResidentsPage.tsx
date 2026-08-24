@@ -3,6 +3,7 @@ import { useResidentsStore } from '@/state/residentsStore'
 import ResidentCardList from './components/ResidentCardList'
 import ResidentFormModal from './components/ResidentFormModal'
 import EhrReconciliationQueue from './EhrReconciliationQueue'
+import FeatureGate from '@/components/FeatureGate'
 import { AppleBadge, AppleButton, AppleCard, AppleSegmentedControl } from '@/apple-ui'
 import type { Resident } from '@/types/resident'
 import {
@@ -181,8 +182,14 @@ export default function ResidentsPage() {
         </AppleCard>
       </div>
 
-      {/* ── EHR Triage Exception Queue ── */}
-      <EhrReconciliationQueue />
+      {/* ── EHR Triage Exception Queue (Enterprise Tier) ── */}
+      <FeatureGate
+        requiredTier="enterprise"
+        featureName="PointClickCare Live EHR 2-Way Sync & Reconciliation Queue"
+        description="Automated bi-directional integration with PointClickCare, MatrixCare, and Epic EHR systems. Catches inbound ADT transfers, physician diet orders, and dysphagia texture modifications in real-time."
+      >
+        <EhrReconciliationQueue />
+      </FeatureGate>
 
       {/* ── Search & Cupertino Filter Controls ── */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">

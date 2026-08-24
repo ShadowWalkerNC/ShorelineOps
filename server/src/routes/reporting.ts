@@ -378,13 +378,14 @@ reportingRouter.get('/compliance-summary', async (req: Request, res: Response, n
 })
 
 import { CmsDietarySurveyEngine } from '../engine/cmsSurvey'
+import { requireTier } from '../middleware/requireTier'
 
 /**
  * GET /api/reporting/cms-survey-export
  * 
  * Generates official CMS-2567 Dietary Survey Audit Pack (Federal F-Tags F800 - F814)
  */
-reportingRouter.get('/cms-survey-export', async (req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/cms-survey-export', requireTier('enterprise'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { format = 'json' } = req.query
     const { rows: residents } = await pool.query(
