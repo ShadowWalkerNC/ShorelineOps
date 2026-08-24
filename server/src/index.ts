@@ -151,8 +151,8 @@ if (fs.existsSync(clientDistPath)) {
   })
 }
 
-// Health and Readiness Probes for Kubernetes / Docker / Cloud Load Balancers
-app.get('/health', (_req, res) => {
+// Health and Readiness Probes for Kubernetes / Docker / Cloud Load Balancers / Render
+const handleHealth = (_req: express.Request, res: express.Response) => {
   res.json({
     status: 'ok',
     service: 'ShorelineOps API',
@@ -160,7 +160,10 @@ app.get('/health', (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
   })
-})
+}
+
+app.get('/health', handleHealth)
+app.get('/api/health', handleHealth)
 
 app.get('/ready', async (_req, res) => {
   try {

@@ -248,17 +248,19 @@ POST /api/invoice/match
 ```
 Returns `overallStatus` and optional `creditMemo`.
 
-## Deployment (Vercel)
+## Deployment (Render)
 
-1. Add the repository to Vercel (GitHub integration).
-2. Ensure the following environment variables are set in Vercel:
-   - `DATABASE_URL`
-   - `JWT_SECRET`
-   - `APPLE_UI_TOKEN` (optional, for premium Apple assets)
-3. Vercel will automatically run the `build:all` script defined in `package.json`.
-4. Preview URLs:
-   - Demo site: `https://<project>.vercel.app/`
-   - Marketing site: `https://<project>-marketing.vercel.app/`
+ShorelineOps includes a native 1-click **Render Blueprint** (`render.yaml`) that automatically deploys:
+1. **API Web Service** (`shoreline-api` on Node/Express with auto-migrations and `/health` probes).
+2. **Interactive Demo App** (`shoreline-demo` React 18 / Vite SPA with client-side rewrite routing).
+3. **Marketing & Dev Portal** (`shoreline-marketing` Astro static site).
+4. **Managed PostgreSQL** (`shoreline-db` instance).
+
+### 1-Click Setup on Render:
+1. In your [Render Dashboard](https://dashboard.render.com), click **New +** ➔ **Blueprint**.
+2. Connect the `ShadowWalkerNC/ShorelineOps` repository.
+3. Render automatically detects `render.yaml` and deploys all services.
+4. For detailed step-by-step instructions, see [docs/RenderDeployment.md](docs/RenderDeployment.md).
 
 ## Design System (Apple UI Guide)
 

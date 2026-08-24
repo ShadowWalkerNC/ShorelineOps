@@ -14,7 +14,8 @@ Welcome to the official technical wiki for **ShorelineOps** — the open-source 
 6. [CMS-2567 Survey Audit Binder](CMSSurveyEngine.md) — Automated F-Tag evaluation (F800-F812), HACCP temperature log verification, and inspection export.
 7. [PointClickCare EHR Reconciliation Queue](PointClickCareQueue.md) — Inbound diet change triage queue, RD approvals, and audit trail.
 8. [Apple UI Design System Integration](AppleUIDesign.md) — Human Interface Guidelines (HIG) tokens, fluid animations, and Cupertino components.
-9. [Vercel Deployment Guide](VercelDeployment.md) — Production multi-project configuration for the React demo app and Astro marketing site.
+9. [Render Cloud Deployment Guide](RenderDeployment.md) — 1-Click multi-service Blueprint setup for the API, React Demo PWA, Astro Marketing, and PostgreSQL.
+10. [Vercel Deployment Guide](VercelDeployment.md) — Multi-project setup for static edge hosting.
 
 ---
 

@@ -1,0 +1,74 @@
+# Render Blueprint Specification for ShorelineOps
+# Official 1-Click Multi-Service Deployment for Render (https://render.com)
+version: "1"
+
+services:
+  # ============================================================================
+  # 1. Shoreline API Backend (Node / Express / TypeScript)
+  # ============================================================================
+  - type: web
+    name: shoreline-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://shoreline-demo.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shoreline-db
+          property: connectionString
+
+  # ============================================================================
+  # 2. Shoreline Interactive Demo Application (React 18 + Vite PWA)
+  # ============================================================================
+  - type: static
+    name: shoreline-demo
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build:demo
+    staticPublishPath: dist
+    autoDeploy: true
+    routes:
+      # SPA fallback routing for client-side React Router
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_DEMO_MODE
+        value: "true"
+      - key: VITE_API_URL
+        value: https://shoreline-api.onrender.com
+
+  # ============================================================================
+  # 3. Shoreline Marketing & Developer Portal (Astro)
+  # ============================================================================
+  - type: static
+    name: shoreline-marketing
+    plan: free
+    region: oregon
+    rootDir: marketing
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+
+# ==============================================================================
+# Managed PostgreSQL Database
+# ==============================================================================
+databases:
+  - name: shoreline-db
+    plan: free
+    region: oregon
+    databaseName: shoreline
+    user: shoreline_user
