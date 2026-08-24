@@ -54,6 +54,14 @@ function isAuthUser(value: unknown): value is AuthUser {
   )
 }
 
+const DEFAULT_DEMO_USER: AuthUser = {
+  id: 'usr_admin',
+  name: 'Chef Marcus Vance',
+  email: 'admin@shoreline.demo',
+  role: 'admin',
+  mfaVerified: true,
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -63,14 +71,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function restore() {
       try {
-        if (DEMO_MODE) {
+        if (DEMO_MODE || IS_DEV) {
           const stored = sessionStorage.getItem(SESSION_KEY)
           if (stored) {
             const parsed = JSON.parse(stored) as unknown
             if (isAuthUser(parsed)) {
               if (!cancelled) setUser({ ...parsed, mfaVerified: !!parsed.mfaVerified })
+              return
             }
           }
+          // In demo mode, automatically log in as the demo admin so direct deep-links (e.g. /menu) load instantly
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(DEFAULT_DEMO_USER))
+          if (!cancelled) setUser(DEFAULT_DEMO_USER)
           return
         }
 
