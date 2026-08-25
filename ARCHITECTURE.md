@@ -1,36 +1,42 @@
-# ShorelineOps Architecture & Technical Specification
+# ShorelineOps Architecture & Technical Specification (Care OS v5.0)
 
 ## 1. System Overview
 
-**ShorelineOps** is an open-source dietary operations, clinical nutrition, and healthcare foodservice coordination platform designed specifically for assisted living, memory care, and skilled nursing communities.
+**ShorelineOps** is an open-source dietary operations, clinical nutrition, and healthcare foodservice platform designed specifically for assisted living, memory care, skilled nursing, CCRCs, and acute care facilities.
 
-Its core operational philosophy is **distributor independence, deterministic clinical safety, and real-time operational resilience**:
-1. Facilities should never be locked into a single food distributor ERP.
-2. Resident diet orders, IDDSI texture requirements, and allergen exclusions drive production, purchasing, and tray delivery with deterministic non-overridable safety hard-blocks.
-3. Clinical EHR integrations and distributor ordering are decoupled via standard adapter interfaces.
-4. Multi-tier caching, conditional ETags, request deduplication, and circuit breakers ensure 0ms offline-first kitchen tablet performance.
+Its core operational principles:
+1. **Open Core Architecture**: Core single-facility operational tools (Resident census, cycle menus, standardized batch recipes, tray cards, local timecard kiosk) are 100% free and open source. Commercial enterprise modules (PointClickCare Live Sync, Multi-Distributor Lowest-Cost Split MRP, CMS-2567 Federal Survey Binder, 3-Way Invoice OCR & Credit Memos) are managed under a secure SaaS tier gated via cryptographic HMAC license keys (`SH_PRO_...` / `SH_ENT_...`).
+2. **Deterministic Clinical Safety**: Resident diet orders, IDDSI texture requirements (Levels 0–7), and allergen exclusions drive production, purchasing, and tray delivery with deterministic non-overridable safety hard-blocks.
+3. **Distributor Independence**: Eliminates vendor lock-in by supporting algorithmic lowest-cost order splitting across Dennis Food Service, Sysco, US Foods, Gordon Food Service, and Performance Food Group.
+4. **Kitchen Ergonomics**: Touch targets ($\ge 44\text{px}$) optimized for line cooks wearing wet nitrile gloves under fluorescent lighting during 45-minute tray line rushes.
+5. **Multi-Tier Caching & Resilience**: In-memory LRU cache, conditional ETags (`304 Not Modified`), request deduplication, circuit breakers, and hybrid SWR IndexedDB storage for offline tablet performance.
 
 ---
 
 ## 2. Architectural Layers
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                               Shoreline UI (PWA)                                │
-│       (React 18 + Vite + TypeScript + Zustand + Hybrid SWR / IndexedDB Cache)   │
-└────────────────────────────────────────┬────────────────────────────────────────┘
-                                         │ REST / Bearer JWT (Conditional ETags / 304)
-┌────────────────────────────────────────▼────────────────────────────────────────┐
-│                              Shoreline Express API                              │
-│       (Node.js + Express + Helmet + LRU Cache + Dedup + Circuit Breakers)       │
-└───────┬──────────────────────┬──────────────────────┬───────────────────┬───────┘
-        │                      │                      │                   │
-┌───────▼──────┐       ┌───────▼──────┐       ┌───────▼──────┐    ┌───────▼──────┐
-│  PostgreSQL  │       │ Distributor  │       │  EHR Sync    │    │ USDA Central │
-│  (Database)  │       │  Connectors  │       │ (FHIR spec)  │    │  (Nutrition) │
-│ • Audit Log  │       │ • Dennis     │       │ • PointClick │    │ • SR Legacy  │
-│ • MRP Schema │       │ • Sysco/USF  │       │   Care       │    │ • FNDDS      │
-└──────────────┘       └──────────────┘       └──────────────┘    └──────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   Shoreline Web PWA                                    │
+│          (React 18 + Vite + TypeScript + shadcn/ui + Apple HIG + Zustand)              │
+│                                                                                        │
+│  [Residents & Diets]  [Menu Planner]  [Production]  [Tray Cards]  [Purchasing & MRP]  │
+│  [Settings & Wings]   [Vendor Portal] [Reporting]   [SaaS Licensing & FeatureGate]     │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ REST / Bearer JWT (Conditional ETags / 304)
+                                            │ Header: X-Shoreline-License-Key
+┌───────────────────────────────────────────▼────────────────────────────────────────────┐
+│                                Shoreline Express API                                   │
+│    (Node.js + Express + Helmet + requireTier Middleware + LRU Cache + HealerBot)       │
+└───────┬─────────────────────┬─────────────────────┬───────────────────┬────────────────┘
+        │                     │                     │                   │
+┌───────▼──────┐      ┌───────▼──────┐      ┌───────▼──────┐    ┌───────▼──────┐
+│  Database    │      │ Distributor  │      │  EHR Sync    │    │ USDA Central │
+│ • SQLite/    │      │  Connectors  │      │ (FHIR & PCC) │    │  (Nutrition) │
+│   PostgreSQL │      │ • Dennis EDI │      │ • PointClick │    │ • 8,000+     │
+│ • Audit Logs │      │ • Sysco REST │      │   Care OAuth │    │   Ingredient │
+│ • Par Guides │      │ • US Foods   │      │ • RD Triage  │    │   Database   │
+└──────────────┘      └──────────────┘      └──────────────┘    └──────────────┘
 ```
 
 ---
@@ -39,74 +45,47 @@ Its core operational philosophy is **distributor independence, deterministic cli
 
 | Module | Core Responsibilities | Routes / APIs | Primary Users |
 |---|---|---|---|
-| **Resident Manager** | Profile, diet orders (NAS, NCS, Renal), IDDSI textures, allergies, beverages, dining room table assignments | `/residents`, `/api/residents` | Dietitians, RDs, DONs |
-| **EHR Triage Queue** | RD reconciliation gate for conflicting inbound EHR diet/texture updates and unverified allergens | `/residents`, `/api/ehr/reconciliation-queue` | Registered Dietitians |
-| **Kitchen Tablet Mode** | Touch worksheets, batch yield scaling, temp logs (165°F), tray line dispatch, quick par count steppers, QR line scanner | `/kitchen/tablet`, `/api/kitchen` | Line Cooks & Prep Staff |
-| **Menu Planner** | 4-week cycle menus, Choice A/Choice B, active cycle week, weekly nutritional audit, print view | `/menu`, `/api/menu` | Dietary Directors |
-| **Smart Recipe Book** | Master recipe catalog with automatic Big 9 allergen detection, USDA nutrient calculation, and vendor SKU costing | `/recipes`, `/api/recipes` | Chefs & Kitchen Staff |
-| **Dietary & Nutrition Engine** | Macro/micronutrient aggregation (Calories, Protein, Carbs, Fat, Sodium, Potassium, Phosphorus, Fiber) and clinical diet order constraint solver | `/api/recipes/analyze-nutrition`, `/api/ehr/nutrients/usda` | Clinical Dietitians & RDs |
-| **MRP & BOM Purchasing** | Multi-level Bill of Materials explosion, on-hand inventory depletion, multi-distributor lowest-cost split order generator | `/purchasing`, `/api/purchasing/mrp-order` | Dietary Managers |
-| **3-Way Invoice Match** | PO vs Dock Receiving vs Invoiced price/quantity variance detection and automated vendor credit memos | `/purchasing`, `/api/purchasing/invoices/match` | Dietary Managers & AP |
-| **Daily Cook Sheets** | Real-time meal tallies, modifiers, alternatives, and station prep worksheets | `/kitchen/sheet`, `/api/kitchen/sheet` | Line Cooks |
-| **Production Sheets** | Station batch scaling (Hot Line, Cold Prep, Puree Station, Bakery) with HACCP temperature limits | `/production`, `/api/production` | Cooks & Managers |
-| **Tray Cards & Service** | High-contrast resident meal tickets with signed QR tokens, red allergen alert banners, and IDDSI texture color banners | `/kitchen/traycards`, `/api/kitchen/traycards-generated` | Dietary Servers |
-| **Distributor Portal** | Vendor portal for distributor sales reps to update SKUs and contract pricing without PHI access | `/distributor`, `/api/distributor` | Food Distributor Reps |
-| **Cost & Compliance** | Food cost ($/CPD), total dietary operating cost (food + labor), substitution log, and 1-click survey print sheet | `/reporting`, `/api/reporting` | Administrators & Inspectors |
-| **CMS-2567 Survey Binder** | Automated compliance cross-walk auditing Federal F-Tags (F800–F812), 14-hr meal timing spans, 90-day HACCP logs | `/reporting`, `/api/reporting/cms-survey-export` | State Surveyors & RDs |
+| **Resident Manager** | Census roster, therapeutic diets (NAS, NCS, Renal), IDDSI textures (Pureed, Minced), allergies, table seating | `/residents`, `/api/residents` | Dietitians, DONs, RDs |
+| **PointClickCare EHR Queue** | Inbound ADT transfers and physician diet updates gated by RD triage queue | `/residents`, `/api/ehr/census` | Registered Dietitians |
+| **Kitchen Tablet Kiosk** | Large-touch worksheets, batch yield scaling, temp logs (165°F), tray line dispatch, quick par counting | `/kitchen/tablet`, `/api/kitchen` | Line Cooks & Prep Staff |
+| **Menu Cycle Planner** | 4-week cycle menus, Choice A/B, active week, nutritional audit, recipe drawer | `/menu`, `/api/menu` | Dietary Directors |
+| **Batch Recipe Book** | Master recipe catalog with Big 9 allergen detection, USDA nutrition analysis, and ingredient cost scaling | `/recipes`, `/api/recipes` | Chefs & Kitchen Staff |
+| **Material Requirements (MRP)** | Multi-level Bill of Materials explosion × resident census into vendor case pack orders | `/purchasing`, `/api/purchasing/mrp-order` | Dietary Managers |
+| **Lowest-Cost Split MRP** | Multi-distributor price comparison (Dennis, Sysco, US Foods) routing orders to lowest-cost vendor | `/purchasing`, `/api/purchasing/orders` | Dietary Directors |
+| **3-Way Invoice Match & Memos** | PO vs Dock Receiving vs Invoiced price/quantity variance detection and automated vendor credit claim generation | `/purchasing`, `/api/purchasing/invoices/match` | Dietary Managers & AP |
+| **CMS-2567 Federal Survey Binder** | 1-click digital inspection binder covering Federal F-Tags (F800–F814) and F809 14-hour rule | `/reporting`, `/api/reporting/cms-survey-export` | Executive Dir & CDM |
+| **Distributor Partner Portal** | Direct vendor portal for Dennis & Sysco sales reps to manage SKUs, pack sizes, and contract rates | `/distributor`, `/api/purchasing/items` | Distributor Reps |
+| **Facility & Operations Settings** | Facility profile, wings, dining rooms, meal schedule times, CPD target budget, and SaaS license key | `/settings`, `/api/settings` | Administrators |
+| **Admin & HealerBot** | Staff scheduling, user accounts, automated self-healing diagnostic bot, and audit logs | `/admin`, `/api/admin` | System Admins |
 
 ---
 
-## 4. Algorithmic Engines
+## 4. UI/UX Design System: shadcn/ui + Apple HIG
 
-### 4.1 Deterministic Clinical Safety Rules Engine (`server/src/engine/safetyEvaluator.ts`)
-- **Strict NPO Lockout**: Non-overridable `BLOCK` on any oral food or beverage dispatch when resident is designated NPO.
-- **Canonical Allergen Intersection**: Scans Big 9 allergens (Gluten, Dairy, Eggs, Peanuts, Tree Nuts, Soy, Fish, Shellfish, Sesame) and flags cross-contact risk.
-- **IDDSI Food & Liquid Texture Compatibility**: Strict matrix enforcement between resident prescription (Pureed L4, Minced L5, Soft L6, Regular L7) and recipe textures.
-- **Therapeutic Nutrient Ceilings**: Hard limits for NAS Sodium ($\le 600\text{mg}$), Diabetic Carbs ($\le 60\text{g}$), and Renal Potassium/Phosphorus.
-
-### 4.2 Universal Culinary Unit Conversion Engine (`server/src/engine/units.ts`)
-- **Universal Matrix**: Exact bidirectional conversions across Mass (`g`, `kg`, `oz`, `lb`), Volume (`ml`, `l`, `tsp`, `tbsp`, `fl oz`, `cup`, `pt`, `qt`, `gal`), and Foodservice Counts (`#10 can`, `case`, `pack`, `bag`, `slice`, `portion`).
-- **Density Awareness**: Volume-to-mass conversions based on ingredient specific gravities (flours, sugars, butter, liquids, purees).
-
-### 4.3 Multi-Distributor Split MRP Engine (`server/src/engine/mrp.ts`)
-- **BOM Multi-Level Explosion**:
-  $$\text{Ingredient Requirement (g)} = \sum_{\text{Meals}} \left( \text{Resident Headcount} \times \text{Choice \%} \times \frac{\text{Scaled Portions}}{\text{Base Yield}} \times \text{Ingredient Base Qty (g)} \right)$$
-- **Multi-Vendor Pricing Comparator**: Compares competing catalog quotes across Dennis, Sysco, and US Foods, computes effective unit costs ($/\text{lb}$ or $/\text{g}$), and generates optimal split PO proposals aligned with delivery lead times.
-
-### 4.4 Three-Way Invoice Match Engine (`server/src/engine/invoicing.ts`)
-- **Price Creep Detection**: Identifies unit price inflation exceeding purchase order contract rates.
-- **Short-Shipment Calculation**: Evaluates receiving dock verified counts against billed quantities.
-- **Automated Credit Memos**: Generates formal vendor credit deduction claims for immediate accounting processing.
-
-### 4.5 CMS-2567 Survey Compliance Cross-Walk (`server/src/engine/cmsSurvey.ts`)
-- **Federal F-Tag Audit**: Cross-walks operations against F800, F801, F803, F804, F805, F808, F809, and F812.
-- **14-Hour Span Rule (F809)**: Audits elapsed hours between evening dinner service and next morning breakfast ($\le 14\text{h}$, or $\le 16\text{h}$ with bedtime snack).
-- **90-Day Temperature Integrity**: Verifies HACCP hot ($\ge 140^\circ\text{F}$) and cold ($\le 41^\circ\text{F}$) holding log compliance.
+The user interface implements **shadcn/ui** primitives combined with Apple Human Interface Guidelines:
+- **Component Primitives** (`src/components/ui/`): Accessible Radix UI wrappers (`Button`, `Card`, `Badge`, `Dialog`, `Tabs`, `Input`, `Select`, `Switch`, `Separator`, `Avatar`).
+- **Canvas Colors**: Neutral light canvas (`#f5f5f7`) and dark mode canvas (`#000000` / `bg-slate-950`).
+- **Frosted Glass Vibrancy**: Sticky headers and floating cards utilize `backdrop-blur-2xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/80 dark:border-slate-800/80`.
+- **System Typography**: Apple SF Pro / system font stack (`-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display"`).
+- **Touch Ergonomics**: All critical kitchen action buttons meet or exceed the $44\text{px} \times 44\text{px}$ touch target guideline.
 
 ---
 
-## 5. Performance, Caching & Resilience Infrastructure
+## 5. Security, HIPAA Technical Safeguards & Open Core Licensing
 
-### 5.1 In-Memory LRU Cache & Conditional ETags (`server/src/middleware/cache.ts`)
-- Sub-millisecond cached reads with tag-based invalidation.
-- Generates cryptographic `ETag` headers and evaluates incoming `If-None-Match` requests, returning **`304 Not Modified` with 0 bytes transferred** when data is unchanged.
-
-### 5.2 Tri-State Circuit Breakers (`server/src/middleware/circuitBreaker.ts`)
-- Protects external distributor and clinical EHR APIs from network timeouts.
-- State Machine: `CLOSED` $\xrightarrow{\text{Failures} \ge 3}$ `OPEN (Fast-fail with fallback)` $\xrightarrow{\text{10s Timeout}}$ `HALF_OPEN (Trial)`.
-
-### 5.3 In-Flight Request Deduplication (`server/src/middleware/dedup.ts`)
-- Coalesces simultaneous identical requests from multiple kitchen tablets into a single database/engine execution.
-
-### 5.4 Client Hybrid SWR Cache (`src/lib/cacheManager.ts`)
-- Instant 0ms UI rendering from memory + IndexedDB with silent background network revalidation.
+- **Authentication & RBAC**: Stateless JWT bearer tokens with Argon2/bcrypt password hashing (enforcing 12+ character complexity, upper, lower, digit, special symbol).
+- **Role Hierarchy**: `cook` $\to$ `aide` $\to$ `dietitian` $\to$ `manager` $\to$ `admin`.
+- **Open Core Entitlement Engine**:
+  - Client: `src/security/license.ts` validates HMAC signatures on license tokens (`SH_PRO_...` / `SH_ENT_...`) and exposes `satisfiesTier()`.
+  - UI Gate: `src/components/FeatureGate.tsx` wraps proprietary features with frosted glass upgrade cards in Community Core mode.
+  - Server Gate: `server/src/middleware/requireTier.ts` intercepts protected REST endpoints returning `402 LICENSE_TIER_REQUIRED`.
+- **HIPAA Technical Safeguards**: Audit logs are immutable and archived with 7-year (2,555 days) retention tracking. PHI is stripped from distributor portal views.
 
 ---
 
-## 6. Security & Technical Safeguards (HIPAA Aligned)
+## 6. Autonomous Operations Consultant Engine
 
-- **10-Minute Idle Auto-Logout**: Automatic session invalidation protecting resident Protected Health Information (PHI) on shared workstations (`AuthContext.tsx`).
-- **Password Hardening**: Minimum 12 characters requiring uppercase, lowercase, numbers, and special symbols.
-- **Audit Log Immutability**: Append-only PostgreSQL triggers (`trg_prevent_audit_log_update` and `trg_prevent_audit_log_delete`) preventing modification of audit records.
-- **Distributor PHI Isolation**: Distributor partner accounts are cryptographically restricted from viewing resident clinical records or dietary orders.
-- **Network Security**: Strict Content Security Policy (CSP), HSTS preload, X-Frame-Options Deny, and rate limiting via Helmet.
+- **Agent Persona**: `dietary_operations_consultant` acting as Certified Dietary Manager (CDM, CFPP) and Healthcare Operations Consultant.
+- **Audit Engine**: `scripts/operations_consultant_audit.js` runs automated operational audits across clinical safety, kitchen ergonomics, supply chain, CMS survey readiness, and open core licensing.
+- **Daily Log**: Master report generated at `docs/DAILY_OPERATIONS_AUDIT.md`.
+- **Recurring Schedule**: Standing background cron (`0 9 * * *` - Daily at 9:00 AM) runs proactive research and audits.

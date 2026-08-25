@@ -4,6 +4,26 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v9.0.0] — 2026-08-25
+### Added
+- **Open Core Licensing & Entitlement Engine** (`src/security/license.ts`, `src/components/FeatureGate.tsx`, `server/src/middleware/requireTier.ts`):
+  - 4-tier entitlement system (`community`, `pro`, `enterprise`, `demo`) with cryptographic HMAC token verification (`SH_PRO_...` / `SH_ENT_...`).
+  - Gated proprietary endpoints (PointClickCare Live Sync, Multi-Distributor Split MRP, CMS-2567 Survey Binder, 3-Way Invoice Match) with HTTP 402 `LICENSE_TIER_REQUIRED`.
+  - Apple HIG `<FeatureGate>` upgrade cards embedded in client features for self-hosted community operators.
+- **shadcn/ui Component Library Integration** (`src/components/ui/`):
+  - Accessible Radix UI primitives (`Button`, `Card`, `Badge`, `Dialog`, `Tabs`, `Input`, `Select`, `Switch`, `Separator`, `Avatar`) with CVA and Tailwind CSS variables.
+  - Added `src/lib/utils.ts` (`cn()`) and `components.json` for shadcn CLI workflows.
+- **Facility & Operations Settings Page** (`src/features/settings/SettingsPage.tsx`, `src/state/settingsStore.ts`):
+  - 5-tab configuration center for Facility Profile, Residential Wings & Dining Locations, Clinical & Dietary Standards, Broadline Distributors, and HIPAA Security / Licensing.
+- **Distributor & Vendor Portal Overhaul** (`src/features/distributor/DistributorPortalPage.tsx`):
+  - Multi-distributor switcher (Dennis, Sysco, US Foods, Gordon), telemetry metrics, and item master publisher.
+- **Autonomous Dietary Operations Consultant Engine** (`dietary_operations_consultant`, `scripts/operations_consultant_audit.js`):
+  - Automated operational stress-testing engine (`npm run audit:operations`) and master log (`docs/DAILY_OPERATIONS_AUDIT.md`) with daily scheduled cron workflow.
+- **UI/UX Design System Unification**:
+  - Unified Astro marketing portal and React web application with identical Apple HIG frosted glass header navigation, typography, system colors, and card layouts.
+
+---
+
 ## [v8.0.0] — 2026-08-24
 ### Added
 - **Deterministic Clinical Safety Rules Engine** (`server/src/engine/safetyEvaluator.ts`):

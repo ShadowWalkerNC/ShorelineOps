@@ -85,6 +85,16 @@
 
 ---
 
+## ✅ V9 Milestones — Open Core Licensing, shadcn/ui & Operations Consultant (Completed & Verified)
+- [x] **Open Core Licensing & Entitlement Engine (`src/security/license.ts`, `server/src/middleware/requireTier.ts`)**: Cryptographic HMAC license parsing (`SH_PRO_...` / `SH_ENT_...`), 4-tier model (`community`, `pro`, `enterprise`, `demo`), and `402 LICENSE_TIER_REQUIRED` API protection.
+- [x] **shadcn/ui Component Library Integration (`src/components/ui/`)**: Full Radix UI + CVA + Tailwind CSS variables design system with `Button`, `Card`, `Badge`, `Dialog`, `Tabs`, `Input`, `Select`, `Switch`, `Separator`, `Avatar`.
+- [x] **Facility & Operations Settings (`/settings`, `src/state/settingsStore.ts`)**: Facility profile, residential wings, dining zones, CPD budget solver, meal schedule times, and HIPAA security settings.
+- [x] **Distributor & Vendor Portal Overhaul (`/distributor`)**: Multi-distributor switcher (Dennis, Sysco, US Foods, Gordon), telemetry metrics, and item master publisher.
+- [x] **Autonomous Dietary Operations Consultant (`dietary_operations_consultant`)**: Automated clinical review engine (`scripts/operations_consultant_audit.js`), master log (`docs/DAILY_OPERATIONS_AUDIT.md`), and daily scheduled cron workflow.
+- [x] **Marketing & Web App UI/UX Unification**: Aligned Astro marketing portal and React demo app with identical Apple HIG frosted glass headers, typography, and card components.
+
+---
+
 ## 🏆 Project Status: All Milestones & Stages 100% Complete & Production Ready
 - [x] Core Clinical Care & Resident Operations (`/residents`)
 - [x] 4-Week Seasonal Cycle Menu Planning (`/menu`)
@@ -99,3 +109,6 @@
 - [x] Deterministic Clinical Safety & NPO Hard-Blocks (`/api/kitchen/verify-tray-scan`)
 - [x] 3-Way Invoice Matching & Vendor Credit Memos (`/api/purchasing/invoices/match`)
 - [x] Inbound EHR Clinical Triage Queue (`/api/ehr/reconciliation-queue`)
+- [x] Open Core Tier Separation & FeatureGate Protection (`/settings`, `src/components/FeatureGate.tsx`)
+- [x] Facility & Operations Settings (`/settings`)
+- [x] Autonomous Operations Consultant Audit Engine (`npm run audit:operations`)

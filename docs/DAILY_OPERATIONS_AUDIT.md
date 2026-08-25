@@ -2,7 +2,7 @@
 
 > **Role:** Certified Dietary Manager (CDM, CFPP) & Healthcare Foodservice Operations Consultant  
 > **Cadence:** Daily Operational Review & Proactive Feature Stress-Testing  
-> **Last Audit:** Tuesday, August 25, 2026 (2026-08-25T20:33:46.774Z)  
+> **Last Audit:** Tuesday, August 25, 2026 (2026-08-25T20:38:59.045Z)  
 > **Scope:** Clinical Safety · Kitchen Ergonomics · Supply Chain · CMS-2567 Survey Readiness · Open Core Model
 
 ---
