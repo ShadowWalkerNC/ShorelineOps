@@ -27,6 +27,7 @@ import KitchenTabletPage from './features/kitchen/KitchenTabletPage'
 import PurchasingPage from './features/purchasing/PurchasingPage'
 import ReportingPage from './features/reporting/ReportingPage'
 import DistributorPortalPage from './features/distributor/DistributorPortalPage'
+import SettingsPage from './features/settings/SettingsPage'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/purchasing"        element={<AuthedLayout><PurchasingPage /></AuthedLayout>} />
         <Route path="/reporting"         element={<AuthedLayout><ReportingPage /></AuthedLayout>} />
         <Route path="/distributor"       element={<AuthedLayout><DistributorPortalPage /></AuthedLayout>} />
+        <Route path="/settings"          element={<AuthedLayout><SettingsPage /></AuthedLayout>} />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
         <Route
