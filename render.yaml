@@ -17,6 +17,8 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: "20.14.0"
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -37,7 +39,7 @@ services:
     name: shoreline-demo
     runtime: static
     buildCommand: npm install && npm run build:demo
-    staticPublishPath: ./dist
+    staticPublishPath: dist
     autoDeploy: true
     routes:
       # SPA fallback routing for client-side React Router
@@ -45,6 +47,8 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      - key: NODE_VERSION
+        value: "20.14.0"
       - key: VITE_DEMO_MODE
         value: "true"
       - key: VITE_API_URL
@@ -56,9 +60,13 @@ services:
   - type: web
     name: shoreline-marketing
     runtime: static
-    buildCommand: npm run build:marketing
-    staticPublishPath: marketing/dist
+    rootDir: marketing
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
     autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20.14.0"
 
 # ==============================================================================
 # Managed PostgreSQL Database

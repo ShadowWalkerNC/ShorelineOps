@@ -1,36 +1,70 @@
 <div align="center">
 
 # 🍽️ ShorelineOps (Care OS v5.0)
-### The Open-Source Dietary Operations & Care Coordination Platform for Senior Living & Healthcare
+### Open-Source Healthcare Dietary Operations, Clinical Nutrition & Care Coordination Platform
 
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
 [![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-design-system--uiux)
-[![Security: Built with HIPAA-aligned safeguards](https://img.shields.io/badge/Security-Built%20with%20HIPAA--aligned%20safeguards-emerald.svg)](#-security-technical-safeguards--hipaa-alignment)
-[![Stack: React 18 / Node / SQLite / Postgres](https://img.shields.io/badge/Stack-React%2018%20%7C%20Node%20%7C%20Postgres-blueviolet.svg)](#%EF%B8%8F-tech-stack)
-[![Marketing & Pricing Site](https://img.shields.io/badge/Marketing%20Site-Astro%20%2B%20Tailwind-orange.svg)](marketing)
+[![Security: HIPAA Technical Safeguards](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
+[![Tests: 89/89 Passing](https://img.shields.io/badge/Tests-89%2F89%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
+[![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
-**Built by an executive healthcare chef, not a venture fund.**  
-*Bridging clinical resident diets, kitchen batch cooking, tray cards, multi-distributor purchasing, and CMS-2567 survey binders without vendor lock-in.*
+**Engineered by a healthcare executive chef, not a venture fund.**  
+*Bridging clinical resident diets, IDDSI dysphagia safety, touch tablet batch cookery, multi-distributor split MRP purchasing, and CMS-2567 federal survey readiness.*
 
-[🚀 Live Demo App](https://shoreline-demo.onrender.com/menu) • [🌐 Marketing & Pricing Portal](https://shoreline-marketing.onrender.com) • [🔑 Open Core Licensing](LICENSING.md) • [📋 Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [📘 Architecture](ARCHITECTURE.md) • [🚚 Distributors](DISTRIBUTORS.md)
+[🚀 Live Demo App](https://shoreline-demo.onrender.com/menu) • [🌐 Marketing & Pricing Portal](https://shoreline-marketing.onrender.com) • [🏢 Corporate HQ Portal](https://shoreline-demo.onrender.com/enterprise) • [🔑 Open Core Licensing](LICENSING.md) • [📋 Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [🎯 Pilot Acquisition Guide](docs/FACILITY_PILOT_ACQUISITION_AND_SCALE.md)
 
 </div>
 
 ---
 
-## 🍽️ What is ShorelineOps?
+## 📸 Platform Interface Tour
 
-**ShorelineOps** is an open-source clinical nutrition and dietary operations platform designed for senior living and healthcare dining (Assisted Living, Memory Care, Skilled Nursing, CCRCs, and Acute Care).
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 CORE APPLICATION MODULES                                │
+├──────────────────────────┬───────────────────────────┬─────────────────────────────────┤
+│ 1. Executive Dashboard   │ 2. Menu Cycle Planner     │ 3. Residents & IDDSI Dysphagia  │
+│ 4. Kitchen Tablet Kiosk  │ 5. Split MRP Purchasing   │ 6. Corporate HQ Multi-Facility  │
+│ 7. CMS-2567 Survey Binder│ 8. Vendor Partner Portal  │ 9. Facility Profile & Standards │
+└──────────────────────────┴───────────────────────────┴─────────────────────────────────┘
+```
 
-In healthcare dining, culinary operations are clinical care:
-- Swallowing disorders (dysphagia) require strict adherence to the **IDDSI framework** (Levels 0–7).
-- Food allergies must be cross-referenced against recipe ingredients in real-time.
-- State surveyors require complete documentation under **CMS Federal F-Tags (F800–F814)**.
-- Kitchens must optimize raw food spend across broadline food distributors (**Dennis Food Service, Sysco, US Foods, Gordon Food Service**) using par levels and Lowest-Cost Split MRP.
+### 1. 📊 Executive Culinary & Clinical Dashboard (`/`)
+*Real-time census tracking, food cost per resident day ($/CPD) budget variance gauges, active IDDSI texture distribution, and clinical allergen alerts.*
+
+![Executive Dashboard Overview](docs/screenshots/dashboard_overview.jpg)
+
+### 2. 📱 Kitchen Touch Tablet Kiosk & Hands-Free Voice HACCP (`/kitchen/tablet`)
+*Large touch targets ($\ge 44\text{px}$) designed for cooks wearing wet nitrile gloves during a 45-minute tray rush. Includes Web Speech API hands-free core temperature logging (165°F poultry, 145°F fish) and CMS F807 resident hydration pass tracking.*
+
+![Kitchen Touch Tablet Kiosk](docs/screenshots/kitchen_tablet_kiosk.jpg)
+
+### 3. 🚚 Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
+*Compares live contract pricing line-by-line across Dennis Food Service, Sysco, and US Foods, generating optimal split purchase orders that save \$1.50–\$3.00 per resident day (\$2,500+/mo on a 60-bed building).*
+
+![Split MRP Purchasing Comparator](docs/screenshots/split_mrp_purchasing.jpg)
+
+### 4. 🏢 Corporate Headquarters Multi-Facility Portal (`/enterprise`)
+*Centralized management for senior living operator chains (5–50 buildings). Features 1-click 4-week seasonal cycle menu syndication, portfolio census tracking, and cross-facility $/CPD spend benchmarking.*
+
+![Corporate HQ Multi-Facility Portal](docs/screenshots/corporate_hq_portal.jpg)
 
 ---
 
-## 🧭 System Architecture & Daily Flow
+## 🍽️ What is ShorelineOps?
+
+**ShorelineOps** is an open-source clinical nutrition and dietary operations platform designed for senior living and healthcare dining (Assisted Living, Memory Care, Skilled Nursing Facilities, CCRCs, and Acute Care Hospitals).
+
+In healthcare dining, culinary operations are clinical care:
+- **Dysphagia & Texture Modification**: Swallowing disorders require strict adherence to the **IDDSI framework** (Levels 0–7: Regular, Soft & Bite-Sized, Minced & Moist, Pureed, Liquidised, Thickened Liquids).
+- **Deterministic Allergen Intersection**: Food allergies (Dairy, Gluten, Shellfish, Tree Nuts, Soy, Egg) are cross-referenced against standardized recipe bill-of-materials in real-time with non-overridable hard-blocks.
+- **State Survey Readiness**: Federal regulations require comprehensive documentation under **CMS State Operations Manual Appendix PP (F-Tags F800–F814)**, including the 14-hour dinner-to-breakfast rule (F809).
+- **Distributor Spend Optimization**: Eliminates distributor lock-in by comparing Broadline order guides (**Dennis Food Service, Sysco, US Foods, Gordon Food Service, PFG**) to guarantee lowest case-pack costs.
+
+---
+
+## 🧭 Complete System Architecture
 
 ```
                                   ┌───────────────────────────────┐
@@ -45,7 +79,7 @@ In healthcare dining, culinary operations are clinical care:
 │ 2. MENU & RECIPE PLANNING     │ │ 3. KITCHEN TABLET & TRAY SCAN │ │ 4. MULTI-DISTRIBUTOR MRP      │
 │ • 4-Week Cycle Menu Engine    │ │ • Batch Cook Worksheets       │ │ • Lowest-Cost Split PO Engine │
 │ • USDA Nutritional Solver     │─┼▶ • Digital Tray Card Scanner  │─┼▶ • Dennis & Sysco EDI Sync    │
-│ • Bill of Materials Explosion │ │ • HACCP 165°F Temp Logs       │ │ • 3-Way Invoice Match & Memos │
+│ • Bill of Materials Explosion │ │ • HACCP 165°F Voice Temp Logs │ │ • 3-Way Invoice Match & Memos │
 └───────────────────────────────┘ └───────────────────────────────┘ └───────────────────────────────┘
                                                   │
                                                   ▼
@@ -61,105 +95,108 @@ In healthcare dining, culinary operations are clinical care:
 
 ## 🌟 Core Modules & Capabilities
 
-### 1. 🟢 Clinical Resident & Diet Management (`/residents`)
-- **IDDSI Dysphagia Alignment**: Supports Levels 0–7 (Regular, Soft & Bite-Sized, Minced & Moist, Pureed, Liquidised, Thickened Liquids).
-- **PointClickCare (PCC) EHR 2-Way Sync**: Catches inbound ADT admission/discharge transfers and physician diet updates into a real-time Registered Dietitian Triage Queue.
-- **Deterministic Allergen Intersection**: Hard-blocks meals containing resident allergens with red banner warnings.
-
-### 2. 🔴 Kitchen Tablet Mode & Digital Tray Line (`/kitchen/tablet` & `/kitchen/traycards`)
-- **Large-Touch Cook Worksheets**: Designed for line cooks wearing wet nitrile gloves with $\ge 44\text{px}$ touch targets.
-- **Digital Tray Card Scanner**: Camera OCR barcode scanning verifies resident identity and dysphagia texture before trays leave the hot line.
-- **HACCP Food Safety Logs**: Instant pass/fail recording for 165°F poultry and 145°F fish core temperatures.
-
-### 3. 🟣 Multi-Distributor Split MRP & Purchasing (`/purchasing` & `/distributor`)
-- **Lowest-Cost Split MRP Optimizer**: Compares contract line-item rates across Dennis Food Service, Sysco, and US Foods to guarantee lowest case cost (saving $1.50–$3.00 per resident day).
-- **3-Way Invoice Matching & Credit Memos**: Scans delivery invoices at the loading dock, flags price overcharges, and generates formal vendor credit claims.
-- **Vendor Partner Portal (`/distributor`)**: Sales reps manage contract catalogs and EDI 850/810 connectors without seeing resident PHI.
-
-### 4. 📊 CMS-2567 Federal Survey Ready Binder (`/reporting`)
-- **1-Click Digital Inspection Binder**: Full crosswalk coverage for Federal F-Tags (F800 through F814).
-- **14-Hour Rule Compliance (F809)**: Verifies interval between evening meal and morning breakfast.
-- **Cost Per Resident Day ($/CPD)**: Real-time food cost dashboard benchmarked against target budgets.
-
-### 5. ⚙️ Facility & Operations Settings (`/settings`)
-- **Facility Profile**: Customize facility name, parent organization, NPI, state license, and clinical leadership.
-- **Wings & Dining Locations**: Interactive residential unit and dining room configuration.
-- **Clinical & Dietary Standards**: CPD target budgets, meal schedule times, and temperature units.
-- **SaaS License Manager**: Manage active tier entitlements and license keys.
-
----
-
-## 🖥️ Screen-by-Screen Map
-
-| Module | Route | What You Do Here | Primary Users |
+| Module | Route | Key Capabilities | Target User |
 |---|---|---|---|
-| **Dashboard** | `/` | Daily census, meal service KPI telemetry, safety alerts, and activity feed | All Staff |
-| **Residents & Diets** | `/residents` | Resident roster, diet orders, IDDSI textures, allergies, and EHR triage | RD / Nursing / CDM |
-| **Menu Cycle Planner** | `/menu` | 4-week cycle menus, meal items, recipes, and dietary modifications | Chef / Dietary Mgr |
-| **Batch Production** | `/production` | Daily scaled prep sheets, cooking stations, yields, and temp logs | Line Cooks / Prep |
-| **Recipe Book** | `/recipes` | Standardized batch recipes, ingredient scaling, and USDA nutrition | Cooks / Bakers |
-| **Inventory & Par Walk** | `/inventory` | Stock on hand, par levels, locations, and low stock warnings | Kitchen Mgr / Cooks |
-| **Kitchen Tablet Kiosk** | `/kitchen/tablet` | Glove-friendly touchscreen prep lists and fast par counting | Line Cooks |
-| **Tray Card Generator** | `/kitchen/traycards` | High-contrast thermal meal service tickets and barcode scanning | Dining Aides / Cooks |
-| **Purchasing & Split MRP** | `/purchasing` | Dennis/Sysco order guides, lowest-cost split POs, and invoice matching | Dietary Director |
-| **Reporting & CMS Binder** | `/reporting` | $/CPD cost logs, substitutions, and CMS-2567 federal survey binder | Administrator / CDM |
-| **Vendor Portal** | `/distributor` | Distributor SKU catalog master, EDI connectors, and pricing | Distributor Sales Reps |
-| **Facility Settings** | `/settings` | Facility profile, wings, dining rooms, meal schedule, and licensing | Admin / Executive Dir |
-| **Administration** | `/admin` | Staff scheduling, user accounts, audit log, and HealerBot panel | Admin / HR |
+| **Executive Dashboard** | `/` | Census telemetry, $/CPD cost gauges, IDDSI distribution chart, real-time safety alerts | Executive Dir / CDM |
+| **Residents & Diets** | `/residents` | Therapeutic diets (NAS, NCS, Renal), IDDSI levels, allergies, PointClickCare EHR triage queue | Registered Dietitian |
+| **Menu Cycle Planner** | `/menu` | 4-week cycle menus, Choice A/B alternates, recipe drawer, nutrition totals | Executive Chef |
+| **Batch Production** | `/production` | Scaled prep sheets, cooking stations (Hot Line, Cold Prep, Puree), 165°F HACCP temp logs | Line Cooks |
+| **Standardized Recipes** | `/recipes` | Master recipe book, ingredient scaling, Big 9 allergen detector, USDA nutrient solver | Cooks & Bakers |
+| **Kitchen Tablet Kiosk** | `/kitchen/tablet` | Glove-friendly touch worksheets, voice HACCP logger, CMS F807 hydration pass | Line Cooks & Aides |
+| **Digital Tray Cards** | `/kitchen/traycards` | High-contrast thermal tickets, signed QR tokens, barcode assembly verification | Dining Aides |
+| **Purchasing & Split MRP** | `/purchasing` | Dennis/Sysco order guides, lowest-cost split POs, 3-way invoice match, credit memos | Dietary Director |
+| **CMS Survey Reporting** | `/reporting` | 1-click CMS-2567 digital survey binder (F800–F814), $/CPD cost audits, substitution logs | Administrator / CDM |
+| **Corporate HQ Portal** | `/enterprise` | Multi-facility chain oversight, central 4-week menu syndicator, cross-facility $/CPD benchmarks | Corporate VP of Dining |
+| **Vendor Partner Portal** | `/distributor` | Distributor catalog master, EDI 850/810 connectors, SKU pricing editor | Vendor Sales Reps |
+| **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times | System Admin |
 
 ---
 
 ## 🔑 Open Core Licensing Model
 
-| Tier | Price | Model | Features Included |
-|---|---|---|---|
-| **Community Core** | $0 / Free | Open Source (AGPL/MIT) | Unlimited resident census, cycle menus, recipe scaler, tray cards, local SQLite/Postgres |
-| **Pro Cloud SaaS** | $199 / mo | Commercial SaaS | Everything in Core + Multi-Distributor Lowest-Cost Split MRP, USDA Nutrition Solver, Cloud Sync |
-| **Enterprise Care** | $399 / mo | Commercial SaaS | Everything in Pro + PointClickCare Live Sync, CMS-2567 Survey Binder, 3-Way Invoice Match |
-| **Demo Sandbox** | Free Preview | Live Evaluation | Pre-seeded multi-facility evaluation sandbox live on Render |
+ShorelineOps uses an **Open Core** architecture:
 
-See [`LICENSING.md`](LICENSING.md) for complete entitlement architecture.
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🆓 COMMUNITY CORE (100% Free & Open Source)                                             │
+│ • Unlimited Resident Census & Diet Orders      • 4-Week Cycle Menu Planner             │
+│ • Standardized Recipe Yield Scaler             • Kitchen Batch Worksheets & Tray Cards │
+│ • Local Timecard Punch Kiosk                   • Offline SQLite & PostgreSQL Support   │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ 💼 PRO CLOUD SAAS ($199 / month / facility)                                            │
+│ • Multi-Distributor Lowest-Cost Split MRP      • USDA FoodData Central 8,000+ Database │
+│ • Cloud Multi-Device Real-Time Sync            • Automated Distributor Order Export    │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ 🏢 ENTERPRISE CARE NETWORK ($399 / month / facility)                                   │
+│ • PointClickCare Live 2-Way EHR Sync           • CMS-2567 Digital Survey Ready Binder  │
+│ • 3-Way Delivery Invoice OCR & Credit Memos    • Corporate HQ Multi-Facility Portal    │
+│ • Dedicated BAA & 24/7 Priority Support        • Master Cycle Menu Syndicator          │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 🤖 Autonomous Operations Consultant & Daily Audit
+## 🤖 Autonomous Dietary Operations Consultant
 
-ShorelineOps includes an autonomous **Dietary Operations Consultant Agent** (`dietary_operations_consultant`) and daily review engine:
-- **Run Audit on Demand**:
+ShorelineOps includes an autonomous **Dietary Operations Consultant Agent** (`dietary_operations_consultant`):
+- **Continuous Auditing**: Evaluates clinical IDDSI constraints, kitchen ergonomics, supply chain price variances, and CMS survey compliance.
+- **Run Audit On-Demand**:
   ```bash
   npm run audit:operations
   ```
-- **Daily Log**: Inspect [`docs/DAILY_OPERATIONS_AUDIT.md`](docs/DAILY_OPERATIONS_AUDIT.md) for clinical safety stress-tests and roadmap recommendations.
+- **Master Audit Log**: Inspect [`docs/DAILY_OPERATIONS_AUDIT.md`](docs/DAILY_OPERATIONS_AUDIT.md) for live focus questions and operational stress-test results.
 
 ---
 
 ## 🛠️ Quickstart & Local Development
 
-### 1. Clone & Install Dependencies
+### 1. Prerequisites
+- Node.js $\ge 20.0.0$
+- npm $\ge 10.0.0$
+
+### 2. Clone & Install
 ```bash
 git clone https://github.com/ShadowWalkerNC/ShorelineOps.git
 cd ShorelineOps
 npm install
 ```
 
-### 2. Run the Full Stack
+### 3. Start Development Servers
 ```bash
+# Starts both the React frontend (port 5173) and Express API (port 3001)
 npm run dev:all
 ```
-- App: `http://localhost:5173`
-- API Server: `http://localhost:3001`
-- Marketing Site: `http://localhost:4321` (via `cd marketing && npm run dev`)
+- Web Application: `http://localhost:5173`
+- Backend API Server: `http://localhost:3001`
+- Astro Marketing Site: `http://localhost:4321` (via `cd marketing && npm run dev`)
 
-### 3. Run Test Suite
+### 4. Run Automated Test Suite
 ```bash
 npm test
 ```
-All 89 unit, integration, and clinical safety test suites pass with 0 failures.
+All **89 system integration and clinical safety test suites** pass with 100% success rate.
+
+---
+
+## 🚢 Render 1-Click Cloud Deployment
+
+Deploy the complete multi-service stack to Render using the official [`render.yaml`](render.yaml) Blueprint:
+
+1. Sign in to your [Render Dashboard](https://dashboard.render.com).
+2. Click **New +** $\to$ **Blueprint**.
+3. Connect your repository: `ShadowWalkerNC/ShorelineOps`.
+4. Render provisions and builds all 4 services automatically:
+   - `shoreline-api` (Node/Express API on port 3001)
+   - `shoreline-demo` (React 18 + Vite SPA on `https://shoreline-demo.onrender.com`)
+   - `shoreline-marketing` (Astro static portal on `https://shoreline-marketing.onrender.com`)
+   - `shoreline-db` (Managed PostgreSQL instance)
+
+See [`docs/RenderDeployment.md`](docs/RenderDeployment.md) for complete deployment instructions and troubleshooting.
 
 ---
 
 ## 📄 Compliance & Legal
-- [Master Services Agreement (MSA)](COMMERCIAL_AGREEMENT.md)
+- [Master Commercial Services Agreement (MSA)](COMMERCIAL_AGREEMENT.md)
 - [Business Associate Agreement (BAA)](BAA.md)
 - [HIPAA Notice of Privacy Practices](HIPAA_NOTICE.md)
 - [Open Core Licensing Guide](LICENSING.md)
