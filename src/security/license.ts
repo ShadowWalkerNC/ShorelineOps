@@ -1,5 +1,5 @@
 /**
- * ShorelineOps — License & Entitlement Engine
+ * ShorelineOps — License & Entitlement Engine (Care OS v5.0)
  * 
  * Manages Open Core Community vs. Pro Cloud vs. Enterprise SaaS tiers.
  * 
@@ -7,7 +7,7 @@
  * 1. 'community': Free Open-Source self-hosted edition (Census, Menus, Recipes, Tray Cards, SQLite/Postgres).
  * 2. 'pro': $199/mo SaaS (USDA Nutrition Engine, Multi-Distributor Price Comparison, Multi-User Cloud Sync, Auto Backups).
  * 3. 'enterprise': $399/mo SaaS (Live PointClickCare EHR API Sync, CMS-2567 Federal Survey Binder, 3-Way Invoice Match & Credit Memos, Multi-Facility Consolidated MRP).
- * 4. 'demo': Interactive live demo sandbox on Render/Vercel (pre-loaded evaluation mode).
+ * 4. 'demo': Interactive live demo sandbox on Render/Vercel/localhost (100% unlocked evaluation mode).
  */
 
 export type LicenseTier = 'community' | 'pro' | 'enterprise' | 'demo'
@@ -32,6 +32,7 @@ export interface LicenseInfo {
 }
 
 const LICENSE_STORAGE_KEY = 'shoreline_saas_license_key'
+const DEMO_MODE_STORAGE_KEY = 'shoreline_demo_mode'
 
 const TIER_FEATURES: Record<LicenseTier, LicenseInfo['features']> = {
   community: {
@@ -83,12 +84,27 @@ const TIER_FEATURES: Record<LicenseTier, LicenseInfo['features']> = {
 export class LicenseManager {
   /** Check whether current instance is in demo mode */
   static isDemo(): boolean {
+    // If explicitly disabled by user in settings
+    if (localStorage.getItem(DEMO_MODE_STORAGE_KEY) === 'false') {
+      return false
+    }
+
+    // Default to true for demo preview sites, localhost, or if demo mode explicitly set
     return (
       import.meta.env.VITE_DEMO_MODE === 'true' ||
       window.location.hostname.includes('render.com') ||
       window.location.hostname.includes('vercel.app') ||
-      window.location.hostname.includes('demo')
+      window.location.hostname.includes('demo') ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      localStorage.getItem(DEMO_MODE_STORAGE_KEY) === 'true' ||
+      !this.getLicenseKey() // Default to unlocked demo evaluation if no key is entered
     )
+  }
+
+  /** Toggle demo evaluation mode */
+  static setDemoMode(enabled: boolean): void {
+    localStorage.setItem(DEMO_MODE_STORAGE_KEY, enabled ? 'true' : 'false')
   }
 
   /** Get active license key from localStorage or env */
@@ -111,37 +127,15 @@ export class LicenseManager {
 
   /** Parse and validate license */
   static getLicense(): LicenseInfo {
-    if (this.isDemo()) {
-      return {
-        tier: 'demo',
-        facilityName: 'Shoreline Demo Facility (Live Preview)',
-        issuedTo: 'Evaluation Visitor',
-        expiresAt: null,
-        isValid: true,
-        features: TIER_FEATURES.demo,
-      }
-    }
-
     const key = this.getLicenseKey()
-    if (!key) {
-      return {
-        tier: 'community',
-        facilityName: 'Self-Hosted Community Instance',
-        issuedTo: 'Open Source Community',
-        expiresAt: null,
-        isValid: true,
-        features: TIER_FEATURES.community,
-      }
-    }
 
-    // Pro / Enterprise license key format: SH_PRO_<base64> or SH_ENT_<base64>
-    try {
-      if (key.startsWith('SH_ENT_') || key.startsWith('SH_PRO_')) {
+    // If an explicit Enterprise or Pro key is provided, parse it
+    if (key.startsWith('SH_ENT_') || key.startsWith('SH_PRO_')) {
+      try {
         const isEnt = key.startsWith('SH_ENT_')
         const payloadStr = atob(key.replace(/^SH_(ENT|PRO)_/, ''))
         const payload = JSON.parse(payloadStr)
         const tier: LicenseTier = isEnt ? 'enterprise' : 'pro'
-
         const isExpired = payload.exp && new Date(payload.exp * 1000) < new Date()
 
         return {
@@ -152,9 +146,21 @@ export class LicenseManager {
           isValid: !isExpired,
           features: isExpired ? TIER_FEATURES.community : TIER_FEATURES[tier],
         }
+      } catch {
+        // Fall through
       }
-    } catch {
-      // Invalid format fallback to community
+    }
+
+    // If in demo mode (default on localhost/render/vercel)
+    if (this.isDemo()) {
+      return {
+        tier: 'demo',
+        facilityName: 'Shoreline Care OS (Enterprise Sandbox Demo)',
+        issuedTo: 'Evaluation Visitor',
+        expiresAt: null,
+        isValid: true,
+        features: TIER_FEATURES.demo,
+      }
     }
 
     return {

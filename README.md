@@ -33,19 +33,29 @@
 ### 1. 📊 Executive Culinary & Clinical Dashboard (`/`)
 *Real-time census tracking, food cost per resident day ($/CPD) budget variance gauges, active IDDSI texture distribution, and clinical allergen alerts.*
 
-![Executive Dashboard Overview](docs/screenshots/dashboard_overview.jpg)
+![Executive Dashboard Overview](docs/screenshots/dashboard_overview.png)
 
-### 2. 📱 Kitchen Touch Tablet Kiosk & Hands-Free Voice HACCP (`/kitchen/tablet`)
+### 2. 📅 4-Week Seasonal Cycle Menu Planner (`/menu`)
+*4-week institutional cycle menus with standardized recipes, IDDSI dysphagia texture options, and real-time allergen collision warnings.*
+
+![Menu Cycle Planner](docs/screenshots/menu_cycle_planner.png)
+
+### 3. 👥 Clinical Residents Roster & IDDSI Dysphagia Orders (`/residents`)
+*Therapeutic diet orders (NAS, NCS, Renal), IDDSI Level 4 Pureed badges, allergen warnings, table seating, and PointClickCare EHR triage queue.*
+
+![Residents & Diets](docs/screenshots/residents_iddsi_triage.png)
+
+### 4. 📱 Kitchen Touch Tablet Kiosk & Hands-Free Voice HACCP (`/kitchen/tablet`)
 *Large touch targets ($\ge 44\text{px}$) designed for cooks wearing wet nitrile gloves during a 45-minute tray rush. Includes Web Speech API hands-free core temperature logging (165°F poultry, 145°F fish) and CMS F807 resident hydration pass tracking.*
 
-![Kitchen Touch Tablet Kiosk](docs/screenshots/kitchen_tablet_kiosk.jpg)
+![Kitchen Touch Tablet Kiosk](docs/screenshots/kitchen_tablet_kiosk.png)
 
-### 3. 🚚 Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
+### 5. 🚚 Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
 *Compares live contract pricing line-by-line across Dennis Food Service, Sysco, and US Foods, generating optimal split purchase orders that save \$1.50–\$3.00 per resident day (\$2,500+/mo on a 60-bed building).*
 
 ![Split MRP Purchasing Comparator](docs/screenshots/split_mrp_purchasing.jpg)
 
-### 4. 🏢 Corporate Headquarters Multi-Facility Portal (`/enterprise`)
+### 6. 🏢 Corporate Headquarters Multi-Facility Portal (`/enterprise`)
 *Centralized management for senior living operator chains (5–50 buildings). Features 1-click 4-week seasonal cycle menu syndication, portfolio census tracking, and cross-facility $/CPD spend benchmarking.*
 
 ![Corporate HQ Multi-Facility Portal](docs/screenshots/corporate_hq_portal.jpg)

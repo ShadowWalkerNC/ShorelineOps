@@ -144,12 +144,16 @@ function NavItem({ to, color, label, icon: Icon, end: endProp, onClick }: { to: 
   )
 }
 
+import { LicenseManager } from '@/security/license'
+import { Sparkles } from 'lucide-react'
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout, atLeast } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
   const now       = useClock()
   const [navOpen, setNavOpen] = useState(false)
+  const license   = LicenseManager.getLicense()
 
   const isAdmin = user?.role === 'admin'
 
@@ -179,7 +183,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     user?.role === 'staff'       ? 'Staff' : 'Read-Only'
 
   return (
-    <div className="flex h-[100dvh] w-full bg-slate-50/50 dark:bg-slate-950 overflow-hidden font-sans text-slate-900 dark:text-slate-100">
+    <div className="flex h-[100dvh] w-full bg-[#f5f5f7] dark:bg-[#000000] overflow-hidden font-sans text-slate-900 dark:text-slate-100">
       
       {navOpen && (
         <div
@@ -336,6 +340,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <span>🌐 Marketing & Docs</span>
             </a>
+
+            {/* License Tier Pill */}
+            <div
+              onClick={() => navigate('/settings')}
+              className="cursor-pointer flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors"
+              title="Click to view License & Settings"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <span>{license.tier === 'demo' ? 'Enterprise Demo Unlocked' : `${license.tier.toUpperCase()} Tier`}</span>
+            </div>
 
             {/* Live Clock Pill */}
             <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full bg-slate-100/70 dark:bg-slate-800/70">

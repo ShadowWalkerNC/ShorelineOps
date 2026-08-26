@@ -149,13 +149,25 @@ export default function FeatureGate({
               </AppleButton>
             </form>
 
+            <button
+              type="button"
+              onClick={() => {
+                LicenseManager.setDemoMode(true)
+                window.location.reload()
+              }}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs hover:opacity-90 transition-opacity"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Enable Demo Sandbox</span>
+            </button>
+
             <a
               href="https://shoreline-marketing.onrender.com/pricing"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors"
             >
-              <span>Subscribe & Get License</span>
+              <span>Subscribe & Get Key</span>
               <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
             </a>
           </div>
