@@ -2,7 +2,7 @@
 
 **Effective Date:** ________________________  
 **Client / Facility Name:** ____________________________________________ ("Customer")  
-**Provider:** Shoreline Operations Platform / iMPAC Health Solutions ("Provider")  
+**Provider:** Shoreline Operations Platform ("Provider")  
 
 This Master Services Agreement ("Agreement") governs Customer's access to and use of the ShorelineOps dietary management and operations software.
 

@@ -4,24 +4,24 @@ import BaseLayout from '../layouts/BaseLayout.astro'
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onrender.com/menu'
 ---
 
-<BaseLayout title="Healthcare Dietary Operations Platform — Built for Real Kitchens">
+<BaseLayout title="Easy Healthcare Dietary & Kitchen Software">
   
   <!-- HERO SECTION -->
   <section class="relative pt-14 sm:pt-20 pb-16 sm:pb-24 overflow-hidden">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
       
-      <!-- Apple HIG Pill Badge -->
+      <!-- Pill Badge -->
       <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200/70 dark:border-blue-800/60 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-6 shadow-2xs font-mono">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span>Free Open-Source Core · Managed Enterprise SaaS</span>
+        <span>Free Core Software · Optional Cloud Upgrades</span>
       </div>
 
-      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight max-w-4xl mx-auto leading-tight mb-5">
-        Dietary Operations for Healthcare Kitchens That <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-teal-500 to-emerald-600 dark:from-blue-400 dark:via-teal-300 dark:to-emerald-400">Actually Cook Real Food.</span>
+      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight max-w-4xl mx-auto leading-tight mb-5 font-sans">
+        Dietary Software Built for Kitchens That <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-teal-500 to-emerald-600 dark:from-blue-400 dark:via-teal-300 dark:to-emerald-400">Actually Cook Real Food.</span>
       </h1>
 
       <p class="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 font-normal leading-relaxed">
-        Connect resident dysphagia textures, meal service tray cards, 4-week cycle menus, and <strong>Multi-Distributor split purchasing (Dennis & Sysco)</strong> in one touch-friendly system.
+        We help assisted living and nursing homes plan menus, prevent food allergy mistakes, and compare food supplier prices (Dennis & Sysco) to save thousands on food costs every month.
       </p>
 
       <!-- Primary Action Buttons -->
@@ -32,177 +32,201 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
           rel="noreferrer"
           class="w-full sm:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
         >
-          <span>🚀</span> Launch Live Interactive App
+          <span>🚀</span> Try the Live Demo (No Login Needed)
         </a>
         <a
           href="/pricing"
           class="w-full sm:w-auto px-6 py-3.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 font-semibold rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center shadow-2xs"
         >
-          Free Core vs Cloud SaaS
+          View Pricing & Plans
         </a>
       </div>
 
       <!-- Real App Interface Showcase -->
       <div class="max-w-5xl mx-auto mb-16 rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-elevated bg-white/60 dark:bg-slate-900/60 p-2 sm:p-3">
-        <div class="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800/60 text-xs text-slate-400 font-mono">
-          <div class="flex gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-rose-400/80"></span>
-            <span class="w-2.5 h-2.5 rounded-full bg-amber-400/80"></span>
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/80"></span>
+        <div class="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-800/60 text-xs text-slate-400 font-mono">
+          <div class="flex items-center gap-2">
+            <div class="flex gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-400/80"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400/80"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/80"></span>
+            </div>
+            <span class="ml-2 truncate text-slate-500 dark:text-slate-400">Shoreline Executive Dashboard</span>
           </div>
-          <span class="ml-2 truncate text-slate-500 dark:text-slate-400">ShorelineOps — Executive Culinary & Clinical Dashboard</span>
+          <span class="text-[11px] text-emerald-600 font-bold">● Live Demo Facility</span>
         </div>
         <img
           src="/screenshots/dashboard_overview.png"
-          alt="ShorelineOps Real Application Executive Dashboard"
+          alt="Shoreline Care OS Executive Dashboard"
           class="w-full h-auto rounded-2xl object-cover"
         />
       </div>
 
-      <!-- Key Value Pillars -->
+      <!-- 4 Quick Benefits -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5 max-w-5xl mx-auto text-left">
         <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <div class="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 font-sans">$1.50–$3.00</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Saved per resident-day via Split MRP</div>
+          <div class="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 font-sans">Save $2,500+/mo</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Automatic lowest-price food ordering</div>
         </div>
         <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
           <div class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-sans">100% Free Core</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Open-source software for care facilities</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Free software for independent homes</div>
         </div>
         <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <div class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 font-sans">IDDSI 2.0 Safety</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Strict Pureed & Minced hard-blocks</div>
+          <div class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 font-sans">Zero Diet Errors</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Prevents pureed & allergy mix-ups</div>
         </div>
         <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <div class="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 font-sans">PointClickCare Sync</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Live EHR dietary orders and RD triage</div>
+          <div class="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 font-sans">1-Click Inspections</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Print complete state survey logs instantly</div>
         </div>
       </div>
 
     </div>
   </section>
 
-  <!-- MARKET COMPARISON -->
+  <!-- 4 SIMPLE PROBLEMS WE SOLVE -->
   <section class="py-16 sm:py-20 border-y border-slate-200/80 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-        <div class="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-2 font-mono">Market Comparison</div>
-        <h2 class="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3">Why Facilities Are Replacing Legacy Monopolies</h2>
+        <div class="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-2 font-mono">Why Facilities Love Shoreline</div>
+        <h2 class="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3 font-sans">Simple Tools for Everyday Kitchen Life</h2>
         <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
-          Legacy software vendors charge $1,200+/month per facility, lock kitchens into a single broadline distributor, and take months to implement. ShorelineOps gives you free single-facility tools with modern, chef-tested ergonomics.
+          No complicated corporate software. Just clear, reliable tools that make your kitchen run smoothly.
         </p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        <!-- Legacy Incumbents -->
+        <!-- Old Way -->
         <div class="p-6 sm:p-8 rounded-3xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 space-y-4 shadow-xs">
-          <div class="text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider font-mono">Legacy Incumbents (MealSuite, CBORD, Paper Binders)</div>
-          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Expensive, Proprietary & Difficult to Train</h3>
+          <div class="text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider font-mono">The Old Way (Clipboards & Overpriced Software)</div>
+          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Expensive, Stressful & Prone to Mistakes</h3>
           <ul class="space-y-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> $800 to $1,500 monthly fees per building</li>
-            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Locked to single distributor pricing (no split MRP price comparison)</li>
-            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Clunky interfaces that line cooks refuse to use during rush</li>
-            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Unannounced distributor price increases slip through unnoticed</li>
-            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Scrambling to assemble paper binders during annual state health survey</li>
+            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Paying $800 to $1,500 every single month for clunky software</li>
+            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Locked into one food supplier with no price comparisons</li>
+            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Handwriting on whiteboards that cooks struggle to read during dinner rush</li>
+            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Accidental food mistakes when a resident gets switched to pureed</li>
+            <li class="flex items-start gap-2.5"><span class="text-rose-500 font-bold">✕</span> Stressing out trying to find old temperature logs during state inspections</li>
           </ul>
         </div>
 
-        <!-- ShorelineOps -->
+        <!-- ShorelineOps Way -->
         <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-blue-500/80 space-y-4 relative overflow-hidden shadow-apple-card">
-          <div class="text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider font-mono">The ShorelineOps Advantage</div>
-          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Free Software, Chef-Built & Automated</h3>
+          <div class="text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider font-mono">The Shoreline Way</div>
+          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Easy, Safe & Built by an Healthcare Chef</h3>
           <ul class="space-y-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
-            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Free Open-Source Core</strong> + $199/mo optional cloud SaaS</li>
-            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Multi-Distributor Split MRP</strong> (Dennis Food Service vs Sysco vs US Foods)</li>
-            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Touch Kitchen Tablet Kiosk & Voice HACCP</strong> with large gloved touch targets</li>
-            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>1-Click CMS-2567 Federal Survey Binder</strong> (F800–F814 compliant)</li>
-            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Live PointClickCare EHR Sync</strong> with Registered Dietitian triage queue</li>
+            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>100% Free Core Software</strong> + $199/mo optional cloud backups</li>
+            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Automatic Price Comparison:</strong> We compare Dennis vs Sysco so you get the best deal on every box</li>
+            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Large Touch Tablet:</strong> Big buttons cooks can easily tap with gloves on</li>
+            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Diet Safety Locks:</strong> Big red alerts prevent serving the wrong food to pureed or allergy residents</li>
+            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>1-Click Inspection Binder:</strong> All food safety and meal records ready in seconds</li>
           </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- REAL APPLICATION TOUR (Screenshots & Modules) -->
+  <!-- REAL APPLICATION FEATURES (Screenshots & Plain Explanations) -->
   <section id="features" class="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center max-w-3xl mx-auto mb-14">
-      <div class="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-2 font-mono">Real Application Tour</div>
-      <h2 class="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mb-3">
-        Engineered for Everyday Healthcare Dining
+      <div class="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-2 font-mono">How It Works</div>
+      <h2 class="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mb-3 font-sans">
+        Everything Your Dietary Kitchen Needs
       </h2>
       <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
-        Every screen designed for line cooks, registered dietitians, and dietary managers.
+        See the actual screens used by dietary managers, chefs, and line cooks every day.
       </p>
     </div>
 
-    <!-- Feature Showcase 1: 4-Week Cycle Menu Planner -->
+    <!-- 1. Menu Cycle Planner -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-16 p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-card">
       <div class="space-y-4">
         <div class="inline-block px-3 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 text-xs font-bold font-mono rounded-full border border-amber-200/60">
-          CYCLE MENUS & RECIPES
+          1. MENU PLANNING
         </div>
         <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">4-Week Seasonal Cycle Menu Planner</h3>
         <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Plan 4-week seasonal institutional cycles with breakfast, lunch, and dinner choice alternates. Links directly to standardized recipes, automatic Big 9 allergen detection, and IDDSI texture modifier options.
+          Set up 4 weeks of breakfast, lunch, and dinner with daily alternate choices. When you change a recipe, portion sizes and food orders adjust automatically.
         </p>
         <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
-          <li class="flex items-center gap-2"><span class="text-blue-600 font-bold">✓</span> Choice A / Choice B daily alternates with automatic scaling</li>
-          <li class="flex items-center gap-2"><span class="text-blue-600 font-bold">✓</span> Slide-out Master Recipe Drawer with USDA nutrient analysis</li>
-          <li class="flex items-center gap-2"><span class="text-blue-600 font-bold">✓</span> 1-click weekly production sheet printout</li>
+          <li class="flex items-center gap-2"><span class="text-blue-600 font-bold">✓</span> Choice A / Choice B daily options</li>
+          <li class="flex items-center gap-2"><span class="text-blue-600 font-bold">✓</span> Connected recipe book with automatic allergy alerts</li>
+          <li class="flex items-center gap-2"><span class="text-blue-600 font-bold">✓</span> 1-click weekly cook sheet printouts</li>
         </ul>
       </div>
       <div class="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-        <img src="/screenshots/menu_cycle_planner.png" alt="4-Week Cycle Menu Planner" class="w-full h-auto object-cover" />
+        <img src="/screenshots/menu_cycle_planner.png" alt="Shoreline 4-Week Menu Planner" class="w-full h-auto object-cover" />
       </div>
     </div>
 
-    <!-- Feature Showcase 2: Clinical Residents Roster & IDDSI Diets -->
+    <!-- 2. Clinical Residents Roster -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-16 p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-card">
       <div class="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle order-2 lg:order-1">
-        <img src="/screenshots/residents_iddsi_triage.png" alt="Clinical Residents Roster" class="w-full h-auto object-cover" />
+        <img src="/screenshots/residents_iddsi_triage.png" alt="Shoreline Residents and Diet Orders" class="w-full h-auto object-cover" />
       </div>
       <div class="space-y-4 order-1 lg:order-2">
         <div class="inline-block px-3 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 text-xs font-bold font-mono rounded-full border border-blue-200/60">
-          CLINICAL NUTRITION
+          2. RESIDENTS & DIETS
         </div>
-        <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Resident Roster & IDDSI Dysphagia Orders</h3>
+        <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Resident Diets & Texture Orders</h3>
         <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Maintain accurate therapeutic diet orders (NAS, NCS, Renal, Cardiac) and IDDSI texture levels (Regular Level 7, Soft & Bite-Sized Level 6, Minced & Moist Level 5, Pureed Level 4).
+          Keep every resident's diet up to date. Track low-salt, diabetic, renal diets, pureed and minced textures, food allergies, and dining room seating.
         </p>
         <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
-          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> PointClickCare EHR live sync with Registered Dietitian triage queue</li>
-          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Strict NPO hard-blocks and red allergy warning badges</li>
-          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Table seating assignments across multiple dining wings</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Pureed, Minced, and Soft texture badges</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Strict NPO and allergy stop-warnings</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Connected to PointClickCare EHR for automatic updates</li>
         </ul>
       </div>
     </div>
 
-    <!-- Feature Showcase 3: Kitchen Touch Tablet Kiosk & Voice HACCP -->
+    <!-- 3. Kitchen Tablet Kiosk -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-16 p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-card">
       <div class="space-y-4">
         <div class="inline-block px-3 py-1 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 text-xs font-bold font-mono rounded-full border border-rose-200/60">
-          KITCHEN ERGONOMICS
+          3. KITCHEN TABLET
         </div>
-        <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Kitchen Touch Tablet & Hands-Free Voice HACCP</h3>
+        <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Touch Kitchen Tablet & Voice Temperature Logger</h3>
         <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Large touch targets (44px+) designed for cooks wearing wet nitrile gloves during a 45-minute tray rush. Includes Web Speech API hands-free core temperature logging (165°F poultry, 145°F fish) and CMS F807 resident hydration pass tracking.
+          Put a tablet on the kitchen wall. Cooks see exactly how many portions of roast turkey and mashed potatoes to prep, and can log food temperatures hands-free using their voice.
         </p>
         <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
-          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Hands-free voice speech-to-temp logging</li>
-          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> High-contrast cook worksheets & pan staging guides</li>
-          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Rapid par stepper counting (+ / -) for line prep</li>
+          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Big buttons designed for cooks wearing wet gloves</li>
+          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Hands-free voice temperature logging (165°F core temp)</li>
+          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Step-by-step meal tray assembly and resident hydration tracking</li>
         </ul>
       </div>
       <div class="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-        <img src="/screenshots/kitchen_tablet_kiosk.png" alt="Kitchen Touch Tablet Kiosk" class="w-full h-auto object-cover" />
+        <img src="/screenshots/kitchen_tablet_kiosk.png" alt="Shoreline Kitchen Touch Tablet" class="w-full h-auto object-cover" />
+      </div>
+    </div>
+
+    <!-- 4. Corporate HQ Portal -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-16 p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-card">
+      <div class="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle order-2 lg:order-1">
+        <img src="/screenshots/corporate_hq_portal.png" alt="Corporate Headquarters Multi-Facility Portal" class="w-full h-auto object-cover" />
+      </div>
+      <div class="space-y-4 order-1 lg:order-2">
+        <div class="inline-block px-3 py-1 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 text-xs font-bold font-mono rounded-full border border-purple-200/60">
+          4. MULTI-FACILITY CHAINS
+        </div>
+        <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Corporate Multi-Facility Management</h3>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          Manage 5 to 50 buildings in one screen. Push master cycle menus to all buildings in 1 click, track resident census across the company, and compare food costs per resident.
+        </p>
+        <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+          <li class="flex items-center gap-2"><span class="text-purple-600 font-bold">✓</span> 1-click cycle menu sharing across all care homes</li>
+          <li class="flex items-center gap-2"><span class="text-purple-600 font-bold">✓</span> Track total company census and beds</li>
+          <li class="flex items-center gap-2"><span class="text-purple-600 font-bold">✓</span> Benchmark daily food spend across all facilities</li>
+        </ul>
       </div>
     </div>
 
     <!-- Live Sandbox CTA -->
     <div class="p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center max-w-4xl mx-auto shadow-apple-card">
-      <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Experience the Live Operational Sandbox</h3>
+      <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Try the Full App for Free</h3>
       <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-lg mx-auto mb-6">
-        Test our pre-seeded evaluation facility with 12 residents, IDDSI pureed modifications, Dennis order guides, and digital timecards.
+        Test our live demo facility right now in your browser. No signup, no credit card required.
       </p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
         <a
@@ -211,13 +235,13 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
           rel="noreferrer"
           class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30"
         >
-          Launch Interactive Sandbox &rarr;
+          Open Live Demo App &rarr;
         </a>
         <a
           href="/pricing"
           class="px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs sm:text-sm transition-all"
         >
-          Free Core vs Cloud SaaS Tiers
+          View Plans & Pricing
         </a>
       </div>
     </div>

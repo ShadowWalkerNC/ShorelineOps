@@ -249,16 +249,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex w-64 h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-r border-slate-200/80 dark:border-slate-800/80 flex-col shrink-0 z-30">
         {/* Brand Header */}
-        <div className="p-4 border-b border-slate-200/70 dark:border-slate-800/70 flex items-center gap-3">
-          <img src="/icon-192.png" alt="Shoreline" className="w-8 h-8 rounded-xl object-contain shadow-xs" />
-          <div className="min-w-0">
-            <div className="font-bold text-slate-900 dark:text-white text-base tracking-tight leading-tight font-sans">
-              ShorelineOps
-            </div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 font-mono">
-              Care OS v5.0
-            </div>
-          </div>
+        <div className="p-4 border-b border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between">
+          <img src="/logo.png" alt="Shoreline Care OS" className="h-8 w-auto object-contain" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/60 font-mono">
+            v5.0
+          </span>
         </div>
 
         {/* Navigation List */}
