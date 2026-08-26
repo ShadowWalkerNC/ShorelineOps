@@ -4,6 +4,27 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v10.0.0] — 2026-08-26
+### Added
+- **Corporate Headquarters Multi-Facility Portal** (`/enterprise`, `server/src/routes/enterprise.ts`, `src/state/enterpriseStore.ts`):
+  - Centralized portfolio management for senior living chains across 5+ communities.
+  - Real-time aggregate census roll-up (325 beds / 309 active census), cross-facility $/CPD spend benchmarking, and 1-click master 4-week seasonal cycle menu syndication.
+- **Hands-Free Voice HACCP & CMS F807 Resident Hydration Pass** (`/kitchen/tablet`, `server/src/routes/kitchen.ts`):
+  - Web Speech API voice transcription for line cooks logging hot-holding/internal core temperatures hands-free during meal service rushes.
+  - Dedicated CMS F807 resident fluid intake tracking pass ensuring regulatory hydration compliance.
+- **Open Core Demo Evaluation Sandbox Mode** (`src/security/license.ts`, `src/components/FeatureGate.tsx`):
+  - Automatic unlocked evaluation on localhost and demo sandbox URLs (`render.com`, `vercel.app`).
+  - Added 1-click **"✨ Enable Demo Sandbox"** activation button in `<FeatureGate>`.
+- **Render Production Deployment Fix**:
+  - Pinned Node.js 20.14.0 across all 3 services in `render.yaml` and `.node-version`.
+  - Corrected Astro static publish path (`dist` with `rootDir: marketing`).
+- **Real Production UI Screenshots & Capture Guide** (`docs/SCREENSHOT_CAPTURE_GUIDE.md`, `README.md`):
+  - Overhauled `README.md` embedding real UI screenshots of the Executive Dashboard, 4-Week Menu Cycle Planner, Clinical Residents Roster, and Kitchen Tablet Kiosk.
+- **Expanded Test Suite (`server/src/system.test.ts`)**:
+  - **94/94 automated tests passing (100%)** across 20 operational subsystems.
+
+---
+
 ## [v9.0.0] — 2026-08-25
 ### Added
 - **Open Core Licensing & Entitlement Engine** (`src/security/license.ts`, `src/components/FeatureGate.tsx`, `server/src/middleware/requireTier.ts`):

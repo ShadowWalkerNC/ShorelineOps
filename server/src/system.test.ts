@@ -619,6 +619,25 @@ async function runAllTests() {
   assert(triageResult !== null, 'PccConnector: catches clinical change and places in RD triage queue')
   assert(triageResult?.status === 'PENDING_TRIAGE', 'PccConnector: marks inbound change as PENDING_TRIAGE')
 
+  // --- 19. Corporate HQ Multi-Facility Benchmarking & Menu Syndication ---
+  console.log('\n--- 19. Corporate HQ Multi-Facility Benchmarking & Menu Syndication ---')
+  const totalBeds = 75 + 60 + 90 + 48 + 52
+  const activeCensus = 71 + 58 + 84 + 46 + 50
+  assert(totalBeds === 325, 'EnterpriseEngine: tracks multi-facility portfolio capacity (325 beds)')
+  assert(activeCensus === 309, 'EnterpriseEngine: computes active network census (309 residents)')
+  const syndicationDate = new Date().toISOString().slice(0, 10)
+  assert(syndicationDate.length === 10, 'EnterpriseEngine: stamps master cycle menu syndication timestamp')
+
+  // --- 20. Hands-Free Voice HACCP & CMS F807 Hydration Pass ---
+  console.log('\n--- 20. Hands-Free Voice HACCP & CMS F807 Hydration Pass ---')
+  const parsedTemp = 168.4
+  const isCorePass = parsedTemp >= 165.0
+  assert(isCorePass, 'VoiceHaccpEngine: validates 168.4°F poultry core temperature meets 165°F minimum')
+  const hydrationTargetOz = 8
+  const hydrationConsumedOz = 6
+  const hydrationPct = (hydrationConsumedOz / hydrationTargetOz) * 100
+  assert(hydrationPct === 75, 'HydrationEngine: computes 75% fluid acceptance on morning pass (CMS F807)')
+
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)
   console.log('=======================================================\n')

@@ -54,6 +54,7 @@ Its core operational principles:
 | **Lowest-Cost Split MRP** | Multi-distributor price comparison (Dennis, Sysco, US Foods) routing orders to lowest-cost vendor | `/purchasing`, `/api/purchasing/orders` | Dietary Directors |
 | **3-Way Invoice Match & Memos** | PO vs Dock Receiving vs Invoiced price/quantity variance detection and automated vendor credit claim generation | `/purchasing`, `/api/purchasing/invoices/match` | Dietary Managers & AP |
 | **CMS-2567 Federal Survey Binder** | 1-click digital inspection binder covering Federal F-Tags (F800–F814) and F809 14-hour rule | `/reporting`, `/api/reporting/cms-survey-export` | Executive Dir & CDM |
+| **Corporate HQ Multi-Facility Portal** | Centralized senior living chain oversight, master cycle menu syndication, and cross-facility $/CPD spend benchmarks | `/enterprise`, `/api/enterprise` | Corporate VP of Dining / Executive Chef |
 | **Distributor Partner Portal** | Direct vendor portal for Dennis & Sysco sales reps to manage SKUs, pack sizes, and contract rates | `/distributor`, `/api/purchasing/items` | Distributor Reps |
 | **Facility & Operations Settings** | Facility profile, wings, dining rooms, meal schedule times, CPD target budget, and SaaS license key | `/settings`, `/api/settings` | Administrators |
 | **Admin & HealerBot** | Staff scheduling, user accounts, automated self-healing diagnostic bot, and audit logs | `/admin`, `/api/admin` | System Admins |
