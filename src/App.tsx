@@ -28,6 +28,7 @@ import PurchasingPage from './features/purchasing/PurchasingPage'
 import ReportingPage from './features/reporting/ReportingPage'
 import DistributorPortalPage from './features/distributor/DistributorPortalPage'
 import SettingsPage from './features/settings/SettingsPage'
+import EnterprisePortalPage from './features/enterprise/EnterprisePortalPage'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -77,6 +78,14 @@ export default function App() {
         <Route path="/reporting"         element={<AuthedLayout><ReportingPage /></AuthedLayout>} />
         <Route path="/distributor"       element={<AuthedLayout><DistributorPortalPage /></AuthedLayout>} />
         <Route path="/settings"          element={<AuthedLayout><SettingsPage /></AuthedLayout>} />
+        <Route
+          path="/enterprise"
+          element={
+            <AuthedLayout>
+              <RoleGate role="manager"><EnterprisePortalPage /></RoleGate>
+            </AuthedLayout>
+          }
+        />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
         <Route

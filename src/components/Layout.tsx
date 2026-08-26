@@ -29,6 +29,7 @@ import {
   Search,
   CheckCircle2,
   Settings as SettingsIcon,
+  Building2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -90,6 +91,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Facility & Settings',
     items: [
       { label: 'Facility Settings', to: '/settings', color: '#0f766e', icon: SettingsIcon },
+      { label: 'Corporate HQ', to: '/enterprise', color: '#af52de', icon: Building2, minRole: 'manager' },
       { label: 'Staff Roster', to: '/staff', color: '#0071e3', icon: UserCheck, minRole: 'manager' },
       { label: 'Timecard Clock', to: '/timecards', color: '#8e8e93', icon: Clock },
     ],

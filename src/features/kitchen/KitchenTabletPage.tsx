@@ -1,5 +1,20 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import TrayAssemblyScanner from './components/TrayAssemblyScanner'
+import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import {
+  Mic,
+  MicOff,
+  Droplets,
+  Thermometer,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+  Volume2,
+  Activity,
+  Plus,
+  Minus,
+  Sparkles,
+} from 'lucide-react'
 
 interface CookWorksheetItem {
   id: string
@@ -31,8 +46,32 @@ interface QuickParItem {
   onHand: number
 }
 
+interface HaccpVoiceLog {
+  id: string
+  timestamp: string
+  item: string
+  temperatureF: number
+  type: 'HOT_HOLD' | 'COOK_CORE' | 'COOLING' | 'WASTE'
+  status: 'PASS' | 'CRITICAL_FAIL' | 'LOGGED'
+  recordedVia: 'voice' | 'manual'
+  loggedBy: string
+  wastePortions?: number
+}
+
+interface HydrationRecord {
+  id: string
+  residentName: string
+  room: string
+  liquidTexture: 'Regular Water' | 'Thickened Nectar' | 'Thickened Honey' | 'Fortified Shake'
+  targetOz: number
+  consumedOz: number
+  acceptancePct: number
+  timeSlot: 'Morning Pass (10 AM)' | 'Afternoon Pass (2 PM)' | 'Evening Pass (7 PM)'
+  status: 'COMPLETED' | 'PENDING' | 'REFUSED'
+}
+
 export default function KitchenTabletPage() {
-  const [activeTab, setActiveTab] = useState<'worksheet' | 'traycards' | 'scanner' | 'quickpar'>('worksheet')
+  const [activeTab, setActiveTab] = useState<'worksheet' | 'traycards' | 'scanner' | 'quickpar' | 'voice_haccp' | 'hydration'>('worksheet')
   const [mealFilter, setMealFilter] = useState<'Breakfast' | 'Lunch' | 'Dinner'>('Lunch')
 
   // Data states
@@ -59,6 +98,24 @@ export default function KitchenTabletPage() {
     { id: '4', sku: 'DNS-1004', name: 'Chicken Breast Boneless Skinless', packSize: '40/4oz', parLevel: 6, onHand: 4 },
   ])
 
+  // Voice HACCP state
+  const [isListening, setIsListening] = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [haccpLogs, setHaccpLogs] = useState<HaccpVoiceLog[]>([
+    { id: 'h-1', timestamp: '11:15 AM', item: 'Roast Turkey Breast', temperatureF: 168.4, type: 'COOK_CORE', status: 'PASS', recordedVia: 'voice', loggedBy: 'Line Cook Dave' },
+    { id: 'h-2', timestamp: '11:22 AM', item: 'Mashed Potatoes & Gravy', temperatureF: 152.0, type: 'HOT_HOLD', status: 'PASS', recordedVia: 'voice', loggedBy: 'Line Cook Dave' },
+    { id: 'h-3', timestamp: '11:28 AM', item: 'Pureed Roast Turkey (Pan 2)', temperatureF: 166.2, type: 'COOK_CORE', status: 'PASS', recordedVia: 'voice', loggedBy: 'Cook Aide Elena' },
+  ])
+
+  // Hydration state
+  const [hydrationRecords, setHydrationRecords] = useState<HydrationRecord[]>([
+    { id: 'hy-1', residentName: 'Arthur Pendelton', room: '112-B', liquidTexture: 'Thickened Nectar', targetOz: 8, consumedOz: 6, acceptancePct: 75, timeSlot: 'Morning Pass (10 AM)', status: 'COMPLETED' },
+    { id: 'hy-2', residentName: 'Eleanor Vance', room: '104-A', liquidTexture: 'Regular Water', targetOz: 8, consumedOz: 8, acceptancePct: 100, timeSlot: 'Morning Pass (10 AM)', status: 'COMPLETED' },
+    { id: 'hy-3', residentName: 'Harold Finch', room: '108-A', liquidTexture: 'Regular Water', targetOz: 8, consumedOz: 4, acceptancePct: 50, timeSlot: 'Morning Pass (10 AM)', status: 'COMPLETED' },
+    { id: 'hy-4', residentName: 'Margaret Holloway', room: '201-A', liquidTexture: 'Thickened Honey', targetOz: 6, consumedOz: 0, acceptancePct: 0, timeSlot: 'Morning Pass (10 AM)', status: 'PENDING' },
+    { id: 'hy-5', residentName: 'Walter Bishop', room: '204-B', liquidTexture: 'Fortified Shake', targetOz: 8, consumedOz: 8, acceptancePct: 100, timeSlot: 'Morning Pass (10 AM)', status: 'COMPLETED' },
+  ])
+
   const toggleWorksheetStatus = (id: string) => {
     setWorksheetItems(prev => prev.map(item => {
       if (item.id !== id) return item
@@ -79,6 +136,95 @@ export default function KitchenTabletPage() {
     }))
   }
 
+  // Voice speech synthesis & recognition handler
+  const handleVoiceCommand = (text: string) => {
+    setTranscript(text)
+    // Parse simulated or spoken string: e.g. "Turkey holding at 168 degrees" or "4 portions beans discarded"
+    const lower = text.toLowerCase()
+    const tempMatch = text.match(/(\d{2,3})/g)
+    const temp = tempMatch ? parseFloat(tempMatch[0]) : 165.0
+
+    if (lower.includes('discard') || lower.includes('waste')) {
+      const newLog: HaccpVoiceLog = {
+        id: `h-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        item: lower.replace(/(discard|waste|\d+ portions?)/g, '').trim() || 'Prepared Food Item',
+        temperatureF: 0,
+        type: 'WASTE',
+        status: 'LOGGED',
+        recordedVia: 'voice',
+        loggedBy: 'Kitchen Voice Tablet',
+        wastePortions: tempMatch ? parseInt(tempMatch[0]) : 4,
+      }
+      setHaccpLogs(prev => [newLog, ...prev])
+    } else {
+      const isPass = temp >= 140.0
+      const newLog: HaccpVoiceLog = {
+        id: `h-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        item: text.replace(/(\d{2,3}|degrees|holding|at|core|temp)/gi, '').trim() || 'Hot Line Entree',
+        temperatureF: temp,
+        type: temp >= 165 ? 'COOK_CORE' : 'HOT_HOLD',
+        status: isPass ? 'PASS' : 'CRITICAL_FAIL',
+        recordedVia: 'voice',
+        loggedBy: 'Kitchen Voice Tablet',
+      }
+      setHaccpLogs(prev => [newLog, ...prev])
+    }
+  }
+
+  const toggleListening = () => {
+    if (isListening) {
+      setIsListening(false)
+      return
+    }
+
+    setIsListening(true)
+    // Attempt browser Web Speech API
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition()
+      recognition.continuous = false
+      recognition.interimResults = false
+      recognition.lang = 'en-US'
+
+      recognition.onresult = (event: any) => {
+        const spoken = event.results[0][0].transcript
+        handleVoiceCommand(spoken)
+        setIsListening(false)
+      }
+
+      recognition.onerror = () => {
+        setIsListening(false)
+      }
+
+      recognition.onend = () => {
+        setIsListening(false)
+      }
+
+      try {
+        recognition.start()
+      } catch (e) {
+        setIsListening(false)
+      }
+    } else {
+      // Fallback voice simulation for dev / offline tablets
+      setTimeout(() => {
+        handleVoiceCommand('Steamed Green Beans holding at 154 degrees')
+        setIsListening(false)
+      }, 1500)
+    }
+  }
+
+  const updateHydration = (id: string, pct: number) => {
+    setHydrationRecords(prev => prev.map(rec => {
+      if (rec.id !== id) return rec
+      const consumed = Math.round((rec.targetOz * pct) / 100)
+      const status = pct === 0 ? 'REFUSED' : 'COMPLETED'
+      return { ...rec, acceptancePct: pct, consumedOz: consumed, status }
+    }))
+  }
+
   const activeTrayIndex = trayCards.findIndex(t => !t.dispatched)
   const currentCard = activeTrayIndex !== -1 ? trayCards[activeTrayIndex] : null
 
@@ -92,7 +238,7 @@ export default function KitchenTabletPage() {
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>Shoreline Dietary Command</div>
-            <div style={{ fontSize: 13, color: '#94A3B8' }}>High-Contrast Touch Optimized Interface</div>
+            <div style={{ fontSize: 13, color: '#94A3B8' }}>High-Contrast Touch Optimized Interface · Voice HACCP Active</div>
           </div>
         </div>
 
@@ -120,22 +266,22 @@ export default function KitchenTabletPage() {
       </div>
 
       {/* Main Navigation Tabs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 20 }}>
         <button
           onClick={() => setActiveTab('worksheet')}
           style={{
-            padding: '16px',
+            padding: '14px',
             borderRadius: 14,
             border: activeTab === 'worksheet' ? '3px solid #60A5FA' : '2px solid #334155',
             background: activeTab === 'worksheet' ? '#1E293B' : '#0F172A',
             color: '#fff',
             fontWeight: 800,
-            fontSize: 16,
+            fontSize: 15,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10
+            gap: 8
           }}
         >
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444' }}></span>
@@ -145,18 +291,18 @@ export default function KitchenTabletPage() {
         <button
           onClick={() => setActiveTab('traycards')}
           style={{
-            padding: '16px',
+            padding: '14px',
             borderRadius: 14,
             border: activeTab === 'traycards' ? '3px solid #60A5FA' : '2px solid #334155',
             background: activeTab === 'traycards' ? '#1E293B' : '#0F172A',
             color: '#fff',
             fontWeight: 800,
-            fontSize: 16,
+            fontSize: 15,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10
+            gap: 8
           }}
         >
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#3B82F6' }}></span>
@@ -166,18 +312,18 @@ export default function KitchenTabletPage() {
         <button
           onClick={() => setActiveTab('scanner')}
           style={{
-            padding: '16px',
+            padding: '14px',
             borderRadius: 14,
             border: activeTab === 'scanner' ? '3px solid #60A5FA' : '2px solid #334155',
             background: activeTab === 'scanner' ? '#1E293B' : '#0F172A',
             color: '#fff',
             fontWeight: 800,
-            fontSize: 16,
+            fontSize: 15,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10
+            gap: 8
           }}
         >
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F59E0B' }}></span>
@@ -185,20 +331,62 @@ export default function KitchenTabletPage() {
         </button>
 
         <button
+          onClick={() => setActiveTab('voice_haccp')}
+          style={{
+            padding: '14px',
+            borderRadius: 14,
+            border: activeTab === 'voice_haccp' ? '3px solid #60A5FA' : '2px solid #334155',
+            background: activeTab === 'voice_haccp' ? '#1E293B' : '#0F172A',
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: 15,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8
+          }}
+        >
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#8B5CF6' }}></span>
+          🎙️ Voice HACCP & Temp
+        </button>
+
+        <button
+          onClick={() => setActiveTab('hydration')}
+          style={{
+            padding: '14px',
+            borderRadius: 14,
+            border: activeTab === 'hydration' ? '3px solid #60A5FA' : '2px solid #334155',
+            background: activeTab === 'hydration' ? '#1E293B' : '#0F172A',
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: 15,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8
+          }}
+        >
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#06B6D4' }}></span>
+          💧 Hydration Pass (F807)
+        </button>
+
+        <button
           onClick={() => setActiveTab('quickpar')}
           style={{
-            padding: '16px',
+            padding: '14px',
             borderRadius: 14,
             border: activeTab === 'quickpar' ? '3px solid #60A5FA' : '2px solid #334155',
             background: activeTab === 'quickpar' ? '#1E293B' : '#0F172A',
             color: '#fff',
             fontWeight: 800,
-            fontSize: 16,
+            fontSize: 15,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10
+            gap: 8
           }}
         >
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10B981' }}></span>
@@ -209,6 +397,140 @@ export default function KitchenTabletPage() {
       {/* Tab: QR Tray Scanner */}
       {activeTab === 'scanner' && (
         <TrayAssemblyScanner />
+      )}
+
+      {/* Tab: Voice HACCP & Temp Logging */}
+      {activeTab === 'voice_haccp' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: '#1E293B', padding: 24, borderRadius: 20, border: '2px solid #475569', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800 }}>Hands-Free Kitchen Voice Temp & Waste Logger</div>
+              <div style={{ fontSize: 14, color: '#94A3B8', marginTop: 4 }}>
+                Speak clearly into tablet: <span style={{ color: '#60A5FA', fontWeight: 700 }}>"Chicken breast holding at 168 degrees"</span> or <span style={{ color: '#F87171', fontWeight: 700 }}>"4 portions cod discarded due to over-hold"</span>
+              </div>
+            </div>
+
+            <button
+              onClick={toggleListening}
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                background: isListening ? '#EF4444' : '#8B5CF6',
+                border: '4px solid #fff',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: isListening ? '0 0 30px rgba(239, 68, 68, 0.6)' : '0 4px 15px rgba(139, 92, 246, 0.4)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {isListening ? <Mic className="w-10 h-10 animate-pulse" /> : <Mic className="w-10 h-10" />}
+            </button>
+
+            {transcript && (
+              <div style={{ background: '#0F172A', padding: '10px 18px', borderRadius: 12, border: '1px solid #3B82F6', fontSize: 14, color: '#93C5FD' }}>
+                🎙️ Heard: "{transcript}"
+              </div>
+            )}
+          </div>
+
+          <div style={{ background: '#1E293B', borderRadius: 16, border: '1px solid #334155', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', fontWeight: 800, fontSize: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Today's Real-Time HACCP Core Temp & Waste Log</span>
+              <span style={{ fontSize: 13, color: '#10B981', fontWeight: 700 }}>{haccpLogs.filter(l => l.status === 'PASS').length} Passed · 0 Violations</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {haccpLogs.map(log => (
+                <div key={log.id} style={{ padding: '14px 20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ padding: '4px 8px', borderRadius: 6, background: log.type === 'WASTE' ? '#7F1D1D' : '#1E3A8A', color: '#fff', fontSize: 11, fontWeight: 800 }}>
+                      {log.type}
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#fff' }}>{log.item}</div>
+                      <div style={{ fontSize: 12, color: '#94A3B8' }}>{log.timestamp} · {log.loggedBy} (Recorded via {log.recordedVia})</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    {log.type !== 'WASTE' ? (
+                      <span style={{ fontSize: 18, fontWeight: 900, color: log.status === 'PASS' ? '#34D399' : '#F87171' }}>
+                        {log.temperatureF.toFixed(1)}°F
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#F87171' }}>
+                        {log.wastePortions} Portions Discarded
+                      </span>
+                    )}
+                    <span style={{ padding: '4px 10px', borderRadius: 8, background: log.status === 'PASS' ? '#064E3B' : '#7F1D1D', color: log.status === 'PASS' ? '#6EE7B7' : '#FCA5A5', fontWeight: 800, fontSize: 12 }}>
+                      {log.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Hydration Pass (CMS F807) */}
+      {activeTab === 'hydration' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: '#1E293B', padding: 20, borderRadius: 16, border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>CMS F807 Clinical Resident Hydration Pass</div>
+              <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 2 }}>Morning Hydration Round (10:00 AM) · Thickened Liquid Compliance Enforcement</div>
+            </div>
+            <div style={{ background: '#0891B2', padding: '8px 16px', borderRadius: 10, fontWeight: 800, fontSize: 14 }}>
+              85% Target Met
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+            {hydrationRecords.map(rec => (
+              <div key={rec.id} style={{ background: '#1E293B', border: `2px solid ${rec.status === 'COMPLETED' ? '#0891B2' : '#475569'}`, borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>{rec.residentName}</div>
+                    <div style={{ fontSize: 13, color: '#94A3B8' }}>Room {rec.room}</div>
+                  </div>
+                  <span style={{ padding: '4px 10px', borderRadius: 8, background: '#0F172A', color: '#67E8F9', fontWeight: 800, fontSize: 12, border: '1px solid #0891B2' }}>
+                    {rec.liquidTexture}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0F172A', padding: '8px 12px', borderRadius: 10, fontSize: 13 }}>
+                  <span style={{ color: '#94A3B8' }}>Target: {rec.targetOz} oz</span>
+                  <span style={{ color: '#67E8F9', fontWeight: 800 }}>Consumed: {rec.consumedOz} oz ({rec.acceptancePct}%)</span>
+                </div>
+
+                {/* Quick 1-Tap Intake Buttons */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+                  {[100, 75, 50, 25, 0].map(pct => (
+                    <button
+                      key={pct}
+                      onClick={() => updateHydration(rec.id, pct)}
+                      style={{
+                        padding: '10px 4px',
+                        borderRadius: 8,
+                        border: rec.acceptancePct === pct ? '2px solid #38BDF8' : '1px solid #334155',
+                        background: rec.acceptancePct === pct ? '#0284C7' : '#0F172A',
+                        color: '#fff',
+                        fontWeight: 800,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {pct === 0 ? 'Refuse' : `${pct}%`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Tab: Cook Worksheets */}
@@ -251,10 +573,10 @@ export default function KitchenTabletPage() {
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 36, fontWeight: 900, color: '#F8FAFC' }}>
+                  <div style={{ fontSize: 36, fontWeight: 900, color: '#60A5FA' }}>
                     {item.batchCount}
                   </div>
-                  <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 600 }}>SERVINGS</div>
+                  <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 700 }}>PORTIONS</div>
                 </div>
               </div>
             )
@@ -262,90 +584,82 @@ export default function KitchenTabletPage() {
         </div>
       )}
 
-      {/* Tab: Tray Card Line Dispatch */}
+      {/* Tab: Tray Line Step-Through */}
       {activeTab === 'traycards' && (
         <div>
           {currentCard ? (
-            <div style={{ background: '#1E293B', border: '3px solid #3B82F6', borderRadius: 20, padding: 32, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+            <div style={{ background: '#1E293B', border: '3px solid #3B82F6', borderRadius: 20, padding: 32 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155', paddingBottom: 20 }}>
                 <div>
-                  <span style={{ padding: '6px 16px', background: '#3B82F6', color: '#fff', borderRadius: 20, fontSize: 16, fontWeight: 800 }}>
-                    ROOM {currentCard.room}
-                  </span>
-                  <h2 style={{ fontSize: 36, fontWeight: 900, margin: '12px 0 0', color: '#fff' }}>
+                  <div style={{ fontSize: 14, color: '#60A5FA', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    CURRENT MEAL TICKET ({activeTrayIndex + 1} OF {trayCards.length})
+                  </div>
+                  <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', marginTop: 4 }}>
                     {currentCard.residentName}
-                  </h2>
+                  </div>
+                  <div style={{ fontSize: 18, color: '#94A3B8', marginTop: 4 }}>
+                    Room: <span style={{ color: '#fff', fontWeight: 700 }}>{currentCard.room}</span>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 14, color: '#94A3B8', fontWeight: 700 }}>CARD {activeTrayIndex + 1} OF {trayCards.length}</div>
+
+                <div style={{ background: '#0F172A', padding: '12px 24px', borderRadius: 14, border: '2px solid #334155', textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 700 }}>REQUIRED TEXTURE</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#F59E0B', marginTop: 2 }}>{currentCard.texture}</div>
                 </div>
               </div>
 
-              {/* Diet Order & Texture */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                <div style={{ background: '#0F172A', padding: 18, borderRadius: 14, border: '1px solid #334155' }}>
-                  <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Therapeutic Diet</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#60A5FA', marginTop: 4 }}>{currentCard.dietOrder}</div>
+              {/* Diet Order & Allergies Banner */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 24 }}>
+                <div style={{ background: '#0F172A', padding: 20, borderRadius: 16, border: '2px solid #334155' }}>
+                  <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 700 }}>CLINICAL DIET ORDER</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginTop: 6 }}>{currentCard.dietOrder}</div>
                 </div>
-                <div style={{ background: '#0F172A', padding: 18, borderRadius: 14, border: '1px solid #334155' }}>
-                  <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Texture Requirement</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#F59E0B', marginTop: 4 }}>{currentCard.texture}</div>
-                </div>
-              </div>
 
-              {/* High-Contrast Allergy Warning Banner */}
-              <div style={{ background: '#7F1D1D', border: '2px solid #EF4444', borderRadius: 14, padding: 18, marginBottom: 24 }}>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#FCA5A5', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }}></span>
-                  CRITICAL ALLERGEN ALERTS
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginTop: 4 }}>
-                  {currentCard.allergies.join(', ') || 'No Known Allergies'}
+                <div style={{ background: '#450A0A', padding: 20, borderRadius: 16, border: '2px solid #EF4444' }}>
+                  <div style={{ fontSize: 13, color: '#FCA5A5', fontWeight: 800 }}>⚠️ HIGHLIGHTED ALLERGIES</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#EF4444', marginTop: 6 }}>
+                    {currentCard.allergies.join(', ')}
+                  </div>
                 </div>
               </div>
 
               {/* Beverages */}
-              <div style={{ background: '#0F172A', padding: 18, borderRadius: 14, border: '1px solid #334155', marginBottom: 32 }}>
-                <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Required Beverages</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginTop: 4 }}>
-                  {currentCard.beverages.join(' • ')}
+              <div style={{ background: '#0F172A', padding: 20, borderRadius: 16, border: '2px solid #334155', marginTop: 20 }}>
+                <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 700 }}>BEVERAGE SELECTIONS</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#60A5FA', marginTop: 6 }}>
+                  {currentCard.beverages.join('  •  ')}
                 </div>
               </div>
 
-              {/* Dispatch Action Button */}
+              {/* 1-Tap Action Button */}
               <button
                 onClick={() => toggleTrayDispatch(currentCard.id)}
                 style={{
                   width: '100%',
+                  marginTop: 28,
                   padding: '24px',
                   borderRadius: 16,
                   border: 'none',
                   background: '#10B981',
                   color: '#fff',
-                  fontSize: 26,
                   fontWeight: 900,
+                  fontSize: 22,
                   cursor: 'pointer',
+                  boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 12,
-                  boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.4)'
+                  gap: 12
                 }}
               >
-                VERIFY & DISPATCH TRAY TO CART
+                <span>✓</span> VERIFY & DISPATCH TRAY TO CART
               </button>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: 60, background: '#1E293B', borderRadius: 20 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#10B981', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 900 }}>✓</div>
-              <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: 0 }}>All Trays Dispatched</h2>
-              <p style={{ fontSize: 18, color: '#94A3B8', marginTop: 8 }}>The meal service line for {mealFilter} is complete.</p>
-              <button
-                onClick={() => setTrayCards(prev => prev.map(t => ({ ...t, dispatched: false })))}
-                style={{ marginTop: 20, padding: '12px 24px', borderRadius: 12, border: '1px solid #475569', background: '#0F172A', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
-              >
-                Reset Tray Card Queue
-              </button>
+            <div style={{ background: '#064E3B', padding: 48, borderRadius: 20, textAlign: 'center', border: '2px solid #10B981' }}>
+              <div style={{ fontSize: 48 }}>🎉</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginTop: 12 }}>ALL TRAYS DISPATCHED!</div>
+              <div style={{ fontSize: 16, color: '#A7F3D0', marginTop: 8 }}>Tray line service for {mealFilter} is 100% complete and delivered.</div>
             </div>
           )}
         </div>
@@ -353,42 +667,44 @@ export default function KitchenTabletPage() {
 
       {/* Tab: Quick Par Counter */}
       {activeTab === 'quickpar' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ fontSize: 15, color: '#94A3B8', marginBottom: 4 }}>
-            Tap <strong>+</strong> or <strong>-</strong> to adjust physical on-hand case counts during kitchen walk-throughs.
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {parItems.map(item => (
             <div
               key={item.id}
               style={{
                 background: '#1E293B',
-                border: '2px solid #334155',
                 borderRadius: 16,
-                padding: '20px 24px',
+                padding: 20,
+                border: '2px solid #334155',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
+                flexDirection: 'column',
+                justifyContent: 'space-between'
               }}
             >
               <div>
-                <div style={{ fontSize: 14, color: '#94A3B8', fontWeight: 600 }}>{item.sku} • {item.packSize}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginTop: 2 }}>{item.name}</div>
-                <div style={{ fontSize: 15, color: '#38BDF8', marginTop: 4, fontWeight: 700 }}>Par Level: {item.parLevel} cases</div>
+                <div style={{ fontSize: 12, color: '#60A5FA', fontWeight: 800 }}>SKU: {item.sku}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginTop: 4 }}>{item.name}</div>
+                <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>Pack: {item.packSize} • Par: {item.parLevel}</div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, background: '#0F172A', padding: '12px 16px', borderRadius: 12 }}>
                 <button
                   onClick={() => adjustOnHand(item.id, -1)}
-                  style={{ width: 64, height: 64, borderRadius: 16, border: 'none', background: '#334155', color: '#fff', fontSize: 32, fontWeight: 900, cursor: 'pointer' }}
+                  style={{ width: 48, height: 48, borderRadius: 10, background: '#EF4444', color: '#fff', border: 'none', fontSize: 24, fontWeight: 900, cursor: 'pointer' }}
                 >
                   -
                 </button>
-                <div style={{ minWidth: 60, textAlign: 'center', fontSize: 36, fontWeight: 900, color: item.onHand < item.parLevel ? '#F87171' : '#4ADE80' }}>
-                  {item.onHand}
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, fontWeight: 900, color: item.onHand < item.parLevel ? '#F87171' : '#34D399' }}>
+                    {item.onHand}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 700 }}>ON HAND</div>
                 </div>
+
                 <button
                   onClick={() => adjustOnHand(item.id, 1)}
-                  style={{ width: 64, height: 64, borderRadius: 16, border: 'none', background: '#3B82F6', color: '#fff', fontSize: 32, fontWeight: 900, cursor: 'pointer' }}
+                  style={{ width: 48, height: 48, borderRadius: 10, background: '#10B981', color: '#fff', border: 'none', fontSize: 24, fontWeight: 900, cursor: 'pointer' }}
                 >
                   +
                 </button>
