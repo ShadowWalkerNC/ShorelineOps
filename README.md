@@ -1,12 +1,13 @@
 <div align="center">
 
-# 🍽️ ShorelineOps (Care OS v5.0)
+<img src="public/logo.png" alt="Shoreline Care OS" width="450" />
+
 ### Open-Source Healthcare Dietary Operations, Clinical Nutrition & Care Coordination Platform
 
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
 [![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-design-system--uiux)
 [![Security: HIPAA Technical Safeguards](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
-[![Tests: 89/89 Passing](https://img.shields.io/badge/Tests-89%2F89%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
+[![Tests: 94/94 Passing](https://img.shields.io/badge/Tests-94%2F94%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
 **Engineered by a healthcare executive chef, not a venture fund.**  
@@ -46,7 +47,7 @@
 ![Residents & Diets](docs/screenshots/residents_iddsi_triage.png)
 
 ### 4. 📱 Kitchen Touch Tablet Kiosk & Hands-Free Voice HACCP (`/kitchen/tablet`)
-*Large touch targets ($\ge 44\text{px}$) designed for cooks wearing wet nitrile gloves during a 45-minute tray rush. Includes Web Speech API hands-free core temperature logging (165°F poultry, 145°F fish) and CMS F807 resident hydration pass tracking.*
+*Large touch targets (44px+) designed for cooks wearing wet nitrile gloves during a 45-minute tray rush. Includes Web Speech API hands-free core temperature logging (165°F poultry, 145°F fish) and CMS F807 resident hydration pass tracking.*
 
 ![Kitchen Touch Tablet Kiosk](docs/screenshots/kitchen_tablet_kiosk.png)
 
@@ -58,7 +59,7 @@
 ### 6. 🏢 Corporate Headquarters Multi-Facility Portal (`/enterprise`)
 *Centralized management for senior living operator chains (5–50 buildings). Features 1-click 4-week seasonal cycle menu syndication, portfolio census tracking, and cross-facility $/CPD spend benchmarking.*
 
-![Corporate HQ Multi-Facility Portal](docs/screenshots/corporate_hq_portal.jpg)
+![Corporate HQ Multi-Facility Portal](docs/screenshots/corporate_hq_portal.png)
 
 ---
 
@@ -117,7 +118,7 @@ In healthcare dining, culinary operations are clinical care:
 | **Purchasing & Split MRP** | `/purchasing` | Dennis/Sysco order guides, lowest-cost split POs, 3-way invoice match, credit memos | Dietary Director |
 | **CMS Survey Reporting** | `/reporting` | 1-click CMS-2567 digital survey binder (F800–F814), $/CPD cost audits, substitution logs | Administrator / CDM |
 | **Corporate HQ Portal** | `/enterprise` | Multi-facility chain oversight, central 4-week menu syndicator, cross-facility $/CPD benchmarks | Corporate VP of Dining |
-| **Vendor Partner Portal** | `/distributor` | Distributor catalog master, EDI 850/810 connectors, SKU pricing editor | Vendor Sales Reps |
+| **Vendor Partner Portal** | `/distributor` | Distributor catalog master, rep role login, inline SKU pricing editor, delivery schedules, CSV tools | Vendor Sales Reps |
 | **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times | System Admin |
 
 ---
@@ -136,11 +137,12 @@ ShorelineOps uses an **Open Core** architecture:
 │ 💼 PRO CLOUD SAAS ($199 / month / facility)                                            │
 │ • Multi-Distributor Lowest-Cost Split MRP      • USDA FoodData Central 8,000+ Database │
 │ • Cloud Multi-Device Real-Time Sync            • Automated Distributor Order Export    │
+│ • Hands-Free Voice HACCP 165°F Temp Logger     • Signed Business Associate Agreement   │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │ 🏢 ENTERPRISE CARE NETWORK ($399 / month / facility)                                   │
 │ • PointClickCare Live 2-Way EHR Sync           • CMS-2567 Digital Survey Ready Binder  │
 │ • 3-Way Delivery Invoice OCR & Credit Memos    • Corporate HQ Multi-Facility Portal    │
-│ • Dedicated BAA & 24/7 Priority Support        • Master Cycle Menu Syndicator          │
+│ • Master 4-Week Cycle Menu Syndicator          • Portfolio $/CPD Spend Benchmarking    │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -173,18 +175,18 @@ npm install
 
 ### 3. Start Development Servers
 ```bash
-# Starts both the React frontend (port 5173) and Express API (port 3001)
+# Starts both the React frontend (port 5180) and Express API (port 3015)
 npm run dev:all
 ```
-- Web Application: `http://localhost:5173`
-- Backend API Server: `http://localhost:3001`
+- Web Application: `http://localhost:5180`
+- Backend API Server: `http://localhost:3015`
 - Astro Marketing Site: `http://localhost:4321` (via `cd marketing && npm run dev`)
 
 ### 4. Run Automated Test Suite
 ```bash
 npm test
 ```
-All **89 system integration and clinical safety test suites** pass with 100% success rate.
+All **94 system integration and clinical safety test suites** pass with 100% success rate across 20 operational domains.
 
 ---
 
@@ -196,7 +198,7 @@ Deploy the complete multi-service stack to Render using the official [`render.ya
 2. Click **New +** $\to$ **Blueprint**.
 3. Connect your repository: `ShadowWalkerNC/ShorelineOps`.
 4. Render provisions and builds all 4 services automatically:
-   - `shoreline-api` (Node/Express API on port 3001)
+   - `shoreline-api` (Node/Express API on port 3015)
    - `shoreline-demo` (React 18 + Vite SPA on `https://shoreline-demo.onrender.com`)
    - `shoreline-marketing` (Astro static portal on `https://shoreline-marketing.onrender.com`)
    - `shoreline-db` (Managed PostgreSQL instance)
