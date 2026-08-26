@@ -4,65 +4,115 @@ import BaseLayout from '../layouts/BaseLayout.astro'
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onrender.com/menu'
 ---
 
-<BaseLayout title="Founder Story — Built by an Healthcare Chef" description="Why ShorelineOps was created inside a real senior living kitchen dealing with dysphagia textures, allergen risks, and food distributor ordering.">
+<BaseLayout title="Founder Story — Built by an Healthcare Executive Chef in Maine" description="Why ShorelineOps was created inside a real senior living kitchen dealing with dysphagia textures, allergen risks, and food distributor ordering.">
   <section class="py-16 sm:py-24">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Header -->
       <div class="text-center mb-12 sm:mb-16">
-        <div class="inline-block px-3.5 py-1 bg-teal-50 dark:bg-teal-950/70 border border-teal-200/70 dark:border-teal-800/60 rounded-full text-teal-700 dark:text-teal-400 text-xs font-semibold uppercase tracking-wider mb-4 font-mono">
-          Practitioner-Led Healthcare Software
+        <div class="inline-block px-3.5 py-1 bg-teal-50 dark:bg-teal-950/70 border border-teal-200/70 dark:border-teal-800/60 rounded-full text-teal-700 dark:text-teal-400 text-xs font-semibold uppercase tracking-wider mb-4 font-mono shadow-2xs">
+          Practitioner-Led Healthcare Dining
         </div>
-        <h1 class="text-3xl sm:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mb-4 leading-tight">
+        <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4 leading-tight">
           Why I Built ShorelineOps Inside a Real Senior Living Kitchen.
         </h1>
         <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 italic">
-          "Nobody selling software to senior living has cooked a pureed dinner service for 80 residents with 14 different allergy restrictions."
+          "Nobody selling healthcare dietary software has ever cooked a pureed dinner service for 80 residents with 14 different allergy restrictions while balancing food cost."
         </p>
       </div>
 
+      <!-- Story Narrative Body -->
       <div class="space-y-6 text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+        
         <p>
-          If you’ve ever run a senior living dietary department, you know the daily reality:
+          If you have ever stepped into a senior living dietary department at 4:30 PM, you know the daily high-stakes reality:
         </p>
-        <ul class="list-disc pl-6 space-y-2 text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
-          <li>Nursing calls down at 4:30 PM with three new room moves, a new diabetic diet order, and a resident transitioning to Pureed texture.</li>
-          <li>Your morning cook is trying to read handwriting on a greasy dry-erase board while balancing 4 pots on the range.</li>
-          <li>You’re trying to build your weekly order for <strong>Dennis Food Service</strong> using clipboards and guesswork, hoping you don't run out of thickener before Friday.</li>
-        </ul>
-
-        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white pt-4">The Legacy Software Failure</h2>
-        <p class="text-xs sm:text-sm">
-          When I looked at what the software industry offered, I found two extremes:
-        </p>
-        <ol class="list-decimal pl-6 space-y-2 text-xs sm:text-sm">
-          <li><strong>Enterprise Monopolies ($1,200+/month)</strong>: Bulky software designed for 500-bed hospital chains, bloated with features no 60-bed assisted living facility will ever touch, and locked into rigid distributor contracts.</li>
-          <li><strong>Binders and Clipboards</strong>: What 80% of independent facilities actually use because the alternatives are too expensive or difficult to train staff on.</li>
-        </ol>
-
-        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white pt-4">The ShorelineOps Philosophy: Free Software + Paid SaaS</h2>
-        <p class="text-xs sm:text-sm">
-          I built <strong>ShorelineOps</strong> to be the tool I wished I had in the kitchen every morning:
-        </p>
-        <ul class="list-disc pl-6 space-y-2 text-xs sm:text-sm">
-          <li><strong>100% Free Core Software</strong> so community facilities and non-profit homes can operate with complete clinical safety without predatory software fees.</li>
-          <li><strong>Big, touch-friendly tablet buttons</strong> that line cooks can tap with gloved hands.</li>
-          <li><strong>Bright red allergen & IDDSI banners</strong> that make it impossible to serve the wrong food to a dysphagia resident.</li>
-          <li><strong>Suggested Multi-Distributor ordering</strong> that calculates <code>Par Level - On Hand</code> automatically so you never over-order or run short.</li>
-        </ul>
-
-        <div class="p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 my-8 text-center shadow-apple-card">
-          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">Let’s Talk Kitchen Operations</h3>
-          <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-lg mx-auto mb-6 leading-relaxed">
-            Whether you’re a Dietary Manager in Maine or an Executive Director looking to tighten food spend, I’d love to show you how we run ShorelineOps.
-          </p>
-          <a
-            href={DEMO_URL}
-            target="_blank"
-            rel="noreferrer"
-            class="inline-flex px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30"
-          >
-            Launch Interactive Demo App &rarr;
-          </a>
+        
+        <div class="p-6 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 space-y-3">
+          <div class="text-amber-800 dark:text-amber-300 font-bold text-xs uppercase tracking-wider font-mono">The Daily 4:30 PM Rush</div>
+          <ul class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+            <li class="flex items-start gap-2.5">
+              <span class="text-amber-600 font-bold">1.</span>
+              <span><strong>Last-Minute Clinical Changes:</strong> Nursing calls down right before tray line with two room transfers, a new physician Low Sodium diet order, and a resident newly designated NPO awaiting swallow evaluation.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="text-amber-600 font-bold">2.</span>
+              <span><strong>Kitchen Ergonomics Under Fire:</strong> Line cooks with wet nitrile gloves are trying to read faded handwriting on a greasy whiteboard while staging 4 pans of hot entrees.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="text-amber-600 font-bold">3.</span>
+              <span><strong>Clipboard Inventory Guesswork:</strong> Building weekly orders for <strong>Dennis Food Service</strong> or <strong>Sysco</strong> using clipboards and guesswork, hoping you don't stock out of thickener or pureed meats before Friday truck delivery.</span>
+            </li>
+          </ul>
         </div>
+
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white pt-4">The Legacy Industry Dilemma</h2>
+        <p class="text-xs sm:text-sm">
+          When I looked across the commercial software landscape, I found two deeply frustrating options:
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
+            <div class="font-bold text-slate-900 dark:text-white text-sm mb-1">1. Proprietary Monopolies ($1,200+/mo)</div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Bulky software designed for 500-bed hospital chains, bloated with unnecessary complexity, requiring 6 months of onboarding, and locking you into a single distributor.</p>
+          </div>
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
+            <div class="font-bold text-slate-900 dark:text-white text-sm mb-1">2. Paper Binders & Spreadsheets</div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">What 80% of independent and assisted living homes actually use because commercial software is unaffordable, resulting in human error and survey anxiety.</p>
+          </div>
+        </div>
+
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white pt-4">The ShorelineOps Vision: Open Core + Clinical Precision</h2>
+        <p class="text-xs sm:text-sm">
+          I built <strong>ShorelineOps</strong> to be the tool I needed in the kitchen every single morning:
+        </p>
+        <ul class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+          <li class="flex items-start gap-2.5">
+            <span class="text-emerald-500 font-bold">✓</span>
+            <span><strong>100% Free Open-Source Core:</strong> Any independent care home, hospice, or non-profit assisted living community can run our software completely free. Clinical safety should never be paywalled.</span>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <span class="text-emerald-500 font-bold">✓</span>
+            <span><strong>Big, High-Contrast Touch Targets (44px+):</strong> Touch tablet kiosk mode designed specifically for gloved line cooks to tap easily during hot line service.</span>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <span class="text-emerald-500 font-bold">✓</span>
+            <span><strong>IDDSI 2.0 Hard-Blocks:</strong> Strict clinical safety rules preventing a Regular texture plate from ever being served to an IDDSI Level 4 Pureed resident.</span>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <span class="text-emerald-500 font-bold">✓</span>
+            <span><strong>Algorithmic Split MRP Purchasing:</strong> Automatically compares line-item contract quotes across Dennis Food Service, Sysco, and US Foods, saving $1.50–$3.00 per resident day.</span>
+          </li>
+        </ul>
+
+        <!-- Visual Real Screenshot of Tablet -->
+        <div class="my-8 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
+          <img src="/screenshots/kitchen_tablet_kiosk.png" alt="Shoreline Touch Tablet Kiosk" class="w-full h-auto object-cover" />
+        </div>
+
+        <!-- Contact Box -->
+        <div class="p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 my-8 text-center shadow-apple-card">
+          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Let’s Talk Culinary & Dietary Operations</h3>
+          <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-lg mx-auto mb-6 leading-relaxed">
+            Whether you are a Dietary Manager in New England or an Executive Director looking to tighten food spend and survey readiness, we would love to show you ShorelineOps.
+          </p>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={DEMO_URL}
+              target="_blank"
+              rel="noreferrer"
+              class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30"
+            >
+              Launch Interactive Demo App &rarr;
+            </a>
+            <a
+              href="/distributors"
+              class="w-full sm:w-auto px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs sm:text-sm hover:bg-slate-200 transition-all"
+            >
+              For Food Distributors (Dennis & Sysco)
+            </a>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
