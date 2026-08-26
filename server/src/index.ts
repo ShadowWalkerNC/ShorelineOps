@@ -27,7 +27,7 @@ import { runSeed } from './db/seed'
 import crypto from 'crypto'
 
 const app = express()
-const PORT = process.env.PORT ?? 3001
+const PORT = process.env.PORT ?? 3015
 const isProd = process.env.NODE_ENV === 'production'
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
