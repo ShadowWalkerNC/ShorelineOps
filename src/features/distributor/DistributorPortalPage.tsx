@@ -28,6 +28,7 @@ import {
   Building,
   UserCheck,
   AlertTriangle,
+  ExternalLink,
 } from 'lucide-react'
 
 type PortalTab = 'catalog' | 'schedule' | 'connectors' | 'plugins'
@@ -89,7 +90,7 @@ export default function DistributorPortalPage() {
       leadTimeHours: 48,
       primaryRepName: 'Marcus Sterling (Dennis Account Lead)',
       primaryRepEmail: 'msterling@dennisfoodservice.com',
-      primaryRepPhone: '(207) 555-0192',
+      primaryRepPhone: '1-800-439-2727 (Dennis Bangor HQ)',
     },
     sysco: {
       vendorId: 'sysco-1',
@@ -654,6 +655,29 @@ export default function DistributorPortalPage() {
                 <div className="font-bold text-slate-900 dark:text-white">{sched.primaryRepName}</div>
                 <div className="text-slate-500 dark:text-slate-400">{sched.primaryRepEmail}</div>
                 <div className="text-slate-500 dark:text-slate-400 font-mono">{sched.primaryRepPhone}</div>
+                {key === 'dennis' && (
+                  <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center gap-2">
+                    <a
+                      href="https://dennisfoodservice.pepr.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline"
+                    >
+                      <span>Pepper App Catalog</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <span className="text-slate-400">&bull;</span>
+                    <a
+                      href="https://dennisfoodservice.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:underline"
+                    >
+                      <span>Dennis Home</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
               </div>
             </AppleCard>
           ))}
@@ -665,19 +689,72 @@ export default function DistributorPortalPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { name: 'Dennis Food Service', state: 'Connected (Live EDI)', format: 'CSV & EDI 850/810', speed: '< 200ms', active: true, color: 'green' },
-              { name: 'Sysco Source EDI Gateway', state: 'Connected (Contract Rate API)', format: 'JSON REST & EDI 850', speed: '< 350ms', active: true, color: 'green' },
-              { name: 'US Foods Broadline Bridge', state: 'Connected (Direct Catalog)', format: 'EDI 850 Order Stream', speed: '< 280ms', active: true, color: 'green' },
-              { name: 'Gordon Food Service (GFS)', state: 'Available on Pro Tier', format: 'REST Order Guide Sync', speed: '—', active: false, color: 'blue' },
+              {
+                name: 'Dennis Food Service (Pepper EDI Bridge)',
+                state: 'Connected (Live EDI)',
+                format: 'Pepr App CSV & EDI 850/810',
+                speed: '< 180ms',
+                active: true,
+                color: 'green',
+                links: [
+                  { label: 'Pepper Catalog Portal', url: 'https://dennisfoodservice.pepr.app/' },
+                  { label: 'Official Website', url: 'https://dennisfoodservice.com/' }
+                ]
+              },
+              {
+                name: 'Sysco Source EDI Gateway',
+                state: 'Connected (Contract Rate API)',
+                format: 'JSON REST & EDI 850',
+                speed: '< 350ms',
+                active: true,
+                color: 'green',
+                links: []
+              },
+              {
+                name: 'US Foods Broadline Bridge',
+                state: 'Connected (Direct Catalog)',
+                format: 'EDI 850 Order Stream',
+                speed: '< 280ms',
+                active: true,
+                color: 'green',
+                links: []
+              },
+              {
+                name: 'Gordon Food Service (GFS)',
+                state: 'Available on Pro Tier',
+                format: 'REST Order Guide Sync',
+                speed: '—',
+                active: false,
+                color: 'blue',
+                links: []
+              },
             ].map(conn => (
-              <AppleCard key={conn.name} className="p-5 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-sm text-slate-900 dark:text-white">{conn.name}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{conn.format} · Response {conn.speed}</div>
+              <AppleCard key={conn.name} className="p-5 flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-sm text-slate-900 dark:text-white">{conn.name}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{conn.format} · Response {conn.speed}</div>
+                  </div>
+                  <AppleBadge color={conn.active ? 'green' : 'blue'}>
+                    {conn.state}
+                  </AppleBadge>
                 </div>
-                <AppleBadge color={conn.active ? 'green' : 'blue'}>
-                  {conn.state}
-                </AppleBadge>
+                {conn.links.length > 0 && (
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 text-xs">
+                    {conn.links.map(l => (
+                      <a
+                        key={l.url}
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        <span>{l.label}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </AppleCard>
             ))}
           </div>

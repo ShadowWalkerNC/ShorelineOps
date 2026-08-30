@@ -16,6 +16,10 @@ import {
 export class DennisConnector implements DistributorConnector {
   public readonly vendorCode = 'dennis'
   public readonly vendorName = 'Dennis Food Service'
+  public readonly catalogPortalUrl = 'https://dennisfoodservice.pepr.app/'
+  public readonly homeUrl = 'https://dennisfoodservice.com/'
+  public readonly orderingPlatform = 'Pepper (pepr.app)'
+  public readonly supportPhone = '1-800-439-2727'
 
   /**
    * Parse Dennis catalog data / sample feed
