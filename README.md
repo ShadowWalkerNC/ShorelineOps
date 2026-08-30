@@ -7,7 +7,7 @@
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
 [![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-design-system--uiux)
 [![Security: HIPAA Technical Safeguards](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
-[![Tests: 101/101 Passing](https://img.shields.io/badge/Tests-101%2F101%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
+[![Tests: 118/118 Passing](https://img.shields.io/badge/Tests-118%2F118%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
 **Engineered by a healthcare executive chef, not a venture fund.**  
@@ -186,7 +186,7 @@ npm run dev:all
 ```bash
 npm test
 ```
-All **101 system integration and clinical safety test suites** pass with 100% success rate across 22 operational domains.
+All **118 system integration, clinical dietary, and safety test suites** pass with 100% success rate across 26 operational domains.
 
 ---
 

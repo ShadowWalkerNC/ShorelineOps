@@ -4,6 +4,7 @@ import { useRecipesStore } from '@/state/recipesStore'
 import WeekGrid from './components/WeekGrid'
 import ItemLibraryPanel from './components/ItemLibraryPanel'
 import DayEditorModal from './components/DayEditorModal'
+import ClinicalDietaryModal from './components/ClinicalDietaryModal'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import type { DayOfWeek, MealSlot, MealEntry, MenuItem } from '@/types'
 import { DAYS_OF_WEEK, MEAL_GROUPS, MEAL_SLOTS } from '@/types/menu'
@@ -20,6 +21,7 @@ import {
   ChevronRight,
   ShieldAlert,
   Layers,
+  Activity,
 } from 'lucide-react'
 
 // ── Recipe Drawer ─────────────────────────────────────────────────────────────
@@ -178,6 +180,7 @@ export default function MenuPage() {
   })
   const [editDay, setEditDay] = useState<DayOfWeek | null>(null)
   const [drawerMenuItem, setDrawerMenuItem] = useState<MenuItem | null>(null)
+  const [showClinicalModal, setShowClinicalModal] = useState(false)
 
   useEffect(() => { fetchWeeks(); fetchItems(); fetchRecipes() }, []) // eslint-disable-line
 
@@ -313,6 +316,14 @@ export default function MenuPage() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <AppleButton
+            variant="secondary"
+            size="md"
+            icon={<Activity className="w-4 h-4 text-emerald-500" />}
+            onClick={() => setShowClinicalModal(true)}
+          >
+            Clinical Dietary Engine
+          </AppleButton>
           <AppleButton
             variant="secondary"
             size="md"
@@ -611,6 +622,12 @@ export default function MenuPage() {
           onClose={() => setDrawerMenuItem(null)}
         />
       )}
+
+      {/* Clinical Dietary & Texture Engine Modal */}
+      <ClinicalDietaryModal
+        isOpen={showClinicalModal}
+        onClose={() => setShowClinicalModal(false)}
+      />
     </div>
   )
 }

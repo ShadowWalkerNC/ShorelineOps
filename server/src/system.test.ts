@@ -17,6 +17,7 @@ import { KitchenProductionEngine } from './engine/production'
 import { SafetyEvaluatorEngine } from './engine/safetyEvaluator'
 import { ThreeWayInvoiceMatchingEngine } from './engine/invoicing'
 import { CmsDietarySurveyEngine } from './engine/cmsSurvey'
+import { DeterministicDietaryEngine } from './engine/dietaryFormulation'
 
 const PasswordSchema = z
   .string()
@@ -684,6 +685,96 @@ async function runAllTests() {
   const dietitianPermissions = ['view:residents', 'edit:residents', 'view:menu', 'edit:menu']
   assert(dietitianPermissions.includes('edit:residents'), 'RbacEngine: grants Registered Dietitian clinical edit access on resident diet orders')
   assert(dietitianPermissions.includes('view:menu'), 'RbacEngine: grants Registered Dietitian view access on cycle menus')
+
+  // --- 23. Deterministic Clinical Ingredient Substitutions ---
+  console.log('\n--- 23. Deterministic Clinical Ingredient Substitutions ---')
+  const glutenSubs = DeterministicDietaryEngine.findSubstitutions(
+    [
+      { item: 'All-purpose flour', qty: '2 cups' },
+      { item: 'Whole milk', qty: '1 cup' },
+    ],
+    'GLUTEN_FREE'
+  )
+  assert(glutenSubs.length === 1, 'DietaryEngine: identifies flour for gluten-free replacement')
+  assert(glutenSubs[0].substituteItem.includes('Cornstarch'), 'DietaryEngine: substitutes cornstarch/rice flour blend for gluten elimination')
+
+  const nasSubs = DeterministicDietaryEngine.findSubstitutions(
+    [
+      { item: 'Kosher salt', qty: '2 tsp' },
+      { item: 'Black pepper', qty: '1 tsp' },
+    ],
+    'LOW_SODIUM'
+  )
+  assert(nasSubs.length === 1, 'DietaryEngine: identifies salt for low-sodium replacement')
+  assert(nasSubs[0].substituteItem.includes('Citrus Herb Seasoning'), 'DietaryEngine: swaps salt for sodium-free citrus herb seasoning')
+
+  // --- 24. IDDSI 2.0 Pureed (L4) & Minced (L5) Liquid Binder Formulation ---
+  console.log('\n--- 24. IDDSI 2.0 Pureed (L4) & Minced (L5) Liquid Binder Formulation ---')
+  const turkeyPureeFormulation = DeterministicDietaryEngine.computeIddsiFormulation(
+    'Roast Turkey Breast',
+    'Meat/Poultry',
+    453.592, // 1 lb cooked meat
+    4 // Pureed L4
+  )
+  assert(turkeyPureeFormulation.solidWeightGrams === 454, 'IddsiEngine: records 454g base solid cooked turkey')
+  assert(turkeyPureeFormulation.liquidBinderGrams === 136, 'IddsiEngine: calculates 30% broth binder volume (136g) for meat puree')
+  assert(turkeyPureeFormulation.complianceChecklist.length >= 3, 'IddsiEngine: provides Fork Drip & Spoon Tilt verification checklist')
+
+  const vegMincedFormulation = DeterministicDietaryEngine.computeIddsiFormulation(
+    'Steamed Green Beans',
+    'Vegetable',
+    300,
+    5 // Minced & Moist L5
+  )
+  assert(vegMincedFormulation.targetIddsiLevel === 5, 'IddsiEngine: verifies IDDSI Level 5 target')
+  assert(vegMincedFormulation.complianceChecklist[0].includes('4mm'), 'IddsiEngine: enforces <= 4mm particle size limit for adults')
+
+  // --- 25. 7-Day Cycle Menu Nutritional, Protein Rotation & Chromatic Balance Auditor ---
+  console.log('\n--- 25. 7-Day Cycle Menu Nutritional, Protein Rotation & Chromatic Balance Auditor ---')
+  const sampleCycleMenu = [
+    {
+      dayOfWeek: 'Monday',
+      breakfast: { name: 'Oatmeal & Berries', category: 'Hot Cereal', proteinType: 'Vegetarian', colorGroup: 'red_orange' as const },
+      lunch: { name: 'Roast Turkey Breast', category: 'Entree', proteinType: 'Poultry', colorGroup: 'white' as const },
+      dinner: { name: 'Baked Salmon with Dill', category: 'Entree', proteinType: 'Fish', colorGroup: 'green' as const },
+      eveningSnack: { name: 'Greek Yogurt & Honey', calories: 150, proteinG: 12 },
+      mealTimes: { dinnerEnd: '18:00', breakfastStart: '07:30' },
+    },
+    {
+      dayOfWeek: 'Tuesday',
+      breakfast: { name: 'Scrambled Eggs & Toast', category: 'Hot Breakfast', proteinType: 'Eggs', colorGroup: 'yellow' as const },
+      lunch: { name: 'Beef Pot Roast', category: 'Entree', proteinType: 'Beef', colorGroup: 'red_orange' as const },
+      dinner: { name: 'Pork Tenderloin & Applesauce', category: 'Entree', proteinType: 'Pork', colorGroup: 'green' as const },
+      eveningSnack: { name: 'Cheese Stick & Crackers', calories: 140, proteinG: 8 },
+      mealTimes: { dinnerEnd: '18:00', breakfastStart: '07:30' },
+    },
+  ]
+
+  const menuAudit = DeterministicDietaryEngine.auditCycleMenu(sampleCycleMenu)
+  assert(menuAudit.isCompliant === true, 'DietaryEngine: confirms balanced protein rotation and chromatic variety')
+  assert(menuAudit.proteinRotationIssues.length === 0, 'DietaryEngine: zero protein clash between poultry, fish, beef, and pork')
+  assert(menuAudit.mealTiming14HourAudit.isCompliant === true, 'DietaryEngine: confirms 13.5-hr dinner-to-breakfast span meets CMS F809 limit')
+
+  // --- 26. Production Demand Station Splitting (Regular vs Pureed vs Soft) ---
+  console.log('\n--- 26. Production Demand Station Splitting (Regular vs Pureed vs Soft) ---')
+  const stationSplit = DeterministicDietaryEngine.splitCensusProductionDemand(
+    'Roast Turkey Breast',
+    4.0, // 4 oz portion
+    {
+      totalResidents: 60,
+      regularCount: 46,
+      mechanicalSoftCount: 8,
+      pureedCount: 4,
+      nasLowSodiumCount: 2,
+      diabeticNcsCount: 5,
+    }
+  )
+
+  assert(stationSplit.totalPortions === 60, 'ProductionSplitter: accounts for all 60 census residents')
+  assert(stationSplit.hotLineStation.portions === 46, 'ProductionSplitter: routes 46 portions to hot line steam table')
+  assert(stationSplit.pureeStation.portions === 4, 'ProductionSplitter: routes 4 portions to pureeing blender station')
+  assert(stationSplit.pureeStation.brothBinderOz === 4.8, 'ProductionSplitter: computes 4.8 oz broth binder for 4 puree portions')
+  assert(stationSplit.mechanicalSoftStation.portions === 8, 'ProductionSplitter: routes 8 portions to minced & moist prep')
 
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)

@@ -27,7 +27,7 @@ Marketing:    Astro + Tailwind CSS (Apple HIG Design Language)
 Backend API:  Node.js + Express + Helmet + Argon2 + LRU Cache + Dedup + Circuit Breakers
 Database:     SQLite (local offline-first) / PostgreSQL / Supabase
 Key Integrations: PointClickCare (OAuth/FHIR), Dennis Food Service EDI, Sysco EDI, USDA FoodData Central
-Testing:      Node.js test harness (101/101 automated system tests passing)
+Testing:      Node.js test harness (118/118 automated system tests passing)
 ```
 
 ---
