@@ -25,20 +25,28 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
       </p>
 
       <!-- Primary Action Buttons -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-md mx-auto mb-12">
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xl mx-auto mb-12">
         <a
           href={DEMO_URL}
           target="_blank"
           rel="noreferrer"
           class="w-full sm:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
         >
-          <span>🚀</span> Try the Live Demo (No Login Needed)
+          <span>🚀</span> Try Live Web Demo
+        </a>
+        <a
+          href="https://github.com/ShadowWalkerNC/ShorelineOps/releases/latest"
+          target="_blank"
+          rel="noreferrer"
+          class="w-full sm:w-auto px-6 py-3.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-semibold rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-2xs hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <span>💾</span> Download Desktop Installer (v5.0)
         </a>
         <a
           href="/pricing"
-          class="w-full sm:w-auto px-6 py-3.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 font-semibold rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center shadow-2xs"
+          class="w-full sm:w-auto px-5 py-3.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 font-semibold rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center shadow-2xs"
         >
-          View Pricing & Plans
+          Pricing
         </a>
       </div>
 
@@ -219,6 +227,51 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
           <li class="flex items-center gap-2"><span class="text-purple-600 font-bold">✓</span> Track total company census and beds</li>
           <li class="flex items-center gap-2"><span class="text-purple-600 font-bold">✓</span> Benchmark daily food spend across all facilities</li>
         </ul>
+      </div>
+    </div>
+
+    <!-- 5. 1-Click Desktop Installer & Offline Architecture -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-16 p-6 sm:p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-apple-card">
+      <div class="space-y-4">
+        <div class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold font-mono rounded-full border border-emerald-500/30">
+          5. 1-CLICK DESKTOP INSTALLER
+        </div>
+        <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight font-sans">
+          One-Time Install · 100% Offline · Zero Cloud Lock-in
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          Install Shoreline Care OS directly onto your nursing home PC or kitchen workstation. Double-click <code class="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-emerald-400">Setup.bat</code> to create a permanent desktop shortcut with local SQLite database storage.
+        </p>
+        <div class="space-y-2 text-xs text-slate-300 pt-2">
+          <div class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> <strong>1-Click Windows Setup:</strong> Automatic background service configuration & shortcut creation</div>
+          <div class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> <strong>100% Offline-First:</strong> All resident diets, recipes, and orders remain stored locally</div>
+          <div class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> <strong>Kitchen Tablet Sync:</strong> Connect kitchen line tablets directly over your local Wi-Fi</div>
+        </div>
+        <div class="pt-2">
+          <a
+            href="https://github.com/ShadowWalkerNC/ShorelineOps/releases/latest"
+            target="_blank"
+            rel="noreferrer"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-sm"
+          >
+            <span>💾</span> Download Windows One-Time Installer (.zip)
+          </a>
+        </div>
+      </div>
+      <div class="p-6 rounded-2xl bg-slate-950/80 border border-slate-800/80 font-mono text-xs text-slate-300 space-y-3">
+        <div class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Quick Install Walkthrough</div>
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <span>1. Download &amp; Extract ZIP</span>
+          <span class="text-emerald-400 font-bold">ShorelineOps-Setup.zip</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <span>2. Run Interactive Installer</span>
+          <span class="text-blue-400 font-bold">Setup.bat</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <span>3. Launch from Desktop Icon</span>
+          <span class="text-purple-400 font-bold">Shoreline Care OS.lnk</span>
+        </div>
       </div>
     </div>
 
