@@ -16,6 +16,7 @@
     "build:all": "npm run build && npm --prefix server run build && npm --prefix marketing run build",
     "start": "node server/dist/index.js",
     "test": "node server/dist/system.test.js",
+    "drill:failure": "node scripts/meal_service_failure_drill.js",
     "audit:operations": "node scripts/operations_consultant_audit.js",
     "preview": "vite preview",
     "preview:demo": "vite preview",
