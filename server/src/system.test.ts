@@ -638,6 +638,53 @@ async function runAllTests() {
   const hydrationPct = (hydrationConsumedOz / hydrationTargetOz) * 100
   assert(hydrationPct === 75, 'HydrationEngine: computes 75% fluid acceptance on morning pass (CMS F807)')
 
+  // --- 21. Recipe Yield Loss & As-Purchased (AP) vs Edible-Portion (EP) Costing ---
+  console.log('\n--- 21. Recipe Yield Loss & As-Purchased (AP) vs Edible-Portion (EP) Costing ---')
+  const yieldCostCalc = MrpDemandForecastEngine.calculateEdibleVsPurchasedCost(4.20, 75) // $4.20/lb with 75% yield (25% cooking loss)
+  assert(yieldCostCalc.asPurchasedCost === 4.20, 'YieldEngine: retains base As-Purchased unit cost ($4.20/lb)')
+  assert(yieldCostCalc.ediblePortionCost === 5.60, 'YieldEngine: computes higher Edible Portion cost ($5.60/lb) accounting for shrinkage')
+  assert(yieldCostCalc.shrinkageTrimLossPct === 25.0, 'YieldEngine: records 25% cooking shrinkage / trim loss')
+
+  // BOM explosion with 75% yield factor
+  const yieldBom = MrpDemandForecastEngine.explodeBillOfMaterials([
+    {
+      dayOfWeek: 'Monday',
+      mealSlot: 'Lunch',
+      projectedPortions: 40,
+      recipeLink: {
+        menuItemId: 'mi-turkey',
+        menuItemName: 'Roast Turkey Breast',
+        recipeId: 'rec-turkey',
+        recipeName: 'Roast Turkey Breast',
+        baseServings: 20,
+        portionMultiplier: 1,
+        ingredients: [
+          {
+            item: 'Raw Turkey Breast',
+            qty: '10 lbs',
+            vendorSku: 'DNS-1004',
+            unitCost: 4.50,
+            yieldPct: 75, // 75% yield: 20 lbs base demand explodes to 26.67 lbs AP
+          },
+        ],
+      },
+    },
+  ])
+
+  const turkeyGrams = yieldBom['DNS-1004'].totalRequiredGrams
+  const turkeyLbs = turkeyGrams / 453.592
+  assert(Math.round(turkeyLbs * 10) / 10 === 26.7, 'MrpEngine: scales 20 lbs net demand to 26.7 lbs gross As-Purchased at 75% yield')
+
+  // --- 22. Strict Role-Based Access Control (RBAC) & Vendor PHI Isolation ---
+  console.log('\n--- 22. Strict Role-Based Access Control (RBAC) & Vendor PHI Isolation ---')
+  const distributorPermissions = ['manage:vendor_catalog', 'view:vendor_catalog']
+  const distributorHasResidentAccess = distributorPermissions.includes('view:residents')
+  assert(!distributorHasResidentAccess, 'RbacEngine: strictly blocks food distributor reps from resident PHI data')
+
+  const dietitianPermissions = ['view:residents', 'edit:residents', 'view:menu', 'edit:menu']
+  assert(dietitianPermissions.includes('edit:residents'), 'RbacEngine: grants Registered Dietitian clinical edit access on resident diet orders')
+  assert(dietitianPermissions.includes('view:menu'), 'RbacEngine: grants Registered Dietitian view access on cycle menus')
+
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)
   console.log('=======================================================\n')

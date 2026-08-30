@@ -14,6 +14,8 @@ export type RecipeIngredient = {
   item: string            // e.g. "applesauce", "chicken breast"
   vendorItemSku?: string  // e.g. "DNS-1004" (Dennis Food Service SKU)
   estimatedCost?: number  // e.g. 4.25
+  yieldPct?: number       // e.g. 75 for 75% yield (shrinkage / trim loss)
+  ediblePortionCost?: number // auto-computed: estimatedCost / (yieldPct / 100)
   allergens?: RecipeAllergen[]
 }
 

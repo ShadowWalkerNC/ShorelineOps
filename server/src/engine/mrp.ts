@@ -28,6 +28,7 @@ export interface MenuItemRecipeLink {
     qty: string
     vendorSku?: string
     unitCost?: number
+    yieldPct?: number // e.g. 75 for 75% yield (shrinkage / trim loss)
   }>
 }
 
@@ -126,7 +127,8 @@ export class MrpDemandForecastEngine {
         const key = ing.vendorSku || ing.item.toLowerCase().trim()
         const parsed = UnitConversionEngine.parseQuantityString(ing.qty)
         const converted = UnitConversionEngine.convert(parsed.amount, parsed.unit, 'g', ing.item)
-        const ingredientTotalGrams = converted.convertedAmount * scaleFactor
+        const yieldFactor = (ing.yieldPct && ing.yieldPct > 0 && ing.yieldPct <= 100) ? (ing.yieldPct / 100) : 1.0
+        const ingredientTotalGrams = (converted.convertedAmount * scaleFactor) / yieldFactor
 
         if (!demandMap[key]) {
           demandMap[key] = {
@@ -279,5 +281,27 @@ export class MrpDemandForecastEngine {
       const priority = { CRITICAL_STOCKOUT: 0, REORDER_REQUIRED: 1, HEALTHY_STOCK: 2 }
       return priority[a.urgency] - priority[b.urgency]
     })
+  }
+
+  /**
+   * Calculate As-Purchased (AP) vs Edible Portion (EP) unit costing
+   */
+  static calculateEdibleVsPurchasedCost(
+    asPurchasedUnitCost: number,
+    yieldPercentage: number = 100
+  ): {
+    asPurchasedCost: number
+    yieldPercent: number
+    ediblePortionCost: number
+    shrinkageTrimLossPct: number
+  } {
+    const validYield = Math.max(1, Math.min(100, yieldPercentage))
+    const epCost = asPurchasedUnitCost / (validYield / 100)
+    return {
+      asPurchasedCost: Math.round(asPurchasedUnitCost * 100) / 100,
+      yieldPercent: validYield,
+      ediblePortionCost: Math.round(epCost * 100) / 100,
+      shrinkageTrimLossPct: Math.round((100 - validYield) * 10) / 10,
+    }
   }
 }

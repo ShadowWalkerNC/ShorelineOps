@@ -98,14 +98,55 @@ export default function KitchenTabletPage() {
     { id: '4', sku: 'DNS-1004', name: 'Chicken Breast Boneless Skinless', packSize: '40/4oz', parLevel: 6, onHand: 4 },
   ])
 
+  // Network and Screen Wake Lock state
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [wakeLockActive, setWakeLockActive] = useState(false)
+  const wakeLockRef = useRef<any>(null)
+
   // Voice HACCP state
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState('')
+  const [pendingHaccpModal, setPendingHaccpModal] = useState<{
+    item: string
+    temperatureF: number
+    type: 'COOK_CORE' | 'HOT_HOLD' | 'COOLING' | 'WASTE'
+    suggestedStatus: 'PASS' | 'CRITICAL_FAIL'
+    correctiveAction?: string
+  } | null>(null)
+
   const [haccpLogs, setHaccpLogs] = useState<HaccpVoiceLog[]>([
     { id: 'h-1', timestamp: '11:15 AM', item: 'Roast Turkey Breast', temperatureF: 168.4, type: 'COOK_CORE', status: 'PASS', recordedVia: 'voice', loggedBy: 'Line Cook Dave' },
     { id: 'h-2', timestamp: '11:22 AM', item: 'Mashed Potatoes & Gravy', temperatureF: 152.0, type: 'HOT_HOLD', status: 'PASS', recordedVia: 'voice', loggedBy: 'Line Cook Dave' },
     { id: 'h-3', timestamp: '11:28 AM', item: 'Pureed Roast Turkey (Pan 2)', temperatureF: 166.2, type: 'COOK_CORE', status: 'PASS', recordedVia: 'voice', loggedBy: 'Cook Aide Elena' },
   ])
+
+  // Screen Wake Lock initialization for hot kitchen lines
+  useEffect(() => {
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+          setWakeLockActive(true)
+        }
+      } catch {
+        setWakeLockActive(false)
+      }
+    }
+    requestWakeLock()
+
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {})
+      }
+    }
+  }, [])
 
   // Hydration state
   const [hydrationRecords, setHydrationRecords] = useState<HydrationRecord[]>([
@@ -136,10 +177,9 @@ export default function KitchenTabletPage() {
     }))
   }
 
-  // Voice speech synthesis & recognition handler
+  // Voice speech synthesis & recognition handler with confirmation card
   const handleVoiceCommand = (text: string) => {
     setTranscript(text)
-    // Parse simulated or spoken string: e.g. "Turkey holding at 168 degrees" or "4 portions beans discarded"
     const lower = text.toLowerCase()
     const tempMatch = text.match(/(\d{2,3})/g)
     const temp = tempMatch ? parseFloat(tempMatch[0]) : 165.0
@@ -159,18 +199,30 @@ export default function KitchenTabletPage() {
       setHaccpLogs(prev => [newLog, ...prev])
     } else {
       const isPass = temp >= 140.0
-      const newLog: HaccpVoiceLog = {
-        id: `h-${Date.now()}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      // Instead of silently saving, display confirmation card modal
+      setPendingHaccpModal({
         item: text.replace(/(\d{2,3}|degrees|holding|at|core|temp)/gi, '').trim() || 'Hot Line Entree',
         temperatureF: temp,
         type: temp >= 165 ? 'COOK_CORE' : 'HOT_HOLD',
-        status: isPass ? 'PASS' : 'CRITICAL_FAIL',
-        recordedVia: 'voice',
-        loggedBy: 'Kitchen Voice Tablet',
-      }
-      setHaccpLogs(prev => [newLog, ...prev])
+        suggestedStatus: isPass ? 'PASS' : 'CRITICAL_FAIL',
+      })
     }
+  }
+
+  const confirmPendingHaccpLog = (correctiveAction?: string) => {
+    if (!pendingHaccpModal) return
+    const newLog: HaccpVoiceLog = {
+      id: `h-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      item: pendingHaccpModal.item,
+      temperatureF: pendingHaccpModal.temperatureF,
+      type: pendingHaccpModal.type,
+      status: correctiveAction ? 'PASS' : pendingHaccpModal.suggestedStatus,
+      recordedVia: 'voice',
+      loggedBy: 'Line Cook (Verified)',
+    }
+    setHaccpLogs(prev => [newLog, ...prev])
+    setPendingHaccpModal(null)
   }
 
   const toggleListening = () => {
@@ -238,7 +290,16 @@ export default function KitchenTabletPage() {
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>Shoreline Dietary Command</div>
-            <div style={{ fontSize: 13, color: '#94A3B8' }}>High-Contrast Touch Optimized Interface · Voice HACCP Active</div>
+            <div style={{ fontSize: 13, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: isOnline ? '#10B981' : '#F59E0B', fontWeight: 700 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: isOnline ? '#10B981' : '#F59E0B' }}></span>
+                {isOnline ? 'ONLINE (Cloud Synced)' : 'OFFLINE (Local Queue Active)'}
+              </span>
+              <span style={{ color: '#64748B' }}>•</span>
+              <span style={{ color: wakeLockActive ? '#60A5FA' : '#94A3B8', fontWeight: 600 }}>
+                ⚡ {wakeLockActive ? 'Screen Wake-Lock Active' : 'Standard Display'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -435,7 +496,103 @@ export default function KitchenTabletPage() {
                 🎙️ Heard: "{transcript}"
               </div>
             )}
+
+            {/* Quick Manual Tap Presets for Gloved Cooks */}
+            <div style={{ width: '100%', borderTop: '1px solid #334155', paddingTop: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, textAlign: 'center' }}>
+                Quick Manual 1-Tap Presets (Gloved Entry)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
+                {[
+                  { label: 'Poultry Core', temp: 168.0, icon: '🔥', type: 'COOK_CORE' },
+                  { label: 'Hot Hold', temp: 145.0, icon: '🍲', type: 'HOT_HOLD' },
+                  { label: 'Cooked Veg', temp: 138.0, icon: '🥦', type: 'HOT_HOLD' },
+                  { label: 'Walk-In Cooler', temp: 37.5, icon: '🧊', type: 'COOLING' },
+                  { label: 'Dish Final Rinse', temp: 181.0, icon: '🧼', type: 'COOK_CORE' },
+                ].map(preset => (
+                  <button
+                    key={preset.label}
+                    onClick={() => {
+                      setPendingHaccpModal({
+                        item: `${preset.label} (${preset.type.replace('_', ' ')})`,
+                        temperatureF: preset.temp,
+                        type: preset.type as any,
+                        suggestedStatus: 'PASS',
+                      })
+                    }}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: 12,
+                      border: '1px solid #475569',
+                      background: '#0F172A',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontWeight: 700,
+                      fontSize: 13,
+                    }}
+                  >
+                    <span style={{ fontSize: 18 }}>{preset.icon}</span>
+                    <span>{preset.label}</span>
+                    <span style={{ color: '#60A5FA', fontWeight: 900, fontSize: 14 }}>{preset.temp}°F</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Voice / Manual HACCP Confirmation Modal */}
+          {pendingHaccpModal && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+              <div style={{ background: '#1E293B', maxWidth: 480, width: '100%', borderRadius: 24, border: '2px solid #3B82F6', padding: 28, display: 'flex', flexDirection: 'column', gap: 20, boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Confirm HACCP Log Entry
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginTop: 4 }}>
+                    {pendingHaccpModal.item}
+                  </div>
+                </div>
+
+                <div style={{ background: '#0F172A', padding: 20, borderRadius: 18, border: '1px solid #334155', textAlign: 'center' }}>
+                  <div style={{ fontSize: 44, fontWeight: 900, color: pendingHaccpModal.suggestedStatus === 'PASS' ? '#34D399' : '#F87171' }}>
+                    {pendingHaccpModal.temperatureF.toFixed(1)}°F
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: pendingHaccpModal.suggestedStatus === 'PASS' ? '#10B981' : '#EF4444', marginTop: 4 }}>
+                    {pendingHaccpModal.suggestedStatus === 'PASS' ? '✅ MEETS FDA / HACCP CRITICAL LIMIT' : '⚠️ BELOW MINIMUM HOLDING TEMPERATURE'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    onClick={() => confirmPendingHaccpLog()}
+                    style={{ padding: '16px', borderRadius: 14, border: 'none', background: '#10B981', color: '#fff', fontWeight: 900, fontSize: 16, cursor: 'pointer' }}
+                  >
+                    ✓ Confirm & Stamp Log ({pendingHaccpModal.temperatureF}°F)
+                  </button>
+
+                  {pendingHaccpModal.suggestedStatus === 'CRITICAL_FAIL' && (
+                    <button
+                      onClick={() => confirmPendingHaccpLog('Reheated to 165°F and re-verified')}
+                      style={{ padding: '14px', borderRadius: 14, border: '1px solid #F59E0B', background: '#78350F', color: '#FDE68A', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+                    >
+                      ⚡ Add Corrective Action: Reheated to 165°F
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setPendingHaccpModal(null)}
+                    style={{ padding: '12px', borderRadius: 12, border: '1px solid #475569', background: '#334155', color: '#94A3B8', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                  >
+                    Cancel / Discard
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div style={{ background: '#1E293B', borderRadius: 16, border: '1px solid #334155', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', fontWeight: 800, fontSize: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
