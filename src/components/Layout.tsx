@@ -189,19 +189,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       
       {/* MOBILE TOP BAR */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-40">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             {mobileOpen ? <CloseIcon size={20} /> : <MenuIcon size={20} />}
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-black text-xs">
-              <Stethoscope className="w-4 h-4" />
-            </div>
-            <span className="font-bold text-sm text-slate-900 dark:text-white tracking-tight">Shoreline Care OS</span>
-          </div>
+          <img src="/logo.png" alt="Shoreline Care OS" className="h-7 w-auto object-contain" />
         </div>
 
         <div className="flex items-center gap-2">
@@ -216,15 +211,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex">
           <div className="w-72 bg-white dark:bg-slate-900 h-full flex flex-col p-4 shadow-2xl border-r border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
-                  <Stethoscope className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-sm text-slate-900 dark:text-white">Shoreline Care OS</div>
-                  <div className="text-[10px] text-teal-600 dark:text-teal-400 font-mono font-bold">EMR &amp; IDDSI Safety</div>
-                </div>
-              </div>
+              <img src="/logo.png" alt="Shoreline Care OS" className="h-8 w-auto object-contain" />
               <button onClick={() => setMobileOpen(false)} className="text-slate-400 p-1">
                 <CloseIcon size={18} />
               </button>
@@ -253,19 +240,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Medical Brand & Clinical Facility Header */}
         <div className="p-4 border-b border-slate-200/70 dark:border-slate-800/70 space-y-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-sm shadow-sm shadow-teal-600/30">
-                <Stethoscope className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white tracking-tight leading-none font-sans">
-                  Shoreline Care OS
-                </div>
-                <div className="text-[10px] font-mono text-teal-600 dark:text-teal-400 font-bold mt-1">
-                  Healthcare Dietary &amp; EMR
-                </div>
-              </div>
-            </div>
+            <img src="/logo.png" alt="Shoreline Care OS" className="h-8 w-auto object-contain" />
             <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/80 px-2 py-0.5 rounded-md border border-teal-200/60 dark:border-teal-800/60 font-mono">
               v5.0
             </span>
