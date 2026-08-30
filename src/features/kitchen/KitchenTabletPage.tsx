@@ -281,22 +281,22 @@ export default function KitchenTabletPage() {
   const currentCard = activeTrayIndex !== -1 ? trayCards[activeTrayIndex] : null
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#0F172A', color: '#F8FAFC', padding: 20, fontFamily: 'Outfit, system-ui, sans-serif' }}>
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans space-y-6">
       {/* Top Header Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ background: '#3B82F6', padding: '10px 16px', borderRadius: 12, fontWeight: 900, fontSize: 20, letterSpacing: '1px' }}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 px-3.5 py-2 rounded-xl font-black text-lg tracking-wider text-white">
             KITCHEN TABLET
           </div>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800 }}>Shoreline Dietary Command</div>
-            <div style={{ fontSize: 13, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: isOnline ? '#10B981' : '#F59E0B', fontWeight: 700 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: isOnline ? '#10B981' : '#F59E0B' }}></span>
+            <div className="text-xl font-bold text-white tracking-tight">Shoreline Dietary Command</div>
+            <div className="text-xs text-slate-400 flex items-center gap-2.5 mt-0.5">
+              <span className={`inline-flex items-center gap-1.5 font-bold ${isOnline ? 'text-emerald-400' : 'text-amber-400'}`}>
+                <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
                 {isOnline ? 'ONLINE (Cloud Synced)' : 'OFFLINE (Local Queue Active)'}
               </span>
-              <span style={{ color: '#64748B' }}>•</span>
-              <span style={{ color: wakeLockActive ? '#60A5FA' : '#94A3B8', fontWeight: 600 }}>
+              <span className="text-slate-600">&bull;</span>
+              <span className={wakeLockActive ? 'text-blue-400 font-semibold' : 'text-slate-400'}>
                 ⚡ {wakeLockActive ? 'Screen Wake-Lock Active' : 'Standard Display'}
               </span>
             </div>
@@ -304,21 +304,14 @@ export default function KitchenTabletPage() {
         </div>
 
         {/* Meal Selector */}
-        <div style={{ display: 'flex', background: '#1E293B', borderRadius: 12, padding: 4, gap: 4 }}>
+        <div className="flex bg-slate-800/80 p-1 rounded-xl gap-1">
           {(['Breakfast', 'Lunch', 'Dinner'] as const).map(meal => (
             <button
               key={meal}
               onClick={() => setMealFilter(meal)}
-              style={{
-                padding: '10px 20px',
-                borderRadius: 8,
-                border: 'none',
-                background: mealFilter === meal ? '#3B82F6' : 'transparent',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 16,
-                cursor: 'pointer'
-              }}
+              className={`py-2 px-4 rounded-lg font-bold text-xs sm:text-sm transition-all ${
+                mealFilter === meal ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+              }`}
             >
               {meal}
             </button>
@@ -327,132 +320,28 @@ export default function KitchenTabletPage() {
       </div>
 
       {/* Main Navigation Tabs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 20 }}>
-        <button
-          onClick={() => setActiveTab('worksheet')}
-          style={{
-            padding: '14px',
-            borderRadius: 14,
-            border: activeTab === 'worksheet' ? '3px solid #60A5FA' : '2px solid #334155',
-            background: activeTab === 'worksheet' ? '#1E293B' : '#0F172A',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444' }}></span>
-          Cook Worksheets
-        </button>
-
-        <button
-          onClick={() => setActiveTab('traycards')}
-          style={{
-            padding: '14px',
-            borderRadius: 14,
-            border: activeTab === 'traycards' ? '3px solid #60A5FA' : '2px solid #334155',
-            background: activeTab === 'traycards' ? '#1E293B' : '#0F172A',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#3B82F6' }}></span>
-          Tray Line ({trayCards.filter(t => t.dispatched).length}/{trayCards.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('scanner')}
-          style={{
-            padding: '14px',
-            borderRadius: 14,
-            border: activeTab === 'scanner' ? '3px solid #60A5FA' : '2px solid #334155',
-            background: activeTab === 'scanner' ? '#1E293B' : '#0F172A',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F59E0B' }}></span>
-          📸 QR Tray Scanner
-        </button>
-
-        <button
-          onClick={() => setActiveTab('voice_haccp')}
-          style={{
-            padding: '14px',
-            borderRadius: 14,
-            border: activeTab === 'voice_haccp' ? '3px solid #60A5FA' : '2px solid #334155',
-            background: activeTab === 'voice_haccp' ? '#1E293B' : '#0F172A',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#8B5CF6' }}></span>
-          🎙️ Voice HACCP & Temp
-        </button>
-
-        <button
-          onClick={() => setActiveTab('hydration')}
-          style={{
-            padding: '14px',
-            borderRadius: 14,
-            border: activeTab === 'hydration' ? '3px solid #60A5FA' : '2px solid #334155',
-            background: activeTab === 'hydration' ? '#1E293B' : '#0F172A',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#06B6D4' }}></span>
-          💧 Hydration Pass (F807)
-        </button>
-
-        <button
-          onClick={() => setActiveTab('quickpar')}
-          style={{
-            padding: '14px',
-            borderRadius: 14,
-            border: activeTab === 'quickpar' ? '3px solid #60A5FA' : '2px solid #334155',
-            background: activeTab === 'quickpar' ? '#1E293B' : '#0F172A',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10B981' }}></span>
-          Quick Par Counter
-        </button>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        {[
+          { key: 'worksheet', label: 'Cook Sheets', dot: 'bg-rose-500' },
+          { key: 'traycards', label: `Tray Line (${trayCards.filter(t => t.dispatched).length}/${trayCards.length})`, dot: 'bg-blue-500' },
+          { key: 'scanner', label: 'QR Tray Scanner', dot: 'bg-amber-500' },
+          { key: 'voice_haccp', label: 'Voice HACCP', dot: 'bg-purple-500' },
+          { key: 'hydration', label: 'Hydration Pass', dot: 'bg-cyan-500' },
+          { key: 'quickpar', label: 'Quick Par Count', dot: 'bg-emerald-500' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as any)}
+            className={`py-3 px-3 rounded-2xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 border ${
+              activeTab === tab.key
+                ? 'bg-slate-900 text-white border-blue-500 shadow-md ring-2 ring-blue-500/20'
+                : 'bg-slate-900/50 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-850'
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${tab.dot}`} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Tab: QR Tray Scanner */}

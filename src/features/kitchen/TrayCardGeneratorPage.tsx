@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { useResidentsStore } from '../../state/residentsStore'
+import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { Printer, Users, ShieldAlert, CheckCircle2, QrCode, Sparkles, MapPin } from 'lucide-react'
 
 export default function TrayCardGeneratorPage() {
   const { residents } = useResidentsStore()
@@ -18,31 +20,30 @@ export default function TrayCardGeneratorPage() {
   }
 
   return (
-    <div className="sl-page">
-      <div className="no-print" style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+      {/* ── Apple Page Header (Hidden on Print) ── */}
+      <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 4 }}>
-            Dietary Tray Cards & Meal Tickets
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-base)' }}>
-            Generate and print room tray tickets with clinical diet orders, liquid consistencies, and allergy warnings.
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+              Tray Cards &amp; Meal Tickets
+            </h1>
+            <AppleBadge color="blue" dot>
+              {filteredResidents.length} Residents
+            </AppleBadge>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Generate standardized 4&times;6 thermal and paper tray delivery cards with IDDSI textures and allergy warnings.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <select
             value={selectedWing}
-            onChange={(e) => setSelectedWing(e.target.value)}
-            style={{
-              height: 'var(--input-height)',
-              padding: '0 12px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontSize: 'var(--text-base)'
-            }}
+            onChange={e => setSelectedWing(e.target.value)}
+            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20"
           >
-            <option value="all">All Wings & Units</option>
+            <option value="all">All Wings &amp; Units</option>
             {wings.map((wing: any) => (
               <option key={wing} value={wing}>{wing}</option>
             ))}
@@ -50,49 +51,27 @@ export default function TrayCardGeneratorPage() {
 
           <select
             value={selectedMeal}
-            onChange={(e) => setSelectedMeal(e.target.value as any)}
-            style={{
-              height: 'var(--input-height)',
-              padding: '0 12px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontSize: 'var(--text-base)'
-            }}
+            onChange={e => setSelectedMeal(e.target.value as any)}
+            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20"
           >
             <option value="Breakfast">Breakfast Service</option>
             <option value="Lunch">Lunch Service</option>
             <option value="Dinner">Dinner Service</option>
           </select>
 
-          <button
+          <AppleButton
+            variant="primary"
+            size="md"
+            icon={<Printer className="w-4 h-4" />}
             onClick={handlePrint}
-            style={{
-              height: 'var(--input-height)',
-              padding: '0 20px',
-              borderRadius: 'var(--radius-md)',
-              border: 'none',
-              backgroundColor: 'var(--color-primary)',
-              color: '#ffffff',
-              fontWeight: 'var(--weight-semi)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}
           >
-            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <polyline points="6 9 6 2 18 2 18 9" />
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-              <rect x="6" y="14" width="12" height="8" />
-            </svg>
             Print Tray Cards
-          </button>
+          </AppleButton>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+      {/* ── Cards Grid (Optimized for Screen & Print) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredResidents.map((resident: any) => {
           const texture = resident.texture || resident.dietTexture || 'Regular'
           const fluid = resident.fluidConsistency || resident.liquidConsistency || 'Thin Liquids'
@@ -101,96 +80,78 @@ export default function TrayCardGeneratorPage() {
           const dietOrder = resident.dietOrder || resident.dietType || 'Regular Diet'
 
           return (
-            <div
+            <AppleCard
               key={resident.id}
-              style={{
-                backgroundColor: 'var(--bg-card)',
-                borderRadius: 'var(--radius-lg)',
-                border: '2px solid var(--border-color)',
-                padding: 18,
-                boxShadow: 'var(--shadow-sm)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-                pageBreakInside: 'avoid'
-              }}
+              className="p-5 flex flex-col justify-between border-2 border-slate-200 dark:border-slate-800 break-inside-avoid shadow-sm hover:border-blue-500/40 transition-all"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: 10 }}>
-                <div>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Room {resident.roomNumber || resident.room || 'Unassigned'}
-                  </span>
-                  <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginTop: 2 }}>
-                    {resident.name}
-                  </h3>
-                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                    {resident.wing || 'West Wing'} &bull; Table {resident.tableNumber || '1'}
-                  </span>
+              <div className="space-y-3">
+                {/* Header */}
+                <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 font-mono">
+                      Room {resident.roomNumber || resident.room || 'Unassigned'}
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+                      {resident.name}
+                    </h3>
+                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3" />
+                      <span>{resident.wing || 'Main Wing'} &middot; Table {resident.tableNumber || '1'}</span>
+                    </div>
+                  </div>
+
+                  <AppleBadge color="blue">
+                    {selectedMeal}
+                  </AppleBadge>
                 </div>
-                <span
-                  style={{
-                    backgroundColor: 'var(--color-primary-light)',
-                    color: 'var(--color-primary)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 'var(--weight-bold)',
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-sm)'
-                  }}
-                >
-                  {selectedMeal}
-                </span>
+
+                {/* IDDSI Textures Block */}
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 text-xs">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Food Texture</div>
+                    <div className="font-bold text-slate-900 dark:text-white mt-0.5">{texture}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Liquid Consistency</div>
+                    <div className="font-bold text-teal-600 dark:text-teal-400 mt-0.5">{fluid}</div>
+                  </div>
+                </div>
+
+                {/* Diet Order */}
+                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-400 uppercase font-mono text-[10px] block">Therapeutic Diet</span>
+                  {dietOrder}
+                </div>
+
+                {/* Allergies / Clinical Alerts */}
+                {allergies.length > 0 ? (
+                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <span>ALLERGIES: {allergies.join(', ')}</span>
+                  </div>
+                ) : (
+                  <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>No Known Food Allergies</span>
+                  </div>
+                )}
+
+                {dislikes.length > 0 && (
+                  <div className="text-xs text-slate-400">
+                    <span className="font-semibold text-slate-500">Dislikes:</span> {dislikes.join(', ')}
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, backgroundColor: 'var(--bg-app)', padding: 10, borderRadius: 'var(--radius-md)' }}>
-                <div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--weight-medium)' }}>Texture</div>
-                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>{texture}</div>
+              {/* QR Verification Token */}
+              <div className="border-t border-dashed border-slate-200 dark:border-slate-800 pt-3 mt-4 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>TKT-{resident.id?.slice(0, 6) || 'res01'}:{resident.profile_version || 1}</span>
                 </div>
-                <div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--weight-medium)' }}>Fluid Consistency</div>
-                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)', color: 'var(--color-teal)' }}>{fluid}</div>
-                </div>
+                <span className="font-bold text-slate-500">v{resident.profile_version || 1} Verified</span>
               </div>
-
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                <strong>Order:</strong> {dietOrder}
-              </div>
-
-              {allergies.length > 0 ? (
-                <div style={{ backgroundColor: 'var(--color-danger-light)', border: '1px solid var(--color-danger)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', color: 'var(--color-danger)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)' }}>
-                  ⚠️ ALLERGIES: {allergies.join(', ')}
-                </div>
-              ) : (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success)', fontWeight: 'var(--weight-medium)' }}>
-                  ✓ No Known Food Allergies
-                </div>
-              )}
-
-              {dislikes.length > 0 && (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                  <strong>Dislikes:</strong> {dislikes.join(', ')}
-                </div>
-              )}
-
-              {/* Signed Security QR Code Token */}
-              <div style={{
-                marginTop: 6,
-                paddingTop: 8,
-                borderTop: '1px dashed var(--border-color)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: 10,
-                color: 'var(--text-muted)',
-              }}>
-                <div style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                  🔒 QR: TKT-{resident.id?.slice(0, 6) || 'res01'}:{resident.profile_version || 1}:{(resident.dietOrder || resident.dietType || 'REG').slice(0, 3)}
-                </div>
-                <span style={{ fontSize: 10, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
-                  v{resident.profile_version || 1} Verified
-                </span>
-              </div>
-            </div>
+            </AppleCard>
           )
         })}
       </div>

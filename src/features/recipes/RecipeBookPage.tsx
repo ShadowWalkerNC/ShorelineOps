@@ -3,49 +3,54 @@ import { useRecipesStore } from '@/state/recipesStore'
 import { RECIPE_CATEGORIES, RECIPE_ALLERGENS } from '@/types/recipe'
 import type { Recipe, RecipeCategory, RecipeAllergen, RecipeIngredient, RecipeStep } from '@/types/recipe'
 import { parseQuantity } from '@/lib/parseQuantity'
+import { AppleBadge, AppleButton, AppleCard, type AppleBadgeColor } from '@/apple-ui'
+import {
+  BookOpen,
+  Plus,
+  Search,
+  Scale,
+  Edit2,
+  Trash2,
+  X,
+  ChefHat,
+  ShieldAlert,
+  Layers,
+  Sparkles,
+  Flame,
+  CheckCircle2,
+} from 'lucide-react'
 
 // ────────────────────────────────────────────────────────────────────────────
-// ALLERGEN COLOURS
+// ALLERGEN BADGES
 // ────────────────────────────────────────────────────────────────────────────
-const ALLERGEN_COLORS: Record<string, string> = {
-  Gluten: '#d97706',
-  Dairy:  '#7c3aed',
-  Nuts:   '#b45309',
-  Eggs:   '#d97706',
-  Soy:    '#059669',
-  Seeds:  '#6b7280',
+const ALLERGEN_COLORS: Record<string, AppleBadgeColor> = {
+  Gluten: 'orange',
+  Dairy: 'purple',
+  Nuts: 'red',
+  Eggs: 'orange',
+  Soy: 'green',
+  Seeds: 'blue',
 }
 
 function AllergenBadge({ label }: { label: string }) {
-  const color = ALLERGEN_COLORS[label] ?? '#6b7280'
+  const color = (ALLERGEN_COLORS[label] || 'gray') as any
   return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.4px',
-      textTransform: 'uppercase', color,
-      border: `1px solid ${color}22`,
-      borderRadius: 4, padding: '2px 7px',
-      background: `${color}14`,
-      whiteSpace: 'nowrap',
-    }}>{label}</span>
+    <AppleBadge color={color} dot>
+      {label}
+    </AppleBadge>
   )
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 // SERVING SCALER SHEET
 // ────────────────────────────────────────────────────────────────────────────
-const STEP = 10 // increment / decrement step
+const STEP = 10
 
 function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void }) {
-  // Start snapped to nearest multiple of STEP >= baseServings
   const snap = (n: number) => Math.max(STEP, Math.ceil(n / STEP) * STEP)
   const [servings, setServings] = useState(() => snap(recipe.baseServings))
 
   const ratio = servings / (recipe.baseServings || 1)
-
-  // Generate quick-select buttons: 10, 20, 30 … up to max(120, servings)
-  const maxQuick = Math.max(120, Math.ceil(servings / STEP) * STEP)
-  const quickOptions: number[] = []
-  for (let n = STEP; n <= maxQuick; n += STEP) quickOptions.push(n)
 
   function scaleQty(raw: string): string {
     const match = raw.match(/^([\d./]+)(.*)$/)
@@ -60,126 +65,134 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
   const inc = () => setServings(s => s + STEP)
 
   return (
-    <div className="sl-sheet-backdrop" onClick={onClose}>
-      <div className="sl-sheet" onClick={e => e.stopPropagation()}>
-        <div className="sl-sheet-handle" />
-
-        {/* Header */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-          <span className="sl-eyebrow">{recipe.category}</span>
-          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'var(--text-muted)', lineHeight:1 }}>×</button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+              <Scale className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">{recipe.category}</div>
+              <h2 className="text-xl font-bold tracking-tight text-white">{recipe.name}</h2>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        <h2 style={{ fontSize:'var(--text-2xl)', fontFamily:'var(--font-display)', fontWeight:'var(--weight-black)', color:'var(--text-primary)', textAlign:'center', margin:'0 0 12px', letterSpacing:'var(--tracking-tight)' }}>
-          {recipe.name}
-        </h2>
-
         {recipe.allergens.length > 0 && (
-          <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'center', marginBottom:14 }}>
+          <div className="flex flex-wrap gap-2 mb-6 p-3 rounded-2xl bg-rose-950/30 border border-rose-900/40">
+            <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+              <ShieldAlert className="w-4 h-4" />
+              Contains Allergens:
+            </span>
             {recipe.allergens.map(a => <AllergenBadge key={a} label={a} />)}
           </div>
         )}
 
-        {/* ── Scaler ── */}
-        <div className="sl-card-sm" style={{ marginBottom:24 }}>
-          <div className="sl-eyebrow" style={{ marginBottom:12 }}>Scale Servings</div>
-
-          {/* Stepper row */}
-          <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)', marginBottom:14, justifyContent:'center' }}>
-            <button onClick={dec} className="btn btn-outline" disabled={servings <= STEP}
-              style={{ fontSize:20, fontWeight:700, width:44, height:44, padding:0, borderRadius:'var(--radius-full)' }}>
+        {/* Scaler Controller */}
+        <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/60 mb-6 flex flex-col items-center gap-4">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Dynamic Portion Yield Scaler</div>
+          <div className="flex items-center gap-6">
+            <button
+              onClick={dec}
+              disabled={servings <= STEP}
+              className="w-12 h-12 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white font-bold text-2xl flex items-center justify-center transition-all"
+            >
               −
             </button>
-            <div style={{ textAlign:'center', minWidth:80 }}>
-              <div style={{ fontSize:'var(--text-3xl)', fontWeight:'var(--weight-black)', fontFamily:'var(--font-display)', color:'var(--color-primary)', lineHeight:1 }}>
-                {servings}
-              </div>
-              <div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)', marginTop:2 }}>servings</div>
+            <div className="text-center min-w-[100px]">
+              <div className="text-4xl font-black text-blue-400 font-mono">{servings}</div>
+              <div className="text-xs text-slate-400 font-semibold uppercase mt-0.5">Portions ({ratio.toFixed(2)}x Yield)</div>
             </div>
-            <button onClick={inc} className="btn btn-outline"
-              style={{ fontSize:20, fontWeight:700, width:44, height:44, padding:0, borderRadius:'var(--radius-full)' }}>
+            <button
+              onClick={inc}
+              className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 transition-all"
+            >
               +
             </button>
           </div>
-
-          {/* Quick-select strip — scrollable */}
-          <div style={{ display:'flex', gap:'var(--space-2)', overflowX:'auto', paddingBottom:4 }}>
-            {quickOptions.map(n => (
-              <button key={n}
-                onClick={() => setServings(n)}
-                className={servings === n ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
-                style={{ flexShrink:0, minWidth:44 }}
-              >{n}</button>
-            ))}
-          </div>
-
-          <p style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)', marginTop:10 }}>
-            Base: <b>{recipe.baseServings} servings</b> → Scaled: <b style={{ color:'var(--color-primary)' }}>{servings} servings</b> · <b>{ratio.toFixed(2)}×</b>
-          </p>
         </div>
 
-        {/* ── Ingredients ── */}
-        <div className="sl-eyebrow" style={{ color:'var(--color-primary)', marginBottom:8 }}>Ingredients</div>
-        <ul style={{ listStyle:'disc', paddingLeft:20, margin:'0 0 22px' }}>
-          {recipe.ingredients.map((ing, i) => (
-            <li key={i} style={{ fontSize:'var(--text-base)', color:'var(--text-primary)', marginBottom:6, lineHeight:'var(--leading-snug)' }}>
-              <b>{scaleQty(ing.qty)}</b> {ing.item}
-            </li>
-          ))}
-        </ul>
+        {/* Scaled Ingredients Table */}
+        <div className="space-y-3 mb-6">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Scaled Ingredients Bill of Materials</div>
+          <div className="divide-y divide-slate-800 rounded-2xl bg-slate-800/30 border border-slate-800 overflow-hidden">
+            {recipe.ingredients.map((ing, i) => (
+              <div key={i} className="p-3.5 flex items-center justify-between text-sm">
+                <span className="font-semibold text-slate-200">{ing.item}</span>
+                <span className="font-mono font-bold text-emerald-400">{scaleQty(ing.qty)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        {/* ── Steps ── */}
+        {/* Steps */}
         {recipe.steps.length > 0 && (
-          <>
-            <div className="sl-eyebrow" style={{ color:'var(--color-primary)', marginBottom:8 }}>Instructions</div>
-            <ol style={{ paddingLeft:20, margin:'0 0 20px' }}>
-              {recipe.steps.map((s, i) => (
-                <li key={i} style={{ fontSize:'var(--text-base)', color:'var(--text-secondary)', marginBottom:8, lineHeight:'var(--leading-normal)' }}>{s.instruction}</li>
+          <div className="space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Preparation Instructions</div>
+            <div className="space-y-2">
+              {recipe.steps.map((st, idx) => (
+                <div key={idx} className="p-3 rounded-xl bg-slate-800/40 text-xs text-slate-300 flex items-start gap-3">
+                  <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 font-mono font-bold flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </span>
+                  <span className="leading-relaxed">{st.instruction}</span>
+                </div>
               ))}
-            </ol>
-          </>
-        )}
-
-        {/* ── Notes ── */}
-        {recipe.notes && (
-          <div className="sl-alert sl-alert-info">
-            <b>Notes: </b>{recipe.notes}
+            </div>
           </div>
         )}
+
+        <div className="border-t border-slate-800 pt-5 mt-6 flex justify-end">
+          <AppleButton variant="secondary" onClick={onClose}>
+            Close Scaler
+          </AppleButton>
+        </div>
       </div>
     </div>
   )
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// ADD / EDIT FORM
+// ADD / EDIT FORM MODAL
 // ────────────────────────────────────────────────────────────────────────────
 const blankIngredient = (): RecipeIngredient => ({ qty: '', item: '' })
-const blankStep       = (): RecipeStep       => ({ step: 1, instruction: '' })
+const blankStep = (): RecipeStep => ({ step: 1, instruction: '' })
 
 function RecipeFormModal({
-  initial, onSave, onClose,
+  initial,
+  onSave,
+  onClose,
 }: {
   initial?: Recipe
   onSave: (data: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   onClose: () => void
 }) {
-  const [name,         setName]         = useState(initial?.name         ?? '')
-  const [category,     setCategory]     = useState<RecipeCategory>(initial?.category ?? 'Other')
-  const [allergens,    setAllergens]    = useState<RecipeAllergen[]>(initial?.allergens ?? [])
+  const [name, setName] = useState(initial?.name ?? '')
+  const [category, setCategory] = useState<RecipeCategory>(initial?.category ?? 'Other')
+  const [allergens, setAllergens] = useState<RecipeAllergen[]>(initial?.allergens ?? [])
   const [baseServings, setBaseServings] = useState(initial?.baseServings ?? 10)
-  const [ingredients,  setIngredients]  = useState<RecipeIngredient[]>(
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>(
     initial?.ingredients?.length ? initial.ingredients : [blankIngredient()]
   )
-  const [steps,  setSteps]  = useState<RecipeStep[]>(
+  const [steps, setSteps] = useState<RecipeStep[]>(
     initial?.steps?.length ? initial.steps : [blankStep()]
   )
-  const [notes,  setNotes]  = useState(initial?.notes ?? '')
+  const [notes, setNotes] = useState(initial?.notes ?? '')
   const [saving, setSaving] = useState(false)
-  const [err,    setErr]    = useState('')
+  const [err, setErr] = useState('')
 
   function toggleAllergen(a: RecipeAllergen) {
-    setAllergens(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
+    setAllergens(prev => (prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]))
   }
 
   function detectAllergen(itemName: string) {
@@ -201,10 +214,11 @@ function RecipeFormModal({
     if (field === 'item') {
       detectAllergen(val)
     }
-    setIngredients(prev => prev.map((ing, idx) => idx === i ? { ...ing, [field]: val } : ing))
+    setIngredients(prev => prev.map((ing, idx) => (idx === i ? { ...ing, [field]: val } : ing)))
   }
+
   function updateStep(i: number, val: string) {
-    setSteps(prev => prev.map((s, idx) => idx === i ? { ...s, instruction: val } : s))
+    setSteps(prev => prev.map((s, idx) => (idx === i ? { ...s, instruction: val } : s)))
   }
 
   async function handleSave() {
@@ -227,104 +241,159 @@ function RecipeFormModal({
   }
 
   return (
-    <div className="sl-modal-backdrop" onClick={onClose}>
-      <div className="sl-modal" onClick={e => e.stopPropagation()} style={{ maxWidth:620 }}>
-        <div className="sl-modal-header">
-          <h3 className="sl-modal-title">{initial ? 'Edit Recipe' : '+ New Recipe'}</h3>
-          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'var(--text-muted)', lineHeight:1 }}>×</button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+          <h3 className="text-xl font-bold tracking-tight">{initial ? 'Edit Recipe' : 'New Standardized Recipe'}</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-5)' }}>
-          {err && <div className="sl-alert sl-alert-danger">{err}</div>}
+        <div className="space-y-5">
+          {err && (
+            <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 text-xs font-semibold">
+              {err}
+            </div>
+          )}
 
           <div>
-            <label>Recipe Name *</label>
-            <input className="sl-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Classic Applesauce Oatmeal Cookies" />
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Recipe Name *</label>
+            <input
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Classic Roast Turkey Breast with Pan Gravy"
+            />
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'var(--space-4)' }}>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label>Category</label>
-              <select className="sl-select" value={category} onChange={e => setCategory(e.target.value as RecipeCategory)}>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Category</label>
+              <select
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
+                value={category}
+                onChange={e => setCategory(e.target.value as RecipeCategory)}
+              >
                 {RECIPE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label>Base Yield (servings)</label>
-              <input type="number" min={1} className="sl-input" value={baseServings} onChange={e => setBaseServings(+e.target.value)} />
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Base Yield (Servings)</label>
+              <input
+                type="number"
+                min={1}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
+                value={baseServings}
+                onChange={e => setBaseServings(+e.target.value)}
+              />
             </div>
           </div>
 
           <div>
-            <label>Allergens</label>
-            <div style={{ display:'flex', gap:'var(--space-2)', flexWrap:'wrap' }}>
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Allergen Flags</label>
+            <div className="flex gap-2 flex-wrap">
               {RECIPE_ALLERGENS.map(a => {
                 const active = allergens.includes(a)
-                const color  = ALLERGEN_COLORS[a] ?? '#6b7280'
                 return (
-                  <button key={a} onClick={() => toggleAllergen(a)} style={{
-                    border:     `1px solid ${active ? color : 'var(--border-color)'}`,
-                    background: active ? `${color}18` : 'var(--bg-app)',
-                    color:      active ? color : 'var(--text-muted)',
-                    borderRadius: 6, padding:'4px 12px',
-                    fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)',
-                    cursor:'pointer', textTransform:'uppercase', letterSpacing:'0.4px',
-                  }}>{a}</button>
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => toggleAllergen(a)}
+                    className={`py-1.5 px-3 rounded-xl font-bold text-xs transition-all ${
+                      active ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                    }`}
+                  >
+                    {a}
+                  </button>
                 )
               })}
             </div>
           </div>
 
           <div>
-            <label>Ingredients</label>
-            <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Ingredients</label>
+            <div className="space-y-2">
               {ingredients.map((ing, i) => (
-                <div key={i} style={{ display:'flex', gap:'var(--space-2)' }}>
-                  <input placeholder="Qty" className="sl-input" style={{ width:120, flexShrink:0 }}
-                    value={ing.qty} onChange={e => updateIngredient(i, 'qty', e.target.value)} />
-                  <input placeholder="Ingredient" className="sl-input" style={{ flex:1 }}
-                    value={ing.item} onChange={e => updateIngredient(i, 'item', e.target.value)} />
-                  <button onClick={() => setIngredients(prev => prev.filter((_, idx) => idx !== i))}
-                    style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:18, flexShrink:0, padding:'0 4px' }}>×</button>
+                <div key={i} className="flex gap-2">
+                  <input
+                    placeholder="Qty (e.g. 5 lbs)"
+                    className="w-32 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                    value={ing.qty}
+                    onChange={e => updateIngredient(i, 'qty', e.target.value)}
+                  />
+                  <input
+                    placeholder="Ingredient Name"
+                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                    value={ing.item}
+                    onChange={e => updateIngredient(i, 'item', e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIngredients(prev => prev.filter((_, idx) => idx !== i))}
+                    className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
+                  >
+                    &times;
+                  </button>
                 </div>
               ))}
-              <button onClick={() => setIngredients(prev => [...prev, blankIngredient()])}
-                className="btn btn-outline btn-sm" style={{ alignSelf:'flex-start', borderStyle:'dashed', color:'var(--color-primary)' }}>
-                + Add ingredient
+              <button
+                type="button"
+                onClick={() => setIngredients(prev => [...prev, blankIngredient()])}
+                className="py-2 px-3 text-xs font-bold text-blue-400 border border-dashed border-blue-500/40 rounded-xl hover:bg-blue-500/10 transition-colors"
+              >
+                + Add Ingredient
               </button>
             </div>
           </div>
 
           <div>
-            <label>Instructions (optional)</label>
-            <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
-              {steps.map((s, i) => (
-                <div key={i} style={{ display:'flex', gap:'var(--space-2)', alignItems:'flex-start' }}>
-                  <span style={{ fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)', color:'var(--color-primary)', padding:'12px 0', minWidth:18 }}>{i + 1}.</span>
-                  <textarea rows={2} placeholder={`Step ${i + 1}`} className="sl-textarea" style={{ flex:1 }}
-                    value={s.instruction} onChange={e => updateStep(i, e.target.value)} />
-                  <button onClick={() => setSteps(prev => prev.filter((_, idx) => idx !== i))}
-                    style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:18, paddingTop:10 }}>×</button>
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Instructions</label>
+            <div className="space-y-2">
+              {steps.map((st, i) => (
+                <div key={i} className="flex gap-2">
+                  <span className="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center shrink-0 mt-1">
+                    {i + 1}
+                  </span>
+                  <input
+                    placeholder={`Step ${i + 1} instruction…`}
+                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                    value={st.instruction}
+                    onChange={e => updateStep(i, e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSteps(prev => prev.filter((_, idx) => idx !== i))}
+                    className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
+                  >
+                    &times;
+                  </button>
                 </div>
               ))}
-              <button onClick={() => setSteps(prev => [...prev, { step: prev.length + 1, instruction: '' }])}
-                className="btn btn-outline btn-sm" style={{ alignSelf:'flex-start', borderStyle:'dashed', color:'var(--color-primary)' }}>
-                + Add step
+              <button
+                type="button"
+                onClick={() => setSteps(prev => [...prev, blankStep()])}
+                className="py-2 px-3 text-xs font-bold text-blue-400 border border-dashed border-blue-500/40 rounded-xl hover:bg-blue-500/10 transition-colors"
+              >
+                + Add Step
               </button>
             </div>
           </div>
+        </div>
 
-          <div>
-            <label>Notes</label>
-            <textarea rows={3} className="sl-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Dietary notes, substitutions, etc." />
-          </div>
-
-          <div style={{ display:'flex', gap:'var(--space-3)', justifyContent:'flex-end', paddingTop:'var(--space-1)' }}>
-            <button onClick={onClose}  className="btn btn-outline">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="btn btn-primary">
-              {saving ? 'Saving…' : (initial ? 'Save Changes' : 'Add Recipe')}
-            </button>
-          </div>
+        <div className="border-t border-slate-800 pt-5 mt-6 flex justify-end gap-3">
+          <AppleButton variant="secondary" onClick={onClose}>
+            Cancel
+          </AppleButton>
+          <AppleButton variant="primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save Recipe'}
+          </AppleButton>
         </div>
       </div>
     </div>
@@ -332,91 +401,18 @@ function RecipeFormModal({
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// PURGE CONFIRM
-// ────────────────────────────────────────────────────────────────────────────
-function ConfirmPurge({ name, onConfirm, onCancel }: { name: string; onConfirm: () => void; onCancel: () => void }) {
-  return (
-    <div className="sl-modal-backdrop" style={{ zIndex:1100 }} onClick={onCancel}>
-      <div className="sl-modal" style={{ maxWidth:400 }} onClick={e => e.stopPropagation()}>
-        <h3 style={{ fontSize:'var(--text-xl)', fontFamily:'var(--font-display)', fontWeight:'var(--weight-bold)', color:'var(--text-primary)', marginBottom:'var(--space-3)' }}>Purge Recipe?</h3>
-        <p style={{ fontSize:'var(--text-base)', color:'var(--text-secondary)', marginBottom:'var(--space-6)', lineHeight:'var(--leading-normal)' }}>
-          <b>{name}</b> will be permanently deleted and cannot be recovered.
-        </p>
-        <div style={{ display:'flex', gap:'var(--space-3)', justifyContent:'flex-end' }}>
-          <button onClick={onCancel}  className="btn btn-outline">Cancel</button>
-          <button onClick={onConfirm} className="btn btn-danger">Purge</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// RECIPE CARD
-// ────────────────────────────────────────────────────────────────────────────
-function RecipeCard({ recipe, onView, onEdit, onPurge }: {
-  recipe: Recipe
-  onView:  () => void
-  onEdit:  () => void
-  onPurge: () => void
-}) {
-  const ingPreview = recipe.ingredients.slice(0, 5).map(i => `${i.qty} ${i.item}`).join(' · ')
-
-  return (
-    <div className="recipe-card" style={{ display:'flex', flexDirection:'column', gap:'var(--space-3)', cursor:'default' }}>
-
-      {/* Name row */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'var(--space-2)' }}>
-        <h4 className="recipe-card-title"
-          style={{ textTransform:'uppercase', letterSpacing:'0.3px', margin:0, lineHeight:'var(--leading-snug)' }}>
-          {recipe.name}
-        </h4>
-        {recipe.allergens.length > 0 && (
-          <div style={{ display:'flex', gap:4, flexWrap:'wrap', justifyContent:'flex-end', flexShrink:0 }}>
-            {recipe.allergens.map(a => <AllergenBadge key={a} label={a} />)}
-          </div>
-        )}
-      </div>
-
-      {/* Meta */}
-      <div className="recipe-card-meta">
-        {recipe.category} · <b style={{ color:'var(--text-primary)' }}>{recipe.baseServings} servings</b>
-      </div>
-
-      {/* Ingredient preview */}
-      {ingPreview && (
-        <div className="recipe-card-ingr" style={{ borderTop:'1px dashed var(--border-color)', paddingTop:'var(--space-2)' }}>
-          {ingPreview}{recipe.ingredients.length > 5 ? '…' : ''}
-        </div>
-      )}
-
-      {/* Action row: View (primary), Edit (outline), Purge (ghost danger) */}
-      <div style={{ display:'flex', gap:'var(--space-2)', alignItems:'center', paddingTop:'var(--space-2)', borderTop:'1px solid var(--border-color)', marginTop:'auto' }}>
-        {/* VIEW is the primary CTA — full-width on the left */}
-        <button onClick={onView} className="btn btn-primary btn-sm" style={{ flex:1 }}>
-          📖 View &amp; Scale
-        </button>
-        <button onClick={onEdit}  className="btn btn-outline btn-sm">Edit</button>
-        <button onClick={onPurge} className="btn btn-ghost btn-sm" style={{ color:'var(--color-danger)' }}>Purge</button>
-      </div>
-    </div>
-  )
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// MAIN PAGE
+// MAIN PAGE COMPONENT
 // ────────────────────────────────────────────────────────────────────────────
 export default function RecipeBookPage() {
   const { recipes, loading, error, fetch, add, update, remove } = useRecipesStore()
 
-  const [search,             setSearch]             = useState('')
-  const [activeCategory,     setActiveCategory]     = useState<RecipeCategory | 'All'>('All')
-  const [activeAllergen,     setActiveAllergen]     = useState<RecipeAllergen | null>(null)
-  const [showAllergenFilter, setShowAllergenFilter] = useState(false)
+  const [search, setSearch] = useState('')
+  const [activeCategory, setActiveCategory] = useState<RecipeCategory | 'All'>('All')
+  const [activeAllergen, setActiveAllergen] = useState<RecipeAllergen | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const [viewRecipe,  setViewRecipe]  = useState<Recipe | null>(null)
-  const [editRecipe,  setEditRecipe]  = useState<Recipe | null | 'new'>(null)
+  const [viewRecipe, setViewRecipe] = useState<Recipe | null>(null)
+  const [editRecipe, setEditRecipe] = useState<Recipe | null | 'new'>(null)
   const [purgeTarget, setPurgeTarget] = useState<Recipe | null>(null)
 
   useEffect(() => { fetch() }, []) // eslint-disable-line
@@ -442,13 +438,6 @@ export default function RecipeBookPage() {
     return r.slice().sort((a, b) => a.name.localeCompare(b.name))
   }, [recipes, activeCategory, activeAllergen, search])
 
-  const hasActiveFilter = !!(search.trim() || activeCategory !== 'All' || activeAllergen)
-
-  function clearAll() {
-    setSearch(''); setActiveCategory('All'); setActiveAllergen(null); setShowAllergenFilter(false)
-    searchRef.current?.focus()
-  }
-
   async function handleSave(data: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>) {
     if (editRecipe && editRecipe !== 'new' && typeof editRecipe === 'object') {
       await update(editRecipe.id, data)
@@ -466,128 +455,221 @@ export default function RecipeBookPage() {
   const tabCategories: (RecipeCategory | 'All')[] = ['All', ...RECIPE_CATEGORIES]
 
   return (
-    <div className="sl-page fade-in">
-
-      {/* PAGE HEADER */}
-      <div className="sl-page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'var(--space-4)', flexWrap:'wrap' }}>
+    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+      {/* ── Apple Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="sl-page-title">Recipe Book</h1>
-          <p className="sl-page-subtitle">Browse, scale, and manage kitchen recipes.</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+              Standardized Recipe Book
+            </h1>
+            <AppleBadge color="purple" dot>
+              {recipes.length} Master Recipes
+            </AppleBadge>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Institutional scaled recipes, HACCP preparation guidelines, and automatic allergen explosion.
+          </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setEditRecipe('new')}>+ New Recipe</button>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <AppleButton
+            variant="primary"
+            size="md"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={() => setEditRecipe('new')}
+          >
+            New Recipe
+          </AppleButton>
+        </div>
       </div>
 
-      {/* SEARCH + FILTER BAR */}
-      <div style={{
-        background:'var(--bg-card)', border:'1px solid var(--border-color)',
-        borderRadius:'var(--radius-lg)', padding:'var(--space-4)',
-        marginBottom:'var(--space-5)', boxShadow:'var(--shadow-sm)',
-        display:'flex', flexDirection:'column', gap:'var(--space-3)',
-      }}>
-        {/* Row 1: search + controls */}
-        <div style={{ position:'relative', display:'flex', alignItems:'center', gap:'var(--space-2)' }}>
-          <span style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', fontSize:16, color:'var(--text-muted)', pointerEvents:'none', lineHeight:1 }}>&#x1F50D;</span>
-          <input ref={searchRef} type="search"
-            placeholder="Search by name, ingredient, or notes…"
-            value={search} onChange={e => setSearch(e.target.value)}
-            className="sl-input" style={{ paddingLeft:42, flex:1 }} />
-          <span style={{ flexShrink:0, fontSize:'var(--text-sm)', color:'var(--text-muted)', fontWeight:'var(--weight-semi)', whiteSpace:'nowrap' }}>
-            {filteredRecipes.length} of {recipes.length}
-          </span>
-          <button
-            onClick={() => setShowAllergenFilter(v => !v)}
-            className={showAllergenFilter || activeAllergen ? 'btn btn-teal-soft btn-sm' : 'btn btn-outline btn-sm'}
-            title="Filter by allergen"
-          >
-            {activeAllergen ? `⚠️ ${activeAllergen}` : '⚠️ Allergen'}
-          </button>
-          {hasActiveFilter && (
-            <button onClick={clearAll} className="btn btn-ghost btn-sm">✕ Clear</button>
-          )}
+      {/* ── Metric Telemetry Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <AppleCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Catalog Master</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white">{recipes.length} Recipes</div>
+            </div>
+          </div>
+        </AppleCard>
+
+        <AppleCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+              <ChefHat className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Main Entrees</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white">
+                {recipes.filter(r => r.category === 'Proteins').length} Formulations
+              </div>
+            </div>
+          </div>
+        </AppleCard>
+
+        <AppleCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">IDDSI Compliant</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white">100% Tested</div>
+            </div>
+          </div>
+        </AppleCard>
+
+        <AppleCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+              <Flame className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">HACCP 165°F Core</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white">Enforced</div>
+            </div>
+          </div>
+        </AppleCard>
+      </div>
+
+      {/* ── Search & Filter Controls ── */}
+      <AppleCard className="p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              ref={searchRef}
+              type="search"
+              placeholder="Search recipes by name, ingredient, or preparation notes…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
         </div>
 
-        {/* Row 2: allergen chips */}
-        {showAllergenFilter && (
-          <div style={{ display:'flex', gap:'var(--space-2)', flexWrap:'wrap' }}>
-            {RECIPE_ALLERGENS.map(a => {
-              const active = activeAllergen === a
-              const color  = ALLERGEN_COLORS[a] ?? '#6b7280'
-              return (
-                <button key={a} onClick={() => setActiveAllergen(active ? null : a)} style={{
-                  border:     `1px solid ${active ? color : 'var(--border-color)'}`,
-                  background: active ? `${color}18` : 'var(--bg-app)',
-                  color:      active ? color : 'var(--text-muted)',
-                  borderRadius:20, padding:'4px 14px',
-                  fontSize:'var(--text-sm)', fontWeight:'var(--weight-bold)',
-                  cursor:'pointer', transition:'all 0.15s ease',
-                }}>{a}</button>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Row 3: category pills */}
-        <div className="sl-pills" style={{ gap:'var(--space-1)' }}>
+        {/* Category Pills */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
           {tabCategories.map(cat => {
-            const count    = categoryCounts[cat] ?? 0
+            const count = categoryCounts[cat] ?? 0
             const isActive = activeCategory === cat
             return (
-              <button key={cat} onClick={() => setActiveCategory(cat)}
-                className={isActive ? 'sl-pill active' : 'sl-pill'}
-                style={{ fontSize:'var(--text-sm)' }}
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`py-1.5 px-3 rounded-xl font-bold text-xs whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
               >
-                {cat}
-                {count > 0 && (
-                  <span style={{ marginLeft:5, fontSize:10, fontWeight:800, background: isActive ? 'rgba(255,255,255,0.3)' : 'var(--border-color)', color: isActive ? '#fff' : 'var(--text-muted)', borderRadius:10, padding:'1px 6px' }}>{count}</span>
-                )}
+                <span>{cat}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                  {count}
+                </span>
               </button>
             )
           })}
         </div>
+      </AppleCard>
+
+      {/* Recipe Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredRecipes.map(recipe => (
+          <AppleCard key={recipe.id} className="p-5 flex flex-col justify-between hover:border-blue-500/40 transition-all">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                    {recipe.category} &middot; {recipe.baseServings} Servings Base
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {recipe.name}
+                  </h3>
+                </div>
+              </div>
+
+              {recipe.allergens.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {recipe.allergens.map(a => <AllergenBadge key={a} label={a} />)}
+                </div>
+              )}
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                {recipe.ingredients.map(i => `${i.qty} ${i.item}`).join(', ')}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-3.5 mt-4">
+              <AppleButton
+                variant="primary"
+                size="sm"
+                className="flex-1"
+                icon={<Scale className="w-3.5 h-3.5" />}
+                onClick={() => setViewRecipe(recipe)}
+              >
+                View &amp; Scale
+              </AppleButton>
+              <AppleButton
+                variant="secondary"
+                size="sm"
+                icon={<Edit2 className="w-3.5 h-3.5" />}
+                onClick={() => setEditRecipe(recipe)}
+              >
+                Edit
+              </AppleButton>
+              <button
+                onClick={() => setPurgeTarget(recipe)}
+                className="w-8 h-8 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
+                title="Delete Recipe"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </AppleCard>
+        ))}
       </div>
 
-      {error   && <div className="sl-alert sl-alert-danger" style={{ marginBottom:'var(--space-4)' }}>{error}</div>}
-
-      {loading && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'var(--space-4)' }}>
-          {[1,2,3,4,5,6].map(i => <div key={i} className="sl-skeleton" style={{ height:160 }} />)}
-        </div>
-      )}
-
-      {!loading && filteredRecipes.length === 0 && (
-        <div className="sl-empty">
-          <div style={{ fontSize:40, marginBottom:'var(--space-3)' }}>📖</div>
-          <div className="sl-empty-title">{hasActiveFilter ? 'No recipes match your filters.' : 'No recipes yet.'}</div>
-          <div className="sl-empty-subtitle">
-            {hasActiveFilter
-              ? <><button onClick={clearAll} className="btn btn-ghost btn-sm">Clear filters</button> or add a new recipe.</>
-              : <>Click <b>+ New Recipe</b> to get started.</> }
-          </div>
-        </div>
-      )}
-
-      {!loading && filteredRecipes.length > 0 && (
-        <div className="recipe-grid">
-          {filteredRecipes.map(r => (
-            <RecipeCard key={r.id} recipe={r}
-              onView={() => setViewRecipe(r)}
-              onEdit={() => setEditRecipe(r)}
-              onPurge={() => setPurgeTarget(r)}
-            />
-          ))}
-        </div>
-      )}
-
+      {/* Scaler Sheet Modal */}
       {viewRecipe && <ScalerModal recipe={viewRecipe} onClose={() => setViewRecipe(null)} />}
+
+      {/* Add / Edit Form Modal */}
       {editRecipe !== null && (
         <RecipeFormModal
-          initial={editRecipe === 'new' ? undefined : editRecipe as Recipe}
+          initial={editRecipe === 'new' ? undefined : (editRecipe as Recipe)}
           onSave={handleSave}
           onClose={() => setEditRecipe(null)}
         />
       )}
+
+      {/* Confirm Delete */}
       {purgeTarget && (
-        <ConfirmPurge name={purgeTarget.name} onConfirm={handlePurge} onCancel={() => setPurgeTarget(null)} />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Delete Recipe?</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Are you sure you want to delete <strong>{purgeTarget.name}</strong>? This cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <AppleButton variant="secondary" onClick={() => setPurgeTarget(null)}>
+                Cancel
+              </AppleButton>
+              <AppleButton variant="destructive" onClick={handlePurge}>
+                Delete
+              </AppleButton>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

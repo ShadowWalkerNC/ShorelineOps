@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { tokenManager } from '@/security/tokenManager'
+import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { CheckSquare, Calendar, ChevronLeft, ChevronRight, Zap, Users, CheckCircle2, AlertCircle } from 'lucide-react'
 
-const DAYS  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
-const MEALS = ['Lunch','Supper']
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MEALS = ['Lunch', 'Supper']
 
 function getMostRecentSunday(date = new Date()) {
   const d = new Date(date)
@@ -12,35 +14,10 @@ function getMostRecentSunday(date = new Date()) {
 
 function formatWeekLabel(sunday: string) {
   const d = new Date(sunday + 'T12:00:00')
-  const sat = new Date(d); sat.setDate(sat.getDate() + 6)
+  const sat = new Date(d)
+  sat.setDate(sat.getDate() + 6)
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
   return `${d.toLocaleDateString('en-US', opts)} – ${sat.toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`
-}
-
-function getChoiceClass(choice: number | null, isAlt: boolean, isDeclined: boolean) {
-  if (isAlt)      return 'is-alt'
-  if (isDeclined) return 'is-declined'
-  if (choice === 1) return 'is-c1'
-  if (choice === 2) return 'is-c2'
-  return ''
-}
-
-interface ToastItem {
-  id: number
-  msg: string
-  type: 'success' | 'error'
-}
-
-function Toast({ toasts }: { toasts: ToastItem[] }) {
-  return (
-    <div className="toast-container" aria-live="polite">
-      {toasts.map(t => (
-        <div key={t.id} className={`toast ${t.type}`}>
-          {t.type === 'success' ? '✓' : '!'} {t.msg}
-        </div>
-      ))}
-    </div>
-  )
 }
 
 interface OrderCellProps {
@@ -53,20 +30,22 @@ interface OrderCellProps {
 }
 
 function OrderCell({ order, residentId, weekStart, day, meal, onSave }: OrderCellProps) {
-  const choice     = order?.choice_selected ?? 1
-  const modifier   = order?.modifier_text   ?? ''
-  const isAlt      = !!(order?.is_alternative)
-  const isDeclined = !!(order?.is_declined)
+  const choice = order?.choice_selected ?? 1
+  const modifier = order?.modifier_text ?? ''
+  const isAlt = !!order?.is_alternative
+  const isDeclined = !!order?.is_declined
 
-  const [localChoice,   setLocalChoice]   = useState(isAlt ? 'alt' : isDeclined ? 'declined' : String(choice))
+  const [localChoice, setLocalChoice] = useState(isAlt ? 'alt' : isDeclined ? 'declined' : String(choice))
   const [localModifier, setLocalModifier] = useState(modifier)
   const saveTimer = useRef<any>(null)
 
   useEffect(() => {
     setLocalChoice(
-      order?.is_alternative ? 'alt' :
-      order?.is_declined    ? 'declined' :
-      String(order?.choice_selected ?? 1)
+      order?.is_alternative
+        ? 'alt'
+        : order?.is_declined
+        ? 'declined'
+        : String(order?.choice_selected ?? 1)
     )
     setLocalModifier(order?.modifier_text ?? '')
   }, [order])
@@ -75,14 +54,14 @@ function OrderCell({ order, residentId, weekStart, day, meal, onSave }: OrderCel
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       const payload = {
-        resident_id:     residentId,
+        resident_id: residentId,
         week_start_date: weekStart,
-        day_of_week:     day,
-        meal_type:       meal,
+        day_of_week: day,
+        meal_type: meal,
         choice_selected: newChoice === 'alt' || newChoice === 'declined' ? null : parseInt(newChoice),
-        modifier_text:   newModifier,
-        is_alternative:  newChoice === 'alt'      ? 1 : 0,
-        is_declined:     newChoice === 'declined' ? 1 : 0,
+        modifier_text: newModifier,
+        is_alternative: newChoice === 'alt' ? 1 : 0,
+        is_declined: newChoice === 'declined' ? 1 : 0,
       }
       onSave(payload)
     }, 600)
@@ -98,337 +77,284 @@ function OrderCell({ order, residentId, weekStart, day, meal, onSave }: OrderCel
     scheduleSave(localChoice, e.target.value)
   }
 
-  const selClass = getChoiceClass(
-    parseInt(localChoice),
-    localChoice === 'alt',
-    localChoice === 'declined'
-  )
-
   return (
-    <div className="order-cell-inner" style={{ padding: '8px 12px' }}>
+    <div className="flex flex-col gap-1 p-1">
       <select
-        className={`order-select ${selClass}`}
         value={localChoice}
         onChange={handleChoice}
-        aria-label={`${day} ${meal} order`}
-        style={{ fontSize: '0.9rem', padding: '6px 8px', fontWeight: 'bold' }}
+        className={`w-full py-1 px-2 rounded-lg text-xs font-bold border transition-colors ${
+          localChoice === '1'
+            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+            : localChoice === '2'
+            ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+            : localChoice === 'alt'
+            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+        }`}
       >
         <option value="1">Choice 1</option>
         <option value="2">Choice 2</option>
-        <option value="alt">Alternative</option>
+        <option value="alt">Standing Alt</option>
         <option value="declined">Declined</option>
       </select>
       <input
         type="text"
-        className="order-modifier"
-        placeholder="add modifier..."
+        placeholder="Custom notes…"
         value={localModifier}
         onChange={handleModifier}
-        maxLength={80}
-        aria-label={`${day} ${meal} modifier`}
-        style={{
-          fontSize: '0.85rem',
-          padding: '4px 6px',
-          border: '1px solid var(--border-default)',
-          background: 'var(--bg-input)',
-          marginTop: '4px',
-          borderRadius: '4px'
-        }}
+        className="w-full py-0.5 px-2 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-md text-[11px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
       />
     </div>
   )
 }
 
-function WeekNav({ week, onChange }: { week: string; onChange: (w: string) => void }) {
-  function shift(days: number) {
-    const d = new Date(week + 'T12:00:00')
-    d.setDate(d.getDate() + days)
-    onChange(d.toISOString().slice(0, 10))
-  }
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button className="btn btn-secondary btn-sm" onClick={() => shift(-7)} aria-label="Previous week">‹</button>
-      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', minWidth: 200, textAlign: 'center' }}>
-        {formatWeekLabel(week)}
-      </span>
-      <button className="btn btn-secondary btn-sm" onClick={() => shift(7)} aria-label="Next week">›</button>
-      <button className="btn btn-secondary btn-sm" onClick={() => onChange(getMostRecentSunday())} title="Jump to current week">
-        Today
-      </button>
-    </div>
-  )
-}
-
 export default function OrderEntryPage() {
-  const [week,        setWeek]        = useState(getMostRecentSunday())
-  const [viewMode,    setViewMode]    = useState<'weekly' | 'day'>('day')
-  const [activeDay,   setActiveDay]   = useState(DAYS[new Date().getDay()])
-  const [residents,   setResidents]   = useState<any[]>([])
-  const [orderMap,    setOrderMap]    = useState<any>({})
-  const [loading,     setLoading]     = useState(true)
-  const [toasts,      setToasts]      = useState<ToastItem[]>([])
-  const [saving,      setSaving]      = useState(false)
-  const [initBusy,    setInitBusy]    = useState(false)
-  const toastId = useRef(0)
+  const [week, setWeek] = useState(getMostRecentSunday())
+  const [viewMode, setViewMode] = useState<'day' | 'weekly'>('day')
+  const [activeDay, setActiveDay] = useState(DAYS[new Date().getDay()])
+  const [residents, setResidents] = useState<any[]>([])
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [initBusy, setInitBusy] = useState(false)
 
   const token = tokenManager.getAccessToken()
 
-  function addToast(msg: string, type: 'success' | 'error' = 'success') {
-    const id = ++toastId.current
-    setToasts(t => [...t, { id, msg, type }])
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3000)
-  }
-
-  const loadWeek = useCallback(async (w: string) => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/kitchen/orders?week=${w}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setResidents(data.residents || [])
-      setOrderMap(data.orderMap   || {})
+      const [resResidents, resOrders] = await Promise.all([
+        fetch('/api/residents', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/kitchen/orders?week=${week}`, { headers: { Authorization: `Bearer ${token}` } }),
+      ])
+      const rData = await resResidents.json()
+      const oData = await resOrders.json()
+      setResidents(rData.residents || rData || [])
+      setOrders(oData.orders || oData || [])
     } catch (err) {
-      addToast('Failed to load orders', 'error')
+      console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [week, token])
 
-  useEffect(() => { loadWeek(week) }, [week, loadWeek])
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
-  async function handleSave(payload: any) {
+  const handleSaveCell = async (payload: any) => {
     setSaving(true)
     try {
-      const res = await fetch('/api/kitchen/orders', {
-        method: 'PUT',
+      await fetch('/api/kitchen/orders', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error()
-    } catch {
-      addToast('Save failed', 'error')
+    } catch (err) {
+      console.error(err)
     } finally {
       setSaving(false)
     }
   }
 
-  async function initWeek() {
-    if (!confirm(`Initialize all orders for week of ${formatWeekLabel(week)}?\n\nThis will create default rows for every resident. Existing data will NOT be overwritten.`)) return
+  const handleInitWeek = async () => {
     setInitBusy(true)
     try {
-      const res = await fetch(`/api/kitchen/orders/initialize-week`, {
+      await fetch('/api/kitchen/orders/init-week', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ week })
+        body: JSON.stringify({ week_start_date: week }),
       })
-      if (!res.ok) throw new Error()
-      await loadWeek(week)
-      addToast('Week initialized — standing alternatives applied automatically')
-    } catch {
-      addToast('Initialization failed', 'error')
+      await loadData()
+    } catch (err) {
+      console.error(err)
     } finally {
       setInitBusy(false)
     }
   }
 
-  const hasOrders = residents.some(r => orderMap[r.id])
+  const navWeek = (delta: number) => {
+    const d = new Date(week + 'T12:00:00')
+    d.setDate(d.getDate() + delta * 7)
+    setWeek(d.toISOString().slice(0, 10))
+  }
 
   return (
-    <div className="sl-page">
-      <div className="page-header">
+    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+      {/* ── Apple Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="page-title">Dietary Tally Entry</h1>
-          <p className="page-subtitle">Configure resident meals — update choices on screen</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+              Meal Tally &amp; Selection Entry
+            </h1>
+            <AppleBadge color="blue" dot>
+              {formatWeekLabel(week)}
+            </AppleBadge>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Pre-service meal selection tally, resident choice recording, and standing diet adjustments.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          {saving && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Saving…</span>}
-          <button
-            id="btn-init-week"
-            className="btn btn-primary"
-            onClick={initWeek}
+
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {saving && <span className="text-xs font-mono font-bold text-slate-400">Saving…</span>}
+          <AppleButton
+            variant="primary"
+            size="md"
+            icon={<Zap className="w-4 h-4" />}
+            onClick={handleInitWeek}
             disabled={initBusy}
           >
-            {initBusy ? '…' : '⚡'} Initialize Week
-          </button>
+            {initBusy ? 'Initializing…' : 'Initialize Week'}
+          </AppleButton>
         </div>
       </div>
 
-      <div className="controls-bar" style={{ display: 'flex', gap: 16, alignItems: 'center', width: '100%', flexWrap: 'wrap', marginBottom: 20 }}>
-        <WeekNav week={week} onChange={setWeek} />
-        
-        {/* Toggle Mode button */}
-        <div style={{ display: 'inline-flex', background: 'var(--border-subtle)', padding: 4, borderRadius: 'var(--radius-md)' }}>
+      {/* ── Controls Bar ── */}
+      <AppleCard className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
           <button
-            className="btn btn-sm"
-            style={{
-              background: viewMode === 'day' ? 'var(--bg-surface)' : 'transparent',
-              color: viewMode === 'day' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              border: 'none',
-              boxShadow: viewMode === 'day' ? 'var(--shadow-sm)' : 'none'
-            }}
+            onClick={() => navWeek(-1)}
+            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white px-2">
+            {formatWeekLabel(week)}
+          </span>
+          <button
+            onClick={() => navWeek(1)}
+            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* View Mode Switcher */}
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+          <button
             onClick={() => setViewMode('day')}
+            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'day' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-slate-400 hover:text-white'
+            }`}
           >
-            📅 Day View
+            Day View
           </button>
           <button
-            className="btn btn-sm"
-            style={{
-              background: viewMode === 'weekly' ? 'var(--bg-surface)' : 'transparent',
-              color: viewMode === 'weekly' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              border: 'none',
-              boxShadow: viewMode === 'weekly' ? 'var(--shadow-sm)' : 'none'
-            }}
             onClick={() => setViewMode('weekly')}
+            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'weekly' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-slate-400 hover:text-white'
+            }`}
           >
-            🗓️ Weekly Grid
+            Weekly Grid
           </button>
         </div>
+      </AppleCard>
 
-        <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
-          Total Residents: {residents.length}
-        </span>
-      </div>
-
+      {/* Day Selector Pills for Day View */}
       {viewMode === 'day' && (
-        <div className="card" style={{ display: 'flex', gap: 8, padding: 12, marginBottom: 16, overflowX: 'auto' }}>
-          {DAYS.map(day => (
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {DAYS.map(d => (
             <button
-              key={day}
-              className={`btn btn-sm ${activeDay === day ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveDay(day)}
+              key={d}
+              onClick={() => setActiveDay(d)}
+              className={`py-2 px-4 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                activeDay === d
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
             >
-              {day}
+              {d}
             </button>
           ))}
         </div>
       )}
 
-      {loading ? (
-        <div className="loading-state">
-          <div className="spinner" />
-          <span>Loading orders…</span>
-        </div>
-      ) : residents.length === 0 ? (
-        <div className="empty-state">
-          <span className="icon">👥</span>
-          <strong>No residents found</strong>
-          <span>Add residents first via the Residents page.</span>
-        </div>
-      ) : !hasOrders ? (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{
-            background: 'rgba(26,86,219,0.06)',
-            border: '1.5px solid var(--c1-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            marginBottom: 16
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>💡</span>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              No orders found for this week. Click <strong style={{ color: 'var(--brand-primary)' }}>⚡ Initialize Week</strong> to pre-apply all standing alternative options.
-            </span>
-          </div>
-        </div>
-      ) : null}
-
-      {!loading && residents.length > 0 && (
-        <div className="order-grid-wrap" style={{ background: '#ffffff', borderRadius: 8 }}>
-          <table className="order-grid" role="grid" aria-label="Weekly meal order grid">
-            <thead>
-              {viewMode === 'weekly' ? (
-                <>
-                  <tr>
-                    <th className="resident-header" rowSpan={2} style={{ color: 'var(--text-primary)', fontSize: '0.85rem' }}>Resident</th>
-                    {DAYS.map(day => (
-                      <th key={day} className="day-header" colSpan={MEALS.length} style={{ fontSize: '0.85rem' }}>
-                        {day}
-                      </th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {DAYS.map(day =>
-                      MEALS.map(meal => (
-                        <th key={`${day}-${meal}`}>{meal}</th>
-                      ))
-                    )}
-                  </tr>
-                </>
-              ) : (
-                <tr>
-                  <th className="resident-header" style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Resident</th>
-                  <th style={{ fontSize: '0.9rem' }}>{activeDay} Lunch</th>
-                  <th style={{ fontSize: '0.9rem' }}>{activeDay} Supper</th>
-                </tr>
-              )}
+      {/* Tally Entry Table */}
+      <AppleCard className="p-0 overflow-hidden border border-slate-200 dark:border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs divide-y divide-slate-200 dark:divide-slate-800">
+            <thead className="bg-slate-50 dark:bg-slate-850 font-bold uppercase font-mono text-[10px] text-slate-400">
+              <tr>
+                <th className="p-3.5 w-24">Room</th>
+                <th className="p-3.5 w-48">Resident Name</th>
+                <th className="p-3.5 w-36">Diet Order</th>
+                {viewMode === 'day' ? (
+                  <>
+                    <th className="p-3.5">Lunch Service</th>
+                    <th className="p-3.5">Supper Service</th>
+                  </>
+                ) : (
+                  DAYS.map(d => (
+                    <th key={d} className="p-3.5 text-center min-w-[130px]">
+                      {d.slice(0, 3)}
+                    </th>
+                  ))
+                )}
+              </tr>
             </thead>
-
-            <tbody>
-              {residents.map(r => (
-                <tr key={r.id}>
-                  <td className="resident-cell" style={{ background: '#ffffff', padding: '12px 16px' }}>
-                    <div className="resident-name" style={{ fontSize: '0.95rem' }}>{r.name}</div>
-                    <div className="resident-room" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Room {r.room}</div>
-                    {r.has_standing_alternative === 1 && (
-                      <div style={{ marginTop: 4 }}>
-                        <span className="badge badge-alt" title={r.alternative_description} style={{ fontSize: '0.7rem' }}>ALT: {r.alternative_description}</span>
-                      </div>
-                    )}
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {residents.map((r: any) => (
+                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                  <td className="p-3.5 font-mono font-bold text-slate-500 dark:text-slate-400">
+                    {r.roomNumber || r.room || '101-A'}
                   </td>
-                  
-                  {viewMode === 'weekly' ? (
-                    DAYS.map(day =>
-                      MEALS.map(meal => {
-                        const order = orderMap[r.id]?.[day]?.[meal]
-                        return (
-                          <td key={`${day}-${meal}`} style={{ padding: 0 }}>
-                            <OrderCell
-                              order={order}
-                              residentId={r.id}
-                              weekStart={week}
-                              day={day}
-                              meal={meal}
-                              onSave={handleSave}
-                            />
-                          </td>
-                        )
-                      })
-                    )
+                  <td className="p-3.5 font-bold text-slate-900 dark:text-white">
+                    {r.name}
+                  </td>
+                  <td className="p-3.5 text-slate-600 dark:text-slate-300">
+                    {r.dietType || r.dietOrder || 'Regular'}
+                  </td>
+                  {viewMode === 'day' ? (
+                    <>
+                      <td className="p-2">
+                        <OrderCell
+                          order={orders.find(o => o.resident_id === r.id && o.day_of_week === activeDay && o.meal_type === 'Lunch')}
+                          residentId={r.id}
+                          weekStart={week}
+                          day={activeDay}
+                          meal="Lunch"
+                          onSave={handleSaveCell}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <OrderCell
+                          order={orders.find(o => o.resident_id === r.id && o.day_of_week === activeDay && o.meal_type === 'Supper')}
+                          residentId={r.id}
+                          weekStart={week}
+                          day={activeDay}
+                          meal="Supper"
+                          onSave={handleSaveCell}
+                        />
+                      </td>
+                    </>
                   ) : (
-                    MEALS.map(meal => {
-                      const order = orderMap[r.id]?.[activeDay]?.[meal]
-                      return (
-                        <td key={`${activeDay}-${meal}`} style={{ padding: 0 }}>
-                          <OrderCell
-                            order={order}
-                            residentId={r.id}
-                            weekStart={week}
-                            day={activeDay}
-                            meal={meal}
-                            onSave={handleSave}
-                          />
-                        </td>
-                      )
-                    })
+                    DAYS.map(d => (
+                      <td key={d} className="p-2">
+                        <OrderCell
+                          order={orders.find(o => o.resident_id === r.id && o.day_of_week === d && o.meal_type === 'Lunch')}
+                          residentId={r.id}
+                          weekStart={week}
+                          day={d}
+                          meal="Lunch"
+                          onSave={handleSaveCell}
+                        />
+                      </td>
+                    ))
                   )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-
-      <Toast toasts={toasts} />
+      </AppleCard>
     </div>
   )
 }
