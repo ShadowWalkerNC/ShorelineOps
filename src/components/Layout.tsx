@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext'
 import { LicenseManager } from '../security/license'
 import NotificationBell from './NotificationBell'
+import InstallDesktopModal from './InstallDesktopModal'
 import { AppleBadge, AppleButton } from '@/apple-ui'
 import {
   LayoutDashboard,
@@ -164,6 +165,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [installModalOpen, setInstallModalOpen] = useState(false)
   const now = useClock()
 
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -345,7 +347,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {timeStr}
             </div>
 
-            <NotificationBell />
+            {/* 1-Click Install Desktop App Button */}
+            <button
+              onClick={() => setInstallModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 border border-teal-200/80 dark:border-teal-800/60 text-teal-700 dark:text-teal-300 text-xs font-bold transition-colors shadow-2xs"
+              title="Install Shoreline Care OS to your desktop or tablet"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Install App</span>
+            </button>
 
             {/* User Session Pill */}
             {user && (
@@ -369,6 +379,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 mt-14 md:mt-0">
           {children}
         </main>
+
+        {/* 1-Click Non-Tech Desktop Installation Modal */}
+        <InstallDesktopModal
+          open={installModalOpen}
+          onClose={() => setInstallModalOpen(false)}
+        />
       </div>
     </div>
   )
