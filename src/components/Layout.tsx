@@ -375,10 +375,70 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Page Viewport */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 mt-14 md:mt-0">
+        {/* Page Viewport (with safe padding for bottom nav on mobile) */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 mt-14 md:mt-0 pb-24 md:pb-6">
           {children}
         </main>
+
+        {/* ── MOBILE BOTTOM NAVIGATION (Jakob's Law Thumb-Zone Ergonomics) ── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 z-40 flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] shadow-lg">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center min-w-[56px] py-1 transition-colors ${
+                isActive ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+              }`
+            }
+          >
+            <LayoutDashboard className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] leading-tight">Dashboard</span>
+          </NavLink>
+
+          <NavLink
+            to="/residents"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center min-w-[56px] py-1 transition-colors ${
+                isActive ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+              }`
+            }
+          >
+            <Users className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] leading-tight">Residents</span>
+          </NavLink>
+
+          <NavLink
+            to="/menu"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center min-w-[56px] py-1 transition-colors ${
+                isActive ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+              }`
+            }
+          >
+            <Calendar className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] leading-tight">Menu</span>
+          </NavLink>
+
+          <NavLink
+            to="/kitchen/tablet"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center min-w-[56px] py-1 transition-colors ${
+                isActive ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+              }`
+            }
+          >
+            <Tablet className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] leading-tight">Tablet</span>
+          </NavLink>
+
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="flex flex-col items-center justify-center min-w-[56px] py-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            <MenuIcon className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] leading-tight">More</span>
+          </button>
+        </nav>
 
         {/* 1-Click Non-Tech Desktop Installation Modal */}
         <InstallDesktopModal

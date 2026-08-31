@@ -84,6 +84,10 @@ Autonomous Review: dietary_operations_consultant (audits clinical safety, IDDSI 
 ## Project-Specific Rules
 
 - **Deterministic Clinical Safety**: Never bypass NPO hard-blocks or allergen exclusion alerts. Safety checks are non-overridable.
+- **Jakob's Law for Mobile Development**: Strictly follow standard mobile mental models and conventions that users already know:
+  - **Thumb-Zone Bottom Navigation**: Provide a standard sticky bottom tab bar with 4–5 core destination tabs (`Dashboard`, `Residents`, `Menu`, `Kitchen`, `More`). Primary everyday workflows must be within comfortable thumb reach.
+  - **Mobile Touch Targets**: All touch targets must be $\ge 44\text{px}$ (iOS HIG) / $\ge 48\text{px}$ (Material Design) with instant tactile feedback.
+  - **Standard Mobile Patterns**: Use native-like bottom sheets for mobile filters/actions, sticky bottom CTA buttons for forms, appropriate `inputmode` (`numeric`, `email`, `tel`) for virtual keyboards, and respect mobile safe-area insets (`env(safe-area-inset-bottom)`).
 - **Open Core Architecture**: Core single-facility operational tools remain open-source and offline-capable. Proprietary SaaS endpoints (PCC Live Sync, Multi-Distributor Split MRP, CMS-2567 Binder, 3-Way Match) must be gated with `requireTier('enterprise')` and `<FeatureGate>`.
 - **shadcn/ui & Apple HIG Consistency**: UI components must use standard shadcn/ui wrappers (`src/components/ui/`) with Apple HIG frosted glass headers and responsive touch targets ($\ge 44\text{px}$).
 - **Testing Before Push**: `npm run build:demo && npm run build:marketing && npm test` must pass 100% before committing code.
