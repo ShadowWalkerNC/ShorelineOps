@@ -3,11 +3,16 @@
   "version": "5.0.0",
   "private": true,
   "main": "electron-main.js",
+  "bin": {
+    "shoreline": "./bin/shoreline.js",
+    "culinaryos": "./bin/shoreline.js"
+  },
   "workspaces": [
     "server",
     "marketing"
   ],
   "scripts": {
+    "cli": "node bin/shoreline.js",
     "dev": "vite",
     "dev:all": "concurrently \"npm run dev\" \"npm --prefix server run dev\"",
     "build": "tsc && vite build",

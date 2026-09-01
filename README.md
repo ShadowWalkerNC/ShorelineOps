@@ -205,6 +205,68 @@ Deploy the complete multi-service stack to Render using the official [`render.ya
 
 See [`docs/RenderDeployment.md`](docs/RenderDeployment.md) for complete deployment instructions and troubleshooting.
 
+
+## 🖥️ CLI & Developer Tools
+
+ShorelineOps ships a unified **command-line interface** (also aliased as `culinaryos`) that gives programmatic control over every clinical, culinary, purchasing, and compliance module. Use it from your terminal, CI/CD pipeline, or as a backend for custom integrations, MCP agents, and SDK calls.
+
+```bash
+# Via npm script
+npm run cli -- <command> [subcommand] [flags]
+
+# After npm link or global install
+shoreline <command>
+culinaryos <command>
+```
+
+### Quick Command Reference
+
+| Command | What it does |
+|---|---|
+| `shoreline residents` | Show active census — diet orders, textures, NPO status |
+| `shoreline residents triage` | Print the RD clinical EHR triage queue |
+| `shoreline menu audit` | Run CMS F800–F809 & USDA nutritional compliance audit |
+| `shoreline production split --census=60` | Station demand split (Steam Table, Puree L4, Minced L5, Soft L6) |
+| `shoreline production ap-ep --ep-demand=15` | AP vs EP yield loss & case-pack calculator |
+| `shoreline kitchen verify-tray --resident-id=SH-001` | Clinical tray verification with NPO hard-block & allergen check |
+| `shoreline kitchen log-temp --item="Turkey" --temp=168` | HACCP 165°F food safety temperature log |
+| `shoreline purchasing split-po --item="Turkey Breast"` | Multi-distributor lowest-cost split MRP (Dennis vs Sysco) |
+| `shoreline survey cms-binder` | Generate CMS-2567 F-Tag survey compliance binder |
+| `shoreline survey cpd` | Cost per resident day ($/CPD) analytics |
+| `shoreline mcp tools` | List all MCP tools available for AI agent integration |
+| `shoreline doctor` | Full system health diagnostic scan |
+
+### Machine-Readable JSON Output
+
+Every command supports `--json` for structured output — ideal for piping into MCP agents, SDK calls, or custom integrations:
+
+```bash
+shoreline residents --json
+shoreline purchasing split-po --item="Boneless Turkey" --json
+shoreline survey cms-binder --json
+```
+
+### MCP & Agent Integration
+
+The built-in MCP server (`server/src/mcp/server.ts`) exposes 5 tool definitions:
+- `shoreline_get_facility_profile`
+- `shoreline_get_census_diets`
+- `shoreline_validate_recipe_dietary`
+- `shoreline_explode_mrp_bom`
+- `shoreline_run_self_healing_audit`
+
+### Developer Ecosystem Roadmap
+
+| Layer | Status |
+|---|---|
+| **CLI** (`shoreline` / `culinaryos`) | ✅ Production |
+| **MCP Server** (`server/src/mcp/server.ts`) | ✅ Production |
+| **REST API** (Express, port 3015) | ✅ Production |
+| **SDK** (TypeScript package) | 🔜 v6.0 Roadmap |
+| **Webhook Events** | 🔜 v6.0 Roadmap |
+
+See [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md) for the complete command reference and flag documentation.
+
 ---
 
 ## 📄 Compliance & Legal

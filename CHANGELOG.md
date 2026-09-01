@@ -4,6 +4,29 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v5.1.0] — 2026-09-01
+### Added
+- **Unified CLI & CulinaryOS Command Line Controller** (`bin/shoreline.js`, `docs/CLI_REFERENCE.md`):
+  - Full-coverage CLI binary aliased as both `shoreline` and `culinaryos` with 8 command groups: `residents`, `menu`, `production`, `kitchen`, `purchasing`/`mrp`, `survey`/`reporting`, `mcp`, `doctor`/`health`.
+  - `--json` flag for machine-readable output across all commands — powers MCP agent integrations, external SDK calls, and CI/CD pipeline automation.
+  - Added `"bin"` entry to `package.json` for global `npm link` installation.
+- **Jakob's Law Mobile Bottom Navigation** (`src/components/Layout.tsx`):
+  - Fixed sticky bottom tab bar (`md:hidden`) with thumb-zone accessible tabs: Dashboard, Residents, Menu, Kitchen, More.
+  - Adheres to `env(safe-area-inset-bottom)` for notched iOS device safety insets.
+  - Main viewport adjusted to `pb-24 md:pb-6` to prevent content clipping.
+- **1-Click Desktop Install Modal** (`src/components/InstallDesktopModal.tsx`):
+  - Non-technical 3-step PWA install guide (Browser Chrome/Edge, iPad/Tablet, Windows Offline ZIP).
+  - "Install App" button added to the application header — no IT department required.
+- **Platform Blueprint** (`docs/PLATFORM_BLUEPRINT.md`):
+  - 20-point aligned architectural decisions matrix from the strategic planning session.
+  - Includes hub-and-spoke syndication, IDDSI recipe variant explosion, deterministic clinical substitution matrix, and v6.0 hardware roadmap (Zebra/Brother thermal + Bluetooth HACCP probes).
+- **Developer Ecosystem Roadmap Section** (`README.md`):
+  - Documents CLI, MCP server, REST API, and v6.0 SDK/Webhook roadmap.
+- **Marketing Site Integration Platform Section** (`marketing/src/pages/index.astro`):
+  - Added "Developer & Integration Platform" section highlighting the CLI, MCP, and SDK roadmap for technical audiences.
+
+---
+
 ## [v10.0.0] — 2026-08-26
 ### Added
 - **Corporate Headquarters Multi-Facility Portal** (`/enterprise`, `server/src/routes/enterprise.ts`, `src/state/enterpriseStore.ts`):
