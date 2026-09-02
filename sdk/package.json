@@ -1,0 +1,25 @@
+{
+  "name": "@shoreline/sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript SDK for the ShorelineOps Care OS API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "keywords": ["shoreline", "healthcare", "dietary", "nursing-home", "sdk"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShadowWalkerNC/ShorelineOps"
+  }
+}

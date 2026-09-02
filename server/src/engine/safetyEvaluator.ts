@@ -9,6 +9,12 @@
  * - Nutrient range ceiling & floor limits (NAS sodium, NCS carbs, Renal minerals)
  */
 
+import { globalWebhookEmitter } from '../webhooks/emitter'
+import type { NpoBlockTriggeredEvent } from '../webhooks/events'
+import crypto from 'crypto'
+
+
+
 export type ViolationSeverity = 'BLOCK' | 'WARNING' | 'REVIEW_REQUIRED'
 
 export interface SafetyFinding {

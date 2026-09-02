@@ -428,8 +428,110 @@ async function main() {
       console.log('Subcommands for survey: cms-binder, cpd')
       break
     }
+    // ── 7. HARDWARE — THERMAL PRINTERS & BLUETOOTH HACCP PROBES ─────────────
+    case 'hardware': {
+      const printers = [
+        { printerId: 'PRINTER-001', name: 'Tray Line Main (ZPL)', model: 'Zebra ZD421', connectionType: 'ethernet', host: '192.168.1.101', port: 9100, status: 'online', labelFormat: 'ZPL' },
+        { printerId: 'PRINTER-002', name: 'Dining Room Station (StarPRNT)', model: 'Star TSP743II', connectionType: 'ethernet', host: '192.168.1.102', port: 9100, status: 'online', labelFormat: 'STAR_PRNT' },
+        { printerId: 'PRINTER-003', name: 'Wing B Mobile Printer (BT)', model: 'Zebra ZQ521', connectionType: 'bluetooth', host: null, port: null, status: 'offline', labelFormat: 'ZPL' },
+      ]
+      const probes = [
+        { probeId: 'PROBE-001', name: 'Hot Line Probe Alpha', model: 'ThermoWorks Signals BT', macAddress: 'AA:BB:CC:DD:EE:01', batteryPct: 87, isConnected: true },
+        { probeId: 'PROBE-002', name: 'Steam Table Probe Beta', model: 'ThermoWorks Signals BT', macAddress: 'AA:BB:CC:DD:EE:02', batteryPct: 62, isConnected: true },
+        { probeId: 'PROBE-003', name: 'Cold Holding Probe Gamma', model: 'Govee H5074', macAddress: 'AA:BB:CC:DD:EE:03', batteryPct: 45, isConnected: false },
+      ]
 
-    // ── 7. MCP (MODEL CONTEXT PROTOCOL) ─────────────────────────────────────
+      if (subcommand === 'printers') {
+        output(printers, (list) => {
+          console.log('\n🖨️  THERMAL TRAY CARD PRINTERS (Registered):')
+          console.log('──────────────────────────────────────────────────────────────')
+          list.forEach(p => {
+            const icon = p.status === 'online' ? '🟢' : '🔴'
+            console.log(`  ${icon} ${p.name.padEnd(32)} ${p.model.padEnd(18)} [${p.labelFormat}]`)
+            if (p.host) console.log(`     Host: ${p.host}:${p.port}`)
+          })
+          console.log('──────────────────────────────────────────────────────────────\n')
+        })
+        return
+      }
+
+      if (subcommand === 'print-tray') {
+        const residentId = getFlag('resident-id', 'SH-001')
+        const mockResidents = {
+          'SH-001': { id: 'SH-001', name: 'Eleanor Vance', room: '104-A', wing: 'Ocean Wing', diet: 'Pureed (L4)', texture: 'IDDSI Level 4 Pureed', fluids: 'Mildly Thick (L2)', allergies: ['Shellfish', 'Penicillin'] },
+          'SH-004': { id: 'SH-004', name: 'Harold Finch', room: '201-A', wing: 'Harbor Wing', diet: 'NPO (Pre-Op)', texture: 'NPO', fluids: 'NPO', allergies: ['Latex', 'Sulfa'] },
+        }
+        const resident = mockResidents[residentId] || mockResidents['SH-001']
+        const mealDate = new Date().toISOString().split('T')[0]
+        const qrToken = `QR-${residentId}-${Date.now().toString(36).toUpperCase()}`
+        const job = {
+          jobId: `PJ-${Date.now()}`, residentId: resident.id, residentName: resident.name,
+          labelWidthMm: 101.6, labelHeightMm: 152.4, qrToken,
+          generatedAt: new Date().toISOString(), printerLanguage: 'JSON',
+          zones: [
+            { zoneId: 'resident_name', type: 'bold_text', value: resident.name },
+            { zoneId: 'room_wing', type: 'text', value: `Room ${resident.room} - ${resident.wing}` },
+            { zoneId: 'diet_order', type: 'text', value: `Diet: ${resident.diet}` },
+            { zoneId: 'iddsi_texture', type: 'text', value: `Texture: ${resident.texture}` },
+            { zoneId: 'fluid_consistency', type: 'text', value: `Fluids: ${resident.fluids}` },
+            { zoneId: 'allergen_banner', type: 'allergen_banner', bold: resident.allergies.length > 0, value: resident.allergies.length > 0 ? `ALLERGENS: ${resident.allergies.join(', ')}` : 'No Known Allergens' },
+            { zoneId: 'qr_code', type: 'qr_code', value: qrToken },
+          ],
+        }
+        output(job, (j) => {
+          console.log(`\n🏷️  4×6 TRAY CARD PRINT JOB: ${j.residentName}`)
+          console.log('──────────────────────────────────────────────────────────────')
+          console.log(`  Job ID:   ${j.jobId}`)
+          console.log(`  QR Token: ${j.qrToken}`)
+          console.log(`  Label:    ${j.labelWidthMm}mm × ${j.labelHeightMm}mm`)
+          j.zones.forEach(z => console.log(`  [${z.zoneId}] ${z.value}${z.bold ? ' [BOLD]' : ''}`))
+          console.log(`\n  ➜ POST /api/hardware/print/tray-card for live printing`)
+          console.log('──────────────────────────────────────────────────────────────\n')
+        })
+        return
+      }
+
+      if (subcommand === 'probes') {
+        output(probes, (list) => {
+          console.log('\n🌡️  BLUETOOTH HACCP TEMPERATURE PROBES:')
+          console.log('──────────────────────────────────────────────────────────────')
+          list.forEach(p => {
+            const icon = p.isConnected ? '🟢' : '🔴'
+            console.log(`  ${icon} ${p.probeId.padEnd(12)} ${p.name.padEnd(28)} ${p.model} [${p.batteryPct}% battery]`)
+          })
+          console.log('──────────────────────────────────────────────────────────────\n')
+        })
+        return
+      }
+
+      if (subcommand === 'probe-temp') {
+        const probeId = getFlag('probe-id', 'PROBE-001')
+        const probe = probes.find(p => p.probeId === probeId) || probes[0]
+        const hashByte = (Math.floor(Date.now() / 60000) * 1234567 + parseInt(probe.probeId.replace(/\D/g, ''), 10) * 89) % 256
+        const tempF = probeId === 'PROBE-003' ? 35 + (hashByte % 15) : 128 + (hashByte % 48)
+        const tempC = Math.round(((tempF - 32) * 5 / 9) * 10) / 10
+        const compliant = probeId === 'PROBE-003' ? tempF <= 41 : tempF >= 140
+        const reading = { probeId, stationId: 'STATION-MAIN', tempF, tempC, readAt: new Date().toISOString(), compliant }
+        output(reading, (r) => {
+          const icon = r.compliant ? '🟢 PASS' : '🔴 VIOLATION'
+          console.log(`\n🌡️  BLUETOOTH HACCP PROBE READ: ${r.probeId}`)
+          console.log('──────────────────────────────────────────────────────────────')
+          console.log(`  Probe:       ${probe.name}`)
+          console.log(`  Temperature: ${r.tempF}°F (${r.tempC}°C)  [${icon}]`)
+          console.log(`  Read At:     ${r.readAt}`)
+          if (!r.compliant) {
+            console.log(`  ⚠️  VIOLATION: ${probeId === 'PROBE-003' ? 'Cold hold above 41°F' : 'Hot hold below 140°F — Reheat to 165°F immediately'}`)
+          }
+          console.log('──────────────────────────────────────────────────────────────\n')
+        })
+        return
+      }
+
+      console.log('Subcommands: hardware printers | print-tray --resident-id=SH-001 | probes | probe-temp --probe-id=PROBE-001')
+      break
+    }
+
+    // ── 8. MCP (MODEL CONTEXT PROTOCOL) ─────────────────────────────────────
     case 'mcp': {
       if (subcommand === 'tools') {
         const tools = [
@@ -518,6 +620,10 @@ Commands:
   mcp                 Model Context Protocol tools for AI agents and external apps
                       Subcommands: tools, serve
                       Flags: --json
+
+  hardware            Thermal tray card printers & Bluetooth HACCP temperature probes
+                      Subcommands: printers, print-tray, probes, probe-temp
+                      Flags: --resident-id=SH-001, --probe-id=PROBE-001, --json
 
   doctor, health      Complete system diagnostic health scan
 

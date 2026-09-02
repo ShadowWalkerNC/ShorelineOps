@@ -89,6 +89,8 @@ import { httpCacheMiddleware } from './middleware/cache'
 
 import { mcpRouter } from './routes/mcp'
 import { globalHealerBot } from './agent/healer'
+import { webhooksRouter } from './routes/webhooks'
+import { hardwareRouter } from './routes/hardware'
 
 // Routes
 app.use('/api/setup',      setupRouter)
@@ -105,6 +107,8 @@ app.use('/api/reporting',  requireAuth, reportingRouter)
 app.use('/api/enterprise', enterpriseRouter)
 app.use('/api/ehr',        ehrRouter)
 app.use('/api/mcp',        mcpRouter)
+app.use('/api/webhooks',   webhooksRouter)
+app.use('/api/hardware',   requireAuth, hardwareRouter)
 
 // Optional Pluggable Modules
 if (process.env.ENABLE_TIMECARD_PLUGIN !== 'false') {
