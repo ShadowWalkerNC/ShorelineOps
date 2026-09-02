@@ -4,6 +4,18 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.0.0] — 2026-09-02
+### Added
+- **TypeScript SDK** (`sdk/`): `@shoreline/sdk` npm package — `ShorelineClient` wrapping the REST API with full TypeScript types. Methods: `getResidents`, `getCensus`, `validateRecipe`, `getMrpSplitPo`, `getCmsSurveyBinder`, `getCostPerResidentDay`, `runHealthCheck`. See `docs/SDK_REFERENCE.md`.
+- **Webhook Event System** (`server/src/webhooks/`): HMAC-SHA256 signed POST delivery with 3× exponential backoff. Five typed events: `ehr.triage.pending`, `haccp.temp.violation`, `cpd.variance.alert`, `npo.block.triggered`, `mrp.po.generated`. Full REST management routes. See `docs/WEBHOOKS.md`.
+- **Thermal Tray Card Print Engine** (`server/src/hardware/thermalPrint.ts`): `ThermalPrintEngine.printTrayCard()` generates structured 4×6 label zone JSON for Zebra ZD421/ZD620/ZQ521 and Brother QL-1110NWB — includes resident name, diet, IDDSI texture, fluid consistency, allergen banner (bold), QR token, and timestamp zones.
+- **Bluetooth HACCP Probe Interface** (`server/src/hardware/bluetoothProbe.ts`): `BluetoothProbeManager` — BLE probe scan, deterministic temperature reads, HACCP log entries, and automatic `haccp.temp.violation` webhook on hot-hold < 140°F / cold-hold > 41°F violations.
+- **Hardware API Routes** (`server/src/routes/hardware.ts`): `POST /api/hardware/print/tray-card`, `GET /api/hardware/printers`, `GET /api/hardware/probes`, `GET /api/hardware/probes/:id/temperature`, `POST /api/hardware/probes/:id/log-haccp`.
+- **CLI `hardware` Command Group**: `shoreline hardware printers | print-tray | probes | probe-temp` — all with `--json` output.
+- **New Docs**: `docs/HARDWARE.md`, `docs/WEBHOOKS.md`, `docs/SDK_REFERENCE.md`, `sdk/README.md`.
+
+---
+
 ## [v5.1.0] — 2026-09-01
 ### Added
 - **Unified CLI & CulinaryOS Command Line Controller** (`bin/shoreline.js`, `docs/CLI_REFERENCE.md`):

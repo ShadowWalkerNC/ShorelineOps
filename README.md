@@ -262,10 +262,59 @@ The built-in MCP server (`server/src/mcp/server.ts`) exposes 5 tool definitions:
 | **CLI** (`shoreline` / `culinaryos`) | ✅ Production |
 | **MCP Server** (`server/src/mcp/server.ts`) | ✅ Production |
 | **REST API** (Express, port 3015) | ✅ Production |
-| **SDK** (TypeScript package) | 🔜 v6.0 Roadmap |
-| **Webhook Events** | 🔜 v6.0 Roadmap |
+| **SDK** (`@shoreline/sdk` — TypeScript) | ✅ v6.0 Shipped |
+| **Webhook Events** (HMAC-SHA256 signed) | ✅ v6.0 Shipped |
 
-See [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md) for the complete command reference and flag documentation.
+See [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md) for the complete command reference and [`docs/SDK_REFERENCE.md`](docs/SDK_REFERENCE.md) for the TypeScript SDK.
+
+---
+
+## 🔧 v6.0 Hardware & Integration
+
+### TypeScript SDK
+
+```ts
+import { ShorelineClient } from '@shoreline/sdk'
+
+const client = new ShorelineClient({
+  baseUrl: 'https://your-facility.shorelineops.com',
+  apiKey: process.env.SHORELINE_API_KEY,
+})
+
+const residents = await client.getResidents()
+const po = await client.getMrpSplitPo('Turkey Breast', 45)
+const health = await client.runHealthCheck()
+```
+
+### Webhook Events
+
+Register an endpoint to receive signed events from your facility:
+
+```bash
+curl -X POST https://your-api/api/webhooks/subscribe \
+  -d '{"url":"https://your-app.com/hooks","secret":"your-secret"}'
+```
+
+Events: `ehr.triage.pending` · `haccp.temp.violation` · `cpd.variance.alert` · `npo.block.triggered` · `mrp.po.generated`
+
+See [`docs/WEBHOOKS.md`](docs/WEBHOOKS.md) for HMAC verification and payload schemas.
+
+### Thermal Tray Card Printing & Bluetooth HACCP Probes
+
+```bash
+# List configured thermal printers (Zebra ZD421, Brother QL-1110NWB, etc.)
+shoreline hardware printers
+
+# Generate a 4×6 tray card label job
+shoreline hardware print-tray --resident-id=SH-001 --json
+
+# Read Bluetooth HACCP probe temperature (fires webhook on violation)
+shoreline hardware probe-temp --probe-id=PROBE-001
+```
+
+REST: `POST /api/hardware/print/tray-card` · `GET /api/hardware/probes` · `POST /api/hardware/probes/:id/log-haccp`
+
+See [`docs/HARDWARE.md`](docs/HARDWARE.md) for supported hardware models and integration guide.
 
 ---
 
