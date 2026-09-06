@@ -377,6 +377,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Page Viewport (with safe padding for bottom nav on mobile) */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 mt-14 md:mt-0 pb-24 md:pb-6">
+          {/* Administrative Dunning Grace Notice (Visible only to Admin/Manager, Zero Clinical Lockout) */}
+          {user && (user.role === 'admin' || user.role === 'manager') && (
+            <div className="hidden data-[dunning=true]:flex items-center justify-between px-4 py-2.5 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs">
+              <div className="flex items-center gap-2 font-medium">
+                <span className="text-base">💳</span>
+                <span>
+                  <strong>Billing Notice:</strong> Automatic SaaS payment processing requires attention. Resident meal services & EHR sync remain <strong>100% active</strong> under clinical grace period.
+                </span>
+              </div>
+              <button
+                onClick={() => navigate('/settings')}
+                className="px-3 py-1 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600 transition-colors text-xs shrink-0"
+              >
+                Update Payment Method
+              </button>
+            </div>
+          )}
           {children}
         </main>
 

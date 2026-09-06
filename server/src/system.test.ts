@@ -810,6 +810,50 @@ async function runAllTests() {
   assert(zpl.includes('^BQN,2,6'), 'ThermalPrintEngine: embeds high-density ZPL QR code symbol')
   assert(zpl.includes('Eleanor Vance'), 'ThermalPrintEngine: encodes resident name in ZPL payload')
 
+  // --- 28. v6.2 Commercialization & Corporate Syndication Tests ---
+  console.log('\n--- 28. v6.2 Commercialization, Dunning Safety & Syndication ---')
+  const { StripeBillingEngine } = await import('./billing/stripeEngine')
+  const { HubAndSpokeSyndicationEngine } = await import('./engine/syndication')
+
+  // 1. Stripe Per-Bed Billing Solver
+  const smallHomeFee = StripeBillingEngine.calculateMonthlyFee(20)
+  assert(smallHomeFee.monthlyTotal === 50.00, 'StripeEngine: computes $50.00/mo ($2.50/bed) for 20-bed home')
+  
+  const enterpriseFee = StripeBillingEngine.calculateMonthlyFee(200)
+  assert(enterpriseFee.tier === 'ENTERPRISE_TIER', 'StripeEngine: applies Enterprise volume tier for >= 150 beds')
+  assert(enterpriseFee.monthlyTotal === 330.00, 'StripeEngine: computes $330.00/mo ($1.65/bed) for 200-bed campus')
+
+  // 2. Clinical Grace Dunning Safety Invariant
+  const failedPaymentEvent = {
+    type: 'invoice.payment_failed',
+    data: {
+      object: {
+        attempt_count: 2,
+        metadata: { facilityId: 'FAC-001' },
+        last_finalization_error: { message: 'Card expired' },
+      },
+    },
+  }
+  const dunningResult = StripeBillingEngine.handleStripeWebhookEvent(failedPaymentEvent)
+  assert(dunningResult.dunningStatus.clinicalLockoutAllowed === false, 'StripeEngine: INVARIANT holds - clinical meal service lockout is strictly prohibited on billing failure')
+  assert(dunningResult.dunningStatus.status === 'PAST_DUE', 'StripeEngine: triggers administrative dunning warning status')
+
+  // 3. Corporate Hub-and-Spoke Menu Syndication
+  const syndicationResults = HubAndSpokeSyndicationEngine.syndicateToSpokes({
+    corporateMenuId: 'CORP-MENU-SPRING',
+    masterMenuName: 'Spring 4-Week Master Cycle',
+    spokeFacilityIds: ['FAC-REGIONAL-01', 'FAC-COASTAL-02'],
+    allowLocalSubstitutions: true,
+    maxSubstitutionVariancePct: 15.0,
+    publishedAt: new Date().toISOString(),
+  })
+
+  assert(syndicationResults.length === 2, 'SyndicationEngine: successfully broadcasts to all designated spoke facilities')
+  assert(syndicationResults[0].status === 'SYNDICATED', 'SyndicationEngine: syndicates compliant spoke within variance budget')
+
+  const substituteEval = HubAndSpokeSyndicationEngine.evaluateLocalSubstitute(2.10, 2.30, 8.50)
+  assert(substituteEval.approved === true, 'SyndicationEngine: approves local recipe substitute within 15% budget variance')
+
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)
   console.log('=======================================================\n')

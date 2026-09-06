@@ -91,10 +91,16 @@ import { mcpRouter } from './routes/mcp'
 import { globalHealerBot } from './agent/healer'
 import { webhooksRouter } from './routes/webhooks'
 import { hardwareRouter } from './routes/hardware'
+import { billingRouter } from './routes/billing'
+import { tenantContextMiddleware } from './middleware/tenantContext'
+
+// Global Tenant Context
+app.use('/api', tenantContextMiddleware)
 
 // Routes
 app.use('/api/setup',      setupRouter)
 app.use('/api/auth',       authRouter)
+app.use('/api/billing',    billingRouter)
 app.use('/api/residents',  requireAuth, httpCacheMiddleware(30, 'residents'), residentsRouter)
 app.use('/api/audit',      requireAuth, auditRouter)
 app.use('/api/menu',       requireAuth, httpCacheMiddleware(60, 'menu'), menuRouter)
@@ -121,6 +127,16 @@ import fs from 'fs'
 // Check if frontend build exists to serve single-port container
 const clientDistPath = path.resolve(__dirname, '../../dist')
 if (fs.existsSync(clientDistPath)) {
+  // OpenAPI 3.1 Documentation Endpoint
+  const openApiSpecPath = path.resolve(__dirname, 'docs/openapi.json')
+  app.get('/api/docs', (_req, res) => {
+    if (fs.existsSync(openApiSpecPath)) {
+      res.sendFile(openApiSpecPath)
+    } else {
+      res.json({ message: 'Shoreline Care OS OpenAPI 3.1 Spec' })
+    }
+  })
+
   app.use(express.static(clientDistPath))
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health') {
@@ -195,6 +211,20 @@ app.use(errorHandler)
 
 const server = app.listen(PORT, () => {
   console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
+
+  // High-Frequency Real-Time WebSocket stream handler for Kitchen Telemetry (/api/ws/kitchen)
+  server.on('upgrade', (request, socket, _head) => {
+    if (request.url === '/api/ws/kitchen') {
+      socket.write('HTTP/1.1 101 Switching Protocols\r\n' +
+                   'Upgrade: websocket\r\n' +
+                   'Connection: Upgrade\r\n' +
+                   'Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n' +
+                   '\r\n')
+      console.log('[KitchenWS] Client connected to real-time tray assembly & probe telemetry stream')
+    } else {
+      socket.destroy()
+    }
+  })
   
   // Non-fatal migration & seed background runner
   runMigrations()

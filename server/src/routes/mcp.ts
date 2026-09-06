@@ -19,9 +19,45 @@ mcpRouter.get('/tools', (_req: Request, res: Response) => {
   res.json({
     protocol: 'modelcontextprotocol/v1',
     server: 'shorelineops-mcp',
-    version: '6.0.0',
+    version: '6.2.0',
     tools: SHORELINE_MCP_TOOLS,
   })
+})
+
+// MCP Server-Sent Events (SSE) Stream Transport
+mcpRouter.get('/sse', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const sessionId = `mcp-session-${Date.now()}`
+  res.write(`event: endpoint\ndata: /api/mcp/messages?sessionId=${sessionId}\n\n`)
+
+  const keepAlive = setInterval(() => {
+    res.write(': keepalive\n\n')
+  }, 15000)
+
+  req.on('close', () => {
+    clearInterval(keepAlive)
+  })
+})
+
+// MCP Stream Messages
+mcpRouter.post('/messages', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { method, params } = req.body
+    if (method === 'tools/list') {
+      return res.json({ tools: SHORELINE_MCP_TOOLS })
+    }
+    if (method === 'tools/call') {
+      const result = await executeMcpTool(params.name, params.arguments || {})
+      return res.json({ content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] })
+    }
+    res.status(400).json({ error: `Unsupported MCP method: ${method}` })
+  } catch (err) {
+    next(err)
+  }
 })
 
 // MCP Tool Execution

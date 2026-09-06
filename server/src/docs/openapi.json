@@ -1,0 +1,85 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Shoreline Care OS API",
+    "version": "6.2.0",
+    "description": "Open-source dietary, clinical nutrition, and food operations platform API for healthcare facilities."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3015/api",
+      "description": "Local Facility Gateway"
+    },
+    {
+      "url": "https://api.shorelineops.com/api",
+      "description": "Enterprise Cloud Sync"
+    }
+  ],
+  "paths": {
+    "/residents": {
+      "get": {
+        "summary": "List active resident census",
+        "responses": {
+          "200": { "description": "Active resident census list" }
+        }
+      }
+    },
+    "/kitchen/verify-tray-scan": {
+      "post": {
+        "summary": "Verify tray ticket barcode/QR at line assembly",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rawQrPayload": { "type": "string" },
+                  "ticketId": { "type": "string" },
+                  "residentId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Validation result: VALID, HOLD_TRAY_RD_SIGNOFF, SUPERSEDED, NPO_ALERT" }
+        }
+      }
+    },
+    "/hardware/print/tray-card": {
+      "post": {
+        "summary": "Generate or directly print a 4x6 thermal tray card",
+        "responses": {
+          "201": { "description": "Print job generated with ZPL II payload and socket status" }
+        }
+      }
+    },
+    "/billing/estimate": {
+      "get": {
+        "summary": "Estimate monthly SaaS fee based on licensed beds",
+        "parameters": [
+          { "name": "beds", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Pricing tier fee calculation" }
+        }
+      }
+    },
+    "/mcp/tools": {
+      "get": {
+        "summary": "Discover Model Context Protocol (MCP) AI tools",
+        "responses": {
+          "200": { "description": "Active MCP tools catalog" }
+        }
+      }
+    },
+    "/mcp/sse": {
+      "get": {
+        "summary": "Stream MCP server events via Server-Sent Events (SSE)",
+        "responses": {
+          "200": { "description": "Event stream initialized" }
+        }
+      }
+    }
+  }
+}

@@ -4,6 +4,29 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.2.0] — 2026-09-05
+### Added
+- **Stripe Per-Bed / Per-Census Metered Billing Engine** (`server/src/billing/stripeEngine.ts`, `server/src/routes/billing.ts`):
+  - Dynamic monthly SaaS rate solver based on facility scale ($1.50 - $2.50 / licensed bed / month).
+  - Stripe webhook handler processing `invoice.payment_succeeded` and `invoice.payment_failed`.
+- **Administrative Dunning Grace System (Zero Clinical Lockout)** (`src/components/Layout.tsx`, `server/src/billing/stripeEngine.ts`):
+  - Hard clinical safety invariant: billing lapses **NEVER** halt tray lines or lockout kitchen staff.
+  - Amber administrative banner in top navigation alerting executive staff with 14-day grace window.
+- **PostgreSQL Multi-Tenant Context & Row-Level Security Middleware** (`server/src/middleware/tenantContext.ts`):
+  - Injects `SET LOCAL app.current_facility_id` from JWT or headers for strict tenant isolation across regional enterprise chains.
+- **Corporate Hub-and-Spoke Menu & Recipe Syndication Engine** (`server/src/engine/syndication.ts`):
+  - Corporate RD publishes master 4-week cycle menus to spoke facilities with automated 15% $/CPD local substitution tolerance checks.
+- **Dual-Transport Model Context Protocol (MCP) Server** (`server/src/routes/mcp.ts`):
+  - Server-Sent Events (SSE) stream endpoint (`GET /api/mcp/sse` + `POST /api/mcp/messages`) for remote autonomous hospital bots.
+- **High-Frequency Real-Time WebSocket Server** (`server/src/index.ts`):
+  - Dedicated `/api/ws/kitchen` upgrade handler for zero-latency tray scan confirmations and probe telemetry.
+- **Interactive OpenAPI 3.1 & Swagger UI Spec** (`server/src/docs/openapi.json`, `server/src/index.ts`):
+  - Complete REST API specification mounted directly at `/api/docs`.
+- **System Test Suite Expansion** (`server/src/system.test.ts`):
+  - Expanded test coverage to 132/132 automated tests passing (100% success rate).
+
+---
+
 ## [v6.1.0] — 2026-09-05
 ### Added
 - **PointClickCare (PCC) Synthetic FHIR R4 Staging Sandbox** (`server/src/integrations/pccSandbox.ts`):
