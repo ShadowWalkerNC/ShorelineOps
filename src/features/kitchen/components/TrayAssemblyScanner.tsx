@@ -2,12 +2,13 @@ import React, { useState } from 'react'
 import { AppleButton, AppleBadge } from '@/apple-ui'
 
 export interface ScanValidationResult {
-  status: 'VALID' | 'SUPERSEDED' | 'INVALID_HASH' | 'NPO_ALERT'
+  status: 'VALID' | 'SUPERSEDED' | 'INVALID_HASH' | 'NPO_ALERT' | 'HOLD_TRAY_RD_SIGNOFF'
   residentName?: string
   roomBed?: string
   currentProfileVersion?: number
   ticketProfileVersion?: number
   message?: string
+  triageReason?: string
 }
 
 export default function TrayAssemblyScanner() {
@@ -244,6 +245,44 @@ export default function TrayAssemblyScanner() {
               </p>
               <div style={{ fontSize: 14, color: '#991b1b', marginTop: 4 }}>
                 {scanResult.message}
+              </div>
+            </div>
+          ) : scanResult.status === 'HOLD_TRAY_RD_SIGNOFF' ? (
+            <div>
+              <div style={{ fontSize: 38, marginBottom: 8 }}>🛑 🔒 📋</div>
+              <h3 style={{ fontSize: 24, fontWeight: 900, color: '#991b1b', margin: 0, textTransform: 'uppercase' }}>
+                CLINICAL HOLD: EHR DIET UPDATE PENDING RD SIGN-OFF
+              </h3>
+              <p style={{ fontSize: 17, fontWeight: 800, color: '#7f1d1d', margin: '8px 0 0' }}>
+                {scanResult.residentName} (Room {scanResult.roomBed}) has an unverified clinical diet change received from PointClickCare.
+              </p>
+              <div style={{
+                margin: '12px auto',
+                maxWidth: 550,
+                padding: '10px 14px',
+                background: '#fee2e2',
+                borderRadius: 8,
+                border: '1px solid #f87171',
+                fontSize: 13,
+                fontWeight: 700,
+                color: '#991b1b',
+                textAlign: 'left'
+              }}>
+                <strong>Clinical Conflict Reason:</strong> {scanResult.triageReason || scanResult.message || 'Incoming EHR order conflicts with active tray profile.'}
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <span style={{
+                  padding: '8px 18px',
+                  background: '#991b1b',
+                  color: 'white',
+                  borderRadius: 20,
+                  fontSize: 13,
+                  fontWeight: 900,
+                  display: 'inline-block',
+                  letterSpacing: '0.05em'
+                }}>
+                  ⛔ HARD-BLOCK: TRAY HELD AT PASS UNTIL RD RECONCILIATION
+                </span>
               </div>
             </div>
           ) : (

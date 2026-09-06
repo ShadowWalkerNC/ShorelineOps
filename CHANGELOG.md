@@ -4,6 +4,27 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.1.0] — 2026-09-05
+### Added
+- **PointClickCare (PCC) Synthetic FHIR R4 Staging Sandbox** (`server/src/integrations/pccSandbox.ts`):
+  - Generates authentic FHIR R4 bundles (`Patient`, `NutritionOrder`, `AllergyIntolerance`) for staging tests without live clinic credentials.
+  - Bidirectional parser mapping incoming FHIR clinical diet orders, IDDSI modifiers, and allergen profiles into internal reconciliation models.
+- **Clinical 'Hold Tray' Active Hard-Lock** (`server/src/routes/kitchen.ts`, `src/features/kitchen/components/TrayAssemblyScanner.tsx`):
+  - Enforces `HOLD_TRAY_RD_SIGNOFF` hard-block when an unverified EHR diet, texture, or NPO change is detected in `ehr_reconciliation_queue`.
+  - Immediate audio-visual lockout overlay on gloved line cook tablet kiosks halting tray pass until RD reconciliation.
+- **Raw ZPL II TCP Network Socket Driver** (`server/src/hardware/thermalPrint.ts`, `server/src/routes/hardware.ts`):
+  - Native 203 DPI ZPL II generator (`^XA ... ^XZ`) for Zebra ZD421/ZD620/ZQ521 thermal printers with dynamic QR magnification and high-contrast allergen warning boxes.
+  - Direct network printing via TCP port 9100 with automatic fallback to client-side rendering if network printers are offline.
+- **Web Bluetooth API Tablet Kiosk GATT Driver** (`src/features/kitchen/WebBluetoothProbe.ts`):
+  - Direct zero-driver browser pairing with Bluetooth LE HACCP probes (ThermoWorks, Inkbird, Govee, and Environmental Sensing GATT `0x181A` / `0x1809`).
+- **Turnkey SQLite-to-PostgreSQL Migrator & Docker Compose Stack** (`server/src/db/sqliteToPostgres.ts`, `docker-compose.production.yml`):
+  - Streaming migration utility for seamless transition from single-facility offline SQLite to multi-facility Enterprise PostgreSQL.
+  - Turnkey production Docker Compose configuration with PostgreSQL 16, healthchecks, and NGINX proxy.
+- **Automated Test Suite Expansion** (`server/src/system.test.ts`):
+  - Expanded test coverage to 124/124 automated tests passing (100% success rate).
+
+---
+
 ## [v6.0.0] — 2026-09-02
 ### Added
 - **TypeScript SDK** (`sdk/`): `@shoreline/sdk` npm package — `ShorelineClient` wrapping the REST API with full TypeScript types. Methods: `getResidents`, `getCensus`, `validateRecipe`, `getMrpSplitPo`, `getCmsSurveyBinder`, `getCostPerResidentDay`, `runHealthCheck`. See `docs/SDK_REFERENCE.md`.

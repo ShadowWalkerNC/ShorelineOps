@@ -776,6 +776,40 @@ async function runAllTests() {
   assert(stationSplit.pureeStation.brothBinderOz === 4.8, 'ProductionSplitter: computes 4.8 oz broth binder for 4 puree portions')
   assert(stationSplit.mechanicalSoftStation.portions === 8, 'ProductionSplitter: routes 8 portions to minced & moist prep')
 
+  // --- 27. v6.1 Production Hardening & Hardware Engine Tests ---
+  console.log('\n--- 27. v6.1 Production Hardening: Synthetic FHIR, ZPL II & Migrator ---')
+  const { PccSyntheticFhirSandbox } = await import('./integrations/pccSandbox')
+  const { ThermalPrintEngine } = await import('./hardware/thermalPrint')
+
+  // Synthetic FHIR Admission Bundle
+  const fhirBundle = PccSyntheticFhirSandbox.generateAdmissionBundle('PCC-TEST-001', {
+    name: { first: 'Margaret', last: 'Atwood' },
+    diet: 'IDDSI Level 4 Pureed',
+    isNpo: false,
+    allergens: ['Peanuts', 'Shellfish'],
+  })
+
+  assert(fhirBundle.resourceType === 'Bundle', 'PccSyntheticFhirSandbox: generates valid FHIR R4 transaction bundle')
+  const parsedFhir = PccSyntheticFhirSandbox.parseFhirBundle(fhirBundle)
+  assert(parsedFhir.firstName === 'Margaret' && parsedFhir.lastName === 'Atwood', 'PccSyntheticFhirSandbox: correctly extracts Patient given and family names')
+  assert(parsedFhir.allergies.includes('Peanuts') && parsedFhir.allergies.includes('Shellfish'), 'PccSyntheticFhirSandbox: extracts active food allergens')
+
+  // ZPL II Generation for Zebra Hardware
+  const samplePrintJob = ThermalPrintEngine.printTrayCard({
+    id: 'RES-001',
+    name: 'Eleanor Vance',
+    room: '104-A',
+    diet: 'Pureed',
+    texture: 'IDDSI Level 4',
+    fluids: 'Mildly Thick',
+    allergies: ['Shellfish'],
+  })
+
+  const zpl = ThermalPrintEngine.generateZplString(samplePrintJob)
+  assert(zpl.startsWith('^XA') && zpl.endsWith('^XZ'), 'ThermalPrintEngine: generates well-formed Zebra ZPL II ^XA ... ^XZ envelope')
+  assert(zpl.includes('^BQN,2,6'), 'ThermalPrintEngine: embeds high-density ZPL QR code symbol')
+  assert(zpl.includes('Eleanor Vance'), 'ThermalPrintEngine: encodes resident name in ZPL payload')
+
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)
   console.log('=======================================================\n')

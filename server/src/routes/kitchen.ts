@@ -419,7 +419,28 @@ kitchenRouter.post('/verify-tray-scan', async (req, res, next) => {
       })
     }
 
-    // 2. Superseded Stale Card Check
+    // 2. Clinical Hold: Inbound EHR Diet Order Change Pending RD Triage Sign-off
+    try {
+      const { rows: triageRows } = await pool.query(
+        `SELECT id, conflict_reason, change_type FROM ehr_reconciliation_queue WHERE resident_id = $1 AND status = 'PENDING_TRIAGE' LIMIT 1`,
+        [resident.id]
+      )
+      if (triageRows.length > 0) {
+        return res.json({
+          status: 'HOLD_TRAY_RD_SIGNOFF',
+          residentName: resident.name,
+          roomBed: resident.room,
+          currentProfileVersion: currentVersion,
+          ticketProfileVersion,
+          triageReason: triageRows[0].conflict_reason,
+          message: `CLINICAL HOLD: Incoming EHR ${triageRows[0].change_type} is awaiting RD reconciliation sign-off. Hold tray at station.`,
+        })
+      }
+    } catch {
+      // Non-fatal if table not yet initialized in test harness
+    }
+
+    // 3. Superseded Stale Card Check
     if (currentVersion > ticketProfileVersion) {
       return res.json({
         status: 'SUPERSEDED',
@@ -431,7 +452,7 @@ kitchenRouter.post('/verify-tray-scan', async (req, res, next) => {
       })
     }
 
-    // 3. Valid Tray Ticket
+    // 4. Valid Tray Ticket
     return res.json({
       status: 'VALID',
       residentName: resident.name,

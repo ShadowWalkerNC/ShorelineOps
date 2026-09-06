@@ -243,4 +243,85 @@ export class ThermalPrintEngine {
       printerLanguage: 'JSON',
     }
   }
+
+  /**
+   * Translates structured 4x6 label zones into standard Zebra ZPL II commands (203 DPI / 8 dots per mm).
+   * 4x6 inches = 812 dots wide x 1218 dots tall.
+   */
+  static generateZplString(job: ThermalPrintJob): string {
+    const dotsPerMm = 8 // 203 DPI standard for Zebra ZD421 / ZD620
+    const lines: string[] = [
+      '^XA', // Start Format
+      '^PW812', // Print Width 812 dots (4 in)
+      '^LL1218', // Label Length 1218 dots (6 in)
+      '^LH0,0', // Label Home
+    ]
+
+    for (const zone of job.zones) {
+      const xDots = Math.round(zone.xOffsetMm * dotsPerMm)
+      const yDots = Math.round(zone.yOffsetMm * dotsPerMm)
+
+      if (zone.type === 'qr_code') {
+        // ZPL QR Code command: ^BQN,2,6 (Magnification 6)
+        lines.push(`^FO${xDots},${yDots}^BQN,2,6^FDQA,${zone.value}^FS`)
+      } else if (zone.type === 'divider') {
+        // Draw horizontal line: ^GBwidth,height,thickness
+        const widthDots = Math.round((zone.widthMm || 97) * dotsPerMm)
+        lines.push(`^FO${xDots},${yDots}^GB${widthDots},2,2^FS`)
+      } else if (zone.type === 'allergen_banner' && zone.bold) {
+        // Reverse black box with white text for allergen warning banner
+        const widthDots = Math.round((zone.widthMm || 97) * dotsPerMm)
+        lines.push(`^FO${xDots},${yDots}^GB${widthDots},50,50^FS`)
+        lines.push(`^FO${xDots + 16},${yDots + 12}^A0N,28,28^FR^FD${zone.value}^FS`)
+      } else {
+        const heightDots = zone.bold ? 36 : 24
+        const widthCharDots = zone.bold ? 36 : 24
+        lines.push(`^FO${xDots},${yDots}^A0N,${heightDots},${widthCharDots}^FD${zone.value}^FS`)
+      }
+    }
+
+    lines.push('^XZ') // End Format
+    return lines.join('\n')
+  }
+
+  /**
+   * Direct TCP Port 9100 Socket transmission to physical Zebra network printer.
+   * Gracefully fails if printer is offline or network socket times out.
+   */
+  static async sendZplToNetworkPrinter(
+    host: string,
+    port = 9100,
+    zplString: string,
+    timeoutMs = 4000
+  ): Promise<{ success: boolean; error?: string; bytesWritten?: number }> {
+    const net = await import('net')
+    return new Promise((resolve) => {
+      const socket = new net.Socket()
+      let bytes = 0
+
+      socket.setTimeout(timeoutMs)
+
+      socket.connect(port, host, () => {
+        bytes = Buffer.byteLength(zplString, 'utf8')
+        socket.write(zplString, 'utf8', () => {
+          socket.end()
+        })
+      })
+
+      socket.on('close', () => {
+        resolve({ success: true, bytesWritten: bytes })
+      })
+
+      socket.on('timeout', () => {
+        socket.destroy()
+        resolve({ success: false, error: `Connection to Zebra printer ${host}:${port} timed out.` })
+      })
+
+      socket.on('error', (err: any) => {
+        socket.destroy()
+        resolve({ success: false, error: err.message || `Socket error connecting to ${host}:${port}` })
+      })
+    })
+  }
 }
+

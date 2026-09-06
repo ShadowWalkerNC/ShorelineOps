@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # ── PostgreSQL Database ───────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: shoreline-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-shoreline}
+      POSTGRES_USER: ${DB_USER:-shoreline_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shoreline_secure_password_2026}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-shoreline_admin} -d ${DB_NAME:-shoreline}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── ShorelineOps Backend API Server ───────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shoreline-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3015
+      DATABASE_URL: postgresql://${DB_USER:-shoreline_admin}:${DB_PASSWORD:-shoreline_secure_password_2026}@postgres:5432/${DB_NAME:-shoreline}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-shoreline_enterprise_jwt_secret_must_be_over_32_chars}
+      FACILITY_ID: ${FACILITY_ID:-FAC-001}
+      ENABLE_HW_PRINT_PORT: 9100
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3015:3015"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3015/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Optional NGINX Reverse Proxy & SSL Termination ────────────────────────
+  reverse-proxy:
+    image: nginx:alpine
+    container_name: shoreline-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+    driver: local

@@ -55,9 +55,24 @@ hardwareRouter.post('/print/tray-card', async (req: Request, res: Response, next
       mealType: resident.mealType,
     })
 
+    const zpl = ThermalPrintEngine.generateZplString(job)
+
+    const directPrint = req.body.directPrint === true
+    const printerHost = req.body.printerHost || '192.168.1.101'
+    const printerPort = req.body.printerPort || 9100
+
+    let socketResult: { success: boolean; error?: string; bytesWritten?: number } | undefined
+
+    if (directPrint) {
+      socketResult = await ThermalPrintEngine.sendZplToNetworkPrinter(printerHost, printerPort, zpl)
+    }
+
     return res.status(201).json({
       message: 'Tray card print job generated',
       job,
+      zpl,
+      directPrintRequested: directPrint,
+      socketResult,
     })
   } catch (err) {
     next(err)
