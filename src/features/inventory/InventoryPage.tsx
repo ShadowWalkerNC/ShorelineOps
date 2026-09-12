@@ -6,7 +6,6 @@
 // NotificationBell and DashboardPage immediately.
 // ============================================================
 import { useEffect, useState, useMemo } from 'react'
-import { useCommunicationsStore } from '../../state/communicationsStore'
 import { useStaffStore } from '../../state/staffStore'
 import { useAuth } from '../../security/AuthContext'
 import {
@@ -19,9 +18,6 @@ import {
   type InventoryCount,
   type CountItem,
   type CountStatus,
-  type TruckOrder,
-  type OrderLineItem,
-  type OrderStatus,
 } from '../../state/inventoryStore'
 
 const TODAY = new Date().toISOString().slice(0, 10)
@@ -192,15 +188,15 @@ function StockTab() {
 
 // ── WASTE LOG TAB ─────────────────────────────────────────────────────────────
 function WasteTab() {
-  const { wasteEntries, addWasteEntry, removeWasteEntry } = useInventoryStore()
+  const { wasteEntries, addWasteEntry } = useInventoryStore()
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Partial<WasteEntry>>({
     date: TODAY, reason: 'Overproduction', meal: 'Lunch', loggedBy: '', qty: 0, unit: 'portions',
   })
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!form.item?.trim() || !form.loggedBy?.trim()) return
-    addWasteEntry({
+    await addWasteEntry({
       date: form.date!, item: form.item!, qty: form.qty ?? 0, unit: form.unit!,
       reason: form.reason!, meal: form.meal!, loggedBy: form.loggedBy!, cost: form.cost,
     })
@@ -260,7 +256,6 @@ function WasteTab() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2, textAlign: 'right', flexShrink: 0 }}>
                 {e.cost != null && <span style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-black)', color: '#dc2626', fontFamily: 'var(--font-display)' }}>{fmt$(e.cost)}</span>}
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>by {e.loggedBy}</span>
-                <button onClick={() => removeWasteEntry(e.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 12, padding: '2px 0', textAlign: 'right' }}>Remove</button>
               </div>
             </div>
           )
@@ -305,10 +300,10 @@ function ZeroBalanceTab() {
     setActiveCount(prev => prev ? { ...prev, items: prev.items.map(i => i.id !== itemId ? i : { ...i, note: val }) } : null)
   }
 
-  function submitCount() {
+  async function submitCount() {
     if (!activeCount) return
     const hasDiscrepancy = activeCount.items.some(i => Math.abs(i.variance) > 2)
-    addCount({
+    await addCount({
       countDate: activeCount.countDate,
       submittedById: activeCount.submittedById,
       status: hasDiscrepancy ? 'Discrepancy' : 'Submitted',
@@ -424,269 +419,17 @@ function ZeroBalanceTab() {
   )
 }
 
-// ── TRUCK ORDERS TAB ──────────────────────────────────────────────────────────
-function TruckOrdersTab() {
-  const { user } = useAuth()
-  const { profiles } = useStaffStore()
-  const { addApproval } = useCommunicationsStore()
-  const { stockItems, truckOrders, addOrder, updateOrder, getLowParItems } = useInventoryStore()
-  const myProfile    = profiles.find(p => (p as any).authUserId === user?.id || (p as any).userId === user?.id)
-  const myStaffId    = myProfile?.id ?? 'staff-3'
-  const isPrivileged = user?.role === 'admin' || user?.role === 'manager'
-
-  const [draftOrder, setDraftOrder] = useState<TruckOrder | null>(null)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [receiveMode, setReceiveMode] = useState<string | null>(null)
-  // local receive qty state (not persisted until Confirm)
-  const [receiveVals, setReceiveVals] = useState<Record<string, string>>({})
-
-  const lowItems = getLowParItems()
-
-  function nextWeekday(dow: number) {
-    const d = new Date()
-    const diff = (dow - d.getDay() + 7) % 7 || 7
-    d.setDate(d.getDate() + diff)
-    return d.toISOString().slice(0, 10)
-  }
-
-  function startOrderFromLow() {
-    const items: OrderLineItem[] = lowItems.map(i => ({
-      itemId: i.id, itemName: i.item, unit: i.unit,
-      currentQty: i.qty, parLevel: i.min,
-      orderedQty: i.reorderQty ?? Math.max(i.min - i.qty, 1),
-      receivedQty: '', unitCost: i.cost ?? 0, vendor: i.vendor ?? 'Sysco', note: '',
-    }))
-    setDraftOrder({ id: uid(), vendorName: 'Sysco', deliveryDate: nextWeekday(3), cutoffDate: nextWeekday(1), status: 'Draft', items, notes: '', createdAt: new Date().toISOString() })
-  }
-
-  function startBlankOrder() {
-    setDraftOrder({ id: uid(), vendorName: 'Sysco', deliveryDate: nextWeekday(3), cutoffDate: nextWeekday(1), status: 'Draft', items: [], notes: '', createdAt: new Date().toISOString() })
-  }
-
-  function addLineItem() {
-    if (!draftOrder) return
-    setDraftOrder(p => p ? { ...p, items: [...p.items, { itemId: uid(), itemName: '', unit: 'each', currentQty: 0, parLevel: 0, orderedQty: 1, receivedQty: '', unitCost: 0, vendor: p.vendorName, note: '' }] } : null)
-  }
-
-  function updateLine(itemId: string, field: keyof OrderLineItem, val: any) {
-    setDraftOrder(p => p ? { ...p, items: p.items.map(i => i.itemId !== itemId ? i : { ...i, [field]: val }) } : null)
-  }
-
-  function removeLine(itemId: string) {
-    setDraftOrder(p => p ? { ...p, items: p.items.filter(i => i.itemId !== itemId) } : null)
-  }
-
-  function calcTotal(items: OrderLineItem[]) {
-    return items.reduce((s, i) => s + i.orderedQty * i.unitCost, 0)
-  }
-
-  function submitForApproval() {
-    if (!draftOrder || draftOrder.items.length === 0) return
-    const total = calcTotal(draftOrder.items)
-    const saved = addOrder({ ...draftOrder, status: 'Pending Approval', submittedById: myStaffId })
-    setDraftOrder(null)
-    addApproval({
-      type: 'truck_order', requestedById: myStaffId, assignedToId: 'staff-2', status: 'Pending',
-      subject: `Truck Order — ${saved.vendorName} · Delivery ${saved.deliveryDate}`,
-      description: `${saved.items.length} line items. Cutoff: ${saved.cutoffDate}. Est. total: $${total.toFixed(2)}. ${saved.notes || ''}`.trim(),
-      payload: {
-        vendor: saved.vendorName, deliveryDate: saved.deliveryDate, cutoffDate: saved.cutoffDate,
-        estimatedTotal: total,
-        items: saved.items.map(i => ({ name: i.itemName, qty: i.orderedQty, unit: i.unit, estimatedCost: +(i.orderedQty * i.unitCost).toFixed(2) })),
-      },
-    })
-  }
-
-  function openReceive(orderId: string) {
-    setReceiveMode(orderId)
-    setExpandedId(orderId)
-    setReceiveVals({})
-  }
-
-  function finishReceive(orderId: string) {
-    const order = truckOrders.find(o => o.id === orderId)
-    if (!order) return
-    const updatedItems = order.items.map(i => ({ ...i, receivedQty: receiveVals[i.itemId] !== undefined ? Number(receiveVals[i.itemId]) : i.receivedQty }))
-    const allReceived  = updatedItems.every(i => i.receivedQty !== '' && Number(i.receivedQty) >= i.orderedQty)
-    updateOrder(orderId, { items: updatedItems, status: allReceived ? 'Received' : 'Partial', receivedById: myStaffId })
-    setReceiveMode(null)
-    setReceiveVals({})
-  }
-
-  const statusColor: Record<OrderStatus, string> = {
-    Draft: '#6b7280', 'Pending Approval': '#d97706', Approved: '#059669',
-    Submitted: '#0284c7', Received: '#7c3aed', Partial: '#dc2626',
-  }
-
-  const inputStyle: React.CSSProperties = { padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--text-primary)', background: 'var(--bg-card)', width: '100%', boxSizing: 'border-box' as any }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-      {lowItems.length > 0 && !draftOrder && (
-        <div className="sl-alert sl-alert-warning" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <b>⚠ {lowItems.length} item{lowItems.length > 1 ? 's' : ''} below par level</b>
-            <div style={{ fontSize: 'var(--text-sm)', marginTop: 2 }}>{lowItems.map(i => i.item).join(' · ')}</div>
-          </div>
-          <button onClick={startOrderFromLow} className="btn btn-primary" style={{ flexShrink: 0 }}>Build Order from Low Items</button>
-        </div>
-      )}
-
-      {!draftOrder && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button onClick={startBlankOrder} className="btn btn-outline">+ Blank Order</button>
-        </div>
-      )}
-
-      {draftOrder && (
-        <div style={{ background: 'var(--bg-card)', border: '2px solid var(--color-primary)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', background: 'var(--color-primary-light)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}>New Truck Order — Draft</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setDraftOrder(null)} className="btn btn-outline btn-sm">Discard</button>
-              <button onClick={submitForApproval} disabled={draftOrder.items.length === 0} className="btn btn-primary btn-sm">Submit for Approval</button>
-            </div>
-          </div>
-          <div style={{ padding: '16px 18px', display: 'flex', gap: 12, flexWrap: 'wrap', borderBottom: '1px solid var(--border-color)' }}>
-            <div style={{ flex: '1 1 140px' }}><label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Vendor</label><input style={inputStyle} value={draftOrder.vendorName} onChange={e => setDraftOrder(p => p ? { ...p, vendorName: e.target.value } : null)} /></div>
-            <div style={{ flex: '1 1 130px' }}><label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Delivery Date</label><input type="date" style={inputStyle} value={draftOrder.deliveryDate} onChange={e => setDraftOrder(p => p ? { ...p, deliveryDate: e.target.value } : null)} /></div>
-            <div style={{ flex: '1 1 130px' }}><label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Order Cutoff</label><input type="date" style={inputStyle} value={draftOrder.cutoffDate} onChange={e => setDraftOrder(p => p ? { ...p, cutoffDate: e.target.value } : null)} /></div>
-            <div style={{ flex: '2 1 200px' }}><label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Notes</label><input style={inputStyle} value={draftOrder.notes} onChange={e => setDraftOrder(p => p ? { ...p, notes: e.target.value } : null)} placeholder="Optional order notes…" /></div>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead><tr style={{ background: 'var(--bg-app)' }}>
-                <th style={TH}>Item</th><th style={TH}>Unit</th><th style={TH}>On Hand</th><th style={TH}>Par</th><th style={TH}>Qty to Order</th><th style={TH}>Unit Cost $</th><th style={TH}>Line Total</th><th style={TH}>Note</th><th style={TH} />
-              </tr></thead>
-              <tbody>
-                {draftOrder.items.map((item, i) => (
-                  <tr key={item.itemId} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-app)', borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={TD}><input style={{ ...inputStyle, minWidth: 140 }} value={item.itemName} onChange={e => updateLine(item.itemId, 'itemName', e.target.value)} placeholder="Item name" /></td>
-                    <td style={TD}><input style={{ ...inputStyle, width: 70 }} value={item.unit} onChange={e => updateLine(item.itemId, 'unit', e.target.value)} /></td>
-                    <td style={{ ...TD, color: 'var(--text-muted)' }}>{item.currentQty}</td>
-                    <td style={{ ...TD, color: 'var(--text-muted)' }}>{item.parLevel}</td>
-                    <td style={TD}><input type="number" min={0} style={{ ...inputStyle, width: 70 }} value={item.orderedQty} onChange={e => updateLine(item.itemId, 'orderedQty', +e.target.value)} /></td>
-                    <td style={TD}><input type="number" min={0} step="0.01" style={{ ...inputStyle, width: 80 }} value={item.unitCost} onChange={e => updateLine(item.itemId, 'unitCost', +e.target.value)} /></td>
-                    <td style={{ ...TD, fontWeight: 700, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{fmt$(item.orderedQty * item.unitCost)}</td>
-                    <td style={TD}><input style={{ ...inputStyle, minWidth: 110 }} value={item.note} onChange={e => updateLine(item.itemId, 'note', e.target.value)} placeholder="note…" /></td>
-                    <td style={TD}><button onClick={() => removeLine(item.itemId)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '2px 4px' }}>×</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={addLineItem} className="btn btn-outline btn-sm">+ Add Line Item</button>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}>Estimated Total: {fmt$(calcTotal(draftOrder.items))}</div>
-          </div>
-        </div>
-      )}
-
-      {truckOrders.length === 0 && !draftOrder ? (
-        <div className="sl-empty">
-          <div style={{ fontSize: 36, marginBottom: 'var(--space-3)' }}>🚛</div>
-          <div className="sl-empty-title">No truck orders yet.</div>
-          <div className="sl-empty-desc">Use "Build Order from Low Items" or "+ Blank Order" to start.</div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          {truckOrders.map(order => {
-            const sc         = statusColor[order.status]
-            const isExpanded = expandedId === order.id
-            const isReceiving = receiveMode === order.id
-            const total      = calcTotal(order.items)
-            return (
-              <div key={order.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-                <div onClick={() => setExpandedId(v => v === order.id ? null : order.id)} style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', userSelect: 'none', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: `${sc}22`, color: sc, border: `1px solid ${sc}55` }}>{order.status}</span>
-                      {order.status === 'Pending Approval' && <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 20, background: '#dc2626', color: '#fff' }}>NEEDS APPROVAL</span>}
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{order.vendorName} — Delivery {order.deliveryDate}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{order.items.length} items · Est. {fmt$(total)} · Cutoff {order.cutoffDate}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                    {isPrivileged && order.status === 'Pending Approval' && (
-                      <button onClick={e => { e.stopPropagation(); updateOrder(order.id, { status: 'Approved' }) }} className="btn btn-primary btn-sm">Approve</button>
-                    )}
-                    {order.status === 'Approved' && (
-                      <button onClick={e => { e.stopPropagation(); updateOrder(order.id, { status: 'Submitted' }) }} className="btn btn-outline btn-sm">Mark Submitted to Vendor</button>
-                    )}
-                    {(order.status === 'Submitted' || order.status === 'Approved') && (
-                      <button onClick={e => { e.stopPropagation(); openReceive(order.id) }} className="btn btn-primary btn-sm">Receive Delivery</button>
-                    )}
-                    <svg width="16" height="16" fill="none" stroke="var(--text-muted)" strokeWidth="2" viewBox="0 0 24 24" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', marginLeft: 4, alignSelf: 'center' }}><path d="M6 9l6 6 6-6" /></svg>
-                  </div>
-                </div>
-                {isExpanded && (
-                  <div style={{ borderTop: '1px solid var(--border-color)' }}>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                        <thead><tr style={{ background: 'var(--bg-app)' }}>
-                          <th style={TH}>Item</th><th style={TH}>Unit</th><th style={TH}>Ordered</th>
-                          {isReceiving && <th style={TH}>Received</th>}
-                          <th style={TH}>Unit Cost</th><th style={TH}>Line Total</th><th style={TH}>Note</th>
-                        </tr></thead>
-                        <tbody>
-                          {order.items.map((item, i) => (
-                            <tr key={item.itemId} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-app)', borderBottom: '1px solid var(--border-color)' }}>
-                              <td style={{ ...TD, fontWeight: 600 }}>{item.itemName}</td>
-                              <td style={{ ...TD, color: 'var(--text-muted)' }}>{item.unit}</td>
-                              <td style={TD}><b>{item.orderedQty}</b></td>
-                              {isReceiving && (
-                                <td style={TD}>
-                                  <input
-                                    type="number" min={0}
-                                    value={receiveVals[item.itemId] ?? ''}
-                                    onChange={e => setReceiveVals(p => ({ ...p, [item.itemId]: e.target.value }))}
-                                    style={{ padding: '5px 8px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', width: 70, fontSize: 13 }}
-                                    placeholder="rcvd"
-                                  />
-                                </td>
-                              )}
-                              <td style={TD}>{fmt$(item.unitCost)}</td>
-                              <td style={{ ...TD, fontWeight: 700, color: 'var(--color-primary)' }}>{fmt$(item.orderedQty * item.unitCost)}</td>
-                              <td style={{ ...TD, color: 'var(--text-muted)' }}>{item.note || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {isReceiving && (
-                      <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button onClick={() => setReceiveMode(null)} className="btn btn-outline">Cancel</button>
-                        <button onClick={() => finishReceive(order.id)} className="btn btn-primary">Confirm Receipt</button>
-
-                      </div>
-                    )}
-                    <div style={{ padding: '10px 18px', borderTop: '1px solid var(--border-color)', textAlign: 'right', fontSize: 14, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}>
-                      Order Total: {fmt$(total)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── USAGE TRENDS TAB ──────────────────────────────────────────────────────────
+// Computed server-side from the append-only transaction ledger.
 function TrendsTab() {
-  const { stockItems, wasteEntries, getLowParItems } = useInventoryStore()
+  const { stockItems, trends, getLowParItems } = useInventoryStore()
   const lowItems      = getLowParItems()
   const totalStockCost = stockItems.reduce((s, i) => s + i.qty * (i.cost ?? 0), 0)
-  const totalWasteCost = wasteEntries.reduce((s, e) => s + (e.cost ?? 0), 0)
-
-  const byReason: Record<string, { count: number; cost: number }> = {}
-  const byMeal:   Record<string, { count: number; cost: number }> = {}
-  wasteEntries.forEach(e => {
-    byReason[e.reason] ??= { count: 0, cost: 0 }; byReason[e.reason].count++; byReason[e.reason].cost += e.cost ?? 0
-    byMeal[e.meal]     ??= { count: 0, cost: 0 }; byMeal[e.meal].count++;     byMeal[e.meal].cost     += e.cost ?? 0
-  })
+  const totalWasteCost = trends?.wasteCost ?? 0
+  const wasteEvents    = trends?.wasteEvents ?? 0
+  const byReason       = trends?.wasteByReason ?? {}
+  const byMeal         = trends?.wasteByMeal ?? {}
+  const stockByCat     = trends?.stockByCategory ?? []
 
   function Bar({ label, val, max, color }: { label: string; val: number; max: number; color: string }) {
     return (
@@ -706,38 +449,35 @@ function TrendsTab() {
         <div className="sl-stat-card"><div className="sl-eyebrow">Items Below Par</div><div style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--weight-black)', fontFamily: 'var(--font-display)', color: '#d97706' }}>{lowItems.length}</div></div>
         <div className="sl-stat-card"><div className="sl-eyebrow">Total Stock Value</div><div style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--weight-black)', fontFamily: 'var(--font-display)', color: 'var(--color-primary)' }}>{fmt$(totalStockCost)}</div></div>
         <div className="sl-stat-card"><div className="sl-eyebrow">Total Waste Cost</div><div style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--weight-black)', fontFamily: 'var(--font-display)', color: '#dc2626' }}>{fmt$(totalWasteCost)}</div></div>
-        <div className="sl-stat-card"><div className="sl-eyebrow">Waste Events</div><div style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--weight-black)', fontFamily: 'var(--font-display)', color: 'var(--color-primary)' }}>{wasteEntries.length}</div></div>
+        <div className="sl-stat-card"><div className="sl-eyebrow">Waste Events</div><div style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--weight-black)', fontFamily: 'var(--font-display)', color: 'var(--color-primary)' }}>{wasteEvents}</div></div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 'var(--space-5)' }}>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
           <div className="sl-section-title" style={{ marginBottom: 'var(--space-3)', color: 'var(--color-primary)' }}>Waste by Reason</div>
           {Object.entries(byReason).sort((a, b) => b[1].count - a[1].count).map(([r, v]) =>
-            <Bar key={r} label={r} val={v.count} max={Math.max(wasteEntries.length, 1)} color="#d97706" />
+            <Bar key={r} label={r} val={v.count} max={Math.max(wasteEvents, 1)} color="#d97706" />
           )}
-          {wasteEntries.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No waste entries yet.</p>}
+          {wasteEvents === 0 && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No waste entries yet.</p>}
         </div>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
           <div className="sl-section-title" style={{ marginBottom: 'var(--space-3)', color: 'var(--color-primary)' }}>Waste by Meal</div>
           {Object.entries(byMeal).sort((a, b) => b[1].count - a[1].count).map(([m, v]) =>
-            <Bar key={m} label={m} val={v.count} max={Math.max(wasteEntries.length, 1)} color="#6366f1" />
+            <Bar key={m} label={m} val={v.count} max={Math.max(wasteEvents, 1)} color="#6366f1" />
           )}
-          {wasteEntries.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No waste entries yet.</p>}
+          {wasteEvents === 0 && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No waste entries yet.</p>}
         </div>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
           <div className="sl-section-title" style={{ marginBottom: 'var(--space-3)', color: 'var(--color-primary)' }}>Stock by Category</div>
-          {INVENTORY_CATEGORIES.map(cat => {
-            const count = stockItems.filter(i => i.category === cat).length
-            const lc    = stockItems.filter(i => i.category === cat && i.qty < i.min).length
-            return (
-              <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{cat}</span>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>{count} items</span>
-                  {lc > 0 && <Badge color="#d97706">{lc} low</Badge>}
-                </div>
+          {stockByCat.map(({ category, items, low }) => (
+            <div key={category} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{category}</span>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>{items} items</span>
+                {low > 0 && <Badge color="#d97706">{low} low</Badge>}
               </div>
-            )
-          })}
+            </div>
+          ))}
+          {stockByCat.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No stock yet.</p>}
         </div>
       </div>
       <div className="sl-alert sl-alert-info" style={{ fontSize: 'var(--text-sm)' }}>
@@ -748,26 +488,33 @@ function TrendsTab() {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-type InventoryTab = 'stock' | 'waste' | 'count' | 'orders' | 'trends'
+type InventoryTab = 'stock' | 'waste' | 'count' | 'trends'
 const INV_TABS: { id: InventoryTab; label: string; icon: string }[] = [
   { id: 'stock',  label: 'Stock Inventory', icon: '📋' },
   { id: 'waste',  label: 'Waste Log',       icon: '🗑️' },
   { id: 'count',  label: 'Zero-Balance',    icon: '🔢' },
-  { id: 'orders', label: 'Truck Orders',    icon: '🚛' },
   { id: 'trends', label: 'Trends',          icon: '📊' },
 ]
 
 export default function InventoryPage() {
   const [tab, setTab] = useState<InventoryTab>('stock')
-  const { fetch, loading } = useInventoryStore()
+  const { fetch, importLegacy, loading } = useInventoryStore()
 
-  useEffect(() => { fetch() }, [fetch])
+  // Cutover: one-time import of this device's legacy localStorage rows onto
+  // the server, then every tab reads the shared server state.
+  useEffect(() => {
+    let live = true
+    importLegacy()
+      .catch(() => { /* import errors are surfaced via store.error */ })
+      .finally(() => { if (live) fetch() })
+    return () => { live = false }
+  }, [importLegacy, fetch])
 
   return (
     <div className="sl-page fade-in">
       <div className="sl-page-header">
         <h1 className="sl-page-title">Inventory &amp; Waste</h1>
-        <p className="sl-page-subtitle">Stock, waste log, zero-balance counts, truck orders, and usage trends.</p>
+        <p className="sl-page-subtitle">Stock, waste log, zero-balance counts, and usage trends.</p>
       </div>
       <div className="sl-pills" style={{ marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
         {INV_TABS.map(t => (
@@ -780,7 +527,6 @@ export default function InventoryPage() {
         {tab === 'stock'  && <StockTab />}
         {tab === 'waste'  && <WasteTab />}
         {tab === 'count'  && <ZeroBalanceTab />}
-        {tab === 'orders' && <TruckOrdersTab />}
         {tab === 'trends' && <TrendsTab />}
       </div>
     </div>

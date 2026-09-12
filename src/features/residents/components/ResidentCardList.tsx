@@ -55,7 +55,8 @@ function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: R
   const colorIndex = (r.name.charCodeAt(0) + (r.room.charCodeAt(0) || 0)) % avatarColors.length
   const avatarBg = avatarColors[colorIndex]
 
-  const isNpo = r.dietType?.toUpperCase().includes('NPO') || r.texture?.toUpperCase().includes('NPO')
+  // B02: typed NPO flag — no more dietType string-sniffing.
+  const isNpo = r.is_npo === true
 
   return (
     <AppleCard
@@ -110,7 +111,7 @@ function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: R
         {isNpo && (
           <div className="p-2.5 rounded-xl bg-red-600 text-white font-black text-xs flex items-center gap-2 mb-3 shadow-sm animate-pulse">
             <AlertOctagon className="w-4 h-4 shrink-0" />
-            <span>NPO HARD-BLOCK: NIL PER OS (NO FOOD/LIQUIDS)</span>
+            <span>NPO HARD-BLOCK: NIL PER OS (NO FOOD/LIQUIDS){r.npo_reason ? ` — ${r.npo_reason}` : ''}</span>
           </div>
         )}
 
@@ -139,11 +140,11 @@ function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: R
             </span>
           </div>
 
-          {(r as any).fluidConsistency && (r as any).fluidConsistency !== 'Thin' && (
+          {r.fluidConsistency && r.fluidConsistency !== 'Thin' && (
             <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50">
               <span className="text-slate-500 font-medium">Liquid Consistency</span>
               <span className="font-bold text-teal-700 dark:text-teal-300 font-mono text-[11px]">
-                {(r as any).fluidConsistency}
+                {r.fluidConsistency}
               </span>
             </div>
           )}

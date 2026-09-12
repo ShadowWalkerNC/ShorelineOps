@@ -1,5 +1,16 @@
 import { create } from 'zustand'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/api/client'
+
+// ============================================================
+// INVENTORY STORE — server-backed (B09)
+// ------------------------------------------------------------
+// All five inventory tabs read/write the Shoreline API
+// (/api/inventory): items CRUD, the append-only transaction
+// ledger, waste log, and count-sheet sessions. The only local
+// state left is the truck-order draft flow (retired in B11) and
+// pure UI prefs. A one-time import pulls legacy
+// `shoreline_db_inventory` localStorage rows onto the server.
+// ============================================================
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export const INVENTORY_CATEGORIES = [
@@ -59,32 +70,28 @@ export interface InventoryCount {
   approvedById?: string
 }
 
-export interface OrderLineItem {
-  itemId: string
-  itemName: string
+export interface InventoryTransaction {
+  id: string
+  itemId: string | null
+  itemName: string | null
+  type: 'receipt' | 'issue' | 'waste' | 'count_adjust'
+  qty: number
   unit: string
-  currentQty: number
-  parLevel: number
-  orderedQty: number
-  receivedQty: number | ''
-  unitCost: number
-  vendor: string
+  userId: string | null
   note: string
+  meta: Record<string, any>
+  createdAt: string
 }
 
-export type OrderStatus = 'Draft' | 'Pending Approval' | 'Approved' | 'Submitted' | 'Received' | 'Partial'
-
-export interface TruckOrder {
-  id: string
-  vendorName: string
-  deliveryDate: string
-  cutoffDate: string
-  status: OrderStatus
-  items: OrderLineItem[]
-  notes: string
-  createdAt: string
-  submittedById?: string
-  receivedById?: string
+export interface InventoryTrends {
+  days: number
+  wasteEvents: number
+  wasteCost: number
+  receipts: number
+  issues: number
+  wasteByReason: Record<string, { count: number; cost: number }>
+  wasteByMeal: Record<string, { count: number; cost: number }>
+  stockByCategory: { category: string; items: number; low: number; value: number }[]
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -96,8 +103,9 @@ export interface InventoryState {
   wasteEntries: WasteEntry[]
   // counts
   counts:       InventoryCount[]
-  // orders
-  truckOrders:  TruckOrder[]
+  // ledger + trends
+  transactions: InventoryTransaction[]
+  trends:       InventoryTrends | null
   loading: boolean
   error: string | null
   // actions – stock
@@ -106,113 +114,286 @@ export interface InventoryState {
   updateItem: (id: string, data: Partial<StockItem>) => Promise<void>
   remove:     (id: string) => Promise<void>
   // actions – waste
-  addWasteEntry:    (data: Omit<WasteEntry, 'id'>) => void
-  removeWasteEntry: (id: string) => void
+  addWasteEntry:    (data: Omit<WasteEntry, 'id'>) => Promise<void>
   // actions – counts
-  addCount:    (data: Omit<InventoryCount, 'id'>) => void
-  updateCount: (id: string, data: Partial<InventoryCount>) => void
-  // actions – orders
-  addOrder:    (data: Omit<TruckOrder, 'id'>) => TruckOrder
-  updateOrder: (id: string, data: Partial<TruckOrder>) => void
+  addCount:    (data: Omit<InventoryCount, 'id'>) => Promise<void>
+  updateCount: (id: string, data: Partial<InventoryCount>) => Promise<void>
+  // one-time legacy localStorage → server import
+  importLegacy: () => Promise<number>
   // helpers
   getLowParItems:  () => StockItem[]
   getZeroItems:    () => StockItem[]
 }
 
-function uid() { return Math.random().toString(36).slice(2, 10) }
+const IMPORT_FLAG = 'shoreline_inventory_imported_v1'
+const LEGACY_KEY  = 'shoreline_db_inventory'
 
-function toStock(row: Record<string, unknown>): StockItem {
+function toStock(row: any): StockItem {
   return {
-    id:         row.id as string,
-    item:       row.item as string,
-    category:   ((row.category as string) ?? 'Other') as InventoryCategory,
-    qty:        Number(row.quantity ?? row.qty ?? 0),
-    unit:       (row.unit as string) ?? '',
-    min:        Number(row.par_level ?? row.min ?? 0),
-    reorderQty: row.reorder_qty != null ? Number(row.reorder_qty) : undefined,
-    cost:       row.cost        != null ? Number(row.cost)        : undefined,
-    vendor:     (row.vendor as string | null) ?? undefined,
-    notes:      (row.notes  as string | null) ?? undefined,
+    id:         row.id,
+    item:       row.name ?? row.item,
+    category:   (row.category ?? 'Other') as InventoryCategory,
+    qty:        Number(row.onHand ?? row.on_hand ?? row.quantity ?? row.qty ?? 0),
+    unit:       row.unit ?? '',
+    min:        Number(row.parLevel ?? row.par_level ?? row.min ?? 0),
+    reorderQty: row.reorderQty != null ? Number(row.reorderQty) : undefined,
+    cost:       row.unitCost != null ? Number(row.unitCost)
+              : row.unit_cost != null ? Number(row.unit_cost)
+              : row.cost != null ? Number(row.cost) : undefined,
+    vendor:     row.vendor ?? undefined,
+    notes:      row.notes ?? undefined,
   }
 }
 
+const WASTE_REASON_SET = new Set(['Overproduction', 'Plate Waste', 'Expired', 'Contamination', 'Other'])
+
+function toWaste(t: InventoryTransaction): WasteEntry {
+  const m = t.meta ?? {}
+  const reason = WASTE_REASON_SET.has(m.reason) ? m.reason as WasteReason : 'Other'
+  const meal = (['Breakfast', 'Lunch', 'Dinner', 'N/A'] as const).includes(m.meal) ? m.meal : 'N/A'
+  return {
+    id:       t.id,
+    date:     typeof m.date === 'string' && m.date ? m.date : (t.createdAt ?? '').slice(0, 10),
+    item:     typeof m.itemName === 'string' && m.itemName ? m.itemName : (t.itemName ?? ''),
+    qty:      Math.abs(t.qty),
+    unit:     t.unit,
+    reason,
+    meal,
+    loggedBy: typeof m.loggedBy === 'string' ? m.loggedBy : '',
+    cost:     m.cost != null ? Number(m.cost) : undefined,
+  }
+}
+
+function toCount(c: any): InventoryCount {
+  return {
+    id:            c.id,
+    countDate:     c.countDate,
+    submittedById: c.submittedById ?? '',
+    status:        c.status as CountStatus,
+    items: (c.items ?? []).map((i: any, idx: number) => ({
+      id:       `${c.id}-line-${idx}`,
+      itemId:   i.itemId ?? '',
+      itemName: i.itemName ?? '',
+      unit:     i.unit ?? '',
+      expected: Number(i.expected ?? 0),
+      counted:  i.counted === '' ? '' : Number(i.counted ?? 0),
+      variance: Number(i.variance ?? 0),
+      note:     i.note ?? '',
+    })),
+    notes:       c.notes ?? '',
+    submittedAt: c.submittedAt ?? undefined,
+    approvedById: c.approvedById ?? undefined,
+  }
+}
+
+function setError(set: (p: Partial<InventoryState>) => void, op: string, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err)
+  set({ error: `${op}: ${message}`, loading: false })
+}
+
 export const useInventoryStore = create<InventoryState>((set, get) => ({
-  stockItems: [], items: [], wasteEntries: [], counts: [], truckOrders: [],
+  stockItems: [], items: [], wasteEntries: [], counts: [],
+  transactions: [], trends: null,
   loading: false, error: null,
 
-  fetch: async () => {
+  fetch: async (search?: string) => {
     set({ loading: true, error: null })
-    const { data, error } = await supabase.from('inventory').select('*').order('item')
-    if (error) { set({ error: error.message, loading: false }); return }
-    const stock = (data ?? []).map((r: any) => toStock(r as Record<string, unknown>))
-    set({ stockItems: stock, items: stock, loading: false })
+    try {
+      const [itemsRes, txRes, countsRes, trendsRes] = await Promise.all([
+        api.get<any[]>('/inventory/items', { params: search ? { search } : {} }),
+        api.get<InventoryTransaction[]>('/inventory/transactions', { params: { limit: 1000 } }),
+        api.get<any[]>('/inventory/counts'),
+        api.get<InventoryTrends>('/inventory/trends'),
+      ])
+      const stock = (itemsRes.data ?? []).map(toStock)
+      const transactions = txRes.data ?? []
+      const wasteEntries = transactions
+        .filter(t => t.type === 'waste')
+        .map(toWaste)
+      set({
+        stockItems: stock,
+        items: stock,
+        transactions,
+        wasteEntries,
+        counts: (countsRes.data ?? []).map(toCount),
+        trends: trendsRes.data ?? null,
+        loading: false,
+      })
+    } catch (err) {
+      setError(set, 'Failed to load inventory', err)
+    }
   },
 
   addItem: async (data) => {
-    const row = {
-      item: data.item, category: data.category,
-      quantity: data.qty, unit: data.unit, par_level: data.min,
-      ...(data.reorderQty !== undefined && { reorder_qty: data.reorderQty }),
-      ...(data.cost       !== undefined && { cost:        data.cost }),
-      ...(data.vendor     !== undefined && { vendor:      data.vendor }),
-      ...(data.notes      !== undefined && { notes:       data.notes }),
+    try {
+      const { data: row } = await api.post('/inventory/items', {
+        name: data.item, category: data.category,
+        unit: data.unit, parLevel: data.min, onHand: data.qty,
+        unitCost: data.cost ?? null,
+        vendor: data.vendor ?? '', notes: data.notes ?? '',
+      })
+      const item = toStock(row)
+      set(s => {
+        const next = [...s.stockItems, item].sort((a, b) => a.item.localeCompare(b.item))
+        return { stockItems: next, items: next }
+      })
+    } catch (err) {
+      setError(set, 'Failed to add item', err)
+      throw err
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('inventory') as any).insert(row).select().single()
-    if (error) throw new Error(error.message)
-    const item = toStock(r as Record<string, unknown>)
-    set(s => { const next = [...s.stockItems, item].sort((a, b) => a.item.localeCompare(b.item)); return { stockItems: next, items: next } })
   },
 
   updateItem: async (id, data) => {
-    const patch: Record<string, unknown> = {}
-    if (data.item       !== undefined) patch.item       = data.item
-    if (data.category   !== undefined) patch.category   = data.category
-    if (data.qty        !== undefined) patch.quantity   = data.qty
-    if (data.unit       !== undefined) patch.unit       = data.unit
-    if (data.min        !== undefined) patch.par_level  = data.min
-    if (data.reorderQty !== undefined) patch.reorder_qty = data.reorderQty
-    if (data.cost       !== undefined) patch.cost       = data.cost
-    if (data.vendor     !== undefined) patch.vendor     = data.vendor
-    if (data.notes      !== undefined) patch.notes      = data.notes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: r, error } = await (supabase.from('inventory') as any).update(patch).eq('id', id).select().single()
-    if (error) throw new Error(error.message)
-    const updated = toStock(r as Record<string, unknown>)
-    set(s => { const next = s.stockItems.map(i => i.id === id ? updated : i); return { stockItems: next, items: next } })
+    try {
+      const current = get().stockItems.find(i => i.id === id)
+      // A quantity change is a stock movement — it goes through the
+      // append-only ledger as a count_adjust transaction.
+      if (current && data.qty !== undefined && Number(data.qty) !== current.qty) {
+        const delta = Number(data.qty) - current.qty
+        await api.post('/inventory/transactions', {
+          itemId: id,
+          type: 'count_adjust',
+          qty: delta,
+          unit: current.unit,
+          note: JSON.stringify({ text: 'Manual stock adjustment (Stock tab)' }),
+        })
+      }
+      const patch: Record<string, unknown> = {}
+      if (data.item     !== undefined) patch.name     = data.item
+      if (data.category !== undefined) patch.category = data.category
+      if (data.unit     !== undefined) patch.unit     = data.unit
+      if (data.min      !== undefined) patch.parLevel = data.min
+      if (data.cost     !== undefined) patch.unitCost = data.cost
+      if (data.vendor   !== undefined) patch.vendor   = data.vendor
+      if (data.notes    !== undefined) patch.notes    = data.notes
+      if (Object.keys(patch).length > 0) {
+        await api.patch(`/inventory/items/${id}`, patch)
+      }
+      // Re-read server state so two tablets always converge.
+      await get().fetch()
+    } catch (err) {
+      setError(set, 'Failed to update item', err)
+      throw err
+    }
   },
 
   remove: async (id) => {
-    const { error } = await supabase.from('inventory').delete().eq('id', id)
-    if (error) throw new Error(error.message)
-    set(s => { const next = s.stockItems.filter(i => i.id !== id); return { stockItems: next, items: next } })
+    try {
+      await api.delete(`/inventory/items/${id}`)
+      set(s => {
+        const next = s.stockItems.filter(i => i.id !== id)
+        return { stockItems: next, items: next }
+      })
+    } catch (err) {
+      setError(set, 'Failed to remove item', err)
+      throw err
+    }
   },
 
-  // Waste — local only (no DB table yet)
-  addWasteEntry: (data) => {
-    const entry: WasteEntry = { ...data, id: uid() }
-    set(s => ({ wasteEntries: [...s.wasteEntries, entry] }))
+  // Waste — server-side ledger (append-only; no deletes by design)
+  addWasteEntry: async (data) => {
+    try {
+      const match = get().stockItems.find(
+        i => i.item.trim().toLowerCase() === data.item.trim().toLowerCase()
+      )
+      await api.post('/inventory/transactions', {
+        itemId: match?.id ?? null,
+        type: 'waste',
+        qty: Math.abs(data.qty),
+        unit: data.unit,
+        note: JSON.stringify({
+          itemName: data.item,
+          reason: data.reason,
+          meal: data.meal,
+          date: data.date,
+          loggedBy: data.loggedBy,
+          cost: data.cost ?? null,
+        }),
+      })
+      await get().fetch()
+    } catch (err) {
+      setError(set, 'Failed to log waste', err)
+      throw err
+    }
   },
-  removeWasteEntry: (id) => set(s => ({ wasteEntries: s.wasteEntries.filter(e => e.id !== id) })),
 
-  // Counts — local only
-  addCount: (data) => {
-    const count: InventoryCount = { ...data, id: uid() }
-    set(s => ({ counts: [...s.counts, count] }))
+  // Counts — server-side sessions; variances post as ledger adjustments
+  addCount: async (data) => {
+    try {
+      await api.post('/inventory/counts', {
+        countDate: data.countDate,
+        submittedById: data.submittedById,
+        status: data.status,
+        items: data.items.map(i => ({
+          itemId: i.itemId, itemName: i.itemName, unit: i.unit,
+          expected: i.expected, counted: i.counted, variance: i.variance,
+          note: i.note ?? '',
+        })),
+        notes: data.notes ?? '',
+        submittedAt: data.submittedAt ?? new Date().toISOString(),
+      })
+      await get().fetch()
+    } catch (err) {
+      setError(set, 'Failed to submit count', err)
+      throw err
+    }
   },
-  updateCount: (id, data) => set(s => ({
-    counts: s.counts.map(c => c.id === id ? { ...c, ...data } : c)
-  })),
+  updateCount: async (id, data) => {
+    try {
+      const patch: Record<string, unknown> = {}
+      if (data.status      !== undefined) patch.status     = data.status
+      if (data.approvedById !== undefined) patch.approvedBy = data.approvedById
+      if (data.notes        !== undefined) patch.notes      = data.notes
+      await api.patch(`/inventory/counts/${id}`, patch)
+      await get().fetch()
+    } catch (err) {
+      setError(set, 'Failed to update count', err)
+      throw err
+    }
+  },
 
-  // Truck orders — local only
-  addOrder: (data) => {
-    const order: TruckOrder = { ...data, id: uid() }
-    set(s => ({ truckOrders: [...s.truckOrders, order] }))
-    return order
+  // One-time cutover: import this device's legacy localStorage inventory rows
+  // (written by the old supabase-emulator data layer) onto the server, then
+  // never look at them again.
+  importLegacy: async () => {
+    try {
+      if (typeof window === 'undefined') return 0
+      if (window.localStorage.getItem(IMPORT_FLAG)) return 0
+      const raw = window.localStorage.getItem(LEGACY_KEY)
+      if (!raw) {
+        window.localStorage.setItem(IMPORT_FLAG, '1')
+        return 0
+      }
+      let rows: any[] = []
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) rows = parsed
+      } catch { /* not importable — ignore */ }
+      let imported = 0
+      for (const r of rows) {
+        try {
+          await api.post('/inventory/items', {
+            name: String(r.item ?? r.name ?? '').slice(0, 200),
+            category: String(r.category ?? 'Other').slice(0, 64),
+            unit: String(r.unit ?? 'each').slice(0, 32),
+            parLevel: Number(r.par_level ?? r.parLevel ?? r.min ?? 0) || 0,
+            onHand: Math.max(0, Number(r.on_hand ?? r.onHand ?? r.quantity ?? r.qty ?? 0) || 0),
+            unitCost: r.unit_cost != null ? Number(r.unit_cost)
+              : r.unitCost != null ? Number(r.unitCost)
+              : r.cost != null ? Number(r.cost) : null,
+            vendor: String(r.vendor ?? '').slice(0, 120),
+            notes: String(r.notes ?? '').slice(0, 2000),
+          })
+          imported += 1
+        } catch { /* skip rows that fail validation; keep importing the rest */ }
+      }
+      window.localStorage.setItem(IMPORT_FLAG, '1')
+      return imported
+    } catch (err) {
+      setError(set, 'Legacy import failed', err)
+      return 0
+    }
   },
-  updateOrder: (id, data) => set(s => ({
-    truckOrders: s.truckOrders.map(o => o.id === id ? { ...o, ...data } : o)
-  })),
 
   getLowParItems: () => get().stockItems.filter(i => i.qty < i.min && i.min > 0),
   getZeroItems:   () => get().stockItems.filter(i => i.qty <= 0),

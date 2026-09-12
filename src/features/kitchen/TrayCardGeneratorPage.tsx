@@ -1,16 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useResidentsStore } from '../../state/residentsStore'
+import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { encodeQr, qrToSvg } from '../../lib/qrcode'
 import {
   Printer,
-  Users,
   ShieldAlert,
   CheckCircle2,
-  QrCode,
   Sparkles,
   MapPin,
-  Stethoscope,
-  Activity,
   AlertTriangle,
   AlertOctagon,
   HeartPulse,
@@ -24,15 +22,101 @@ const IDDSI_COLORS: Record<string, { bg: string; color: string; border: string; 
   Pureed:           { bg: '#d1fae5', color: '#047857', border: '#6ee7b7', label: 'IDDSI Level 4 (Pureed)' },
 }
 
+/** Engine-generated tray card (server/src/engine/production.ts PrintableTrayCard). */
+interface TrayCard {
+  ticketId: string
+  residentId: string
+  residentName: string
+  room: string
+  table: string
+  mealSlot: string
+  serviceDate: string
+  dietOrder: string
+  iddsiTexture: string
+  textureBannerColor: string
+  hasCriticalAllergies: boolean
+  allergenList: string[]
+  portionSize: string
+  isNpo: boolean
+  npoReason?: string
+  fluidRestrictionMl?: number
+  profileVersion: number
+  qrToken: string
+  selectedEntree: string
+  selectedSides: string[]
+  selectedBeverages: string[]
+  specialNotes: string
+}
+
+/** Real scannable QR for the engine's signed ticketId:profileVersion:hash token. */
+function TrayQr({ token }: { token: string }) {
+  const svg = useMemo(() => {
+    try {
+      // qrToSvg renders the exact token the assembly scanner verifies.
+      return qrToSvg(encodeQr(token), 4, 2)
+    } catch {
+      return null
+    }
+  }, [token])
+  if (!svg) {
+    return (
+      <div className="p-1 rounded bg-red-50 border border-red-300 text-[9px] font-bold text-red-700 text-center">
+        QR UNAVAILABLE
+      </div>
+    )
+  }
+  return (
+    <div
+      className="p-1 rounded bg-white border border-slate-200"
+      // The token is engine-generated (alphanumeric + : hex); safe to inline.
+      dangerouslySetInnerHTML={{ __html: svg }}
+      role="img"
+      aria-label={`Tray ticket QR ${token}`}
+    />
+  )
+}
+
 export default function TrayCardGeneratorPage() {
   const { residents } = useResidentsStore()
   const [selectedWing, setSelectedWing] = useState<string>('all')
   const [selectedMeal, setSelectedMeal] = useState<'Breakfast' | 'Lunch' | 'Dinner'>('Lunch')
+  const [cards, setCards] = useState<TrayCard[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const wings = Array.from(new Set(residents.map((r: any) => r.wing || 'West Wing'))).filter(Boolean)
+  const wingByResidentId = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const r of residents as any[]) m.set(r.id, r.wing || 'West Wing')
+    return m
+  }, [residents])
 
-  const filteredResidents = residents.filter((r: any) => {
-    if (selectedWing !== 'all' && (r.wing || 'West Wing') !== selectedWing) return false
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const token = tokenManager.getAccessToken()
+        const res = await fetch(
+          `/api/kitchen/traycards-generated?mealSlot=${encodeURIComponent(selectedMeal)}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        )
+        if (!res.ok) throw new Error(`Tray card service returned ${res.status}`)
+        const data = await res.json()
+        if (!cancelled) setCards(Array.isArray(data.trayCards) ? data.trayCards : [])
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'Could not load tray cards')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [selectedMeal])
+
+  const filteredCards = cards.filter(c => {
+    if (selectedWing !== 'all' && (wingByResidentId.get(c.residentId) || 'West Wing') !== selectedWing) return false
     return true
   })
 
@@ -50,11 +134,12 @@ export default function TrayCardGeneratorPage() {
               Clinical Tray Cards &amp; 4&times;6 Meal Tickets
             </h1>
             <AppleBadge color="blue" dot>
-              {filteredResidents.length} Patient Trays
+              {filteredCards.length} Patient Trays
             </AppleBadge>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Point-of-service clinical meal verification tickets with IDDSI 2.0 textures, fluid consistencies, and allergen hard-blocks.
+            Every card carries the engine&apos;s signed, scannable verification token.
           </p>
         </div>
 
@@ -85,28 +170,38 @@ export default function TrayCardGeneratorPage() {
             size="md"
             icon={<Printer className="w-4 h-4" />}
             onClick={handlePrint}
+            disabled={loading || filteredCards.length === 0}
           >
             Print 4&times;6 Thermal Tray Cards
           </AppleButton>
         </div>
       </div>
 
+      {loading && (
+        <div className="no-print flex items-center gap-2 text-sm text-slate-500">
+          <Sparkles className="w-4 h-4 animate-pulse" />
+          Generating signed tray cards…
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="no-print p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border-2 border-red-300 text-sm font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 shrink-0" />
+          <span>Could not load tray cards: {error}. Cards are not printed without a signed verification token.</span>
+        </div>
+      )}
+
       {/* ── Cards Grid (Optimized for Screen & Print) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredResidents.map((resident: any) => {
-          const texture = resident.texture || resident.dietTexture || 'Regular'
-          const fluid = resident.fluidConsistency || resident.liquidConsistency || 'Thin Liquids'
-          const allergies = resident.allergies || []
-          const dislikes = resident.dislikes || []
-          const dietOrder = resident.dietOrder || resident.dietType || 'Regular Diet'
-          const isNpo = dietOrder?.toUpperCase().includes('NPO') || texture?.toUpperCase().includes('NPO')
-          const iddsiInfo = IDDSI_COLORS[texture] || IDDSI_COLORS.Regular
+        {filteredCards.map(card => {
+          const iddsiInfo = IDDSI_COLORS[card.iddsiTexture] || IDDSI_COLORS.Regular
+          const allergies = card.allergenList || []
 
           return (
             <AppleCard
-              key={resident.id}
+              key={card.ticketId}
               className={`p-4 sm:p-5 flex flex-col justify-between border-2 ${
-                isNpo
+                card.isNpo
                   ? 'border-red-500 bg-red-50/20 dark:bg-red-950/20'
                   : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900'
               } rounded-2xl break-inside-avoid shadow-xs hover:border-teal-500/50 transition-all`}
@@ -117,34 +212,34 @@ export default function TrayCardGeneratorPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-400 font-mono px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800">
-                        ROOM {resident.roomNumber || resident.room || '101'}
+                        ROOM {card.room || '—'}
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400">MRN: SH-{resident.id?.slice(0, 5) || '1004'}</span>
+                      <span className="text-[10px] font-mono text-slate-400">v{card.profileVersion}</span>
                     </div>
                     <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight mt-1">
-                      {resident.name}
+                      {card.residentName}
                     </h3>
                     <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
                       <MapPin className="w-3 h-3 text-slate-400" />
-                      <span>{resident.servingLocation || 'Dining Room'} &middot; Table {resident.tableAssignment || 'T-2'}</span>
+                      <span>{card.table || 'Dining Room'}</span>
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
                     <span className="text-[10px] font-black uppercase text-teal-700 dark:text-teal-300 font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
-                      {selectedMeal}
+                      {card.mealSlot}
                     </span>
-                    <div className="p-1 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <QrCode className="w-6 h-6 text-slate-700 dark:text-slate-300" />
+                    <div className="w-16 h-16">
+                      <TrayQr token={card.qrToken} />
                     </div>
                   </div>
                 </div>
 
-                {/* NPO BANNER */}
-                {isNpo && (
+                {/* NPO BANNER — driven by the real is_npo flag, with reason */}
+                {card.isNpo && (
                   <div className="p-2 rounded-xl bg-red-600 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs animate-pulse">
                     <AlertOctagon className="w-4 h-4" />
-                    <span>NPO: DO NOT DELIVER TRAY (HOLD)</span>
+                    <span>NPO: DO NOT DELIVER TRAY (HOLD){card.npoReason ? ` — ${card.npoReason}` : ''}</span>
                   </div>
                 )}
 
@@ -152,7 +247,7 @@ export default function TrayCardGeneratorPage() {
                 <div className="space-y-1.5 text-xs">
                   <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
                     <span className="font-bold text-slate-500">Therapeutic Diet:</span>
-                    <span className="font-black text-slate-900 dark:text-white">{dietOrder}</span>
+                    <span className="font-black text-slate-900 dark:text-white">{card.dietOrder}</span>
                   </div>
 
                   <div
@@ -163,10 +258,17 @@ export default function TrayCardGeneratorPage() {
                     <span className="font-black">{iddsiInfo.label}</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-900 dark:text-teal-200">
-                    <span className="font-bold text-teal-700 dark:text-teal-400">Liquid Texture:</span>
-                    <span className="font-black">{fluid}</span>
-                  </div>
+                  {card.fluidRestrictionMl ? (
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-900 dark:text-teal-200">
+                      <span className="font-bold text-teal-700 dark:text-teal-400">Fluid Limit:</span>
+                      <span className="font-black">{card.fluidRestrictionMl} ml/day</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Entrée (NPO lockout text comes from the engine) */}
+                <div className={`p-2 rounded-xl text-xs font-black ${card.isNpo ? 'bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-200 border border-red-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100'}`}>
+                  {card.selectedEntree}
                 </div>
 
                 {/* Allergy Alerts */}
@@ -191,10 +293,9 @@ export default function TrayCardGeneratorPage() {
                   </div>
                 )}
 
-                {/* Dislikes / Likes */}
-                {dislikes.length > 0 && (
+                {card.specialNotes && (
                   <div className="text-[11px] text-slate-500 font-medium">
-                    <strong className="text-slate-700 dark:text-slate-300">Exclude:</strong> {Array.isArray(dislikes) ? dislikes.join(', ') : dislikes}
+                    <strong className="text-slate-700 dark:text-slate-300">Notes:</strong> {card.specialNotes}
                   </div>
                 )}
               </div>
@@ -203,9 +304,9 @@ export default function TrayCardGeneratorPage() {
               <div className="pt-2.5 mt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-mono">
                 <div className="flex items-center gap-1 text-teal-600 dark:text-teal-400 font-bold">
                   <HeartPulse className="w-3 h-3" />
-                  <span>RD AUDITED · CMS F804 PASSED</span>
+                  <span>SIGNED v{card.profileVersion}</span>
                 </div>
-                <span>TICKET #{resident.id?.slice(0, 4) || '101'}</span>
+                <span className="truncate max-w-[55%]" title={card.qrToken}>{card.ticketId}</span>
               </div>
             </AppleCard>
           )

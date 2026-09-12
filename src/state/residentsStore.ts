@@ -21,6 +21,12 @@ function toResident(row: Record<string, unknown>): Resident {
     likes:               (row.likes as string) ?? '',
     dislikes:            (row.dislikes as string) ?? '',
     specialInstructions: (row.special_instructions as string) ?? '',
+    // B02: clinical fields — accept both the DB snake_case rows and the
+    // /api/residents camelCase payload so every client gets typed values.
+    is_npo:              Boolean(row.is_npo ?? row.isNpo ?? false),
+    npo_reason:          (row.npo_reason ?? row.npoReason ?? '') as string,
+    fluid_restriction_ml:(row.fluid_restriction_ml ?? row.fluidRestrictionMl ?? null) as number | null,
+    fluidConsistency:    (row.fluid_consistency ?? row.fluidConsistency ?? '') as string,
   }
 }
 
@@ -42,6 +48,9 @@ function toRow(data: Partial<Resident>): Record<string, unknown> {
   if (data.likes               !== undefined) r.likes                = data.likes
   if (data.dislikes            !== undefined) r.dislikes             = data.dislikes
   if (data.specialInstructions !== undefined) r.special_instructions = data.specialInstructions
+  // B04: NPO fields are dietitian/manager-settable through the profile.
+  if (data.is_npo              !== undefined) r.is_npo               = data.is_npo
+  if (data.npo_reason          !== undefined) r.npo_reason           = data.npo_reason
   return r
 }
 

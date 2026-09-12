@@ -19,6 +19,8 @@ import { setupRouter } from './routes/setup'
 import { ehrRouter } from './routes/ehr'
 import { recipesRouter } from './routes/recipes'
 import { enterpriseRouter } from './routes/enterprise'
+import { inventoryRouter } from './routes/inventory'
+import { trayrunsRouter } from './routes/trayruns'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 import { pool } from './db/pool'
@@ -117,6 +119,8 @@ app.use('/api/production', requireAuth, productionRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
 app.use('/api/kitchen',    requireAuth, kitchenRouter)
 app.use('/api/purchasing', requireAuth, purchasingRouter)
+app.use('/api/inventory',  requireAuth, inventoryRouter)
+app.use('/api/trayruns',  requireAuth, trayrunsRouter)
 app.use('/api/reporting',  requireAuth, reportingRouter)
 app.use('/api/enterprise', enterpriseRouter)
 app.use('/api/ehr',        ehrRouter)

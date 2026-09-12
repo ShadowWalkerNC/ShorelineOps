@@ -158,7 +158,7 @@ export default function NotificationBell() {
         id: 'sys-approvals', type: 'approval', severity: 'warning',
         subject: `${pending.length} pending approval request${pending.length > 1 ? 's' : ''}`,
         body: pending.slice(0, 3).map(t => t.subject).join(' · '),
-        link: '/communications', createdAt: now,
+        link: '/', createdAt: now, // B13: /communications cut — approval threads have no review surface now
       })
     }
 
@@ -178,14 +178,14 @@ export default function NotificationBell() {
           id: 'sys-budget-over', type: 'budget', severity: 'warning',
           subject: `Budget on track to exceed by $${(projected - totalBudget).toFixed(2)}`,
           body: `${period.label}: spent $${totalSpent.toFixed(2)} of $${totalBudget.toFixed(2)} (${pct.toFixed(1)}% used, day ${daysElapsed} of ${period.totalDays}).`,
-          link: '/budget', createdAt: now,
+          link: '/reporting', createdAt: now,
         })
       } else if (pct > 75) {
         alerts.push({
           id: 'sys-budget-warn', type: 'budget', severity: 'info',
           subject: `Budget ${pct.toFixed(0)}% used — ${period.label}`,
           body: `$${totalSpent.toFixed(2)} spent of $${totalBudget.toFixed(2)} with ${period.totalDays - daysElapsed} days remaining.`,
-          link: '/budget', createdAt: now,
+          link: '/reporting', createdAt: now,
         })
       }
     }

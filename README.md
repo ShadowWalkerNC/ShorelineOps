@@ -13,7 +13,7 @@
 **Engineered by a healthcare executive chef, not a venture fund.**  
 *Bridging clinical resident diets, IDDSI dysphagia safety, touch tablet batch cookery, multi-distributor split MRP purchasing, and CMS-2567 federal survey readiness.*
 
-[🚀 Live Demo App](https://shoreline-demo.onrender.com/menu) • [🌐 Marketing & Pricing Portal](https://shoreline-marketing.onrender.com) • [🏢 Corporate HQ Portal](https://shoreline-demo.onrender.com/enterprise) • [🔑 Open Core Licensing](LICENSING.md) • [📋 Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [🎯 Pilot Acquisition Guide](docs/FACILITY_PILOT_ACQUISITION_AND_SCALE.md)
+[🚀 Live Demo App](https://shoreline-demo.onrender.com/menu) • [🌐 Marketing & Pricing Portal](https://shoreline-marketing.onrender.com) • [🔑 Open Core Licensing](LICENSING.md) • [📋 Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [🎯 Pilot Acquisition Guide](docs/FACILITY_PILOT_ACQUISITION_AND_SCALE.md)
 
 </div>
 
@@ -26,8 +26,7 @@
 │                                 CORE APPLICATION MODULES                                │
 ├──────────────────────────┬───────────────────────────┬─────────────────────────────────┤
 │ 1. Executive Dashboard   │ 2. Menu Cycle Planner     │ 3. Residents & IDDSI Dysphagia  │
-│ 4. Kitchen Tablet Kiosk  │ 5. Split MRP Purchasing   │ 6. Corporate HQ Multi-Facility  │
-│ 7. CMS-2567 Survey Binder│ 8. Vendor Partner Portal  │ 9. Facility Profile & Standards │
+│ 4. Split MRP Purchasing  │ 5. CMS-2567 Survey Binder │ 6. Facility Profile & Standards │
 └──────────────────────────┴───────────────────────────┴─────────────────────────────────┘
 ```
 
@@ -46,20 +45,10 @@
 
 ![Residents & Diets](docs/screenshots/residents_iddsi_triage.png)
 
-### 4. 📱 Kitchen Touch Tablet Kiosk & Hands-Free Voice HACCP (`/kitchen/tablet`)
-*Large touch targets (44px+) designed for cooks wearing wet nitrile gloves during a 45-minute tray rush. Includes Web Speech API hands-free core temperature logging (165°F poultry, 145°F fish) and CMS F807 resident hydration pass tracking.*
-
-![Kitchen Touch Tablet Kiosk](docs/screenshots/kitchen_tablet_kiosk.png)
-
-### 5. 🚚 Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
+### 4. 🚚 Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
 *Compares live contract pricing line-by-line across Dennis Food Service, Sysco, and US Foods, generating optimal split purchase orders that save \$1.50–\$3.00 per resident day (\$2,500+/mo on a 60-bed building).*
 
 ![Split MRP Purchasing Comparator](docs/screenshots/split_mrp_purchasing.jpg)
-
-### 6. 🏢 Corporate Headquarters Multi-Facility Portal (`/enterprise`)
-*Centralized management for senior living operator chains (5–50 buildings). Features 1-click 4-week seasonal cycle menu syndication, portfolio census tracking, and cross-facility $/CPD spend benchmarking.*
-
-![Corporate HQ Multi-Facility Portal](docs/screenshots/corporate_hq_portal.png)
 
 ---
 
@@ -113,12 +102,9 @@ In healthcare dining, culinary operations are clinical care:
 | **Menu Cycle Planner** | `/menu` | 4-week cycle menus, Choice A/B alternates, recipe drawer, nutrition totals | Executive Chef |
 | **Batch Production** | `/production` | Scaled prep sheets, cooking stations (Hot Line, Cold Prep, Puree), 165°F HACCP temp logs | Line Cooks |
 | **Standardized Recipes** | `/recipes` | Master recipe book, ingredient scaling, Big 9 allergen detector, USDA nutrient solver | Cooks & Bakers |
-| **Kitchen Tablet Kiosk** | `/kitchen/tablet` | Glove-friendly touch worksheets, voice HACCP logger, CMS F807 hydration pass | Line Cooks & Aides |
 | **Digital Tray Cards** | `/kitchen/traycards` | High-contrast thermal tickets, signed QR tokens, barcode assembly verification | Dining Aides |
 | **Purchasing & Split MRP** | `/purchasing` | Dennis/Sysco order guides, lowest-cost split POs, 3-way invoice match, credit memos | Dietary Director |
-| **CMS Survey Reporting** | `/reporting` | 1-click CMS-2567 digital survey binder (F800–F814), $/CPD cost audits, substitution logs | Administrator / CDM |
-| **Corporate HQ Portal** | `/enterprise` | Multi-facility chain oversight, central 4-week menu syndicator, cross-facility $/CPD benchmarks | Corporate VP of Dining |
-| **Vendor Partner Portal** | `/distributor` | Distributor catalog master, rep role login, inline SKU pricing editor, delivery schedules, CSV tools | Vendor Sales Reps |
+| **CMS Survey Reporting** | `/reporting` | 1-click CMS-2567 digital survey binder (F800–F814), $/CPD cost audits, substitution logs, budget targets & spend | Administrator / CDM |
 | **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times | System Admin |
 
 ---
@@ -141,8 +127,7 @@ ShorelineOps uses an **Open Core** architecture:
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │ 🏢 ENTERPRISE CARE NETWORK ($399 / month / facility)                                   │
 │ • PointClickCare Live 2-Way EHR Sync           • CMS-2567 Digital Survey Ready Binder  │
-│ • 3-Way Delivery Invoice OCR & Credit Memos    • Corporate HQ Multi-Facility Portal    │
-│ • Master 4-Week Cycle Menu Syndicator          • Portfolio $/CPD Spend Benchmarking    │
+│ • 3-Way Delivery Invoice OCR & Credit Memos                                              │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 

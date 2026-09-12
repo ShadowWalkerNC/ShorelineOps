@@ -20,6 +20,7 @@ import {
   SEED_ADMIN_USERS,
   SEED_AUDIT_LOG,
   SEED_SETTINGS,
+  isDemoSeedAllowed,
 } from '@/demo/seed'
 
 // ── Default Additional Seed Data ───────────────────────────────────────────────
@@ -314,7 +315,10 @@ function getTableData(tableName: string): any[] {
   }
 
   const initFn = TABLE_INITIALIZERS[tableName]
-  const initial = initFn ? initFn() : []
+  // B14 demo-honesty: fail closed. Fictional seed residents, menus, staff, and
+  // purchase data are only ever written in dev or explicit demo mode. A
+  // production boot starts with empty tables and real data sources only.
+  const initial = isDemoSeedAllowed() && initFn ? initFn() : []
   try {
     if (typeof window !== 'undefined') {
       localStorage.setItem(key, JSON.stringify(initial))

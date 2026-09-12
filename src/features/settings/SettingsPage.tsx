@@ -499,7 +499,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-600 dark:text-slate-300">Evening Snack Window</label>
+                <label className="font-bold text-slate-600 dark:text-slate-300">Evening Snack Start</label>
                 <input
                   type="time"
                   value={operations.mealTimes.snack}

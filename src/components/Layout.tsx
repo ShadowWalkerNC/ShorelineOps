@@ -8,8 +8,6 @@ import { AppleBadge, AppleButton } from '@/apple-ui'
 import {
   LayoutDashboard,
   Users,
-  MessageSquare,
-  Tablet,
   Calendar,
   ChefHat,
   Receipt,
@@ -17,10 +15,8 @@ import {
   ClipboardList,
   CheckSquare,
   ShoppingCart,
-  Truck,
   TrendingUp,
   Boxes,
-  DollarSign,
   UserCheck,
   Clock,
   Shield,
@@ -31,8 +27,8 @@ import {
   Search,
   CheckCircle2,
   Settings as SettingsIcon,
-  Building2,
   Activity,
+  Truck,
   HeartPulse,
   Stethoscope,
   ShieldCheck,
@@ -71,17 +67,16 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Clinical & Resident EMR',
     items: [
       { label: 'Clinical Dashboard', to: '/', color: '#0d9488', icon: LayoutDashboard, end: true },
-      { label: 'Resident Census & Diets', to: '/residents', color: '#0284c7', icon: Users, badge: '60 Beds' },
-      { label: 'Clinical Triage & Comms', to: '/communications', color: '#8b5cf6', icon: MessageSquare },
+      { label: 'Resident Census & Diets', to: '/residents', color: '#0284c7', icon: Users },
     ],
   },
   {
     title: 'IDDSI 2.0 & Kitchen Production',
     items: [
-      { label: 'Kitchen Tablet Kiosk', to: '/kitchen/tablet', color: '#ef4444', icon: Tablet, minRole: 'dietary', badge: 'Touch' },
       { label: 'Seasonal Cycle Planner', to: '/menu', color: '#f59e0b', icon: Calendar, minRole: 'dietary', end: true },
       { label: 'Daily Cook Worksheet', to: '/kitchen/sheet', color: '#f59e0b', icon: ChefHat, minRole: 'dietary' },
       { label: '4x6 Tray Cards & Tickets', to: '/kitchen/traycards', color: '#ec4899', icon: Receipt, minRole: 'dietary' },
+      { label: 'Tray Dispatch & Tracking', to: '/kitchen/dispatch', color: '#0d9488', icon: Truck, minRole: 'dietary' },
       { label: 'Standardized Recipes', to: '/recipes', color: '#6366f1', icon: BookOpen },
       { label: 'Batch Cook Production', to: '/production', color: '#14b8a6', icon: ClipboardList },
       { label: 'Meal Selection Tally', to: '/kitchen/orders', color: '#06b6d4', icon: CheckSquare, minRole: 'dietary' },
@@ -91,17 +86,14 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Supply Chain & Split MRP',
     items: [
       { label: 'Purchasing & Split Orders', to: '/purchasing', color: '#0284c7', icon: ShoppingCart, minRole: 'dietary' },
-      { label: 'Distributor Portal (Dennis/Sysco)', to: '/distributor', color: '#8b5cf6', icon: Truck },
       { label: 'CMS-2567 & $/CPD Auditing', to: '/reporting', color: '#10b981', icon: TrendingUp, minRole: 'dietary' },
       { label: 'Inventory & Par Levels', to: '/inventory', color: '#f59e0b', icon: Boxes },
-      { label: 'Department Budget & Spend', to: '/budget', color: '#6366f1', icon: DollarSign, minRole: 'manager' },
     ],
   },
   {
     title: 'Facility & Governance',
     items: [
       { label: 'Facility Profile & Wings', to: '/settings', color: '#0f766e', icon: SettingsIcon },
-      { label: 'Corporate HQ Multi-Site', to: '/enterprise', color: '#8b5cf6', icon: Building2, minRole: 'manager' },
       { label: 'Clinical Staff Roster', to: '/staff', color: '#0284c7', icon: UserCheck, minRole: 'manager' },
       { label: 'Staff Timecard Clock', to: '/timecards', color: '#64748b', icon: Clock },
     ],
@@ -109,7 +101,7 @@ const NAV_SECTIONS: NavSection[] = [
 ]
 
 const NAV_ADMIN: NavItemDef = {
-  label: 'System Admin & HealerBot',
+  label: 'System Admin',
   to: '/admin',
   color: '#ef4444',
   icon: Shield,
@@ -254,7 +246,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <span className="font-bold truncate">Shoreline Care Center</span>
             </div>
-            <span className="text-[10px] font-mono font-bold text-slate-400 shrink-0">60 Beds</span>
           </div>
         </div>
 
@@ -434,18 +425,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Calendar className="w-5 h-5 mb-0.5" />
             <span className="text-[10px] leading-tight">Menu</span>
-          </NavLink>
-
-          <NavLink
-            to="/kitchen/tablet"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center min-w-[56px] py-1 transition-colors ${
-                isActive ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-500 dark:text-slate-400'
-              }`
-            }
-          >
-            <Tablet className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] leading-tight">Tablet</span>
           </NavLink>
 
           <button

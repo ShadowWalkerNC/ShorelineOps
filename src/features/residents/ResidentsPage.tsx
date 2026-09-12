@@ -3,6 +3,7 @@ import { useResidentsStore } from '@/state/residentsStore'
 import ResidentCardList from './components/ResidentCardList'
 import ResidentFormModal from './components/ResidentFormModal'
 import EhrReconciliationQueue from './EhrReconciliationQueue'
+import DietReviewFlags from './DietReviewFlags'
 import FeatureGate from '@/components/FeatureGate'
 import { AppleBadge, AppleButton, AppleCard, AppleSegmentedControl } from '@/apple-ui'
 import type { Resident } from '@/types/resident'
@@ -190,6 +191,9 @@ export default function ResidentsPage() {
       >
         <EhrReconciliationQueue />
       </FeatureGate>
+
+      {/* ── B04: RD diet review worklist (dietitian/manager see flags here) ── */}
+      <DietReviewFlags />
 
       {/* ── Search & Cupertino Filter Controls ── */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">

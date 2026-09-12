@@ -77,7 +77,7 @@ export interface PurchaseOrder {
   vendor_id: string
   vendor_name?: string
   vendor_code?: string
-  status: 'draft' | 'submitted' | 'received' | 'cancelled'
+  status: 'draft' | 'approved' | 'submitted' | 'received' | 'cancelled' | 'partial'
   order_date: string
   expected_date?: string
   notes?: string

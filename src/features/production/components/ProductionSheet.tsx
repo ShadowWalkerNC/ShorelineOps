@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useProductionStore } from '../../../state/productionStore'
 import type { ProductionSheet as Sheet, ProductionRow } from '../../../types/production'
 import { TEXTURE_LIST, DIET_LIST, LOCATION_LIST } from '../../../types/production'
 
@@ -7,13 +6,15 @@ type ViewMode = 'texture' | 'diet' | 'location'
 
 interface Props {
   sheet: Sheet
+  /** Persist a kitchen note for one row (e.g. via the backend sheet API) */
+  onSaveNote: (menuItemId: string, note: string) => Promise<void>
 }
 
-export default function ProductionSheetView({ sheet }: Props) {
-  const { updateRow } = useProductionStore()
+export default function ProductionSheetView({ sheet, onSaveNote }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('texture')
   const [editingNote, setEditingNote] = useState<string | null>(null)
   const [noteValue, setNoteValue] = useState('')
+  const [noteError, setNoteError] = useState<string | null>(null)
 
   const columns = viewMode === 'texture' ? TEXTURE_LIST
     : viewMode === 'diet' ? DIET_LIST
@@ -25,10 +26,15 @@ export default function ProductionSheetView({ sheet }: Props) {
     return (row.locationCounts as any)[col] ?? 0
   }
 
-  const handleNoteSubmit = (row: ProductionRow) => {
-    updateRow(sheet.id, row.menuItemId, { kitchenNote: noteValue })
-    setEditingNote(null)
-    setNoteValue('')
+  const handleNoteSubmit = async (row: ProductionRow) => {
+    setNoteError(null)
+    try {
+      await onSaveNote(row.menuItemId, noteValue)
+      setEditingNote(null)
+      setNoteValue('')
+    } catch {
+      setNoteError('Could not save the note — please try again.')
+    }
   }
 
   return (
@@ -94,19 +100,22 @@ export default function ProductionSheetView({ sheet }: Props) {
                 <td className="px-3 py-3 text-center font-bold text-gray-900">{row.total}</td>
                 <td className="px-4 py-3">
                   {editingNote === row.menuItemId ? (
-                    <div className="flex gap-1">
-                      <input
-                        autoFocus
-                        value={noteValue}
-                        onChange={e => setNoteValue(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleNoteSubmit(row)
-                          if (e.key === 'Escape') setEditingNote(null)
-                        }}
-                        className="flex-1 border rounded px-2 py-1 text-xs"
-                        placeholder="Add note…"
-                      />
-                      <button onClick={() => handleNoteSubmit(row)} className="text-xs text-green-600 font-medium">Save</button>
+                    <div>
+                      <div className="flex gap-1">
+                        <input
+                          autoFocus
+                          value={noteValue}
+                          onChange={e => setNoteValue(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleNoteSubmit(row)
+                            if (e.key === 'Escape') setEditingNote(null)
+                          }}
+                          className="flex-1 border rounded px-2 py-1 text-xs"
+                          placeholder="Add note…"
+                        />
+                        <button onClick={() => handleNoteSubmit(row)} className="text-xs text-green-600 font-medium">Save</button>
+                      </div>
+                      {noteError && <div className="text-xs text-red-600 mt-1">{noteError}</div>}
                     </div>
                   ) : (
                     <button

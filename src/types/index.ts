@@ -7,7 +7,7 @@ export { ROLE_RANK, ROLE_LABEL, ROLE_PERMISSIONS, DEPARTMENTS, USER_ROLES, hasPe
 export type { StaffProfile, StaffStatus, CallOut, CallOutReason, CallOutShift, Certification, EmergencyContact, ScheduleEntry } from './staff'
 export { COMMON_CERTIFICATIONS } from './staff'
 
-export type { InventoryItem, InventoryCategory, InventoryUnit, StorageLocation, PriceRecord, InventoryCount, InventoryCountStatus, InventoryCountItem, TruckOrder, TruckOrderStatus, TruckOrderItem, VendorContact, LocationSettings } from './inventory'
+export type { InventoryItem, InventoryCategory, InventoryUnit, StorageLocation, PriceRecord, InventoryCount, InventoryCountStatus, InventoryCountItem, VendorContact, LocationSettings } from './inventory'
 export { INVENTORY_CATEGORIES, INVENTORY_UNITS, STORAGE_LOCATIONS } from './inventory'
 
 export type { BudgetPeriod, MealCostBreakdown, DayMenuCostEstimate, MenuMealCost, MenuCostLineItem, PriceAlert } from './budget'
@@ -24,8 +24,8 @@ export type { MealSlot, MealGroup, DayOfWeek, ItemMealCategory, DietaryTag, Menu
 export { MEAL_SLOTS, MEAL_SLOT_LABELS, MEAL_GROUPS, DAYS_OF_WEEK, ITEM_MEAL_CATEGORIES, DIETARY_TAGS, emptyDayMenu, emptyWeek } from './menu'
 
 // ── Residents ─────────────────────────────────────────────────────────────────
-export type { ResidentStatus, Texture, PortionSize, ServingLocation, DietType, Allergy, Beverage, Resident } from './resident'
-export { DIET_TYPES, ALLERGY_OPTIONS, BEVERAGE_OPTIONS, MONTHS } from './resident'
+export type { ResidentStatus, Texture, PortionSize, ServingLocation, DietType, Allergy, Beverage, Resident, IddsiFoodLevel } from './resident'
+export { DIET_TYPES, ALLERGY_OPTIONS, BEVERAGE_OPTIONS, MONTHS, IDDSI_TEXTURE_LEVELS, iddsiForTexture, iddsiChipLabel } from './resident'
 
 // ── Production ────────────────────────────────────────────────────────────────
 export type { ProductionRow, MealCount, ProductionSheet } from './production'

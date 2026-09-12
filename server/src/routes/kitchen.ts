@@ -1,10 +1,26 @@
 import { Router } from 'express'
 import { pool } from '../db/pool'
+import { requireRole } from '../middleware/requireAuth'
+import type { AuthRequest } from '../middleware/requireAuth'
+import { activeCensus, activeCensusCount, activeResidentWhere, ROOM_NUMERIC_ORDER } from '../db/census'
+import { randomUUID } from 'crypto'
 
 export const kitchenRouter = Router()
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const MEALS = ['Lunch', 'Supper']
+// ── B08: canonical meal-slot enum ───────────────────────────────────────────
+// One meal vocabulary everywhere: Breakfast / Lunch / Dinner (+ snack slots).
+// Legacy stored rows use 'Supper'; they are mapped to 'Dinner' at READ time
+// (in /sheet below and in the sheet page's clinical join) — never dropped,
+// never rewritten. /orders keeps raw keys because B02's OrderEntryPage reads
+// 'Supper' keys literally.
+export const CANONICAL_MEALS = ['Breakfast', 'Lunch', 'Dinner'] as const
+export const CANONICAL_SNACK_SLOTS = ['morningSnack', 'afternoonSnack', 'eveningSnack'] as const
+const MEALS = CANONICAL_MEALS
+
+// B08: read-time legacy mapping — stored 'Supper' rows count as 'Dinner'.
+// Portable CASE expression works on both SQLite and PostgreSQL.
+const mealMatch = (col: string) => `CASE WHEN ${col} = 'Supper' THEN 'Dinner' ELSE ${col} END = $3`
 
 // ── GET /api/kitchen/orders ──────────────────────────────────────────────────
 // Returns residents + their orders for a given week
@@ -14,15 +30,9 @@ kitchenRouter.get('/orders', async (req, res, next) => {
     if (!week) return res.status(400).json({ error: 'week query param required (YYYY-MM-DD)' })
 
     // Order residents by room number numerically (cast to integer if possible, else text sort)
-    const { rows: residents } = await pool.query(`
-      SELECT * FROM residents
-      ORDER BY
-        CASE
-          WHEN room ~ '^[0-9]+$' THEN CAST(room AS INTEGER)
-          ELSE 999999
-        END,
-        room
-    `)
+    // B03: active census only — discharged / Hospital / LOA residents are
+    // excluded from the weekly order grid.
+    const residents = await activeCensus({ orderBy: ROOM_NUMERIC_ORDER })
 
     const { rows: orders } = await pool.query(`
       SELECT wo.*, r.room, r.name
@@ -32,6 +42,9 @@ kitchenRouter.get('/orders', async (req, res, next) => {
     `, [week])
 
     // Build lookup map: residentId -> day -> meal -> order
+    // B08: keys stay RAW here ('Supper' included) — B02's OrderEntryPage
+    // matches meal_type === 'Supper' literally. The /sheet endpoint and the
+    // sheet page map legacy 'Supper' rows to 'Dinner' at read time instead.
     const orderMap: Record<string, Record<string, Record<string, any>>> = {}
     for (const o of orders) {
       if (!orderMap[o.resident_id]) orderMap[o.resident_id] = {}
@@ -90,7 +103,9 @@ kitchenRouter.post('/orders/initialize-week', async (req, res, next) => {
     const { week } = req.body
     if (!week) return res.status(400).json({ error: 'week required (YYYY-MM-DD)' })
 
-    const { rows: residents } = await pool.query('SELECT * FROM residents')
+    // B03: pre-fill orders for Active residents only — initializing orders for
+    // discharged / Hospital / LOA residents would inflate production counts.
+    const residents = await activeCensus()
 
     const client = await pool.connect()
     try {
@@ -136,15 +151,18 @@ kitchenRouter.get('/sheet', async (req, res, next) => {
     }
 
     // Standard tallies (no alternatives, no declined)
+    // B03: count only Active residents — order rows belonging to discharged /
+    // Hospital / LOA residents must not inflate the production tally.
     const { rows: tallyRows } = await pool.query(`
       SELECT choice_selected, COUNT(*) as count
       FROM weekly_orders
       WHERE week_start_date = $1
         AND day_of_week     = $2
-        AND meal_type       = $3
+        AND ${mealMatch('meal_type')}
         AND is_alternative  = 0
         AND is_declined     = 0
         AND choice_selected IS NOT NULL
+        AND resident_id IN (SELECT id FROM residents WHERE ${activeResidentWhere()})
       GROUP BY choice_selected
     `, [week, day, meal])
 
@@ -155,53 +173,65 @@ kitchenRouter.get('/sheet', async (req, res, next) => {
     }
 
     // Modifiers / exceptions
+    // B03: Active residents only.
     const { rows: modifiers } = await pool.query(`
       SELECT r.room as room_number, r.name, wo.choice_selected, wo.modifier_text
       FROM weekly_orders wo
       JOIN residents r ON r.id = wo.resident_id
       WHERE wo.week_start_date = $1
         AND wo.day_of_week     = $2
-        AND wo.meal_type       = $3
+        AND ${mealMatch('wo.meal_type')}
         AND wo.is_alternative  = 0
         AND wo.is_declined     = 0
         AND TRIM(wo.modifier_text) != ''
+        AND ${activeResidentWhere('r')}
       ORDER BY
         CASE
-          WHEN r.room ~ '^[0-9]+$' THEN CAST(r.room AS INTEGER)
+          -- B08: portable numeric-room check (the PostgreSQL regex operator is
+          -- unsupported on SQLite; TRIM of all digits works on both).
+          WHEN r.room <> '' AND TRIM(r.room, '0123456789') = '' THEN CAST(r.room AS INTEGER)
           ELSE 999999
         END,
         r.room
     `, [week, day, meal])
 
     // Alternatives
+    // B03: Active residents only.
     const { rows: alternatives } = await pool.query(`
       SELECT r.room as room_number, r.name, r.alternative_description, wo.modifier_text
       FROM weekly_orders wo
       JOIN residents r ON r.id = wo.resident_id
       WHERE wo.week_start_date = $1
         AND wo.day_of_week     = $2
-        AND wo.meal_type       = $3
+        AND ${mealMatch('wo.meal_type')}
         AND wo.is_alternative  = 1
+        AND ${activeResidentWhere('r')}
       ORDER BY
         CASE
-          WHEN r.room ~ '^[0-9]+$' THEN CAST(r.room AS INTEGER)
+          -- B08: portable numeric-room check (the PostgreSQL regex operator is
+          -- unsupported on SQLite; TRIM of all digits works on both).
+          WHEN r.room <> '' AND TRIM(r.room, '0123456789') = '' THEN CAST(r.room AS INTEGER)
           ELSE 999999
         END,
         r.room
     `, [week, day, meal])
 
     // Declined
+    // B03: Active residents only.
     const { rows: declined } = await pool.query(`
       SELECT r.room as room_number, r.name
       FROM weekly_orders wo
       JOIN residents r ON r.id = wo.resident_id
       WHERE wo.week_start_date = $1
         AND wo.day_of_week     = $2
-        AND wo.meal_type       = $3
+        AND ${mealMatch('wo.meal_type')}
         AND wo.is_declined     = 1
+        AND ${activeResidentWhere('r')}
       ORDER BY
         CASE
-          WHEN r.room ~ '^[0-9]+$' THEN CAST(r.room AS INTEGER)
+          -- B08: portable numeric-room check (the PostgreSQL regex operator is
+          -- unsupported on SQLite; TRIM of all digits works on both).
+          WHEN r.room <> '' AND TRIM(r.room, '0123456789') = '' THEN CAST(r.room AS INTEGER)
           ELSE 999999
         END,
         r.room
@@ -211,12 +241,12 @@ kitchenRouter.get('/sheet', async (req, res, next) => {
     const { rows: mealOptions } = await pool.query(`
       SELECT choice_number, dish_name
       FROM meal_options
-      WHERE week_start_date = $1 AND day_of_week = $2 AND meal_type = $3
+      WHERE week_start_date = $1 AND day_of_week = $2 AND ${mealMatch('meal_type')}
       ORDER BY choice_number
     `, [week, day, meal])
 
-    const { rows: residentCountRow } = await pool.query('SELECT COUNT(*) as n FROM residents')
-    const totalResidents = parseInt(residentCountRow[0]?.n || '0')
+    // B03: headcount is the active census, not every row ever admitted.
+    const totalResidents = await activeCensusCount()
 
     const summary = {
       total_standard: tally.choice1 + tally.choice2,
@@ -289,11 +319,18 @@ kitchenRouter.get('/traycards-generated', async (req, res, next) => {
   try {
     const { mealSlot = 'Dinner', serviceDate = new Date().toISOString().slice(0, 10), entree = 'Roasted Chicken Breast', sides = 'Steamed Broccoli, Mashed Potatoes' } = req.query
 
-    const { rows: residentRows } = await pool.query(`
-      SELECT id, name, room, table_assignment, serving_location, diet_type, texture, portion_size, allergies, beverages, special_instructions, dislikes
-      FROM residents
-      ORDER BY room ASC
-    `)
+    // B01: full clinical columns — the engine must see real NPO status,
+    // fluid restrictions, and profile versions (stale defaults caused
+    // cards to print with isNpo=false, profileVersion=1).
+    // B03: active census only — discharged / Hospital / LOA residents get no
+    // tray cards. (servingLocation is kept for dining-room vs room-tray
+    // routing; it is NOT a census filter.)
+    const residentRows = await activeCensus({
+      columns: `id, name, room, table_assignment, serving_location, diet_type, texture,
+             portion_size, allergies, beverages, special_instructions, dislikes,
+             is_npo, npo_reason, fluid_restriction_ml, profile_version, status`,
+      orderBy: 'room ASC',
+    })
 
     const profiles: ResidentServiceProfile[] = residentRows.map(r => ({
       id: r.id,
@@ -308,6 +345,11 @@ kitchenRouter.get('/traycards-generated', async (req, res, next) => {
       beverages: r.beverages || [],
       specialInstructions: r.special_instructions,
       dislikes: r.dislikes,
+      status: r.status,
+      isNpo: Boolean(r.is_npo),
+      npoReason: r.npo_reason ?? undefined,
+      fluidRestrictionMl: r.fluid_restriction_ml ?? undefined,
+      profileVersion: r.profile_version ?? 1,
     }))
 
     const sideArray = typeof sides === 'string' ? sides.split(',').map(s => s.trim()) : []
@@ -349,19 +391,65 @@ kitchenRouter.post('/batch-scale', (req, res) => {
 /**
  * POST /api/kitchen/explode-recipe-variants
  * Explodes a base recipe into Regular, Pureed L4, Minced & Moist L5, NAS, and NCS batch prep sheets
+ *
+ * B07: `headcounts` is optional. Omit it (or omit individual keys) and the
+ * server derives variant headcounts from the active census × diet orders via
+ * KitchenProductionEngine.deriveVariantHeadcounts. Explicit values override
+ * the derivation per-key; omitted keys fall back to the derived count.
  */
-kitchenRouter.post('/explode-recipe-variants', (req, res) => {
+
+// B07: an explicit headcount override must be a non-negative finite number —
+// anything else defers to the census-derived count for that bucket.
+function isCountValue(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0
+}
+
+function toPortionCount(v: unknown, derived: number): number {
+  return isCountValue(v) ? Math.floor(v) : derived
+}
+
+kitchenRouter.post('/explode-recipe-variants', async (req, res, next) => {
   try {
-    const { recipe, headcounts } = req.body
-    if (!recipe || !recipe.ingredients || !headcounts) {
-      return res.status(400).json({ error: 'recipe and headcounts object required' })
+    const { recipe, headcounts, mealSlot } = req.body
+    if (!recipe || !recipe.ingredients) {
+      return res.status(400).json({ error: 'recipe object with ingredients required' })
     }
 
-    const result = KitchenProductionEngine.explodeRecipeVariants(recipe, headcounts)
-    res.json(result)
-  } catch (err: any) {
-    res.status(400).json({ error: err.message || 'Variant explosion failed' })
-  }
+    // B07: validate the meal slot against B08's canonical vocabulary.
+    // Legacy stored 'Supper' rows read as 'Dinner' (B08 read-time mapping).
+    // The slot is provenance only — diet/texture orders do not vary by meal.
+    let slot = typeof mealSlot === 'string' && mealSlot.trim() ? mealSlot.trim() : 'Lunch'
+    if (slot === 'Supper') slot = 'Dinner'
+    if (!(CANONICAL_MEALS as readonly string[]).includes(slot)) {
+      return res.status(400).json({
+        error: `mealSlot must be one of ${CANONICAL_MEALS.join(', ')} (legacy 'Supper' accepted as 'Dinner')`,
+      })
+    }
+
+    // Derive census-based headcounts (B03 active census; NPO excluded — hard block).
+    const derived = await KitchenProductionEngine.deriveVariantHeadcounts(slot)
+
+    // Explicit values win per-key; the derivation fills the gaps.
+    const counts = {
+      regularCount: toPortionCount(headcounts?.regularCount, derived.regularCount),
+      pureedCount: toPortionCount(headcounts?.pureedCount, derived.pureedCount),
+      mincedCount: toPortionCount(headcounts?.mincedCount, derived.mincedCount),
+      nasCount: toPortionCount(headcounts?.nasCount, derived.nasCount),
+      ncsCount: toPortionCount(headcounts?.ncsCount, derived.ncsCount),
+    }
+    const overriddenKeys = (['regularCount', 'pureedCount', 'mincedCount', 'nasCount', 'ncsCount'] as const)
+      .filter(k => isCountValue(headcounts?.[k]))
+
+    const result = KitchenProductionEngine.explodeRecipeVariants(recipe, counts)
+    res.json({
+      ...result,
+      mealSlot: slot,
+      headcountSource: overriddenKeys.length > 0 ? 'override' : 'derived',
+      overriddenKeys,
+      headcounts: counts,
+      headcountBreakdown: derived,
+    })
+  } catch (err) { next(err) }
 })
 
 /**
@@ -387,12 +475,13 @@ kitchenRouter.post('/verify-tray-scan', async (req, res, next) => {
     }
 
     // Lookup resident by ID or extracted ticket prefix
+    // B01: CAST(... AS TEXT) works on both PostgreSQL and SQLite (id::text is pg-only).
     let resQuery = 'SELECT id, name, room, diet_type, texture, is_npo, npo_reason, profile_version FROM residents WHERE id = $1'
     let queryParams: any[] = [residentId]
 
     if (!residentId && ticketId && ticketId.startsWith('TKT-')) {
       const idPrefix = ticketId.split('-')[1]
-      resQuery = 'SELECT id, name, room, diet_type, texture, is_npo, npo_reason, profile_version FROM residents WHERE id::text LIKE $1'
+      resQuery = 'SELECT id, name, room, diet_type, texture, is_npo, npo_reason, profile_version FROM residents WHERE CAST(id AS TEXT) LIKE $1'
       queryParams = [`${idPrefix}%`]
     }
 
@@ -464,51 +553,198 @@ kitchenRouter.post('/verify-tray-scan', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// ── POST /api/kitchen/voice-haccp ────────────────────────────────────────────
-// Records a hands-free voice-transcribed temperature or waste log
-kitchenRouter.post('/voice-haccp', async (req, res, next) => {
+// ── GET /api/kitchen/hydration ───────────────────────────────────────────────
+// B05: real hydration-pass roster for CMS F807 compliance — the active census
+// joined to TODAY's persisted hydration_records. There is NO fabrication:
+// residents with no record yet show consumedOz/offeredOz as null (not
+// invented numbers), and acceptance percentages are never computed here.
+export const HYDRATION_PASSES = ['morning', 'afternoon', 'evening'] as const
+export type HydrationPass = (typeof HYDRATION_PASSES)[number]
+
+/** Default per-pass fluid target when a resident has no individualized target. */
+export const HYDRATION_PASS_TARGET_OZ = 8
+
+/** UTC calendar-day window for "today's" records (portable: TEXT on SQLite, TIMESTAMPTZ on pg). */
+function dayWindow(day: string): [string, string] {
+  const d = new Date(`${day}T00:00:00Z`)
+  const next = new Date(d.getTime() + 24 * 60 * 60 * 1000)
+  const iso = (t: Date) => t.toISOString().slice(0, 10)
+  return [`${day} 00:00:00`, `${iso(next)} 00:00:00`]
+}
+
+function normalizeRecord(r: any) {
+  return {
+    id: r.id,
+    residentId: r.resident_id,
+    pass: r.pass,
+    targetOz: parseFloat(r.target_oz ?? 0),
+    offeredOz: r.offered_oz == null ? null : parseFloat(r.offered_oz),
+    consumedOz: r.consumed_oz == null ? null : parseFloat(r.consumed_oz),
+    refused: Boolean(r.refused),
+    supplement: r.supplement ?? '',
+    recordedBy: r.recorded_by ?? null,
+    recordedAt: r.recorded_at,
+  }
+}
+
+kitchenRouter.get('/hydration', async (req, res, next) => {
   try {
-    const { item, temperatureF, type, loggedBy, wastePortions } = req.body
-    if (!item) return res.status(400).json({ error: 'item is required' })
+    const pass = String(req.query.pass ?? 'morning')
+    if (!(HYDRATION_PASSES as readonly string[]).includes(pass)) {
+      return res.status(400).json({ error: `pass must be one of ${HYDRATION_PASSES.join(', ')}` })
+    }
+    const rawDate = req.query.date
+    const day = typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+      ? rawDate
+      : new Date().toISOString().slice(0, 10)
 
-    const temp = typeof temperatureF === 'number' ? temperatureF : 165.0
-    const logType = type || (temp >= 165 ? 'COOK_CORE' : 'HOT_HOLD')
-    const isPass = logType === 'WASTE' ? true : temp >= 140.0
+    // B03: active census only. NPO residents are excluded from the pass roster
+    // entirely — offering oral fluids to an NPO resident is a hard block, not a
+    // checklist row. They are counted separately so the UI can say so plainly.
+    const residents = await activeCensus({
+      columns: `id, name, room, texture, ensure_per_day, fluid_restriction_ml, is_npo`,
+      orderBy: 'room ASC',
+    })
+    const npoExcluded = residents.filter(r => r.is_npo).length
+    const rosterResidents = residents.filter(r => !r.is_npo)
 
-    const record = {
-      id: `h-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      item,
-      temperatureF: temp,
-      type: logType,
-      status: isPass ? 'PASS' : 'CRITICAL_FAIL',
-      loggedBy: loggedBy || 'Kitchen Voice Tablet',
-      wastePortions: wastePortions || 0,
+    const [dayStart, dayEnd] = dayWindow(day)
+    const { rows: recs } = await pool.query(
+      `SELECT * FROM hydration_records WHERE recorded_at >= $1 AND recorded_at < $2`,
+      [dayStart, dayEnd]
+    )
+    const byResidentPass = new Map<string, any>()
+    for (const r of recs) byResidentPass.set(`${r.resident_id}:${r.pass}`, r)
+
+    const hydrationRoster = rosterResidents.map(r => {
+      const rec = byResidentPass.get(`${r.id}:${pass}`)
+      const norm = rec ? normalizeRecord(rec) : null
+      return {
+        residentId: r.id,
+        residentName: r.name,
+        room: r.room,
+        liquidTexture: (r.texture ?? '').includes('Pureed') ? 'Thickened Nectar' : 'Regular Water',
+        targetOz: norm?.targetOz ?? HYDRATION_PASS_TARGET_OZ,
+        offeredOz: norm?.offeredOz ?? null,
+        consumedOz: norm?.consumedOz ?? null,
+        refused: norm?.refused ?? false,
+        supplement: norm?.supplement ?? '',
+        ensurePerDay: r.ensure_per_day ?? 0,
+        fluidRestrictionMl: r.fluid_restriction_ml ?? null,
+        recordedBy: norm?.recordedBy ?? null,
+        recordedAt: norm?.recordedAt ?? null,
+        // Derived ONLY from real records: never a fabricated percentage.
+        status: !norm ? 'NOT_RECORDED' : norm.refused ? 'REFUSED' : 'RECORDED',
+      }
+    })
+
+    const sum = (rows: any[], key: string) =>
+      rows.reduce((acc, r) => acc + (r[key] == null ? 0 : parseFloat(r[key])), 0)
+    const passRecs = recs.filter(r => r.pass === pass)
+    const passTotals = {
+      targetOz: hydrationRoster.length * HYDRATION_PASS_TARGET_OZ,
+      offeredOz: sum(passRecs, 'offered_oz'),
+      consumedOz: sum(passRecs, 'consumed_oz'),
+      refusedCount: passRecs.filter(r => r.refused).length,
+      recordedCount: passRecs.length,
+    }
+    const dayTotals = {
+      offeredOz: sum(recs, 'offered_oz'),
+      consumedOz: sum(recs, 'consumed_oz'),
+      refusedCount: recs.filter(r => r.refused).length,
+      recordedCount: recs.length,
     }
 
-    res.json({ status: 'LOGGED', record })
+    res.json({ pass, date: day, hydrationRoster, passTotals, dayTotals, npoExcluded, totalResidents: hydrationRoster.length })
   } catch (err) { next(err) }
 })
 
-// ── GET /api/kitchen/hydration ───────────────────────────────────────────────
-// Returns resident hydration pass roster for CMS F807 compliance
-kitchenRouter.get('/hydration', async (req, res, next) => {
+// ── POST /api/kitchen/hydration ──────────────────────────────────────────────
+// B05: persists one hydration-pass record (offered/consumed/refused per
+// resident per pass). Upserts on (resident, pass, day) so a re-logged pass is a
+// correction, not a duplicate. NPO is a hard block: never log fluids for an
+// NPO resident. Refusals are stored distinctly from zero-consumption.
+kitchenRouter.post('/hydration', requireRole('staff'), async (req: AuthRequest, res, next) => {
   try {
-    const { rows: residents } = await pool.query('SELECT id, name, room, texture FROM residents WHERE is_npo = false ORDER BY room')
-    const hydrationRoster = residents.map((r, idx) => ({
-      id: `hy-${r.id}`,
-      residentId: r.id,
-      residentName: r.name,
-      room: r.room,
-      liquidTexture: r.texture?.includes('Pureed') ? 'Thickened Nectar' : 'Regular Water',
-      targetOz: 8,
-      consumedOz: idx % 3 === 0 ? 8 : idx % 3 === 1 ? 6 : 4,
-      acceptancePct: idx % 3 === 0 ? 100 : idx % 3 === 1 ? 75 : 50,
-      timeSlot: 'Morning Pass (10 AM)',
-      status: 'COMPLETED',
-    }))
+    const { residentId, pass, offeredOz = 0, consumedOz = 0, refused = false, supplement = '', recordedBy } = req.body ?? {}
 
-    res.json({ hydrationRoster, totalResidents: hydrationRoster.length })
+    if (!residentId || typeof residentId !== 'string') {
+      return res.status(400).json({ error: 'residentId required' })
+    }
+    if (!(HYDRATION_PASSES as readonly string[]).includes(pass)) {
+      return res.status(400).json({ error: `pass must be one of ${HYDRATION_PASSES.join(', ')}` })
+    }
+    const offered = Number(offeredOz)
+    const consumed = Number(consumedOz)
+    if (!Number.isFinite(offered) || offered < 0 || !Number.isFinite(consumed) || consumed < 0) {
+      return res.status(400).json({ error: 'offeredOz and consumedOz must be non-negative numbers' })
+    }
+    if (consumed > offered) {
+      return res.status(400).json({ error: 'consumedOz cannot exceed offeredOz' })
+    }
+    if (refused && consumed > 0) {
+      return res.status(400).json({ error: 'a refusal cannot have consumedOz > 0 — record the refusal, not the intake' })
+    }
+    if (typeof supplement !== 'string' || supplement.length > 100) {
+      return res.status(400).json({ error: 'supplement must be a string of at most 100 characters' })
+    }
+
+    const { rows: residents } = await pool.query(
+      'SELECT id, name, status, is_npo FROM residents WHERE id = $1', [residentId]
+    )
+    if (!residents[0]) return res.status(404).json({ error: 'resident not found' })
+    if (residents[0].is_npo) {
+      return res.status(403).json({ error: 'NPO hard block: oral fluids may not be logged for an NPO resident' })
+    }
+    if (residents[0].status !== 'Active') {
+      return res.status(403).json({ error: 'hydration passes can only be logged for Active residents' })
+    }
+
+    const day = new Date().toISOString().slice(0, 10)
+    const [dayStart, dayEnd] = dayWindow(day)
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM hydration_records
+       WHERE resident_id = $1 AND pass = $2 AND recorded_at >= $3 AND recorded_at < $4`,
+      [residentId, pass, dayStart, dayEnd]
+    )
+
+    const by = typeof recordedBy === 'string' && recordedBy.trim()
+      ? recordedBy.trim()
+      : (req.userId ?? 'staff')
+    // Portable write: pool.query discards RETURNING rows on the SQLite
+    // backend (writes resolve { rows: [] }), so re-read the record.
+    const recordId = existing[0]?.id ?? randomUUID()
+    if (existing[0]) {
+      await pool.query(
+        `UPDATE hydration_records SET
+           target_oz = $1, offered_oz = $2, consumed_oz = $3,
+           refused = $4, supplement = $5, recorded_by = $6, recorded_at = NOW()
+         WHERE id = $7`,
+        [HYDRATION_PASS_TARGET_OZ, offered, consumed, refused ? 1 : 0, supplement, by, recordId]
+      )
+    } else {
+      await pool.query(
+        `INSERT INTO hydration_records
+           (id, resident_id, pass, target_oz, offered_oz, consumed_oz, refused, supplement, recorded_by, recorded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
+        [recordId, residentId, pass, HYDRATION_PASS_TARGET_OZ, offered, consumed, refused ? 1 : 0, supplement, by]
+      )
+    }
+    const { rows: saved } = await pool.query(
+      'SELECT * FROM hydration_records WHERE id = $1', [recordId]
+    )
+    const record = saved[0]
+    if (!record) {
+      return res.status(500).json({ error: 'hydration record was not persisted' })
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('LOG_HYDRATION_PASS', $1, $2, 'hydration_record', 'success', $3)`,
+      [req.userId ?? null, record.id, JSON.stringify({ residentId, pass, offeredOz: offered, consumedOz: consumed, refused: Boolean(refused), supplement })]
+    )
+
+    res.json({ success: true, corrected: Boolean(existing[0]), record: normalizeRecord(record) })
   } catch (err) { next(err) }
 })
 

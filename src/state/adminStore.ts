@@ -5,11 +5,15 @@
 import { create } from 'zustand'
 import type { AdminUser, AuditLogEntry, SystemSettings } from '../types/admin'
 import type { UserRole } from '../security/AuthContext'
-import { SEED_ADMIN_USERS, SEED_AUDIT_LOG, SEED_SETTINGS, uid, now } from '@/demo/seed'
+import { SEED_ADMIN_USERS, SEED_AUDIT_LOG, SEED_SETTINGS, isDemoSeedAllowed, uid, now } from '@/demo/seed'
 
-let _users: AdminUser[]         = JSON.parse(JSON.stringify(SEED_ADMIN_USERS))
-let _audit: AuditLogEntry[]     = JSON.parse(JSON.stringify(SEED_AUDIT_LOG))
-let _settings: SystemSettings   = JSON.parse(JSON.stringify(SEED_SETTINGS))
+// B14 demo-honesty: fictional admin users, audit entries, and facility settings
+// load only in dev/demo mode. Production boots with empty stores (fail closed).
+const seedAllowed = isDemoSeedAllowed()
+
+let _users: AdminUser[]         = seedAllowed ? JSON.parse(JSON.stringify(SEED_ADMIN_USERS)) : []
+let _audit: AuditLogEntry[]     = seedAllowed ? JSON.parse(JSON.stringify(SEED_AUDIT_LOG)) : []
+let _settings: SystemSettings   = seedAllowed ? JSON.parse(JSON.stringify(SEED_SETTINGS)) : null as unknown as SystemSettings
 
 interface AdminState {
   users: AdminUser[]

@@ -13,12 +13,16 @@ const MealEntrySchema = z.object({
   label: z.string().optional(),
 })
 
-const MEAL_SLOTS = ['breakfast', 'morningSnack', 'lunch', 'afternoonSnack', 'dinner'] as const
+// B08: canonical slot list — Breakfast / Lunch / Dinner + snack slots, aligned
+// with the shared meal vocabulary. eveningSnack is optional so week payloads
+// written before B08 (5-slot days) still validate.
+const MEAL_SLOTS = ['breakfast', 'morningSnack', 'lunch', 'afternoonSnack', 'dinner', 'eveningSnack'] as const
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
 
 const DayMenuSchema = z.object(
-  Object.fromEntries(MEAL_SLOTS.map(s => [s, MealEntrySchema])) as
-    Record<typeof MEAL_SLOTS[number], typeof MealEntrySchema>
+  Object.fromEntries(
+    MEAL_SLOTS.map(s => [s, s === 'eveningSnack' ? MealEntrySchema.optional() : MealEntrySchema])
+  ) as unknown as Record<typeof MEAL_SLOTS[number], z.ZodTypeAny>
 )
 
 const WeekBodySchema = z.object({

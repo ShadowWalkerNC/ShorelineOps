@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { AppleButton, AppleBadge } from '@/apple-ui'
+import { tokenManager } from '../../../security/tokenManager'
 
 export interface ScanValidationResult {
   status: 'VALID' | 'SUPERSEDED' | 'INVALID_HASH' | 'NPO_ALERT' | 'HOLD_TRAY_RD_SIGNOFF'
@@ -9,6 +10,9 @@ export interface ScanValidationResult {
   ticketProfileVersion?: number
   message?: string
   triageReason?: string
+  // B14 demo-honesty: set when the result was fabricated client-side because the
+  // validation service was unreachable — never present it as a real verification.
+  simulated?: boolean
 }
 
 export default function TrayAssemblyScanner() {
@@ -57,6 +61,44 @@ export default function TrayAssemblyScanner() {
     }
   }
 
+  /**
+   * B12 hook: on a VALID scan, also record the 'assembled' tray-tracking event
+   * (fire-and-forget — assembly verification outcomes are never altered by this).
+   */
+  const recordAssembledEvent = async (rawQrPayload: string) => {
+    try {
+      const ticketId = rawQrPayload.split(':')[0] ?? ''
+      if (!ticketId) return
+      const token = tokenManager.getAccessToken() ?? localStorage.getItem('shoreline_auth_token')
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const h = new Date().getHours() + new Date().getMinutes() / 60
+      const mealSlot = h < 10 ? 'breakfast' : h < 11 ? 'morningSnack' : h < 14 ? 'lunch' : h < 16 ? 'afternoonSnack' : h < 20.5 ? 'dinner' : 'breakfast'
+
+      const ensureRes = await fetch('/api/trayruns/ensure', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ mealSlot }),
+      })
+      if (!ensureRes.ok) return
+      const { run } = await ensureRes.json()
+      if (!run?.id) return
+
+      await fetch(`/api/trayruns/${run.id}/events`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ticketId,
+          event: 'assembled',
+          note: 'Assembled at tray line — QR scan verified',
+        }),
+      })
+    } catch {
+      // Non-fatal: tracking must never break the assembly flow.
+    }
+  }
+
   const handleScan = async (rawQrPayload: string) => {
     if (!rawQrPayload.trim()) return
     setLoading(true)
@@ -75,16 +117,20 @@ export default function TrayAssemblyScanner() {
       if (res.ok) {
         result = await res.json()
       } else {
-        // Fallback simulation for offline testing
+        // Fallback simulation for offline testing — NEVER present as a real scan
+        // verification. Labels itself simulated and uses no plausible fake room.
         const parts = rawQrPayload.split(':')
         const profileVer = parts[1] ? parseInt(parts[1], 10) : 1
         result = {
           status: profileVer < 2 ? 'SUPERSEDED' : 'VALID',
-          residentName: 'Sample Resident',
-          roomBed: '104-A',
+          residentName: 'Sample Resident (offline simulation)',
+          roomBed: '—',
           currentProfileVersion: 2,
           ticketProfileVersion: profileVer,
-          message: profileVer < 2 ? 'Diet order changed. Ticket is stale.' : 'Tray ticket verified.',
+          message: profileVer < 2
+            ? 'Offline simulation — diet order may have changed. Re-scan when connected.'
+            : 'Offline simulation — NOT a real verification. Re-scan when connected.',
+          simulated: true,
         }
       }
 
@@ -93,6 +139,7 @@ export default function TrayAssemblyScanner() {
 
       if (result.status === 'VALID') {
         playFeedbackSound('success')
+        void recordAssembledEvent(rawQrPayload.trim())
       } else {
         playFeedbackSound('alert')
         triggerHaptic()
@@ -198,8 +245,11 @@ export default function TrayAssemblyScanner() {
           {scanResult.status === 'VALID' ? (
             <div>
               <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              {scanResult.simulated && (
+                <AppleBadge color="orange">SIMULATED — not a real scan verification</AppleBadge>
+              )}
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#166534', margin: 0 }}>
-                TRAY APPROVED FOR SERVICE
+                {scanResult.simulated ? 'TRAY SCAN SIMULATED (OFFLINE)' : 'TRAY APPROVED FOR SERVICE'}
               </h3>
               <p style={{ fontSize: 16, fontWeight: 700, color: '#15803d', margin: '8px 0 0' }}>
                 {scanResult.residentName} (Room {scanResult.roomBed}) • Current Diet Profile (v{scanResult.currentProfileVersion})
@@ -211,6 +261,9 @@ export default function TrayAssemblyScanner() {
           ) : scanResult.status === 'SUPERSEDED' ? (
             <div>
               <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️ 🛑</div>
+              {scanResult.simulated && (
+                <AppleBadge color="orange">SIMULATED — not a real scan verification</AppleBadge>
+              )}
               <h3 style={{ fontSize: 24, fontWeight: 900, color: '#991b1b', margin: 0, textTransform: 'uppercase' }}>
                 HALT: DIET ORDER CHANGED
               </h3>

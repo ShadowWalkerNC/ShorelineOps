@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
-import { CheckSquare, Calendar, ChevronLeft, ChevronRight, Zap, Users, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CheckSquare, Calendar, ChevronLeft, ChevronRight, Zap, Users, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react'
+import { iddsiForTexture, iddsiChipLabel } from '@/types/resident'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MEALS = ['Lunch', 'Supper']
@@ -22,6 +23,7 @@ function formatWeekLabel(sunday: string) {
 
 interface OrderCellProps {
   order: any
+  resident: any
   residentId: string
   weekStart: string
   day: string
@@ -29,7 +31,78 @@ interface OrderCellProps {
   onSave: (payload: any) => Promise<void>
 }
 
-function OrderCell({ order, residentId, weekStart, day, meal, onSave }: OrderCellProps) {
+// ── B02: clinical surfacing at the order-entry decision point ──────────────
+// Raw resident rows from /api/kitchen/orders are DB snake_case (is_npo,
+// allergies, texture); other clients may return camelCase. Read both.
+function residentClinical(r: any) {
+  return {
+    allergies: ((r?.allergies ?? []) as string[]),
+    texture: (r?.texture ?? 'Regular') as string,
+    isNpo: Boolean(r?.is_npo ?? r?.isNpo ?? false),
+    npoReason: (r?.npo_reason ?? r?.npoReason ?? '') as string,
+  }
+}
+
+/**
+ * Warning-only conflict check (never silently changes the order).
+ * - NPO + anything but Declined → hard-block (non-overridable; surfaced here).
+ * - Modified IDDSI texture + a standard entrée choice with no adaptation in
+ *   the notes → texture-mismatch risk warning.
+ */
+function orderConflict(
+  resident: any,
+  choice: string,
+  modifier: string
+): { tone: 'block' | 'warn'; text: string } | null {
+  const { texture, isNpo } = residentClinical(resident)
+  if (isNpo && choice !== 'declined') {
+    return { tone: 'block', text: 'NPO HARD-BLOCK — no tray may be served. Set this cell to Declined.' }
+  }
+  const { level, label } = iddsiForTexture(texture)
+  if (level < 7 && (choice === '1' || choice === '2') && !modifier.trim()) {
+    return {
+      tone: 'warn',
+      text: `Texture risk — resident is ${label} (IDDSI L${level}). Confirm the entrée is prepared to this texture, or record the adaptation in notes / use Standing Alt.`,
+    }
+  }
+  return null
+}
+
+/** Allergy badges + IDDSI texture chip rendered in each resident row. */
+function ClinicalBadges({ resident }: { resident: any }) {
+  const { allergies, texture, isNpo } = residentClinical(resident)
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+      <span
+        className="px-1.5 py-0.5 rounded-md text-[10px] font-black font-mono bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800"
+        title={`IDDSI 2.0 food level for texture: ${texture}`}
+      >
+        {iddsiChipLabel(texture)}
+      </span>
+      {isNpo && (
+        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-600 text-white">
+          NPO — NO TRAY
+        </span>
+      )}
+      {allergies.length > 0 ? (
+        allergies.map(a => (
+          <span
+            key={a}
+            className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+          >
+            ⚠ {a}
+          </span>
+        ))
+      ) : (
+        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+          NKDA
+        </span>
+      )}
+    </div>
+  )
+}
+
+function OrderCell({ order, resident, residentId, weekStart, day, meal, onSave }: OrderCellProps) {
   const choice = order?.choice_selected ?? 1
   const modifier = order?.modifier_text ?? ''
   const isAlt = !!order?.is_alternative
@@ -104,6 +177,23 @@ function OrderCell({ order, residentId, weekStart, day, meal, onSave }: OrderCel
         onChange={handleModifier}
         className="w-full py-0.5 px-2 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-md text-[11px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
       />
+      {(() => {
+        const conflict = orderConflict(resident, localChoice, localModifier)
+        if (!conflict) return null
+        return (
+          <div
+            role="alert"
+            className={`flex items-start gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold leading-snug ${
+              conflict.tone === 'block'
+                ? 'bg-red-600 text-white'
+                : 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+            }`}
+          >
+            <AlertTriangle className="w-3 h-3 shrink-0 mt-px" />
+            <span>{conflict.text}</span>
+          </div>
+        )
+      })()}
     </div>
   )
 }
@@ -129,6 +219,8 @@ export default function OrderEntryPage() {
       ])
       const rData = await resResidents.json()
       const oData = await resOrders.json()
+      // /api/residents returns a list; /api/kitchen/orders returns
+      // { residents, orderMap, week } (orderMap is flattened below).
       setResidents(rData.residents || rData || [])
       setOrders(oData.orders || oData || [])
     } catch (err) {
@@ -138,6 +230,25 @@ export default function OrderEntryPage() {
     }
   }, [week, token])
 
+  // Flatten the /api/kitchen/orders orderMap (resident → day → meal) into the
+  // cell rows the grid expects. Handles a plain array payload too.
+  const orderList = useMemo(() => {
+    if (Array.isArray(orders)) return orders
+    const map = (orders as any)?.orderMap
+    if (!map) return []
+    const list: any[] = []
+    for (const residentId of Object.keys(map)) {
+      const byDay = map[residentId] || {}
+      for (const day_of_week of Object.keys(byDay)) {
+        const byMeal = byDay[day_of_week] || {}
+        for (const meal_type of Object.keys(byMeal)) {
+          list.push({ resident_id: residentId, day_of_week, meal_type, ...byMeal[meal_type] })
+        }
+      }
+    }
+    return list
+  }, [orders])
+
   useEffect(() => {
     loadData()
   }, [loadData])
@@ -145,8 +256,9 @@ export default function OrderEntryPage() {
   const handleSaveCell = async (payload: any) => {
     setSaving(true)
     try {
+      // Backend registers PUT /api/kitchen/orders (single-cell upsert).
       await fetch('/api/kitchen/orders', {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -163,7 +275,8 @@ export default function OrderEntryPage() {
   const handleInitWeek = async () => {
     setInitBusy(true)
     try {
-      await fetch('/api/kitchen/orders/init-week', {
+      // Backend registers POST /api/kitchen/orders/initialize-week.
+      await fetch('/api/kitchen/orders/initialize-week', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -289,7 +402,7 @@ export default function OrderEntryPage() {
                 {viewMode === 'day' ? (
                   <>
                     <th className="p-3.5">Lunch Service</th>
-                    <th className="p-3.5">Supper Service</th>
+                    <th className="p-3.5">Dinner Service</th>
                   </>
                 ) : (
                   DAYS.map(d => (
@@ -301,56 +414,74 @@ export default function OrderEntryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {residents.map((r: any) => (
-                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="p-3.5 font-mono font-bold text-slate-500 dark:text-slate-400">
-                    {r.roomNumber || r.room || '101-A'}
-                  </td>
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white">
-                    {r.name}
-                  </td>
-                  <td className="p-3.5 text-slate-600 dark:text-slate-300">
-                    {r.dietType || r.dietOrder || 'Regular'}
-                  </td>
-                  {viewMode === 'day' ? (
-                    <>
-                      <td className="p-2">
-                        <OrderCell
-                          order={orders.find(o => o.resident_id === r.id && o.day_of_week === activeDay && o.meal_type === 'Lunch')}
-                          residentId={r.id}
-                          weekStart={week}
-                          day={activeDay}
-                          meal="Lunch"
-                          onSave={handleSaveCell}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <OrderCell
-                          order={orders.find(o => o.resident_id === r.id && o.day_of_week === activeDay && o.meal_type === 'Supper')}
-                          residentId={r.id}
-                          weekStart={week}
-                          day={activeDay}
-                          meal="Supper"
-                          onSave={handleSaveCell}
-                        />
-                      </td>
-                    </>
-                  ) : (
-                    DAYS.map(d => (
-                      <td key={d} className="p-2">
-                        <OrderCell
-                          order={orders.find(o => o.resident_id === r.id && o.day_of_week === d && o.meal_type === 'Lunch')}
-                          residentId={r.id}
-                          weekStart={week}
-                          day={d}
-                          meal="Lunch"
-                          onSave={handleSaveCell}
-                        />
-                      </td>
-                    ))
-                  )}
-                </tr>
-              ))}
+              {residents.map((r: any) => {
+                // B02: flag rows with allergies or texture restrictions prominently.
+                const clin = residentClinical(r)
+                const restricted = clin.isNpo || clin.allergies.length > 0 || iddsiForTexture(clin.texture).level < 7
+                return (
+                  <tr
+                    key={r.id}
+                    className={`transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40 ${
+                      clin.isNpo
+                        ? 'bg-red-50/70 dark:bg-red-950/20'
+                        : restricted
+                        ? 'bg-amber-50/40 dark:bg-amber-950/10'
+                        : ''
+                    }`}
+                  >
+                    <td className="p-3.5 font-mono font-bold text-slate-500 dark:text-slate-400">
+                      {r.roomNumber || r.room || '—'}
+                    </td>
+                    <td className="p-3.5">
+                      <div className="font-bold text-slate-900 dark:text-white">{r.name}</div>
+                      <ClinicalBadges resident={r} />
+                    </td>
+                    <td className="p-3.5 text-slate-600 dark:text-slate-300">
+                      {r.dietType || r.dietOrder || r.diet_type || 'Regular'}
+                    </td>
+                    {viewMode === 'day' ? (
+                      <>
+                        <td className="p-2">
+                          <OrderCell
+                            order={orderList.find(o => o.resident_id === r.id && o.day_of_week === activeDay && o.meal_type === 'Lunch')}
+                            resident={r}
+                            residentId={r.id}
+                            weekStart={week}
+                            day={activeDay}
+                            meal="Lunch"
+                            onSave={handleSaveCell}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <OrderCell
+                            order={orderList.find(o => o.resident_id === r.id && o.day_of_week === activeDay && o.meal_type === 'Supper')}
+                            resident={r}
+                            residentId={r.id}
+                            weekStart={week}
+                            day={activeDay}
+                            meal="Supper"
+                            onSave={handleSaveCell}
+                          />
+                        </td>
+                      </>
+                    ) : (
+                      DAYS.map(d => (
+                        <td key={d} className="p-2">
+                          <OrderCell
+                            order={orderList.find(o => o.resident_id === r.id && o.day_of_week === d && o.meal_type === 'Lunch')}
+                            resident={r}
+                            residentId={r.id}
+                            weekStart={week}
+                            day={d}
+                            meal="Lunch"
+                            onSave={handleSaveCell}
+                          />
+                        </td>
+                      ))
+                    )}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

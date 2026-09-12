@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../../api/client'
+import { useAuth } from '../../security/AuthContext'
+import BudgetTargetsSection from './BudgetTargetsSection'
 import {
   ReportingSummary,
   DailyCostLog,
@@ -9,7 +11,10 @@ import {
 } from '../../types/reporting'
 
 export default function ReportingPage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'substitutions' | 'allergies' | 'mismatches' | 'variance'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'substitutions' | 'allergies' | 'mismatches' | 'variance' | 'budget'>('dashboard')
+  // Budget Targets section preserves the old /budget page's manager-only access
+  const { atLeast } = useAuth()
+  const canSeeBudget = atLeast('manager')
   
   // Date range filters
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -28,7 +33,7 @@ export default function ReportingPage() {
 
   // Cost entry form state
   const [showAddCostModal, setShowAddCostModal] = useState(false)
-  const [costForm, setCostForm] = useState({ logDate: todayStr, residentCount: 38, foodCost: 412.67, notes: '' })
+  const [costForm, setCostForm] = useState({ logDate: todayStr, residentCount: 0, foodCost: 0, notes: '' })
 
   // Substitution form state
   const [showAddSubModal, setShowAddSubModal] = useState(false)
@@ -49,18 +54,9 @@ export default function ReportingPage() {
       setSummary(res.data)
     } catch (err) {
       console.error(err)
-      // Fallback data
-      setSummary({
-        dateRange: { start: startDate, end: endDate },
-        activeResidents: 38,
-        totalFoodCost: '2888.69',
-        totalResidentDays: 266,
-        costPerResidentDay: '10.86',
-        substitutions: 6,
-        allergyFlagCount: 1,
-        specialDietCount: 2,
-        generatedAt: new Date().toISOString()
-      })
+      // B14 demo-honesty: never fabricate report figures. When the reporting
+      // service is unreachable the dashboard renders explicit empty states.
+      setSummary(null)
     }
   }
 
@@ -71,10 +67,8 @@ export default function ReportingPage() {
       setCostLogs(res.data)
     } catch (err) {
       console.error(err)
-      setCostLogs([
-        { id: '1', log_date: todayStr, resident_count: 38, food_cost: 412.67, cost_per_resident_day: 10.86, notes: 'Standard 3-meal cycle' },
-        { id: '2', log_date: new Date(Date.now() - 86400000).toISOString().slice(0, 10), resident_count: 38, food_cost: 395.20, cost_per_resident_day: 10.40, notes: 'Pasta feature night' },
-      ])
+      // B14 demo-honesty: no fabricated cost-log rows.
+      setCostLogs([])
     } finally {
       setLoading(false)
     }
@@ -87,10 +81,8 @@ export default function ReportingPage() {
       setSubstitutions(res.data)
     } catch (err) {
       console.error(err)
-      setSubstitutions([
-        { id: '1', resident_name: 'Eleanor Vance', room: '104-A', meal_date: todayStr, meal_type: 'Dinner', original_item: 'Roast Pork Loin', substitute_item: 'Baked Chicken Breast', reason: 'Religious/Personal preference' },
-        { id: '2', resident_name: 'Arthur Pendelton', room: '112-B', meal_date: todayStr, meal_type: 'Lunch', original_item: 'Cream of Broccoli', substitute_item: 'Chicken Noodle Puree', reason: 'Swallowing difficulty (texture swap)' },
-      ])
+      // B14 demo-honesty: no fabricated substitution logs with fictional residents.
+      setSubstitutions([])
     } finally {
       setLoading(false)
     }
@@ -103,10 +95,8 @@ export default function ReportingPage() {
       setAllergyRisks(res.data)
     } catch (err) {
       console.error(err)
-      setAllergyRisks([
-        { id: '1', first_name: 'Arthur', last_name: 'Pendelton', room: '112-B', diet_order: 'Puree / Mechanical Soft', texture: 'Puree', allergies: ['Shellfish', 'Tree Nuts'], beverages: ['Water Thickened Nectar'] },
-        { id: '2', first_name: 'Margaret', last_name: 'Holloway', room: '201-A', diet_order: 'No Added Salt (NAS)', texture: 'Regular', allergies: ['Gluten / Wheat'], beverages: ['Skim Milk'] },
-      ])
+      // B14 demo-honesty: no fabricated allergy-risk rows.
+      setAllergyRisks([])
     } finally {
       setLoading(false)
     }
@@ -119,10 +109,8 @@ export default function ReportingPage() {
       setDietMismatches(res.data)
     } catch (err) {
       console.error(err)
-      setDietMismatches([
-        { id: '1', first_name: 'Arthur', last_name: 'Pendelton', room: '112-B', diet_order: 'Puree', texture: 'Puree', allergies: ['Shellfish'], supplements: ['Ensure Plus 2x/day'] },
-        { id: '2', first_name: 'Harold', last_name: 'Finch', room: '108-A', diet_order: 'No Concentrated Sweets (NCS)', texture: 'Ground / Minced', beverages: ['Coffee Decaf'] },
-      ])
+      // B14 demo-honesty: no fabricated diet-mismatch rows.
+      setDietMismatches([])
     } finally {
       setLoading(false)
     }
@@ -135,10 +123,8 @@ export default function ReportingPage() {
       setProductionVariances(res.data)
     } catch (err) {
       console.error(err)
-      setProductionVariances([
-        { id: '1', date: todayStr, meal_type: 'Lunch', item_name: 'Roast Turkey Breast', planned: 42, produced: 44, variancePct: '4.8' },
-        { id: '2', date: todayStr, meal_type: 'Dinner', item_name: 'Vegetable Lasagna', planned: 38, produced: 38, variancePct: '0.0' },
-      ])
+      // B14 demo-honesty: no fabricated production-variance rows.
+      setProductionVariances([])
     } finally {
       setLoading(false)
     }
@@ -184,7 +170,13 @@ export default function ReportingPage() {
           </p>
         </div>
 
-        {/* Date Filter & Print */}
+      {/* B14 demo-honesty: explicit empty state when the reporting service is
+          unreachable — never fabricate figures. */}
+      {summary === null && !loading && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-lg)', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#92400e' }}>
+          ⚠️ Reporting service unavailable — figures show as "—" until real data loads. No sample numbers are displayed.
+        </div>
+      )}        {/* Date Filter & Print */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <input
             type="date"
@@ -222,7 +214,7 @@ export default function ReportingPage() {
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Food Cost / Resident Day</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
-            ${summary?.costPerResidentDay || '10.86'}
+            ${summary?.costPerResidentDay ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Target: &lt; $11.50/day</div>
         </div>
@@ -230,7 +222,7 @@ export default function ReportingPage() {
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Total Operating / Res Day</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#2563EB', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
-            ${summary?.totalOperatingCostPerResidentDay || '18.42'}
+            ${summary?.totalOperatingCostPerResidentDay ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Food + Dietary Labor</div>
         </div>
@@ -238,7 +230,7 @@ export default function ReportingPage() {
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Substitutions Logged</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
-            {summary?.substitutions || 6}
+            {summary?.substitutions ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Period total</div>
         </div>
@@ -246,7 +238,7 @@ export default function ReportingPage() {
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Allergy Audit Flags</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#D97706', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
-            {summary?.allergyFlagCount || 1}
+            {summary?.allergyFlagCount ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Residents with active flags</div>
         </div>
@@ -254,7 +246,7 @@ export default function ReportingPage() {
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Special Diet Orders</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
-            {summary?.specialDietCount || 2}
+            {summary?.specialDietCount ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Textures & therapeutic</div>
         </div>
@@ -287,7 +279,7 @@ export default function ReportingPage() {
               Fresh / Perishable Food (60%)
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
-              ${summary?.breakdown?.perishableFoodCost || '360.00'}
+              ${summary?.breakdown?.perishableFoodCost ?? '—'}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Meats, dairy, produce & bakery</div>
           </div>
@@ -298,7 +290,7 @@ export default function ReportingPage() {
               Dry Grocery & Canned (25%)
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
-              ${summary?.breakdown?.dryGroceryCost || '150.00'}
+              ${summary?.breakdown?.dryGroceryCost ?? '—'}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Flour, grains, sauces, thickeners</div>
           </div>
@@ -309,7 +301,7 @@ export default function ReportingPage() {
               Paper & Dry Goods (10%)
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
-              ${summary?.breakdown?.paperGoodsCost || '60.00'}
+              ${summary?.breakdown?.paperGoodsCost ?? '—'}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Napkins, gloves, tray mats, cups</div>
           </div>
@@ -320,7 +312,7 @@ export default function ReportingPage() {
               Sanitation & Chemicals (5%)
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
-              ${summary?.breakdown?.chemicalSanitationCost || '30.00'}
+              ${summary?.breakdown?.chemicalSanitationCost ?? '—'}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Dish machine sanitizer & degreasers</div>
           </div>
@@ -404,6 +396,23 @@ export default function ReportingPage() {
         >
           📊 Production Variance
         </button>
+        {canSeeBudget && (
+          <button
+            onClick={() => setActiveTab('budget')}
+            style={{
+              padding: '10px 18px',
+              border: 'none',
+              background: 'none',
+              borderBottom: activeTab === 'budget' ? '3px solid var(--color-primary)' : '3px solid transparent',
+              color: activeTab === 'budget' ? 'var(--color-primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'budget' ? 700 : 500,
+              fontSize: 14,
+              cursor: 'pointer'
+            }}
+          >
+            💰 Budget Targets
+          </button>
+        )}
       </div>
 
       {/* Cost per Resident Day Tab */}
@@ -610,6 +619,13 @@ export default function ReportingPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Budget Targets Tab (merged from /budget, B13) */}
+      {activeTab === 'budget' && canSeeBudget && (
+        <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', padding: 20, boxShadow: 'var(--shadow-sm)' }}>
+          <BudgetTargetsSection />
         </div>
       )}
 

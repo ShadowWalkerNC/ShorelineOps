@@ -392,7 +392,7 @@ const BUDGET_TABS: { id: BudgetTab; label: string; icon: string }[] = [
   { id:'settings',      label:'Period Settings',    icon:'⚙️' },
 ]
 
-export default function BudgetPage() {
+export default function BudgetTargetsSection() {
   const [tab, setTab] = useState<BudgetTab>('overview')
 
   const fetch       = useBudgetStore(s => s.fetch)
@@ -417,11 +417,9 @@ export default function BudgetPage() {
   }
 
   return (
-    <div className="sl-page fade-in">
-      <div className="sl-page-header">
-        <h1 className="sl-page-title">Budget &amp; Spending</h1>
-        <p className="sl-page-subtitle">Track food and supply costs against your per-resident daily budget.</p>
-      </div>
+    <div className="fade-in">
+      {/* Moved from /budget (B13 scope cut): budget targets, spending log, and $/resident/day
+          now live inside /reporting. Manager-only section. */}
 
       <div style={{ display:'flex', gap:'var(--space-3)', flexWrap:'wrap', marginBottom:'var(--space-5)', alignItems:'center' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', background:'var(--bg-card)', border:`1px solid ${overBudget ? '#fecaca' : 'var(--border-color)'}`, borderRadius:'var(--radius-lg)', boxShadow:'var(--shadow-sm)' }}>

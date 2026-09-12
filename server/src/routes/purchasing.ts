@@ -22,10 +22,12 @@
  *   POST   /api/purchasing/suggested-order    (generate suggested PO from order guide)
  *
  *   GET    /api/purchasing/orders
- *   POST   /api/purchasing/orders
+ *   POST   /api/purchasing/orders             (always creates status='draft')
  *   GET    /api/purchasing/orders/:id
  *   PUT    /api/purchasing/orders/:id
  *   DELETE /api/purchasing/orders/:id
+ *   POST   /api/purchasing/orders/:id/approve (manager: draft → approved, audit-logged)
+ *   POST   /api/purchasing/orders/:id/submit  (approved → submitted, audit-logged)
  *
  *   GET    /api/purchasing/orders/:id/lines
  *   POST   /api/purchasing/orders/:id/lines
@@ -35,11 +37,13 @@
  *   GET    /api/purchasing/orders/:id/export-csv   (CSV download)
  */
 import { Router, Request, Response, NextFunction } from 'express'
+import { randomUUID } from 'crypto'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
 import { MrpDemandForecastEngine, ScheduledMealDemand, InventoryItemStock } from '../engine/mrp'
+import { UnitConversionEngine, MASS_TO_GRAMS, VOLUME_TO_ML } from '../engine/units'
 
 export const purchasingRouter = Router()
 
@@ -498,8 +502,8 @@ purchasingRouter.get('/orders', async (_req: Request, res: Response, next: NextF
   } catch (e) { next(e) }
 })
 
-/** POST /api/purchasing/orders */
-purchasingRouter.post('/orders', async (req: Request, res: Response, next: NextFunction) => {
+/** POST /api/purchasing/orders — always created as a draft; approval moves it forward */
+purchasingRouter.post('/orders', requireRole('staff'), async (req: Request, res: Response, next: NextFunction) => {
   const ar = req as AuthRequest
   const { vendorId, orderDate, expectedDate, notes = '', lines = [] } = req.body
   if (!vendorId) return err(res, 400, 'vendorId required')
@@ -507,8 +511,8 @@ purchasingRouter.post('/orders', async (req: Request, res: Response, next: NextF
   try {
     await client.query('BEGIN')
     const { rows: [order] } = await client.query(
-      `INSERT INTO purchase_orders (vendor_id, order_date, expected_date, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO purchase_orders (vendor_id, order_date, expected_date, notes, created_by, status)
+       VALUES ($1, $2, $3, $4, $5, 'draft')
        RETURNING *`,
       [vendorId, orderDate ?? new Date().toISOString().slice(0, 10), expectedDate ?? null, notes, ar.userId ?? null]
     )
@@ -519,6 +523,11 @@ purchasingRouter.post('/orders', async (req: Request, res: Response, next: NextF
         [order.id, line.vendorItemId, line.qtyOrdered, line.unitCost ?? null, line.notes ?? '']
       )
     }
+    await client.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('PO_CREATE', $1, $2, 'purchase_order', 'success', $3)`,
+      [ar.userId ?? null, order.id, JSON.stringify({ vendorId, lineCount: (lines as any[]).length })]
+    )
     await client.query('COMMIT')
     res.status(201).json(order)
   } catch (e) {
@@ -542,7 +551,9 @@ purchasingRouter.get('/orders/:id', async (req: Request, res: Response, next: Ne
     )
     if (!order) return err(res, 404, 'Order not found')
     const { rows: lines } = await pool.query(
-      `SELECT pol.*, vi.name AS item_name, vi.vendor_sku, vi.pack_size, vi.uom
+      `SELECT pol.*, vi.name AS item_name, vi.vendor_sku, vi.pack_size, vi.uom,
+              (SELECT og.id      FROM order_guides og WHERE og.vendor_item_id = pol.vendor_item_id LIMIT 1) AS guide_id,
+              (SELECT og.on_hand FROM order_guides og WHERE og.vendor_item_id = pol.vendor_item_id LIMIT 1) AS guide_on_hand
        FROM purchase_order_lines pol
        JOIN vendor_items vi ON vi.id = pol.vendor_item_id
        WHERE pol.purchase_order_id = $1
@@ -579,6 +590,111 @@ purchasingRouter.delete('/orders/:id', requireRole('admin'), async (req: Request
     await pool.query(`UPDATE purchase_orders SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [id])
     res.json({ ok: true })
   } catch (e) { next(e) }
+})
+
+// ─── PO approval workflow (B11) ──────────────────────────────────────────────
+// Replaces the old TruckOrdersTab comms-store routing (staff-2 hardcode):
+// draft → manager approves → approved → submitted. Transitions are
+// server-enforced and audit-logged; approval requires the manager role.
+
+/** Return the PO or null. */
+async function findOrder(client: { query: (sql: string, params?: any[]) => Promise<{ rows: any[] }> }, id: string) {
+  const { rows: [order] } = await client.query(`SELECT * FROM purchase_orders WHERE id = $1`, [id])
+  return order ?? null
+}
+
+/**
+ * POST /api/purchasing/orders/:id/approve
+ * Manager-only: draft → approved. Any other current status → 409.
+ * Audit-logged with the approving manager's identity, in the same
+ * transaction as the status change (fail closed: no audit row, no move).
+ *
+ * Note: the SQLite write path returns no rows, so the transition is verified
+ * with a re-read rather than RETURNING (B10 fail-closed pattern).
+ */
+purchasingRouter.post('/orders/:id/approve', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+  const ar = req as AuthRequest
+  const { id } = req.params
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const order = await findOrder(client, id)
+    if (!order) {
+      await client.query('ROLLBACK')
+      return err(res, 404, 'Order not found')
+    }
+    if (order.status !== 'draft') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ error: `Only draft orders can be approved (current status: ${order.status})` })
+    }
+    await client.query(
+      `UPDATE purchase_orders SET status = 'approved', updated_at = NOW()
+       WHERE id = $1 AND status = 'draft'`,
+      [id]
+    )
+    const moved = await findOrder(client, id)
+    if (!moved || moved.status !== 'approved') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ error: 'Order status changed concurrently — reload and retry' })
+    }
+    await client.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('PO_APPROVE', $1, $2, 'purchase_order', 'success', $3)`,
+      [ar.userId ?? null, id, JSON.stringify({ from: 'draft', to: 'approved', vendorId: order.vendor_id })]
+    )
+    await client.query('COMMIT')
+    res.json(moved)
+  } catch (e) {
+    await client.query('ROLLBACK')
+    next(e)
+  } finally {
+    client.release()
+  }
+})
+
+/**
+ * POST /api/purchasing/orders/:id/submit
+ * Marks an approved PO as submitted to the vendor. approved → submitted only;
+ * anything else → 409. Audit-logged in the same transaction.
+ */
+purchasingRouter.post('/orders/:id/submit', requireRole('staff'), async (req: Request, res: Response, next: NextFunction) => {
+  const ar = req as AuthRequest
+  const { id } = req.params
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const order = await findOrder(client, id)
+    if (!order) {
+      await client.query('ROLLBACK')
+      return err(res, 404, 'Order not found')
+    }
+    if (order.status !== 'approved') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ error: `Only approved orders can be submitted (current status: ${order.status})` })
+    }
+    await client.query(
+      `UPDATE purchase_orders SET status = 'submitted', updated_at = NOW()
+       WHERE id = $1 AND status = 'approved'`,
+      [id]
+    )
+    const moved = await findOrder(client, id)
+    if (!moved || moved.status !== 'submitted') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ error: 'Order status changed concurrently — reload and retry' })
+    }
+    await client.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('PO_SUBMIT', $1, $2, 'purchase_order', 'success', $3)`,
+      [ar.userId ?? null, id, JSON.stringify({ from: 'approved', to: 'submitted', vendorId: order.vendor_id })]
+    )
+    await client.query('COMMIT')
+    res.json(moved)
+  } catch (e) {
+    await client.query('ROLLBACK')
+    next(e)
+  } finally {
+    client.release()
+  }
 })
 
 // ─── Order lines ──────────────────────────────────────────────────────────
@@ -626,6 +742,221 @@ purchasingRouter.delete('/orders/:id/lines/:lineId', async (req: Request, res: R
   } catch (e) { next(e) }
 })
 
+// ─── PO Receiving — closes the receiving loop (B10) ──────────────────────────
+
+/**
+ * Convert a received quantity from the line's unit into the order guide's
+ * unit via the shared units engine (mass↔mass, volume↔volume, mass↔volume
+ * density path, #10 can↔mass). Where the engine has no real conversion path
+ * (e.g. case ↔ each with no pack factor on the item), the raw qty is carried
+ * through 1:1 but flagged explicitly in the ledger note — never silently
+ * "converted", and never guessed.
+ */
+function toGuideUnits(
+  qty: number,
+  fromUnit: string | undefined,
+  guideUnit: string | undefined,
+  itemName?: string
+): { qty: number; unit: string; converted: boolean; assumedOneToOne: boolean; fromUnit: string; guideUnit: string } {
+  const from = UnitConversionEngine.normalizeUnit(fromUnit || '')
+  const to = UnitConversionEngine.normalizeUnit(guideUnit || '')
+  const isMass = (u: string) => u in MASS_TO_GRAMS
+  const isVol = (u: string) => u in VOLUME_TO_ML
+  const engineHandles =
+    from === to ||
+    ((isMass(from) || isVol(from)) && (isMass(to) || isVol(to))) ||
+    (from === '#10 can' && isMass(to)) ||
+    (to === '#10 can' && isMass(from))
+  if (engineHandles) {
+    const { convertedAmount } = UnitConversionEngine.convert(qty, from, to, itemName)
+    return { qty: convertedAmount, unit: to, converted: from !== to, assumedOneToOne: false, fromUnit: from, guideUnit: to }
+  }
+  return { qty, unit: to, converted: false, assumedOneToOne: true, fromUnit: from, guideUnit: to }
+}
+
+/**
+ * POST /api/purchasing/orders/:id/lines/:lineId/receive
+ *
+ * Records a receipt for a PO line: sets the cumulative qty_received and,
+ * atomically in one DB transaction, increments the matched order guide's
+ * on_hand (unit-converted) and appends an inventory_transactions receipt row
+ * (user-stamped).
+ *
+ * Matching: line → vendor_item → order_guides via vendor_item_id (vendor SKU
+ * is carried through for the audit trail). An unmatched line returns
+ * 409 { code: 'GUIDE_UNMATCHED' } so the UI shows an explicit "assign" state —
+ * matching is never guessed.
+ *
+ * Body: { qtyReceived: number (cumulative total), qtyUnit?: string, note?: string }
+ *   - Partial receives: post the new cumulative total; only the delta moves stock.
+ *   - Corrections: posting a lower total writes a signed 'count_adjust' ledger
+ *     row — the ledger is append-only, never edited.
+ */
+purchasingRouter.post('/orders/:id/lines/:lineId/receive', requireRole('staff'), async (req, res, next) => {
+  const ar = req as AuthRequest
+  const { id, lineId } = req.params
+  const { qtyReceived, qtyUnit, note = '' } = req.body ?? {}
+  const total = Number(qtyReceived)
+  if (!Number.isFinite(total) || total < 0) return err(res, 400, 'qtyReceived must be a non-negative number')
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    const { rows: [line] } = await client.query(
+      `SELECT pol.*, vi.vendor_sku, vi.name AS item_name, vi.uom AS line_uom
+       FROM purchase_order_lines pol
+       JOIN vendor_items vi ON vi.id = pol.vendor_item_id
+       WHERE pol.id = $1 AND pol.purchase_order_id = $2`,
+      [lineId, id]
+    )
+    if (!line) { await client.query('ROLLBACK'); return err(res, 404, 'PO line not found') }
+
+    const { rows: [guide] } = await client.query(
+      `SELECT og.*, vi.uom AS guide_uom
+       FROM order_guides og
+       JOIN vendor_items vi ON vi.id = og.vendor_item_id
+       WHERE og.vendor_item_id = $1
+       LIMIT 1`,
+      [line.vendor_item_id]
+    )
+    if (!guide) {
+      await client.query('ROLLBACK')
+      return res.status(409).json({
+        code: 'GUIDE_UNMATCHED',
+        error: 'Line is not matched to an order guide entry — assign it before receiving',
+        lineId, vendorItemId: line.vendor_item_id, vendorSku: line.vendor_sku, itemName: line.item_name,
+      })
+    }
+
+    const prior = Number(line.qty_received ?? 0) // stored in the line's base unit (vi.uom)
+    const baseUnit = UnitConversionEngine.normalizeUnit(line.line_uom || 'each')
+    // The posted cumulative total is expressed in qtyUnit (defaults to the
+    // line's base unit); normalize to base units before diffing so mixed-unit
+    // receipts (e.g. ordered in lb, counted in kg) stay correct.
+    const totalConv = toGuideUnits(total, qtyUnit ?? line.line_uom, baseUnit, line.item_name)
+    const totalBase = Math.round(totalConv.qty * 100) / 100
+    const deltaOrdered = Math.round((totalBase - prior) * 100) / 100
+    if (deltaOrdered === 0) {
+      await client.query('COMMIT')
+      return res.json({ ok: true, changed: false, lineId, qtyReceived: prior })
+    }
+
+    const conv = toGuideUnits(deltaOrdered, baseUnit, guide.guide_uom, line.item_name)
+    const guideBefore = Number(guide.on_hand ?? 0)
+    const guideAfter = Math.round((guideBefore + conv.qty) * 100) / 100
+
+    await client.query(
+      `UPDATE purchase_order_lines SET qty_received = $1 WHERE id = $2`,
+      [totalBase, lineId]
+    )
+    await client.query(
+      `UPDATE order_guides SET on_hand = on_hand + $1, updated_at = NOW() WHERE id = $2`,
+      [conv.qty, guide.id]
+    )
+    // Fail closed: the on-hand bump must actually land. If the guide row was
+    // created without an id (e.g. the SQLite path strips uuid defaults),
+    // `WHERE id = NULL` would silently match nothing — roll back instead of
+    // writing a receipt row that claims stock moved.
+    const { rows: [recheck] } = await client.query(
+      `SELECT on_hand FROM order_guides WHERE id = $1`,
+      [guide.id]
+    )
+    if (!recheck || Math.abs(Number(recheck.on_hand) - guideAfter) > 0.005) {
+      await client.query('ROLLBACK')
+      return err(res, 500, 'Failed to update order guide on-hand — receipt rolled back')
+    }
+
+    // Append-only ledger row: real receipts add stock; a correction that
+    // lowers qty_received posts a signed count_adjust instead.
+    const txType = deltaOrdered > 0 ? 'receipt' : 'count_adjust'
+    const txQty = deltaOrdered > 0 ? Math.abs(conv.qty) : conv.qty
+    const txId = randomUUID()
+    await client.query(
+      `INSERT INTO inventory_transactions (id, item_id, type, qty, unit, user_id, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        txId, null, txType, txQty, conv.unit, ar.userId ?? null,
+        JSON.stringify({
+          text: note || (deltaOrdered > 0
+            ? `PO receipt: ${line.item_name}`
+            : `PO receipt correction: ${line.item_name}`),
+          purchaseOrderId: id,
+          lineId,
+          vendorItemId: line.vendor_item_id,
+          vendorSku: line.vendor_sku,
+          itemName: line.item_name,
+          priorReceived: prior,
+          newReceived: totalBase,
+          postedTotal: total,
+          postedUnit: qtyUnit ?? line.line_uom,
+          deltaInLineUnits: deltaOrdered,
+          lineUnit: conv.fromUnit,
+          deltaInGuideUnits: conv.qty,
+          guideUnit: conv.guideUnit,
+          unitConverted: conv.converted,
+          assumedOneToOne: conv.assumedOneToOne || undefined,
+          correction: deltaOrdered < 0 || undefined,
+        }),
+      ]
+    )
+
+    // Promote the PO to 'received' once every line is fully received.
+    const { rows: pending } = await client.query(
+      `SELECT 1 FROM purchase_order_lines
+       WHERE purchase_order_id = $1 AND (qty_received IS NULL OR qty_received < qty_ordered)
+       LIMIT 1`,
+      [id]
+    )
+    let orderStatus: string | undefined
+    if (!pending.length) {
+      const { rows: [o] } = await client.query(
+        `UPDATE purchase_orders SET status = 'received', updated_at = NOW()
+         WHERE id = $1 AND status <> 'cancelled' RETURNING status`,
+        [id]
+      )
+      orderStatus = o?.status
+    }
+
+    await client.query('COMMIT')
+    const ordered = Number(line.qty_ordered ?? 0)
+    res.json({
+      ok: true,
+      changed: true,
+      lineId,
+      qtyReceived: totalBase,
+      units: {
+        postedUnit: qtyUnit ?? line.line_uom,
+        baseUnit,
+        guideUnit: conv.guideUnit,
+      },
+      flags: {
+        overReceived: totalBase > ordered,
+        partial: totalBase > 0 && totalBase < ordered,
+        complete: totalBase > 0 && totalBase >= ordered,
+      },
+      guide: {
+        guideId: guide.id,
+        vendorItemId: line.vendor_item_id,
+        onHandBefore: guideBefore,
+        onHandAfter: guideAfter,
+        deltaInGuideUnits: conv.qty,
+        guideUnit: conv.guideUnit,
+        unitConverted: conv.converted,
+        assumedOneToOne: conv.assumedOneToOne,
+      },
+      receiptTransactionId: txId,
+      transactionType: txType,
+      orderStatus,
+    })
+  } catch (e) {
+    await client.query('ROLLBACK')
+    next(e)
+  } finally {
+    client.release()
+  }
+})
+
 // ─── CSV Export ───────────────────────────────────────────────────────────
 
 /**
@@ -660,73 +991,6 @@ purchasingRouter.get('/orders/:id/export-csv', async (req: Request, res: Respons
   } catch (e) { next(e) }
 })
 
-// ═══════════════════════════════════════════════════════════════════════════
-// THREE-WAY INVOICE MATCHING & VENDOR CREDIT MEMOS
-// ═══════════════════════════════════════════════════════════════════════════
-
-import { ThreeWayInvoiceMatchingEngine, InvoiceLineItem } from '../engine/invoicing'
-
-/**
- * POST /api/purchasing/invoices/match
- * Executes 3-way matching (PO vs Receiving vs Invoiced), flags price variance, and generates credit memos.
- */
-purchasingRouter.post('/invoices/match', requireTier('enterprise'), async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { invoiceNumber, vendorName, invoiceDate, poReference, lines } = req.body
-    if (!invoiceNumber || !vendorName || !lines || !Array.isArray(lines)) {
-      return err(res, 400, 'invoiceNumber, vendorName, and lines array are required')
-    }
-
-    const report = ThreeWayInvoiceMatchingEngine.evaluateThreeWayMatch({
-      invoiceNumber,
-      vendorName,
-      invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
-      poReference: poReference || 'PO-DIRECT',
-      lines: lines as InvoiceLineItem[],
-    })
-
-    // Persist invoice record
-    try {
-      await pool.query(`
-        INSERT INTO distributor_invoices 
-          (vendor_id, vendor_name, invoice_number, invoice_date, po_reference, total_amount, match_status, variance_summary, raw_items)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (invoice_number) DO UPDATE SET
-          match_status = EXCLUDED.match_status,
-          variance_summary = EXCLUDED.variance_summary,
-          total_amount = EXCLUDED.total_amount
-      `, [
-        vendorName.toLowerCase().replace(/\s+/g, '-'),
-        vendorName,
-        invoiceNumber,
-        report.invoiceDate,
-        report.poReference,
-        report.totalBilledAmount,
-        report.overallStatus,
-        JSON.stringify(report.lineVariances),
-        JSON.stringify(lines),
-      ])
-
-      if (report.creditMemo) {
-        await pool.query(`
-          INSERT INTO vendor_credit_memos (vendor_name, memo_number, credit_amount, reason, status)
-          VALUES ($1, $2, $3, $4, 'ISSUED')
-          ON CONFLICT (memo_number) DO NOTHING
-        `, [
-          vendorName,
-          report.creditMemo.memoNumber,
-          report.creditMemo.totalCreditAmount,
-          report.creditMemo.formattedMemoText,
-        ])
-      }
-    } catch (dbErr: any) {
-      console.warn('[Purchasing] DB persistence notice:', dbErr.message)
-    }
-
-    res.json(report)
-  } catch (e) { next(e) }
-})
-
 /**
  * GET /api/purchasing/invoices
  * Lists recent distributor invoices and their match statuses
@@ -735,19 +999,6 @@ purchasingRouter.get('/invoices', requireTier('enterprise'), async (_req: Reques
   try {
     const { rows } = await pool.query(`
       SELECT * FROM distributor_invoices ORDER BY invoice_date DESC LIMIT 50
-    `)
-    res.json(rows)
-  } catch (e) { next(e) }
-})
-
-/**
- * GET /api/purchasing/credit-memos
- * Lists active vendor credit memos
- */
-purchasingRouter.get('/credit-memos', requireTier('enterprise'), async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { rows } = await pool.query(`
-      SELECT * FROM vendor_credit_memos ORDER BY created_at DESC LIMIT 50
     `)
     res.json(rows)
   } catch (e) { next(e) }

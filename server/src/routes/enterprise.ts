@@ -1,3 +1,10 @@
+/**
+ * PARKED (B13 scope cut — Owner Decision 5) — DO NOT DELETE, DO NOT UNMOUNT.
+ *
+ * These enterprise routes served the cut Corporate HQ Multi-Site portal (/enterprise).
+ * They are parked, not removed: the code stays mounted and compiling so a future
+ * decision can re-activate it, but nothing in the UI links to it anymore.
+ */
 import { Router, Request, Response } from 'express'
 import { requireAuth } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'

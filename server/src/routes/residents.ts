@@ -1,8 +1,9 @@
 import { Router } from 'express'
+import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
-import type { AuthRequest } from '../middleware/requireAuth'
+import type { AuthRequest, ApiRole } from '../middleware/requireAuth'
 
 export const residentsRouter = Router()
 
@@ -23,7 +24,36 @@ const ResidentSchema = z.object({
   likes: z.string().default(''),
   dislikes: z.string().default(''),
   specialInstructions: z.string().default(''),
+  // B01: manual NPO / fluid-restriction edits must be possible so the
+  // version bump below can fire on them (NPO remains non-overridable downstream).
+  isNpo: z.boolean().optional(),
+  npoReason: z.string().optional(),
+  fluidRestrictionMl: z.number().int().min(0).nullable().optional(),
+  // B04: optional effective date for a therapeutic diet order. Only meaningful
+  // (and only accepted) alongside a clinical change by a privileged role.
+  dietEffectiveDate: z.string().optional().refine(
+    (v) => v === undefined || !Number.isNaN(Date.parse(v)),
+    { message: 'dietEffectiveDate must be a valid ISO date-time string' }
+  ),
 })
+
+/**
+ * B04 (Owner Decision 3): therapeutic diet order writes are dietitian/manager-only.
+ * Strict role equality, following the A05 pattern — NOT rank-based:
+ * requireRole('dietitian') would also admit frontdesk, and requireRole('manager')
+ * would exclude the dietitian. Neither frontdesk nor admin may write diet orders.
+ */
+const DIET_WRITE_ROLES = ['dietitian', 'manager'] as const
+function canWriteDietOrder(role?: ApiRole): boolean {
+  return !!role && (DIET_WRITE_ROLES as readonly string[]).includes(role)
+}
+
+/** Fields that constitute a therapeutic diet order (B04). fluidRestrictionMl is
+ * part of B01's clinical snapshot, so it gates with the clinical set too. */
+const CLINICAL_WRITE_FIELDS = [
+  'dietType', 'texture', 'isNpo', 'npoReason', 'allergies',
+  'fluidRestrictionMl', 'dietEffectiveDate',
+] as const
 
 /** Normalize the allergies column (pg TEXT[] arrives as an array; SQLite stores JSON text). */
 function normAllergies(v: any): string[] {
@@ -38,7 +68,15 @@ function normAllergies(v: any): string[] {
 }
 
 /** Clinical fields tracked by resident_profile_history (migration 013). */
-function clinicalSnapshot(row: any) {
+interface ClinicalSnapshot {
+  dietType: string
+  texture: string
+  isNpo: boolean
+  npoReason: string
+  allergies: string[]
+}
+
+function clinicalSnapshot(row: any): ClinicalSnapshot {
   return {
     dietType: row.diet_type ?? 'Regular',
     texture: row.texture ?? 'Regular',
@@ -48,15 +86,52 @@ function clinicalSnapshot(row: any) {
   }
 }
 
-function clinicalChanged(
-  before: ReturnType<typeof clinicalSnapshot>,
-  after: ReturnType<typeof clinicalSnapshot>,
-) {
+function clinicalChanged(before: ClinicalSnapshot, after: ClinicalSnapshot) {
   return before.dietType !== after.dietType
     || before.texture !== after.texture
     || before.isNpo !== after.isNpo
     || before.npoReason !== after.npoReason
     || JSON.stringify(before.allergies) !== JSON.stringify(after.allergies)
+}
+
+/**
+ * B01: bump profile_version when any clinical field changes.
+ * Increments residents.profile_version, writes a resident_profile_history row
+ * (A06's writer) and a DIET_PROFILE_CHANGED audit entry. Returns the new
+ * version, or null when nothing clinical changed (no bump, no writes).
+ */
+async function bumpProfileVersion(
+  residentId: string,
+  before: ClinicalSnapshot,
+  after: ClinicalSnapshot,
+  actorId?: string,
+): Promise<number | null> {
+  if (!clinicalChanged(before, after)) return null
+  // NOTE: no RETURNING — the pool runs UPDATE via sqlite db.run() which
+  // returns no rows; re-read the version instead (works on pg + SQLite).
+  await pool.query(
+    `UPDATE residents
+     SET profile_version = COALESCE(profile_version, 1) + 1, updated_at = NOW()
+     WHERE id = $1`,
+    [residentId]
+  )
+  const { rows: vRows } = await pool.query(
+    'SELECT profile_version FROM residents WHERE id = $1', [residentId]
+  )
+  const newVersion: number = vRows[0].profile_version
+  await pool.query(
+    `INSERT INTO resident_profile_history
+       (resident_id, profile_version, diet_type, texture, is_npo, allergies)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [residentId, newVersion, after.dietType, after.texture, after.isNpo, after.allergies]
+  )
+  await pool.query(
+    `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+     VALUES ('DIET_PROFILE_CHANGED', $1, $2, 'resident', 'success', $3)`,
+    [actorId ?? null, residentId,
+     JSON.stringify({ before, after, profile_version: newVersion })]
+  )
+  return newVersion
 }
 
 /** Map DB resident_profile_history row → camelCase object */
@@ -93,6 +168,15 @@ function toResident(row: any) {
     likes: row.likes,
     dislikes: row.dislikes,
     specialInstructions: row.special_instructions,
+    // B01: full clinical profile for tray-card generation
+    isNpo: Boolean(row.is_npo),
+    npoReason: row.npo_reason ?? '',
+    fluidRestrictionMl: row.fluid_restriction_ml ?? null,
+    profileVersion: row.profile_version ?? 1,
+    // B04: diet order provenance (migration 020)
+    dietOrderedBy: row.diet_ordered_by ?? null,
+    dietOrderDate: row.diet_order_date ?? null,
+    dietEffectiveDate: row.diet_effective_date ?? null,
   }
 }
 
@@ -128,6 +212,45 @@ residentsRouter.get('/', async (req: AuthRequest, res, next) => {
     )
 
     res.json(rows.map(toResident))
+  } catch (err) { next(err) }
+})
+
+/** Map DB diet_review_flags row → camelCase object */
+function toFlag(row: any) {
+  return {
+    id: row.id,
+    residentId: row.resident_id,
+    residentName: row.resident_name ?? '',
+    residentRoom: row.resident_room ?? '',
+    message: row.message ?? '',
+    flaggedBy: row.flagged_by ?? null,
+    status: row.status,
+    createdAt: row.created_at,
+    resolvedBy: row.resolved_by ?? null,
+    resolvedAt: row.resolved_at ?? null,
+  }
+}
+
+// ─────────────────────────────────────────────
+// GET /api/residents/flags  — open RD review worklist
+// B04: dietitian/manager only (strict). NOTE: registered BEFORE '/:id' so
+// Express doesn't treat "flags" as a resident id.
+// ─────────────────────────────────────────────
+residentsRouter.get('/flags', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    if (!canWriteDietOrder(req.userRole)) {
+      return res.status(403).json({
+        error: 'The diet review worklist is only visible to the dietitian and manager roles.',
+      })
+    }
+    const { rows } = await pool.query(`
+      SELECT f.*, r.name AS resident_name, r.room AS resident_room
+      FROM diet_review_flags f
+      LEFT JOIN residents r ON r.id = f.resident_id
+      WHERE f.status = 'OPEN'
+      ORDER BY f.created_at ASC
+    `)
+    res.json(rows.map(toFlag))
   } catch (err) { next(err) }
 })
 
@@ -183,8 +306,10 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
       INSERT INTO residents
         (name, room, status, diet_type, texture, portion_size, ensure_per_day,
          allergies, beverages, birthday_month, birthday_day, serving_location,
-         table_assignment, likes, dislikes, special_instructions)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         table_assignment, likes, dislikes, special_instructions,
+         diet_ordered_by, diet_order_date, diet_effective_date)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+              $17, NOW(), NOW())
       RETURNING *`,
       [
         data.name, data.room, data.status, data.dietType, data.texture,
@@ -192,6 +317,8 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
         data.birthdayMonth ?? null, data.birthdayDay ?? null,
         data.servingLocation, data.tableAssignment,
         data.likes, data.dislikes, data.specialInstructions,
+        // B04: the admission diet order carries provenance too.
+        req.userId ?? null,
       ]
     )
     await pool.query(
@@ -214,9 +341,40 @@ residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, 
        FROM residents WHERE id = $1`, [req.params.id]
     )
     if (!existing[0]) return res.status(404).json({ error: 'Resident not found' })
+
+    // B04 (Owner Decision 3): clinical diet fields are dietitian/manager-only.
+    // Aides and every other role may still edit demographics below, but a
+    // request that touches a clinical field without a privileged role is
+    // refused with 403 — the field-level split, not a whole-endpoint gate.
+    const requestedClinical = (Object.keys(req.body ?? {}) as string[]).filter(
+      (k) => (CLINICAL_WRITE_FIELDS as readonly string[]).includes(k)
+        && (req.body as Record<string, unknown>)[k] !== undefined
+    )
+    if (requestedClinical.length > 0 && !canWriteDietOrder(req.userRole)) {
+      await pool.query(
+        `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+         VALUES ('DIET_ORDER_DENIED', $1, $2, 'resident', 'failure', $3)`,
+        [req.userId ?? null, req.params.id,
+         JSON.stringify({ role: req.userRole ?? 'unknown', fields: requestedClinical })]
+      )
+      return res.status(403).json({
+        error: 'Diet order changes (diet type, texture, NPO, allergies, fluid restriction) ' +
+               'require the dietitian or manager role. Use the "Flag for RD review" action instead.',
+      })
+    }
+
+    // B04: a therapeutic NPO diet order implies the NPO hard-block flag.
+    // Privileged roles only (this line is unreachable for other roles, which
+    // were refused above). NPO remains non-overridable downstream.
+    if (data.dietType === 'NPO') {
+      data.isNpo = true
+    }
+
     const before = clinicalSnapshot(existing[0])
 
-    const { rows } = await pool.query(`
+    // B01: the pool runs UPDATE via sqlite db.run() (no RETURNING rows),
+    // so re-read the row instead of depending on RETURNING *.
+    await pool.query(`
       UPDATE residents SET
         name                 = COALESCE($1,  name),
         room                 = COALESCE($2,  room),
@@ -234,16 +392,25 @@ residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, 
         likes                = COALESCE($14, likes),
         dislikes             = COALESCE($15, dislikes),
         special_instructions = COALESCE($16, special_instructions),
+        is_npo               = COALESCE($17, is_npo),
+        npo_reason           = COALESCE($18, npo_reason),
+        fluid_restriction_ml = COALESCE($19, fluid_restriction_ml),
         updated_at           = NOW()
-      WHERE id = $17
-      RETURNING *`,
+      WHERE id = $20`,
       [
-        data.name, data.room, data.status, data.dietType, data.texture,
-        data.portionSize, data.ensurePerDay, data.allergies, data.beverages,
-        data.birthdayMonth, data.birthdayDay, data.servingLocation,
-        data.tableAssignment, data.likes, data.dislikes, data.specialInstructions,
+        data.name ?? null, data.room ?? null, data.status ?? null,
+        data.dietType ?? null, data.texture ?? null,
+        data.portionSize ?? null, data.ensurePerDay ?? null,
+        data.allergies ?? null, data.beverages ?? null,
+        data.birthdayMonth ?? null, data.birthdayDay ?? null,
+        data.servingLocation ?? null, data.tableAssignment ?? null,
+        data.likes ?? null, data.dislikes ?? null, data.specialInstructions ?? null,
+        data.isNpo ?? null, data.npoReason ?? null, data.fluidRestrictionMl ?? null,
         req.params.id,
       ]
+    )
+    const { rows } = await pool.query(
+      'SELECT * FROM residents WHERE id = $1', [req.params.id]
     )
     await pool.query(
       `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
@@ -251,29 +418,121 @@ residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, 
       [req.userId, req.params.id]
     )
 
-    // A06: clinical safety audit trail — diet, texture, allergy, or NPO changes
-    // write a versioned history row (before/after preserved across the trail).
+    // B01: any diet/texture/NPO/allergy change bumps profile_version so
+    // previously printed tray cards scan SUPERSEDED. NPO/allergen
+    // restrictions remain non-overridable downstream.
     const after = clinicalSnapshot(rows[0])
-    if (clinicalChanged(before, after)) {
-      const newVersion = (existing[0].profile_version ?? 1) + 1
+    const newVersion = await bumpProfileVersion(req.params.id, before, after, req.userId)
+
+    // B04: every clinical change records diet order provenance — who ordered
+    // it, when it was ordered, and when it takes effect (optional effective
+    // date from the request; otherwise effective immediately).
+    let finalRow = rows[0]
+    if (newVersion !== null) {
+      const effective = data.dietEffectiveDate
+        ? new Date(data.dietEffectiveDate).toISOString()
+        : null
       await pool.query(
-        'UPDATE residents SET profile_version = $1, updated_at = NOW() WHERE id = $2',
-        [newVersion, req.params.id]
+        `UPDATE residents
+         SET diet_ordered_by    = $1,
+             diet_order_date    = NOW(),
+             diet_effective_date = COALESCE($2, NOW())
+         WHERE id = $3`,
+        [req.userId ?? null, effective, req.params.id]
       )
-      await pool.query(
-        `INSERT INTO resident_profile_history
-           (resident_id, profile_version, diet_type, texture, is_npo, allergies)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [req.params.id, newVersion, after.dietType, after.texture, after.isNpo, after.allergies]
+      const { rows: fresh } = await pool.query(
+        'SELECT * FROM residents WHERE id = $1', [req.params.id]
       )
-      await pool.query(
-        `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
-         VALUES ('DIET_PROFILE_CHANGED', $1, $2, 'resident', 'success', $3)`,
-        [req.userId, req.params.id,
-         JSON.stringify({ before, after, profile_version: newVersion })]
-      )
+      finalRow = fresh[0]
     }
-    res.json(toResident(rows[0]))
+
+    res.json(toResident({
+      ...finalRow,
+      profile_version: newVersion ?? finalRow.profile_version,
+    }))
+  } catch (err) { next(err) }
+})
+
+// ─────────────────────────────────────────────
+// POST /api/residents/:id/flags — flag for RD review
+// B04 (Owner Decision 3): aides are read-only on clinical diet fields, so
+// they get this path instead of edit access. Any staff role may flag.
+// ─────────────────────────────────────────────
+residentsRouter.post('/:id/flags', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const { message } = z.object({
+      message: z.string().trim().min(1).max(1000),
+    }).parse(req.body)
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM residents WHERE id = $1', [req.params.id]
+    )
+    if (!existing[0]) return res.status(404).json({ error: 'Resident not found' })
+    // Client-generated id: the pool runs INSERT via sqlite db.run(), which
+    // returns no RETURNING rows (B01 pattern) — SELECT by id is deterministic
+    // on both backends.
+    const flagId = randomUUID()
+    await pool.query(`
+      INSERT INTO diet_review_flags (id, resident_id, message, flagged_by)
+      VALUES ($1, $2, $3, $4)`,
+      [flagId, req.params.id, message, req.userId ?? null]
+    )
+    const { rows } = await pool.query(`
+      SELECT f.*, r.name AS resident_name, r.room AS resident_room
+      FROM diet_review_flags f
+      LEFT JOIN residents r ON r.id = f.resident_id
+      WHERE f.id = $1`,
+      [flagId]
+    )
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
+       VALUES ('DIET_FLAG_CREATED', $1, $2, 'resident', 'success')`,
+      [req.userId ?? null, req.params.id]
+    )
+    res.status(201).json(toFlag(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// ─────────────────────────────────────────────
+// POST /api/residents/flags/:flagId/resolve — RD worklist resolution
+// B04: dietitian/manager only (strict) — same authority as the diet writes
+// the flag is asking about. Does NOT touch the A05 EHR reconcile path.
+// ─────────────────────────────────────────────
+residentsRouter.post('/flags/:flagId/resolve', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    if (!canWriteDietOrder(req.userRole)) {
+      return res.status(403).json({
+        error: 'Resolving diet review flags requires the dietitian or manager role.',
+      })
+    }
+    const { action } = z.object({
+      action: z.enum(['RESOLVED', 'DISMISSED']),
+    }).parse(req.body)
+    const { rows: existing } = await pool.query(
+      'SELECT id, status FROM diet_review_flags WHERE id = $1', [req.params.flagId]
+    )
+    if (!existing[0]) return res.status(404).json({ error: 'Flag not found' })
+    if (existing[0].status !== 'OPEN') {
+      return res.status(409).json({ error: `Flag is already ${existing[0].status}` })
+    }
+    await pool.query(
+      `UPDATE diet_review_flags
+       SET status = $1, resolved_by = $2, resolved_at = NOW()
+       WHERE id = $3`,
+      [action, req.userId ?? null, req.params.flagId]
+    )
+    const { rows } = await pool.query(`
+      SELECT f.*, r.name AS resident_name, r.room AS resident_room
+      FROM diet_review_flags f
+      LEFT JOIN residents r ON r.id = f.resident_id
+      WHERE f.id = $1`,
+      [req.params.flagId]
+    )
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('DIET_FLAG_RESOLVED', $1, $2, 'diet_review_flag', 'success', $3)`,
+      [req.userId ?? null, req.params.flagId, JSON.stringify({ action })]
+    )
+    res.json(toFlag(rows[0]))
   } catch (err) { next(err) }
 })
 

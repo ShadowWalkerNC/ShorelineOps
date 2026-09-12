@@ -34,7 +34,6 @@ flowchart LR
 #### Why Reps Will Walk You Into Facilities:
 1. **Guaranteed Order Consistency**: When kitchens use clipboards, they forget items, skip delivery cycles, or run out of emergency thickener. Suggested par ordering guarantees weekly truck volume.
 2. **Protects Rep Commissions**: Reduces account churn and eliminates emergency off-schedule rush deliveries.
-3. **Dedicated Rep Portal (`/distributor`)**: Reps can update SKUs, pack sizes, and contract rates without messy email chains.
 
 #### Rep Outreach Script (LinkedIn / Email / Coffee Meetup):
 ```text
@@ -87,15 +86,15 @@ https://shoreline-demo.onrender.com/menu
 ## 🚀 Part 2: The 30-Day Zero-Risk Facility Pilot Playbook
 
 ```
-Week 1: Zero-Effort Setup (15 Mins) ➔ Week 2: Kitchen Tablet Kiosk ➔ Week 3: Split MRP Savings Audit ➔ Week 4: Conversion
+Week 1: Zero-Effort Setup (15 Mins) ➔ Week 2: Kitchen Floor Trial ➔ Week 3: Split MRP Savings Audit ➔ Week 4: Conversion
 ```
 
 1. **Week 1 (Onboarding & Data Setup)**:
    - Facility provides their current resident census roster and primary vendor CSV order guide.
    - You import the data in under 15 minutes.
 2. **Week 2 (Kitchen Floor Trial)**:
-   - Provide the kitchen with a pre-configured tablet (or mount an iPad on the prep line).
-   - Cooks use the large-button touchscreen for daily batch scaling, HACCP temps, and tray cards.
+   - Cooks use the Daily Cook Worksheet for batch scaling, HACCP temp logging, and 4x6 tray cards.
+   - Dietary aides record meal selections with the Meal Selection Tally.
 3. **Week 3 (Financial & Clinical ROI Audit)**:
    - Generate the **Cost Per Resident Day ($/CPD)** report and **Lowest-Cost Split MRP** comparison.
    - Show the Executive Director the exact dollar amount saved ($2,000–$4,500/mo).
@@ -129,17 +128,8 @@ graph TD
   - Each facility is mapped to a tenant ID (`facility_id`) in PostgreSQL with schema partitioning or RLS policies.
   - Custom vanity domains: `portland.shorelinecare.com`, `augusta.shorelinecare.com`.
 
-### 2. Corporate HQ Centralized Menu & Spend Syndication (`/enterprise`)
-- **Master Menu Publishing**: Corporate Executive Chefs create a master 4-week cycle menu and syndicate it across 20 buildings with 1 click. Individual facilities inherit the master cycle while customizing local resident counts.
-- **Cross-Facility $/CPD Benchmarking**: High-level corporate dashboard comparing raw food cost per resident day across every building in the portfolio.
-
-### 3. Direct EDI 850 / 810 Transmission Engine
+### 2. Direct EDI 850 / 810 Transmission Engine
 - Direct ANSI ASC X12 EDI transmission (`EDI 850 Purchase Order`, `EDI 855 PO Acknowledgment`, `EDI 856 Advanced Shipping Notice`, `EDI 810 Invoice`) via secure AS2/SFTP direct to distributor mainframes.
-
-### 4. Voice-Activated Kitchen Logging
-- Integration of the browser Web Speech API on the Kitchen Tablet Kiosk for hands-free HACCP temperature recording:
-  - Cook speaks: *"Chicken breast holding at 168 degrees, pan 2"*
-  - System parses temperature, station, and logs timecode with zero touch.
 
 ---
 

@@ -91,7 +91,12 @@ export function httpCacheMiddleware(ttlSeconds: number = 60, cacheTag?: string) 
     // Only cache GET requests
     if (req.method !== 'GET') return next()
 
-    const cacheKey = `${req.originalUrl || req.url}`
+    // B04: role-scoped cache key. Endpoints under this middleware serve
+    // role-dependent payloads (e.g. the dietitian-only /residents/flags
+    // worklist); a role-blind key would serve one role's 200 to another
+    // role's request, defeating server-side authorization.
+    const role = (req as unknown as { userRole?: string }).userRole ?? 'anon'
+    const cacheKey = `${req.originalUrl || req.url}|role:${role}`
     const cached = serverCache.get(cacheKey)
 
     // Check Client ETag (If-None-Match)

@@ -163,10 +163,11 @@ function requireEhrWebhookSignature(req: RawBodyRequest, res: Response, next: Ne
 }
 
 /**
- * Gates POST /api/ehr/simulate-inbound-triage: dietitian or admin only.
+ * Gates privileged EHR reconciliation actions (dietitian or admin only).
  * Anonymous, bad-token, or insufficient-role calls → 403 + audit-logged.
  * (Strict role equality: the rank-based requireRole('dietitian') would also admit
  * frontdesk/manager, so this security gate checks the two privileged roles exactly.)
+ * B13: formerly also gated the cut POST /api/ehr/simulate-inbound-triage endpoint.
  */
 function requireDietitianOrAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization
@@ -382,66 +383,4 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
   }
 })
 
-/**
- * POST /api/ehr/simulate-inbound-triage
- * Simulates inbound EHR webhook with automated RD triage evaluation.
- * A04: dietitian or admin only — anonymous/insufficient-role calls → 403 + audit-logged.
- */
-ehrRouter.post('/simulate-inbound-triage', requireDietitianOrAdmin, async (req: Request, res: Response) => {
-  try {
-    const { residentId, incomingDiet, incomingTexture, newAllergens = [] } = req.body
-
-    const { rows: [resident] } = await pool.query(
-      'SELECT id, name, diet_type, texture, allergies, is_npo FROM residents WHERE id = $1',
-      [residentId]
-    )
-
-    if (!resident) {
-      return res.status(404).json({ error: 'Resident not found' })
-    }
-
-    const incomingUpdate = {
-      residentExternalId: `PCC-${resident.id.slice(0, 8)}`,
-      firstName: resident.name.split(' ')[0] || 'Resident',
-      lastName: resident.name.split(' ').slice(1).join(' ') || 'Patient',
-      room: '101',
-      status: 'active' as const,
-      dietOrder: incomingDiet || resident.diet_type,
-      texture: incomingTexture || resident.texture,
-      allergies: [...(resident.allergies || []), ...newAllergens],
-      supplements: [],
-      effectiveAt: new Date().toISOString(),
-    }
-
-    const triageItem = pcc.evaluateInboundTriage(incomingUpdate, {
-      id: resident.id,
-      dietType: resident.diet_type,
-      texture: resident.texture,
-      allergies: resident.allergies || [],
-      isNpo: resident.is_npo,
-    })
-
-    if (triageItem) {
-      await pool.query(`
-        INSERT INTO ehr_reconciliation_queue
-          (resident_id, resident_name, external_ehr_id, source_ehr, change_type, incoming_payload, conflict_reason, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING_TRIAGE')
-      `, [
-        resident.id,
-        resident.name,
-        triageItem.externalEhrId,
-        triageItem.sourceEhr,
-        triageItem.changeType,
-        JSON.stringify(triageItem.incomingPayload),
-        triageItem.conflictReason,
-      ])
-    }
-
-    res.json({
-      triageRequired: !!triageItem,
-      triageItem,
-    })
-  } catch (err: any) {
-    res.status(400).json({ error: err.message || 'Simulation failed' })
-  }
-})
+// B13: POST /api/ehr/simulate-inbound-triage was CUT (mock/simulated endpoint).

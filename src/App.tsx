@@ -12,8 +12,6 @@ import RecipeBookPage from './features/recipes/RecipeBookPage'
 import InventoryPage from './features/inventory/InventoryPage'
 import StaffPage from './features/staff/StaffPage'
 import StaffProfilePage from './features/staff/StaffProfilePage'
-import CommunicationsPage from './features/communications/CommunicationsPage'
-import BudgetPage from './features/budget/BudgetPage'
 import TimecardPage from './features/timecard/TimecardPage'
 import OfflinePage from './features/offline/OfflinePage'
 import SetupWizardPage from './features/setup/SetupWizardPage'
@@ -23,12 +21,10 @@ import PwaBanner from './components/PwaBanner'
 import OrderEntryPage from './features/kitchen/OrderEntryPage'
 import KitchenSheetPage from './features/kitchen/KitchenSheetPage'
 import TrayCardGeneratorPage from './features/kitchen/TrayCardGeneratorPage'
-import KitchenTabletPage from './features/kitchen/KitchenTabletPage'
+import TrayDispatchPage from './features/traydispatch/TrayDispatchPage'
 import PurchasingPage from './features/purchasing/PurchasingPage'
 import ReportingPage from './features/reporting/ReportingPage'
-import DistributorPortalPage from './features/distributor/DistributorPortalPage'
 import SettingsPage from './features/settings/SettingsPage'
-import EnterprisePortalPage from './features/enterprise/EnterprisePortalPage'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -45,6 +41,19 @@ function RoleGate({ role, children }: { role: Parameters<typeof RequireRole>[0][
     <RequireRole role={role} fallback={<Navigate to="/" replace />}>
       {children}
     </RequireRole>
+  )
+}
+
+/** B13: cut routes render a real 404 instead of silently redirecting. */
+function NotFoundPage() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
+      <h1 className="text-4xl font-bold text-slate-900">404 — Page not found</h1>
+      <p className="text-slate-600 max-w-md">
+        This page doesn't exist or was removed. Use the navigation to get back to work.
+      </p>
+      <a href="/" className="text-blue-600 underline">Go to Dashboard</a>
+    </div>
   )
 }
 
@@ -68,34 +77,18 @@ export default function App() {
         <Route path="/recipes"         element={<AuthedLayout><RecipeBookPage /></AuthedLayout>} />
         <Route path="/inventory"       element={<AuthedLayout><InventoryPage /></AuthedLayout>} />
         <Route path="/timecards"       element={<AuthedLayout><TimecardPage /></AuthedLayout>} />
-        <Route path="/communications"  element={<AuthedLayout><CommunicationsPage /></AuthedLayout>} />
         <Route path="/legal"           element={<AuthedLayout><LegalPage /></AuthedLayout>} />
         <Route path="/kitchen/orders"    element={<AuthedLayout><OrderEntryPage /></AuthedLayout>} />
         <Route path="/kitchen/sheet"     element={<AuthedLayout><KitchenSheetPage /></AuthedLayout>} />
         <Route path="/kitchen/traycards" element={<AuthedLayout><TrayCardGeneratorPage /></AuthedLayout>} />
-        <Route path="/kitchen/tablet"    element={<AuthedLayout><KitchenTabletPage /></AuthedLayout>} />
+        <Route path="/kitchen/dispatch"  element={<AuthedLayout><TrayDispatchPage /></AuthedLayout>} />
         <Route path="/purchasing"        element={<AuthedLayout><PurchasingPage /></AuthedLayout>} />
         <Route path="/reporting"         element={<AuthedLayout><ReportingPage /></AuthedLayout>} />
-        <Route path="/distributor"       element={<AuthedLayout><DistributorPortalPage /></AuthedLayout>} />
         <Route path="/settings"          element={<AuthedLayout><SettingsPage /></AuthedLayout>} />
-        <Route
-          path="/enterprise"
-          element={
-            <AuthedLayout>
-              <RoleGate role="manager"><EnterprisePortalPage /></RoleGate>
-            </AuthedLayout>
-          }
-        />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
-        <Route
-          path="/budget"
-          element={
-            <AuthedLayout>
-              <RoleGate role="manager"><BudgetPage /></RoleGate>
-            </AuthedLayout>
-          }
-        />
+        {/* /budget merged into /reporting (B13 scope cut) — legacy redirect */}
+        <Route path="/budget" element={<Navigate to="/reporting" replace />} />
         <Route
           path="/staff"
           element={
@@ -123,7 +116,7 @@ export default function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   )

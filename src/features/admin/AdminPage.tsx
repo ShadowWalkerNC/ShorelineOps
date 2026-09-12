@@ -1,36 +1,25 @@
 import { useState } from 'react'
 import { RequireRole } from '../../security/AuthContext'
 import StaffScheduling     from './components/StaffScheduling'
-import CouncilNotes        from './components/CouncilNotes'
-import BottleDrive         from './components/BottleDrive'
 import UserManager         from './components/UserManager'
 import CallOuts            from './components/CallOuts'
-import BudgetPettyCash     from './components/BudgetPettyCash'
-import TaskAssigner        from './components/TaskAssigner'
 import SystemSettingsPanel from './components/SystemSettings'
-import DocumentsTemplates  from './components/DocumentsTemplates'
 import AuditLogViewer      from './components/AuditLogViewer'
-import MaintenanceWorkOrders from './components/MaintenanceWorkOrders'
-import HealerBotPanel      from './components/HealerBotPanel'
 import LicenseManagerPanel from './components/LicenseManagerPanel'
 
+// B13 scope cuts: removed panels — HealerBot, BottleDrive, CouncilNotes,
+// TaskAssigner, MaintenanceWorkOrders, DocumentsTemplates, BudgetPettyCash.
+// Kept: User Accounts, Audit Log, Data Management, Licensing, Call-Outs.
+// Staff Scheduling is parked for Phase 5.
 type AdminTab =
-  | 'license' | 'healer' | 'scheduling' | 'council' | 'bottle' | 'users' | 'callouts'
-  | 'budget' | 'tasks' | 'data' | 'docs' | 'maintenance' | 'audit'
+  | 'license' | 'scheduling' | 'users' | 'callouts' | 'data' | 'audit'
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'license',     label: '🔑 SaaS Licensing & Entitlements' },
-  { id: 'healer',      label: '🤖 Self-Healing & Health' },
-  { id: 'scheduling',  label: 'Staff Scheduling' },
-  { id: 'council',     label: 'Council Notes' },
-  { id: 'bottle',      label: 'Bottle Drive' },
+  { id: 'scheduling',  label: 'Staff Scheduling (Parked)' },
   { id: 'users',       label: 'User Accounts' },
   { id: 'callouts',    label: 'Call-Outs' },
-  { id: 'budget',      label: 'Budget & Petty Cash' },
-  { id: 'tasks',       label: 'Task Assigner' },
   { id: 'data',        label: 'Data Management' },
-  { id: 'docs',        label: 'Documents & Templates' },
-  { id: 'maintenance', label: 'Maintenance & Work Orders' },
   { id: 'audit',       label: 'Audit Log' },
 ]
 
@@ -47,7 +36,7 @@ export default function AdminPage() {
             Administration &amp; Kitchen Console
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-            Manage staff scheduling, view resident council notes, track bottle drive funds, import/export databases, and print logs.
+            Manage user accounts, review audit logs, import/export databases, and manage licensing.
           </p>
         </div>
 
@@ -84,17 +73,10 @@ export default function AdminPage() {
           boxShadow: 'var(--shadow-sm)',
         }}>
           {tab === 'license'     && <LicenseManagerPanel />}
-          {tab === 'healer'      && <HealerBotPanel />}
           {tab === 'scheduling'  && <StaffScheduling />}
-          {tab === 'council'     && <CouncilNotes />}
-          {tab === 'bottle'      && <BottleDrive />}
           {tab === 'users'       && <UserManager />}
           {tab === 'callouts'    && <CallOuts />}
-          {tab === 'budget'      && <BudgetPettyCash />}
-          {tab === 'tasks'       && <TaskAssigner />}
           {tab === 'data'        && <SystemSettingsPanel />}
-          {tab === 'docs'        && <DocumentsTemplates />}
-          {tab === 'maintenance' && <MaintenanceWorkOrders />}
           {tab === 'audit'       && <AuditLogViewer />}
         </div>
       </div>

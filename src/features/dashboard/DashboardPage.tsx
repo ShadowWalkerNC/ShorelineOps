@@ -237,7 +237,7 @@ function BudgetStrip() {
   const fmt         = (n: number) => `$${n.toFixed(2)}`
 
   return (
-    <Link to="/budget" style={{ display: 'block', textDecoration: 'none' }}>
+    <Link to="/reporting" style={{ display: 'block', textDecoration: 'none' }}>
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', boxShadow: 'var(--shadow-sm)', marginBottom: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{period.label} Dietary Operating Budget</span>
@@ -386,28 +386,7 @@ export default function DashboardPage() {
         gap: 12,
         marginBottom: 18,
       }}>
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(0,113,227,0.08) 0%, rgba(0,113,227,0.02) 100%)',
-          border: '1px solid rgba(0,113,227,0.2)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>📸</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0071e3' }}>Digital Tray Scanner</span>
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Real-time QR verification & NPO halt</div>
-          </div>
-          <Link to="/kitchen/tablet">
-            <AppleButton size="sm" variant="primary">Launch Scanner</AppleButton>
-          </Link>
-        </div>
-
+        {/* B13: Digital Tray Scanner card removed — it launched the cut /kitchen/tablet route */}
         <div style={{
           background: 'linear-gradient(135deg, rgba(52,199,89,0.08) 0%, rgba(52,199,89,0.02) 100%)',
           border: '1px solid rgba(52,199,89,0.25)',
@@ -482,7 +461,6 @@ export default function DashboardPage() {
           value={pendingApprovals}
           sub="awaiting review"
           iconBg={pendingApprovals > 0 ? '#fffbeb' : 'var(--color-success-light)'}
-          to="/communications"
           alertClass={pendingApprovals > 0 ? 'warn-card' : undefined}
           icon={<svg width="18" height="18" fill="none" stroke={pendingApprovals > 0 ? '#d97706' : 'var(--color-success)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
         />
@@ -491,7 +469,6 @@ export default function DashboardPage() {
           value={unreadThreads}
           sub="draft or pending review"
           iconBg="var(--color-primary-light)"
-          to="/communications"
           icon={<svg width="18" height="18" fill="none" stroke="var(--color-primary)" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg>}
         />
         <MetricCard
@@ -509,7 +486,7 @@ export default function DashboardPage() {
               value={`${budgetPct.toFixed(0)}%`}
               sub={`$${totalSpent.toFixed(0)} of $${totalBudget.toFixed(0)}`}
               iconBg="var(--color-teal-light)"
-              to="/budget"
+              to="/reporting"
               icon={<svg width="18" height="18" fill="none" stroke="var(--color-teal)" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
             />
             <MetricCard
@@ -517,7 +494,7 @@ export default function DashboardPage() {
               value={`$${dailyPerRes.toFixed(2)}`}
               sub={`Target $${period.budgetPerResidentPerDay.toFixed(2)}`}
               iconBg="var(--color-purple-light)"
-              to="/budget"
+              to="/reporting"
               icon={<svg width="18" height="18" fill="none" stroke="var(--color-purple)" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
             />
           </>
@@ -688,8 +665,7 @@ export default function DashboardPage() {
           <QuickLink to="/production"     label="Production"       desc="Worksheets, tray tickets"         iconColor="var(--color-success-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-success)"       strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>} />
           <QuickLink to="/inventory"      label="Inventory"        desc="Stock levels & truck orders"      iconColor="var(--color-warning-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-warning-hover)" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>} badge={lowParItems.length} />
           <QuickLink to="/recipes"        label="Recipe Book"      desc="Browse & scale recipes"           iconColor="var(--color-purple-light)"   icon={<svg width="16" height="16" fill="none" stroke="var(--color-purple)"        strokeWidth="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>} />
-          <QuickLink to="/communications" label="Communications"   desc="Threads & approvals"               iconColor="var(--color-teal-light)"     icon={<svg width="16" height="16" fill="none" stroke="var(--color-teal)"         strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>} badge={pendingApprovals} />
-          {isManager && <QuickLink to="/budget" label="Budget" desc="Spending log & per-resident cost" iconColor="var(--color-success-light)" icon={<svg width="16" height="16" fill="none" stroke="var(--color-success)" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>} />}
+          {isManager && <QuickLink to="/reporting" label="Budget" desc="Budget targets, spending log & per-resident cost" iconColor="var(--color-success-light)" icon={<svg width="16" height="16" fill="none" stroke="var(--color-success)" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>} />}
           {isManager && <QuickLink to="/staff"  label="Staff"  desc="Schedules & staff management"    iconColor="var(--color-purple-light)"   icon={<svg width="16" height="16" fill="none" stroke="var(--color-purple)"  strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />}
         </div>
       </div>

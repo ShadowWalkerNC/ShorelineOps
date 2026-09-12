@@ -11,6 +11,7 @@
 
 import crypto from 'crypto'
 import { UnitConversionEngine } from './units'
+import { activeCensus } from '../db/census'
 
 export interface ResidentServiceProfile {
   id: string
@@ -25,6 +26,10 @@ export interface ResidentServiceProfile {
   isNpo?: boolean
   npoReason?: string
   fluidRestrictionMl?: number
+  status?: string // Resident status (Active/Hospital/LOA/Passed Away).
+  // B03: census filtering is on `status` — never on `servingLocation`.
+  // Absent status is treated as Active (the residents.status DB default),
+  // so legacy callers that omit it keep working.
   allergies: string[]
   beverages: string[]
   likes?: string
@@ -82,6 +87,58 @@ export interface RecipeVariantGraphResult {
   variants: ScaledBatchRecipe[]
   totalPortions: number
   stationSummary: Record<string, number>
+}
+
+// ── B07: server-side mirror of B02's IDDSI texture mapping ───────────────────
+// Canonical mapping lives in the frontend type layer:
+//   src/types/resident.ts → IDDSI_TEXTURE_LEVELS / iddsiForTexture (B02).
+// It is mirrored here because the server engine cannot import the Vite
+// frontend bundle. Keep the two tables in sync.
+// IDDSI food levels: 7 Regular · 6 Soft & Bite-Sized · 5 Minced & Moist ·
+// 4 Pureed · 3 Liquidised (drink levels 0–4 are a separate scale).
+const IDDSI_FOOD_LEVEL_FOR_TEXTURE: Record<string, 3 | 4 | 5 | 6 | 7> = {
+  'Regular': 7,
+  'Cut-Up': 6,
+  'Minced': 5,
+  'Minced & Moist': 5,
+  'Pureed': 4,
+  'Liquid': 3,
+}
+
+/** Server-side mirror of B02's iddsiForTexture. Unknown texture → 7 (Regular). */
+function iddsiFoodLevelForTexture(texture: string | null | undefined): 3 | 4 | 5 | 6 | 7 {
+  const key = (texture ?? '').trim()
+  return IDDSI_FOOD_LEVEL_FOR_TEXTURE[key] ?? 7
+}
+
+// ── B07: therapeutic diet → variant bucket mapping ───────────────────────────
+// Canonical diet vocabulary: src/types/resident.ts → DIET_TYPES.
+// Assumption (documented in the response payload): sodium-restricted orders
+// (Low Sodium, Cardiac, Renal) batch under the Low-Sodium (NAS) variant;
+// carbohydrate-restricted orders (Diabetic) batch under the Carb-Controlled
+// (NCS) variant. 'Regular' and 'Mechanical Soft' map to no diet bucket — they
+// are texture assignments, handled by the texture buckets instead.
+const NAS_DIET_TYPES = new Set(['Low Sodium', 'Cardiac', 'Renal'])
+const NCS_DIET_TYPES = new Set(['Diabetic'])
+
+/** Census-derived therapeutic variant headcounts (B07), with provenance. */
+export interface VariantHeadcountBreakdown {
+  mealSlot: string
+  regularCount: number
+  pureedCount: number
+  mincedCount: number
+  nasCount: number
+  ncsCount: number
+  /** Active census residents included in the derivation (non-NPO). */
+  censusCounted: number
+  /** Active NPO residents excluded — NPO is a non-overridable hard block. */
+  npoExcluded: number
+  /** L3/L6/unknown textures folded into the Regular base batch. */
+  otherTextureCount: number
+  /** UI-ready display: "12 Regular · 3 Pureed L4 · 2 Minced L5 · 4 NAS · 2 NCS". */
+  breakdownDisplay: string
+  /** Mapping assumptions so the cook can audit the derivation. */
+  mappingNotes: string[]
 }
 
 export class KitchenProductionEngine {
@@ -269,6 +326,100 @@ export class KitchenProductionEngine {
   }
 
   /**
+   * B07: derive therapeutic variant headcounts from the active census × diet
+   * orders. Uses B03's canonical activeCensus() (status='Active' only) unless
+   * an explicit census row set is supplied (fixture / testing seam).
+   *
+   * Texture → bucket (B02 IDDSI mapping, mirrored server-side): L4 → Pureed,
+   * L5 → Minced & Moist; everything else (L7 Regular, L6 Soft & Bite-Sized,
+   * L3 Liquidised, unknowns) → Regular base batch.
+   *
+   * diet_type → bucket: Low Sodium / Cardiac / Renal → NAS; Diabetic → NCS.
+   * Texture and diet buckets are independent — a resident can contribute to
+   * both a texture bucket and a diet bucket (separate batch sheets).
+   *
+   * NPO residents are excluded from every bucket. NPO is a non-overridable
+   * clinical hard block: nothing the caller supplies can re-add them.
+   */
+  static async deriveVariantHeadcounts(
+    mealSlot: string,
+    census?: Array<Record<string, any>>
+  ): Promise<VariantHeadcountBreakdown> {
+    const rows = census ?? await activeCensus({
+      columns: 'diet_type, texture, is_npo, status',
+    })
+
+    let regularCount = 0
+    let pureedCount = 0
+    let mincedCount = 0
+    let nasCount = 0
+    let ncsCount = 0
+    let censusCounted = 0
+    let npoExcluded = 0
+    let otherTextureCount = 0
+
+    for (const r of rows ?? []) {
+      // NPO hard block: NPO residents never appear in batch headcounts.
+      const isNpo = Boolean(r.is_npo ?? r.isNpo)
+      if (isNpo) { npoExcluded += 1; continue }
+
+      const texture = String(r.texture ?? 'Regular')
+      const dietType = String(r.diet_type ?? r.dietType ?? 'Regular')
+
+      // Texture bucket — each resident counts exactly once here.
+      const level = iddsiFoodLevelForTexture(texture)
+      if (level === 4) {
+        pureedCount += 1
+      } else if (level === 5) {
+        mincedCount += 1
+      } else {
+        // L7/L6/L3/unknown: the base Regular batch covers them; the kitchen
+        // adapts at plating/processing (cut up, liquidise, substitute).
+        regularCount += 1
+        if (texture.trim() !== 'Regular') otherTextureCount += 1
+      }
+
+      // Diet bucket — independent of texture (separate batch sheets).
+      const dietKey = dietType.trim()
+      if (NAS_DIET_TYPES.has(dietKey)) nasCount += 1
+      else if (NCS_DIET_TYPES.has(dietKey)) ncsCount += 1
+
+      censusCounted += 1
+    }
+
+    const displayParts: string[] = []
+    if (regularCount > 0) displayParts.push(`${regularCount} Regular`)
+    if (pureedCount > 0) displayParts.push(`${pureedCount} Pureed L4`)
+    if (mincedCount > 0) displayParts.push(`${mincedCount} Minced L5`)
+    if (nasCount > 0) displayParts.push(`${nasCount} NAS`)
+    if (ncsCount > 0) displayParts.push(`${ncsCount} NCS`)
+    let breakdownDisplay = displayParts.length > 0 ? displayParts.join(' · ') : '0 residents'
+    if (npoExcluded > 0) breakdownDisplay += ` · ${npoExcluded} NPO excluded`
+
+    const mappingNotes = [
+      'Texture → bucket uses the B02 IDDSI mapping (mirrored server-side): Pureed → L4, Minced / Minced & Moist → L5.',
+      'Regular, Cut-Up (L6 Soft & Bite-Sized), Liquid (L3 Liquidised) and unknown textures fold into the Regular base batch; the kitchen adapts at plating.',
+      'diet_type → NAS: Low Sodium, Cardiac, Renal. → NCS: Diabetic. Regular / Mechanical Soft → no diet bucket.',
+      'Texture and diet buckets are independent — one resident can count in both.',
+      'NPO residents are excluded from all buckets (non-overridable hard block).',
+    ]
+
+    return {
+      mealSlot,
+      regularCount,
+      pureedCount,
+      mincedCount,
+      nasCount,
+      ncsCount,
+      censusCounted,
+      npoExcluded,
+      otherTextureCount,
+      breakdownDisplay,
+      mappingNotes,
+    }
+  }
+
+  /**
    * Generate high-contrast clinical tray cards with signed QR tokens
    */
   static generateTrayCards(
@@ -280,8 +431,12 @@ export class KitchenProductionEngine {
       sideNames: string[]
     }
   ): PrintableTrayCard[] {
+    // B03: census filter is on `status` (Active/Hospital/LOA/Passed Away).
+    // `servingLocation` is service routing (Dining Room / Room Tray / …),
+    // NOT census — it must never be used to exclude residents. Absent status
+    // is treated as Active (the residents.status DB default).
     return residents
-      .filter(r => r.servingLocation !== 'LOA' && r.servingLocation !== 'Hospital')
+      .filter(r => r.status == null || r.status === 'Active')
       .map(r => {
         const ticketId = `TKT-${r.id.slice(0, 8)}-${Date.now().toString(36).slice(-4)}`
         const profileVersion = r.profileVersion || 1

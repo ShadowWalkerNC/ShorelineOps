@@ -1,9 +1,36 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../../api/client'
-import { Vendor, VendorItem, OrderGuideEntry, SuggestedOrderLine, PurchaseOrder } from '../../types/purchasing'
+import { useAuth } from '../../security/AuthContext'
+import { Vendor, VendorItem, OrderGuideEntry, SuggestedOrderLine, PurchaseOrder, PurchaseOrderLine } from '../../types/purchasing'
 import DennisImportModal from './DennisImportModal'
 
+/** PO line joined with its order-guide match state (for receiving). */
+interface ReceiveLine extends PurchaseOrderLine {
+  guide_id?: string | null
+  guide_on_hand?: number | null
+}
+
+// ── PO status presentation (B11 approval workflow) ───────────────────────────
+function orderBadge(status: string): { bg: string; fg: string } {
+  switch (status) {
+    case 'received':  return { bg: '#DCFCE7', fg: '#166534' }
+    case 'submitted': return { bg: '#DBEAFE', fg: '#1E40AF' }
+    case 'approved':  return { bg: '#EDE9FE', fg: '#5B21B6' }
+    case 'cancelled': return { bg: '#F3F4F6', fg: '#6B7280' }
+    case 'partial':   return { bg: '#FEF3C7', fg: '#92400E' }
+    default:          return { bg: '#FEF3C7', fg: '#92400E' } // draft
+  }
+}
+
+/** Orders far enough along the workflow to accept deliveries. Drafts (and
+ *  cancelled orders) cannot be received — mirrors the old tab's gating. */
+const RECEIVABLE_STATUSES = ['approved', 'submitted', 'received', 'partial']
+
 export default function PurchasingPage() {
+  const { atLeast } = useAuth()
+  // Manager approval step (B11): only managers/admins can approve draft POs.
+  // The server enforces this too (403 for everyone else); this just hides the button.
+  const canApprove = atLeast('manager')
   const [activeTab, setActiveTab] = useState<'order-guide' | 'suggested' | 'catalog' | 'orders'>('order-guide')
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [selectedVendorId, setSelectedVendorId] = useState<string>('')
@@ -22,6 +49,15 @@ export default function PurchasingPage() {
   const [showAddCatalogModal, setShowAddCatalogModal] = useState(false)
   const [newGuideItem, setNewGuideItem] = useState({ vendorItemId: '', parLevel: 0, onHand: 0, sortGroup: '' })
   const [newCatalogItem, setNewCatalogItem] = useState({ vendorSku: '', name: '', brand: '', packSize: '', uom: 'case', category: '', unitCost: 0 })
+
+  // Receiving (B10): per-line received qty edits with partial/over-receive
+  // flags, cumulative totals, and order-guide on-hand impact — the
+  // consolidated receive mode for all backend purchase orders.
+  const [receiveOrder, setReceiveOrder] = useState<PurchaseOrder | null>(null)
+  const [receiveLines, setReceiveLines] = useState<ReceiveLine[]>([])
+  const [receiveVals, setReceiveVals] = useState<Record<string, string>>({})
+  const [receiving, setReceiving] = useState<Record<string, boolean>>({})
+  const [assigning, setAssigning] = useState<Record<string, boolean>>({})
 
   // Fetch vendors on load
   useEffect(() => {
@@ -149,10 +185,75 @@ export default function PurchasingPage() {
         lines,
         notes: 'Generated from Par & Suggested Purchasing'
       })
-      showMsg('Purchase order created successfully!')
+      showMsg('Draft purchase order created — awaiting manager approval')
       setActiveTab('orders')
+      fetchOrders()
     } catch (err) {
       showMsg('Failed to create purchase order', 'error')
+    }
+  }
+
+  // ── Build from low items (B11) ──────────────────────────────────────────
+  // Low-stock = order guide entries where on_hand < par_level (the same set the
+  // old TruckOrdersTab built from). Creates a draft PO; the server forces
+  // status='draft' and only a manager can approve it.
+  const handleBuildFromLow = async () => {
+    if (!selectedVendorId) {
+      showMsg('Select a vendor first', 'error')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await api.post('/purchasing/suggested-order', { vendorId: selectedVendorId })
+      const lowLines: SuggestedOrderLine[] = res.data.lines || []
+      if (lowLines.length === 0) {
+        showMsg('Nothing below par — no draft PO needed')
+        return
+      }
+      await api.post('/purchasing/orders', {
+        vendorId: selectedVendorId,
+        orderDate: new Date().toISOString().slice(0, 10),
+        lines: lowLines.map(l => ({
+          vendorItemId: l.vendorItemId,
+          qtyOrdered: l.suggestedQty,
+          unitCost: l.unitCost
+        })),
+        notes: 'Built from low-par items'
+      })
+      showMsg(`Draft PO created with ${lowLines.length} low-stock line(s) — awaiting manager approval`)
+      fetchOrders()
+    } catch (err: any) {
+      showMsg(err?.response?.data?.error || 'Failed to build order from low items', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Approval workflow (B11) ─────────────────────────────────────────────
+  // draft → (manager) approve → approved → submit → submitted. Enforced
+  // server-side; 403 for non-managers, 409 for illegal transitions.
+
+  const approveOrder = async (id: string) => {
+    try {
+      await api.post(`/purchasing/orders/${id}/approve`)
+      showMsg('Purchase order approved')
+      fetchOrders()
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        showMsg('Approval requires a manager role', 'error')
+      } else {
+        showMsg(err?.response?.data?.error || 'Approval failed', 'error')
+      }
+    }
+  }
+
+  const submitOrder = async (id: string) => {
+    try {
+      await api.post(`/purchasing/orders/${id}/submit`)
+      showMsg('Purchase order marked as submitted to vendor')
+      fetchOrders()
+    } catch (err: any) {
+      showMsg(err?.response?.data?.error || 'Submit failed', 'error')
     }
   }
 
@@ -175,6 +276,83 @@ export default function PurchasingPage() {
 
   const handlePrintSheet = () => {
     window.print()
+  }
+
+  // ── Receiving (B10) ──────────────────────────────────────────────────────
+
+  const receiveFlag = (total: number, ordered: number) => {
+    if (!(total > 0)) return { label: 'Not received', bg: '#F3F4F6', fg: '#6B7280' }
+    if (total > ordered) return { label: '⚠ Over-received', bg: '#FEE2E2', fg: '#991B1B' }
+    if (total < ordered) return { label: 'Partial', bg: '#FEF3C7', fg: '#92400E' }
+    return { label: '✓ Complete', bg: '#DCFCE7', fg: '#166534' }
+  }
+
+  const openReceive = async (order: PurchaseOrder) => {
+    setLoading(true)
+    try {
+      const res = await api.get(`/purchasing/orders/${order.id}`)
+      setReceiveOrder(res.data)
+      const lines: ReceiveLine[] = res.data.lines || []
+      setReceiveLines(lines)
+      const vals: Record<string, string> = {}
+      lines.forEach(l => { if (l.id) vals[l.id] = String(l.qty_received ?? 0) })
+      setReceiveVals(vals)
+    } catch (err) {
+      showMsg('Failed to load order lines', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const confirmReceive = async (line: ReceiveLine) => {
+    if (!line.id || !receiveOrder) return
+    const total = Number(receiveVals[line.id])
+    if (!Number.isFinite(total) || total < 0) {
+      showMsg('Enter a valid received quantity', 'error')
+      return
+    }
+    setReceiving(p => ({ ...p, [line.id as string]: true }))
+    try {
+      const res = await api.post(`/purchasing/orders/${receiveOrder.id}/lines/${line.id}/receive`, {
+        qtyReceived: total,
+        qtyUnit: line.uom || 'each'
+      })
+      const g = res.data.guide
+      setReceiveLines(prev => prev.map(l => l.id === line.id
+        ? { ...l, qty_received: total, guide_on_hand: g ? g.onHandAfter : l.guide_on_hand }
+        : l))
+      showMsg(`Received ${line.item_name}: guide on-hand ${g.onHandBefore} → ${g.onHandAfter} ${g.guideUnit} (${g.deltaInGuideUnits >= 0 ? '+' : ''}${g.deltaInGuideUnits})`)
+      fetchOrders()
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        showMsg('Line is unmatched — assign it to the order guide first', 'error')
+      } else {
+        showMsg(err?.response?.data?.error || 'Failed to record receipt', 'error')
+      }
+    } finally {
+      setReceiving(p => ({ ...p, [line.id as string]: false }))
+    }
+  }
+
+  const assignLineToGuide = async (line: ReceiveLine) => {
+    if (!line.id || !receiveOrder) return
+    setAssigning(p => ({ ...p, [line.id as string]: true }))
+    try {
+      const res = await api.post('/purchasing/order-guide', {
+        vendorId: receiveOrder.vendor_id,
+        vendorItemId: line.vendor_item_id,
+        parLevel: Number(line.qty_ordered) || 0,
+        onHand: 0
+      })
+      setReceiveLines(prev => prev.map(l => l.id === line.id
+        ? { ...l, guide_id: res.data.id, guide_on_hand: Number(res.data.on_hand ?? 0) }
+        : l))
+      showMsg(`Assigned ${line.item_name} to the order guide`)
+    } catch (err: any) {
+      showMsg(err?.response?.data?.error || 'Failed to assign — manager role required', 'error')
+    } finally {
+      setAssigning(p => ({ ...p, [line.id as string]: false }))
+    }
   }
 
   const currentVendor = vendors.find(v => v.id === selectedVendorId)
@@ -560,9 +738,33 @@ export default function PurchasingPage() {
       {/* Tab: Purchase Orders History */}
       {activeTab === 'orders' && (
         <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 16px', color: 'var(--text-primary)' }}>
-            Recent Purchase Orders
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                Purchase Orders
+              </h2>
+              <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>
+                New orders start as drafts. A manager approves them, then they are submitted to the vendor.
+              </p>
+            </div>
+            <button
+              onClick={handleBuildFromLow}
+              disabled={loading || !selectedVendorId}
+              style={{
+                background: 'var(--color-primary)',
+                color: '#fff',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 'var(--radius-md)',
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: 'pointer',
+                minHeight: 44
+              }}
+            >
+              🛒 Build PO from Low Items
+            </button>
+          </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
@@ -571,10 +773,13 @@ export default function PurchasingPage() {
                 <th style={{ padding: '10px 12px' }}>Status</th>
                 <th style={{ padding: '10px 12px' }}>Notes</th>
                 <th style={{ padding: '10px 12px' }}>Created By</th>
+                <th style={{ padding: '10px 12px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {orders.map(order => (
+              {orders.map(order => {
+                const badge = orderBadge(order.status)
+                return (
                 <tr key={order.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '12px', fontWeight: 600 }}>{order.order_date}</td>
                   <td style={{ padding: '12px' }}>{order.vendor_name}</td>
@@ -582,28 +787,237 @@ export default function PurchasingPage() {
                     <span style={{
                       padding: '3px 8px',
                       borderRadius: 12,
-                      background: order.status === 'received' ? '#DCFCE7' : order.status === 'submitted' ? '#DBEAFE' : '#FEF3C7',
-                      color: order.status === 'received' ? '#166534' : order.status === 'submitted' ? '#1E40AF' : '#92400E',
+                      background: badge.bg,
+                      color: badge.fg,
                       fontSize: 12,
                       fontWeight: 700,
-                      textTransform: 'uppercase'
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap'
                     }}>
-                      {order.status}
+                      {order.status === 'draft' ? 'Draft — pending approval' : order.status}
                     </span>
                   </td>
                   <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{order.notes || '—'}</td>
                   <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{order.created_by_name || 'System'}</td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {order.status === 'draft' && canApprove && (
+                        <button
+                          onClick={() => approveOrder(order.id)}
+                          style={{
+                            background: 'var(--color-primary)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 14px',
+                            borderRadius: 'var(--radius-md)',
+                            fontWeight: 600,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                            minHeight: 44
+                          }}
+                        >
+                          ✅ Approve
+                        </button>
+                      )}
+                      {order.status === 'draft' && !canApprove && (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', alignSelf: 'center' }}>
+                          Awaiting manager approval
+                        </span>
+                      )}
+                      {order.status === 'approved' && (
+                        <button
+                          onClick={() => submitOrder(order.id)}
+                          style={{
+                            background: 'var(--bg-app)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border-color)',
+                            padding: '8px 14px',
+                            borderRadius: 'var(--radius-md)',
+                            fontWeight: 600,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                            minHeight: 44
+                          }}
+                        >
+                          📤 Mark Submitted
+                        </button>
+                      )}
+                      {RECEIVABLE_STATUSES.includes(order.status) && (
+                        <button
+                          onClick={() => openReceive(order)}
+                          style={{
+                            background: 'var(--bg-app)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border-color)',
+                            padding: '8px 14px',
+                            borderRadius: 'var(--radius-md)',
+                            fontWeight: 600,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                            minHeight: 44
+                          }}
+                        >
+                          📦 Receive
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              ))}
+              )})}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
-                    No purchase orders recorded yet.
+                  <td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
+                    No purchase orders recorded yet. Use “Build PO from Low Items” to start one from below-par stock.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+
+          {/* Receiving panel — per-line received qty, partials, over/under flags */}
+          {receiveOrder && (
+            <div style={{ marginTop: 24, border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 20, background: 'var(--bg-app)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  📦 Receiving — {receiveOrder.vendor_name} · {receiveOrder.order_date}
+                </h3>
+                <button
+                  onClick={() => { setReceiveOrder(null); setReceiveLines([]) }}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '8px 14px',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                    minHeight: 44
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              <p style={{ margin: '0 0 12px', color: 'var(--text-secondary)', fontSize: 13 }}>
+                Enter the cumulative total received per line. Only the difference from what's already recorded moves inventory — partial receives post what arrives, and posting a lower total records a correction.
+              </p>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '10px 12px' }}>Item</th>
+                    <th style={{ padding: '10px 12px' }}>Ordered</th>
+                    <th style={{ padding: '10px 12px' }}>Received so far</th>
+                    <th style={{ padding: '10px 12px' }}>New total received</th>
+                    <th style={{ padding: '10px 12px' }}>Status</th>
+                    <th style={{ padding: '10px 12px' }}>On-hand impact</th>
+                    <th style={{ padding: '10px 12px' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receiveLines.map(line => {
+                    const prior = Number(line.qty_received ?? 0)
+                    const ordered = Number(line.qty_ordered ?? 0)
+                    const raw = line.id ? receiveVals[line.id] : ''
+                    const newTotal = raw !== undefined && raw !== '' ? Number(raw) : 0
+                    const valid = Number.isFinite(newTotal) && newTotal >= 0
+                    const flag = receiveFlag(valid ? newTotal : 0, ordered)
+                    const delta = valid ? Math.round((newTotal - prior) * 100) / 100 : 0
+                    const preview = line.guide_id && valid && delta !== 0
+                      ? Math.round((Number(line.guide_on_hand ?? 0) + delta) * 100) / 100
+                      : null
+                    return (
+                      <tr key={line.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {line.item_name}
+                          <div style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{line.vendor_sku} · {line.pack_size}</div>
+                        </td>
+                        <td style={{ padding: '12px' }}>{ordered} {line.uom}</td>
+                        <td style={{ padding: '12px' }}>{prior} {line.uom}</td>
+                        <td style={{ padding: '12px' }}>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={raw ?? ''}
+                            onChange={e => line.id && setReceiveVals(p => ({ ...p, [line.id as string]: e.target.value }))}
+                            style={{ width: 90, padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: 14, minHeight: 44, boxSizing: 'border-box' }}
+                          />
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <span style={{ padding: '3px 10px', borderRadius: 12, background: flag.bg, color: flag.fg, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            {flag.label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: 13 }}>
+                          {line.guide_id ? (
+                            <>
+                              <div>Guide on-hand: <b>{line.guide_on_hand}</b> {line.uom}</div>
+                              {preview !== null && (
+                                <div style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
+                                  → {preview} ({delta >= 0 ? '+' : ''}{delta})
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <span style={{ padding: '3px 10px', borderRadius: 12, background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                Unmatched — assign
+                              </span>
+                              <button
+                                onClick={() => assignLineToGuide(line)}
+                                disabled={line.id ? assigning[line.id] : false}
+                                style={{
+                                  background: 'var(--color-primary)',
+                                  color: '#fff',
+                                  border: 'none',
+                                  padding: '8px 12px',
+                                  borderRadius: 'var(--radius-md)',
+                                  fontWeight: 600,
+                                  fontSize: 12,
+                                  cursor: 'pointer',
+                                  minHeight: 44
+                                }}
+                              >
+                                {line.id && assigning[line.id] ? 'Assigning…' : '＋ Add to order guide'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <button
+                            onClick={() => confirmReceive(line)}
+                            disabled={!line.guide_id || (line.id ? receiving[line.id] : false)}
+                            title={!line.guide_id ? 'Assign the line to the order guide first' : 'Confirm receipt'}
+                            style={{
+                              background: !line.guide_id ? 'var(--bg-app)' : 'var(--color-primary)',
+                              color: !line.guide_id ? 'var(--text-muted)' : '#fff',
+                              border: '1px solid var(--border-color)',
+                              padding: '8px 14px',
+                              borderRadius: 'var(--radius-md)',
+                              fontWeight: 600,
+                              fontSize: 13,
+                              cursor: !line.guide_id ? 'not-allowed' : 'pointer',
+                              minHeight: 44,
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {line.id && receiving[line.id] ? 'Saving…' : 'Confirm receipt'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {receiveLines.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
+                        No lines on this order.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

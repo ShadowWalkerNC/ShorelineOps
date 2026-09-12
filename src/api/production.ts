@@ -19,7 +19,7 @@ export const productionApi = {
   signOff: (id: string, staffName: string) =>
     api.post<ProductionSheet>(`/production/sheets/${id}/signoff`, { staffName }).then(r => r.data),
 
-  /** Delete a sheet (rarely used — allows regeneration) */
-  deleteSheet: (id: string) =>
-    api.delete(`/production/sheets/${id}`).then(r => r.data),
+  /** Delete a sheet (rarely used — allows regeneration). Server returns 204 with no body. */
+  deleteSheet: (id: string): Promise<void> =>
+    api.delete(`/production/sheets/${id}`).then(() => undefined),
 }

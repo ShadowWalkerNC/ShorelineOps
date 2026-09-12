@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import type { Recipe } from '@/types/recipe'
-import { SEED_RECIPES, uid, now } from '@/demo/seed'
+import { SEED_RECIPES, isDemoSeedAllowed, uid, now } from '@/demo/seed'
 import { recipesApi } from '@/api/recipes'
 
-let _recipes: Recipe[] = JSON.parse(JSON.stringify(SEED_RECIPES))
+// B14 demo-honesty: fictional seed recipes load only in dev/demo mode.
+// Production boots empty and relies on the recipes API (fail closed).
+let _recipes: Recipe[] = isDemoSeedAllowed() ? JSON.parse(JSON.stringify(SEED_RECIPES)) : []
 
 type RecipesState = {
   recipes: Recipe[]

@@ -18,6 +18,7 @@ import { SafetyEvaluatorEngine } from './engine/safetyEvaluator'
 import { ThreeWayInvoiceMatchingEngine } from './engine/invoicing'
 import { CmsDietarySurveyEngine } from './engine/cmsSurvey'
 import { DeterministicDietaryEngine } from './engine/dietaryFormulation'
+import { allowedNextEvents, computeTrayLines, computeMissedTrays } from './engine/trayTracking'
 
 const PasswordSchema = z
   .string()
@@ -525,6 +526,36 @@ async function runAllTests() {
   assert(variantExplosion.variants.some(v => v.variantType === 'Pureed' && v.station === 'Puree Station'), 'ProductionEngine: routes Pureed variant to Puree Station')
   assert(variantExplosion.variants.some(v => v.variantType === 'Low Sodium' && v.scaledIngredients.some(i => i.item.includes('Salt-Free'))), 'ProductionEngine: applies salt-free substitution on Low Sodium variant')
 
+  // --- 15b. B07: Auto-derive therapeutic variant headcounts from census × diet orders ---
+  console.log('\n--- 15b. Variant Headcount Auto-Derivation (B07) ---')
+  const headcountFixture = [
+    { texture: 'Regular', diet_type: 'Regular' },
+    { texture: 'Regular', diet_type: 'Low Sodium' },
+    { texture: 'Pureed', diet_type: 'Regular' },
+    { texture: 'Pureed', diet_type: 'Diabetic' },
+    { texture: 'Minced', diet_type: 'Cardiac' },
+    { texture: 'Minced & Moist', diet_type: 'Renal' },
+    { texture: 'Cut-Up', diet_type: 'Regular' },          // L6 → folds into Regular
+    { texture: 'Liquid', diet_type: 'Regular' },          // L3 → folds into Regular
+    { texture: 'Mystery', diet_type: 'Mechanical Soft' },// unknown → folds into Regular
+    { texture: null, diet_type: null },                    // missing → Regular
+    { texture: 'Pureed', dietType: 'Low Sodium', isNpo: false }, // camelCase row seam
+    { texture: 'Regular', diet_type: 'Regular', is_npo: true },  // NPO — excluded
+  ]
+  const derived = await KitchenProductionEngine.deriveVariantHeadcounts('Lunch', headcountFixture)
+  assert(derived.regularCount === 6, `Headcounts: Regular=6 (got ${derived.regularCount})`)
+  assert(derived.pureedCount === 3, `Headcounts: Pureed L4=3 (got ${derived.pureedCount})`)
+  assert(derived.mincedCount === 2, `Headcounts: Minced L5=2 (got ${derived.mincedCount})`)
+  assert(derived.nasCount === 4, `Headcounts: NAS=4 (got ${derived.nasCount})`)
+  assert(derived.ncsCount === 1, `Headcounts: NCS=1 (got ${derived.ncsCount})`)
+  assert(derived.censusCounted === 11, `Headcounts: 11 counted (got ${derived.censusCounted})`)
+  assert(derived.npoExcluded === 1, `Headcounts: 1 NPO excluded (got ${derived.npoExcluded})`)
+  assert(derived.otherTextureCount === 3, `Headcounts: 3 other textures folded into Regular (got ${derived.otherTextureCount})`)
+  assert(
+    derived.breakdownDisplay === '6 Regular · 3 Pureed L4 · 2 Minced L5 · 4 NAS · 1 NCS · 1 NPO excluded',
+    `Headcounts: breakdownDisplay matches ("${derived.breakdownDisplay}")`
+  )
+
   // --- 16. Multi-Distributor Lowest-Cost Split MRP ---
   console.log('\n--- 16. Multi-Distributor Lowest-Cost Split MRP ---')
   const multiDistProposal = MrpDemandForecastEngine.evaluateMultiDistributorLowestCost(
@@ -853,6 +884,53 @@ async function runAllTests() {
 
   const substituteEval = HubAndSpokeSyndicationEngine.evaluateLocalSubstitute(2.10, 2.30, 8.50)
   assert(substituteEval.approved === true, 'SyndicationEngine: approves local recipe substitute within 15% budget variance')
+
+  // --- B12. Tray tracking engine (state machine + missed-tray SLA) ---
+  console.log('\n--- B12. Tray tracking ---')
+  assert(JSON.stringify(allowedNextEvents([])) === JSON.stringify(['assembled']), 'TrayTracking: empty line starts with assembled')
+  assert(JSON.stringify(allowedNextEvents(['assembled'])) === JSON.stringify(['dispatched']), 'TrayTracking: assembled -> dispatched only')
+  const afterDispatch = allowedNextEvents(['assembled', 'dispatched'])
+  assert(afterDispatch.includes('delivered') && afterDispatch.includes('missed') && afterDispatch.includes('remade') && afterDispatch.length === 3, 'TrayTracking: dispatched -> delivered|missed|remade')
+  assert(allowedNextEvents(['assembled', 'dispatched', 'delivered']).length === 0, 'TrayTracking: delivered is terminal')
+  assert(allowedNextEvents(['assembled', 'dispatched', 'missed']).length === 0, 'TrayTracking: missed is terminal')
+  assert(allowedNextEvents(['assembled', 'dispatched', 'remade']).length === 0, 'TrayTracking: remade is terminal')
+  assert(!allowedNextEvents(['assembled']).includes('delivered'), 'TrayTracking: cannot deliver before dispatch')
+
+  const nowMs = Date.now()
+  const minsAgo = (m: number) => new Date(nowMs - m * 60000).toISOString()
+  const mkEv = (id: string, ticket: string, event: 'assembled' | 'dispatched' | 'delivered' | 'missed' | 'remade', at: string) => ({
+    id, run_id: 'run-1', resident_id: null as string | null, ticket_id: ticket, event, at, by: 'u1', note: '',
+  })
+  const lines = computeTrayLines([
+    mkEv('e1', 'TKT-A', 'assembled', minsAgo(90)),
+    mkEv('e2', 'TKT-A', 'dispatched', minsAgo(45)),
+    mkEv('e3', 'TKT-B', 'assembled', minsAgo(80)),
+    mkEv('e4', 'TKT-B', 'dispatched', minsAgo(70)),
+    mkEv('e5', 'TKT-B', 'delivered', minsAgo(20)),
+    mkEv('e6', 'TKT-C', 'assembled', minsAgo(60)),
+    mkEv('e7', 'TKT-C', 'dispatched', minsAgo(10)),
+    mkEv('e8', 'TKT-D', 'assembled', minsAgo(50)),
+    mkEv('e9', 'TKT-D', 'dispatched', minsAgo(40)),
+    mkEv('e10', 'TKT-D', 'missed', minsAgo(30)),
+  ])
+  assert(lines.length === 4, 'TrayTracking: groups events into 4 tray lines')
+  const missed = computeMissedTrays(lines, 30, nowMs)
+  assert(missed.length === 2, 'TrayTracking: SLA flags exactly 2 problem trays')
+  const overdue = missed.find((m) => m.kind === 'overdue')
+  const explicit = missed.find((m) => m.kind === 'missed')
+  assert(!!overdue && overdue.ticketId === 'TKT-A' && (overdue.minutesOverdue ?? 0) >= 14, 'TrayTracking: TKT-A overdue past 30-min SLA')
+  assert(!!explicit && explicit.ticketId === 'TKT-D', 'TrayTracking: explicitly missed tray is surfaced')
+  assert(!missed.some((m) => m.ticketId === 'TKT-B'), 'TrayTracking: delivered tray is not flagged')
+  assert(!missed.some((m) => m.ticketId === 'TKT-C'), 'TrayTracking: tray within SLA is not flagged')
+  // Remake with a new ticket starts a fresh line; the old line stays terminal.
+  const remakeLines = computeTrayLines([
+    mkEv('r1', 'TKT-X', 'assembled', minsAgo(90)),
+    mkEv('r2', 'TKT-X', 'dispatched', minsAgo(60)),
+    mkEv('r3', 'TKT-X', 'remade', minsAgo(50)),
+    mkEv('r4', 'TKT-Y', 'assembled', minsAgo(40)),
+  ])
+  assert(remakeLines.length === 2, 'TrayTracking: remake new ticket starts a new line')
+  assert(JSON.stringify(remakeLines.find((l) => l.ticketId === 'TKT-Y')?.allowedNext) === JSON.stringify(['dispatched']), 'TrayTracking: remade line resumes at dispatched')
 
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)

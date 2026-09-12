@@ -378,7 +378,7 @@ export const SEED_PRODUCTION_SHEETS: ProductionSheet[] = [
       {
         menuItemId: 'mi8', menuItemName: 'Grilled Chicken Breast', textureModified: true,
         textureCounts: { Regular: 7, 'Cut-Up': 0, Minced: 1, 'Minced & Moist': 1, Pureed: 1, Liquid: 0 },
-        dietCounts: { Regular: 5, Diabetic: 2, Cardiac: 1, Renal: 1, 'Low Sodium': 1, 'Mechanical Soft': 0 },
+        dietCounts: { Regular: 5, Diabetic: 2, Cardiac: 1, Renal: 1, 'Low Sodium': 1, 'Mechanical Soft': 0, NPO: 0 },
         locationCounts: { 'Dining Room': 6, Room: 1, 'Assisted Living': 2, 'Memory Care': 1 },
         total: 10,
       },
@@ -420,4 +420,26 @@ export function uid() {
 
 export function now() {
   return new Date().toISOString()
+}
+
+// ── Demo-honesty gate (B14) ─────────────────────────────────────────────────
+// Seed residents, menus, staff, and the other fictional datasets below must
+// NEVER load in a production build. Fail closed: anything other than an
+// explicit dev/demo environment means the seed data stays out.
+//
+// Enabled only when:
+//   - Vite dev server (`import.meta.env.DEV`), or
+//   - `VITE_DEMO_MODE=true` (e.g. hosted demo sandboxes on Render/Vercel)
+//
+// A production bundle has neither, so production boots with empty stores and
+// real data sources only — no fictional residents, rooms, or MRNs.
+export function isDemoSeedAllowed(): boolean {
+  try {
+    // NOTE: written as direct property access on purpose — Vite statically
+    // replaces import.meta.env.* at build time (dev -> true, production ->
+    // false unless VITE_DEMO_MODE=true was set in the build environment).
+    return import.meta.env.DEV === true || import.meta.env.VITE_DEMO_MODE === 'true'
+  } catch {
+    return false
+  }
 }

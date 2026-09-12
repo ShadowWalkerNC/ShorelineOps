@@ -1,6 +1,13 @@
 /**
- * MCP & Self-Healing Diagnostics API Routes
- * 
+ * PARKED (B13 scope cut — Owner Decision 5) — DO NOT DELETE, DO NOT UNMOUNT.
+ *
+ * The MCP tool-discovery/execution routes and self-healing diagnostics endpoints
+ * served the cut HealerBot admin panel. They are parked, not removed: the code
+ * stays mounted and compiling so a future decision can re-activate it, but no
+ * UI surface reaches these endpoints anymore.
+ *
+ * MCP & Self-Healing Diagnostics API Routes (parked)
+ *
  * Exposes:
  * - GET /api/mcp/tools: Model Context Protocol tool schema discovery
  * - POST /api/mcp/execute: Tool invocation endpoint for CulinaryOS and AI agents

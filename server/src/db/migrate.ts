@@ -317,7 +317,7 @@ const migrations: { name: string; sql: string }[] = [
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
         vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
-        status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','submitted','received','cancelled')),
+        status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','approved','submitted','received','cancelled')),
         order_date      DATE NOT NULL DEFAULT CURRENT_DATE,
         expected_date   DATE,
         notes           TEXT DEFAULT '',
@@ -563,7 +563,7 @@ const migrations: { name: string; sql: string }[] = [
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
         vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
-        status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','submitted','received','cancelled')),
+        status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','approved','submitted','received','cancelled')),
         order_date      DATE NOT NULL DEFAULT CURRENT_DATE,
         expected_date   DATE,
         notes           TEXT DEFAULT '',
@@ -626,6 +626,185 @@ const migrations: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    // B09: server-side inventory — stock items, append-only transaction log,
+    // and count-sheet sessions so the five inventory tabs are multi-user.
+    name: '017_inventory_tables',
+    sql: `
+      CREATE TABLE IF NOT EXISTS inventory_items (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        sku         TEXT DEFAULT '',
+        vendor_sku  TEXT DEFAULT '',
+        name        TEXT NOT NULL,
+        category    TEXT NOT NULL DEFAULT 'Other',
+        unit        TEXT NOT NULL DEFAULT 'each',
+        par_level   NUMERIC(10,2) NOT NULL DEFAULT 0,
+        on_hand     NUMERIC(10,2) NOT NULL DEFAULT 0,
+        unit_cost   NUMERIC(10,4),
+        vendor      TEXT DEFAULT '',
+        location    TEXT DEFAULT '',
+        notes       TEXT DEFAULT '',
+        active      BOOLEAN NOT NULL DEFAULT true,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_items_name ON inventory_items(name);
+
+      -- Append-only stock ledger. Corrections are new adjusting rows (type
+      -- 'count_adjust'), never edits or deletes — no UPDATE/DELETE triggers
+      -- are wired here because the API layer is the only writer.
+      CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        item_id     UUID REFERENCES inventory_items(id) ON DELETE SET NULL,
+        type        TEXT NOT NULL CHECK (type IN ('receipt', 'issue', 'waste', 'count_adjust')),
+        qty         NUMERIC(10,2) NOT NULL,
+        unit        TEXT NOT NULL DEFAULT 'each',
+        user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+        note        TEXT DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_tx_item
+        ON inventory_transactions(item_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inventory_tx_type
+        ON inventory_transactions(type, created_at DESC);
+
+      -- Count-sheet sessions (zero-balance counts). The adjusting
+      -- transactions written on submit keep the ledger as the source of truth
+      -- for on-hand quantities; the session preserves who counted what.
+      CREATE TABLE IF NOT EXISTS inventory_counts (
+        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        count_date    DATE NOT NULL,
+        submitted_by  TEXT DEFAULT '',
+        status        TEXT NOT NULL DEFAULT 'Draft'
+                      CHECK (status IN ('Draft', 'Submitted', 'Approved', 'Discrepancy')),
+        items         TEXT NOT NULL DEFAULT '[]',
+        notes         TEXT DEFAULT '',
+        submitted_at  TIMESTAMPTZ,
+        approved_by   TEXT DEFAULT '',
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_counts_date
+        ON inventory_counts(count_date DESC);
+    `,
+  },
+  {
+    // B12: tray run tracking — every meal service gets a tracked tray run
+    // (assembled → dispatched → delivered, plus missed/remade), with a
+    // missed-tray SLA surfaced on the dispatch checklist.
+    //
+    // tray_events is append-only: the API layer exposes no UPDATE/DELETE for
+    // it, and the trayTracking engine enforces forward-only transitions, so
+    // every event keeps its original user + timestamp.
+    name: '018_tray_tracking',
+    sql: `
+      CREATE TABLE IF NOT EXISTS tray_runs (
+        id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        meal_slot    TEXT NOT NULL CHECK (meal_slot IN ('breakfast', 'morningSnack', 'lunch', 'afternoonSnack', 'dinner')),
+        service_date DATE NOT NULL,
+        wing         TEXT NOT NULL DEFAULT '',
+        notes        TEXT NOT NULL DEFAULT '',
+        created_by   UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (service_date, meal_slot, wing)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_tray_runs_date
+        ON tray_runs(service_date DESC);
+
+      CREATE TABLE IF NOT EXISTS tray_events (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        run_id      UUID NOT NULL REFERENCES tray_runs(id) ON DELETE CASCADE,
+        resident_id UUID REFERENCES residents(id) ON DELETE SET NULL,
+        ticket_id   TEXT NOT NULL DEFAULT '',
+        event       TEXT NOT NULL CHECK (event IN ('assembled', 'dispatched', 'delivered', 'missed', 'remade')),
+        at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        by          TEXT,
+        note        TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_tray_events_run
+        ON tray_events(run_id, at);
+      CREATE INDEX IF NOT EXISTS idx_tray_events_resident
+        ON tray_events(resident_id);
+    `,
+  },
+  {
+    // B11: widen the purchase_orders status CHECK to include 'approved' so the
+    // manager approval step (draft → approved → submitted) is a real status.
+    // Follows the 008 users_role_check precedent: effective on PostgreSQL;
+    // the SQLite translation layer strips ALTER TABLE … CONSTRAINT statements
+    // (see pool.ts translateQuery), where fresh databases instead pick up the
+    // widened CHECK from the updated CREATE TABLE definitions in 010/016.
+    // Legacy SQLite databases keep the old 4-value CHECK and fail closed
+    // (CHECK violation → 500) rather than silently accepting 'approved'.
+    name: '019_po_approval_status',
+    sql: `
+      ALTER TABLE purchase_orders DROP CONSTRAINT IF EXISTS purchase_orders_status_check;
+      ALTER TABLE purchase_orders ADD CONSTRAINT purchase_orders_status_check
+        CHECK (status IN ('draft','approved','submitted','received','cancelled'));
+    `,
+  },
+  {
+    // B04 (Owner Decision 3): therapeutic diet order provenance + the aide
+    // "flag for RD review" worklist table. Numbered 020 — B11 owns 019.
+    name: '020_diet_order_provenance',
+    sql: `
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS diet_ordered_by TEXT DEFAULT NULL;
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS diet_order_date TIMESTAMPTZ DEFAULT NULL;
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS diet_effective_date TIMESTAMPTZ DEFAULT NULL;
+
+      CREATE TABLE IF NOT EXISTS diet_review_flags (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        resident_id TEXT NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+        message     TEXT NOT NULL DEFAULT '',
+        flagged_by  TEXT,
+        status      TEXT NOT NULL DEFAULT 'OPEN'
+                      CHECK (status IN ('OPEN', 'RESOLVED', 'DISMISSED')),
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        resolved_by TEXT,
+        resolved_at TIMESTAMPTZ
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_diet_review_flags_status
+        ON diet_review_flags(status);
+      CREATE INDEX IF NOT EXISTS idx_diet_review_flags_resident
+        ON diet_review_flags(resident_id);
+    `,
+  },
+  {
+    // B05: real hydration-pass logging (F807 survey territory). One row per
+    // resident per pass per day; POST upserts on (resident_id, pass, today).
+    // refusals are stored distinctly from zero-consumption (refused=true).
+    // resident_id is TEXT: residents.id is UUID on pg / TEXT on sqlite
+    // (see pool.ts translation). Client code generates the id (A02 pattern:
+    // uuid_generate_v4() defaults do not exist on SQLite).
+    name: '021_hydration_records',
+    sql: `
+      CREATE TABLE IF NOT EXISTS hydration_records (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        resident_id TEXT NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+        pass        TEXT NOT NULL
+                      CHECK (pass IN ('morning', 'afternoon', 'evening')),
+        target_oz   NUMERIC(8,2) NOT NULL DEFAULT 0,
+        offered_oz  NUMERIC(8,2) NOT NULL DEFAULT 0,
+        consumed_oz NUMERIC(8,2) NOT NULL DEFAULT 0,
+        refused     BOOLEAN NOT NULL DEFAULT false,
+        supplement  TEXT NOT NULL DEFAULT '',
+        recorded_by TEXT,
+        recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_hydration_records_date
+        ON hydration_records(recorded_at);
+      CREATE INDEX IF NOT EXISTS idx_hydration_records_resident
+        ON hydration_records(resident_id);
+    `,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.
@@ -659,6 +838,15 @@ export const EXPECTED_TABLES: string[] = [
   'distributor_invoices',
   'vendor_credit_memos',
   'ehr_reconciliation_queue',
+  // B04: aide "flag for RD review" worklist (migration 020).
+  'diet_review_flags',
+  'inventory_items',
+  'inventory_transactions',
+  'inventory_counts',
+  'tray_runs',
+  'tray_events',
+  // B05: hydration pass log (migration 021).
+  'hydration_records',
 ]
 
 /**

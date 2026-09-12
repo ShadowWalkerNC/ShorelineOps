@@ -9,7 +9,7 @@
 //   Receive truck → update currentQty
 //   Menu planned → deduct projected usage from currentQty
 //   Count day → InventoryCount submitted → variance flagged
-//   Low par → auto-suggest TruckOrderItem quantities
+//   Low par → auto-suggest reorder quantities
 // ============================================================
 
 // ── Enumerations ─────────────────────────────────────────────────────────────
@@ -136,51 +136,6 @@ export interface InventoryCountItem {
   countedQty: number
   /** countedQty - expectedQty — negative = shrinkage/loss */
   variance: number
-  note?: string
-}
-
-// ── Truck Orders ──────────────────────────────────────────────────────────────
-export interface TruckOrder {
-  id: string
-  vendorName: string
-  /** Date the delivery is expected */
-  deliveryDate: string      // YYYY-MM-DD
-  /** Order must be submitted by this date/time */
-  cutoffDate: string        // YYYY-MM-DD
-  status: TruckOrderStatus
-  items: TruckOrderItem[]
-  /** Calculated: sum of all lineTotal values */
-  totalCost: number
-  /** Notes visible to all kitchen staff */
-  notes?: string
-  submittedById?: string
-  submittedAt?: string
-  receivedById?: string
-  receivedAt?: string
-  createdAt: string
-  updatedAt: string
-}
-
-export type TruckOrderStatus =
-  | 'Draft'         // being built
-  | 'Pending Approval' // submitted, awaiting manager OK
-  | 'Approved'      // approved, ready to send to vendor
-  | 'Submitted'     // sent to vendor
-  | 'Received'      // delivery received and checked in
-  | 'Partial'       // delivery received but items missing/shorted
-
-export interface TruckOrderItem {
-  inventoryItemId: string
-  itemName: string          // snapshot
-  unit: InventoryUnit
-  /** Qty ordered from vendor */
-  orderedQty: number
-  /** Qty actually received — filled in on delivery */
-  receivedQty?: number
-  /** Price per unit at time of order */
-  unitCost: number
-  /** orderedQty × unitCost */
-  lineTotal: number
   note?: string
 }
 
