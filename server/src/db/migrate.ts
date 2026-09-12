@@ -507,7 +507,200 @@ const migrations: { name: string; sql: string }[] = [
       CREATE INDEX IF NOT EXISTS idx_ehr_queue_status ON ehr_reconciliation_queue(status);
     `,
   },
+  {
+    // A02: backfill — the 8 tables below were defined in 010/011/012 but were never
+    // created in databases where those migrations were already marked applied
+    // (append-only rule means those migrations can never re-run). Definitions are
+    // copied verbatim from the original migrations; IF NOT EXISTS keeps it idempotent.
+    name: '016_purchasing_reporting_backfill',
+    sql: `
+      -- From 010: Vendor catalog items (broadline SKUs, pack sizes, UOMs)
+      CREATE TABLE IF NOT EXISTS vendor_items (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        vendor_sku      TEXT NOT NULL,
+        name            TEXT NOT NULL,
+        brand           TEXT DEFAULT '',
+        pack_size       TEXT DEFAULT '',
+        uom             TEXT DEFAULT 'case',
+        category        TEXT DEFAULT '',
+        unit_cost       NUMERIC(10,4) DEFAULT 0,
+        active          BOOLEAN NOT NULL DEFAULT true,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(vendor_id, vendor_sku)
+      );
+
+      -- From 010: Maps facility ingredients to preferred vendor items (many-to-one preferred)
+      CREATE TABLE IF NOT EXISTS facility_item_maps (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id         UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        ingredient_name     TEXT NOT NULL,
+        vendor_item_id      UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
+        preferred           BOOLEAN NOT NULL DEFAULT true,
+        conversion_factor   NUMERIC(10,4) DEFAULT 1.0,
+        notes               TEXT DEFAULT '',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- From 010: Standing order guide entries: par levels and on-hand counts per vendor item
+      CREATE TABLE IF NOT EXISTS order_guides (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        vendor_item_id  UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
+        par_level       NUMERIC(10,2) NOT NULL DEFAULT 0,
+        on_hand         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        avg_usage       NUMERIC(10,2),
+        sort_group      TEXT DEFAULT '',
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(facility_id, vendor_item_id)
+      );
+
+      -- From 010: Purchase orders (header)
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','submitted','received','cancelled')),
+        order_date      DATE NOT NULL DEFAULT CURRENT_DATE,
+        expected_date   DATE,
+        notes           TEXT DEFAULT '',
+        created_by      UUID REFERENCES users(id),
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- From 010: Purchase order line items
+      CREATE TABLE IF NOT EXISTS purchase_order_lines (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        purchase_order_id   UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+        vendor_item_id      UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
+        qty_ordered         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        qty_received        NUMERIC(10,2),
+        unit_cost           NUMERIC(10,4),
+        notes               TEXT DEFAULT '',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- From 011: Daily cost snapshot (optional manual entry; reports can also be computed live)
+      CREATE TABLE IF NOT EXISTS daily_cost_log (
+        id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        facility_id           UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        log_date              DATE NOT NULL,
+        resident_count        INT NOT NULL DEFAULT 0,
+        food_cost             NUMERIC(10,2) NOT NULL DEFAULT 0,
+        cost_per_resident_day NUMERIC(10,4) GENERATED ALWAYS AS (
+          CASE WHEN resident_count > 0 THEN food_cost / resident_count ELSE 0 END
+        ) STORED,
+        notes                 TEXT DEFAULT '',
+        created_by            UUID REFERENCES users(id),
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(facility_id, log_date)
+      );
+
+      -- From 012: Recipe Nutritional Breakdown
+      CREATE TABLE IF NOT EXISTS recipe_nutrients (
+        recipe_id         UUID PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE,
+        calories          NUMERIC(8,2) NOT NULL DEFAULT 0,
+        protein_g         NUMERIC(8,2) NOT NULL DEFAULT 0,
+        carbs_g           NUMERIC(8,2) NOT NULL DEFAULT 0,
+        fat_g             NUMERIC(8,2) NOT NULL DEFAULT 0,
+        sat_fat_g         NUMERIC(8,2) NOT NULL DEFAULT 0,
+        sodium_mg         NUMERIC(8,2) NOT NULL DEFAULT 0,
+        potassium_mg      NUMERIC(8,2) NOT NULL DEFAULT 0,
+        phosphorus_mg     NUMERIC(8,2) NOT NULL DEFAULT 0,
+        fiber_g           NUMERIC(8,2) NOT NULL DEFAULT 0,
+        sugar_g           NUMERIC(8,2) NOT NULL DEFAULT 0,
+        calculated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- From 012: Menu Item to Recipe Mapping
+      CREATE TABLE IF NOT EXISTS menu_item_recipes (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        menu_item_id        UUID REFERENCES menu_items(id) ON DELETE CASCADE,
+        recipe_id           UUID REFERENCES recipes(id) ON DELETE CASCADE,
+        portion_multiplier  NUMERIC(6,2) NOT NULL DEFAULT 1.0,
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `,
+  },
 ]
+
+// A02: every table migrate.ts expects to exist after a full migration run.
+// Used by assertSchemaIntegrity() — a boot-time fail-closed drift guard.
+export const EXPECTED_TABLES: string[] = [
+  '_migrations',
+  'users',
+  'residents',
+  'refresh_tokens',
+  'audit_log',
+  'menu_items',
+  'menu_weeks',
+  'production_sheets',
+  'system_settings',
+  'timecard_punches',
+  'meal_options',
+  'weekly_orders',
+  'facility_config',
+  'vendors',
+  'vendor_items',
+  'facility_item_maps',
+  'order_guides',
+  'purchase_orders',
+  'purchase_order_lines',
+  'substitution_log',
+  'daily_cost_log',
+  'recipes',
+  'recipe_nutrients',
+  'menu_item_recipes',
+  'resident_profile_history',
+  'distributor_invoices',
+  'vendor_credit_memos',
+  'ehr_reconciliation_queue',
+]
+
+/**
+ * A02 boot-time schema drift assertion (fail closed).
+ *
+ * After migrations run, verifies that every table migrate.ts expects actually
+ * exists in the connected database. On mismatch, throws an explicit error
+ * naming the missing tables — the boot path must treat this as fatal and
+ * refuse to start (fail loud, not silent).
+ *
+ * Table-existence only (not a full column diff) — deliberately surgical.
+ * Works against SQLite (sqlite_master) and PostgreSQL (pg_tables); the backend
+ * is detected by probing, so the pg→sqlite fallback in pool.ts is handled.
+ */
+export async function assertSchemaIntegrity(): Promise<void> {
+  let rows: any[]
+  try {
+    ;({ rows } = await pool.query(`SELECT name FROM sqlite_master WHERE type = 'table'`))
+  } catch {
+    ;({ rows } = await pool.query(`SELECT tablename AS name FROM pg_tables WHERE schemaname = 'public'`))
+  }
+
+  // pool.ts returns { rows: [] } when no database backend is reachable at all
+  // (cloud-demo in-memory fallback). Migrations already failed in that case;
+  // there is nothing to assert against, so skip rather than false-positive.
+  if (rows.length === 0) {
+    console.warn('[migrate] Schema integrity check skipped: no table inventory available (database unreachable)')
+    return
+  }
+
+  const present = new Set(rows.map((r: any) => r.name))
+  const missing = EXPECTED_TABLES.filter((t) => !present.has(t))
+
+  if (missing.length > 0) {
+    throw new Error(
+      `[schema-drift] FATAL: ${missing.length} expected table(s) missing from the database: ${missing.join(', ')}. ` +
+      `The database schema is out of sync with server/src/db/migrate.ts. Refusing to boot.`
+    )
+  }
+
+  console.log(`[migrate] Schema integrity check passed (${EXPECTED_TABLES.length}/${EXPECTED_TABLES.length} tables present)`)
+}
 
 export async function runMigrations(maxRetries = 5, retryDelayMs = 2000) {
   let attempt = 0
@@ -544,6 +737,10 @@ export async function runMigrations(maxRetries = 5, retryDelayMs = 2000) {
     await pool.query('INSERT INTO _migrations (name) VALUES ($1)', [name])
     console.log(`[migrate] Applied ${name}`)
   }
+
+  // A02: fail-closed drift guard — verify the migrated DB actually has every
+  // table the schema definition expects before any boot proceeds.
+  await assertSchemaIntegrity()
 
   console.log('[migrate] Done.')
 }

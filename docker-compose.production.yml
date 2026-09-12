@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3015
+      PORT: 3001
       DATABASE_URL: postgresql://${DB_USER:-shoreline_admin}:${DB_PASSWORD:-shoreline_secure_password_2026}@postgres:5432/${DB_NAME:-shoreline}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-shoreline_enterprise_jwt_secret_must_be_over_32_chars}
       FACILITY_ID: ${FACILITY_ID:-FAC-001}
@@ -38,9 +38,9 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3015:3015"
+      - "3001:3001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3015/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 15s
       timeout: 5s
       retries: 3

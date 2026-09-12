@@ -175,11 +175,11 @@ npm install
 
 ### 3. Start Development Servers
 ```bash
-# Starts both the React frontend (port 5180) and Express API (port 3015)
+# Starts both the React frontend (port 5180) and Express API (port 3001)
 npm run dev:all
 ```
 - Web Application: `http://localhost:5180`
-- Backend API Server: `http://localhost:3015`
+- Backend API Server: `http://localhost:3001`
 - Astro Marketing Site: `http://localhost:4321` (via `cd marketing && npm run dev`)
 
 ### 4. Run Automated Test Suite
@@ -198,7 +198,7 @@ Deploy the complete multi-service stack to Render using the official [`render.ya
 2. Click **New +** $\to$ **Blueprint**.
 3. Connect your repository: `ShadowWalkerNC/ShorelineOps`.
 4. Render provisions and builds all 4 services automatically:
-   - `shoreline-api` (Node/Express API on port 3015)
+   - `shoreline-api` (Node/Express API on port 3001)
    - `shoreline-demo` (React 18 + Vite SPA on `https://shoreline-demo.onrender.com`)
    - `shoreline-marketing` (Astro static portal on `https://shoreline-marketing.onrender.com`)
    - `shoreline-db` (Managed PostgreSQL instance)
@@ -261,7 +261,7 @@ The built-in MCP server (`server/src/mcp/server.ts`) exposes 5 tool definitions:
 |---|---|
 | **CLI** (`shoreline` / `culinaryos`) | ✅ Production |
 | **MCP Server** (`server/src/mcp/server.ts`) | ✅ Production |
-| **REST API** (Express, port 3015) | ✅ Production |
+| **REST API** (Express, port 3001) | ✅ Production |
 | **SDK** (`@shoreline/sdk` — TypeScript) | ✅ v6.0 Shipped |
 | **Webhook Events** (HMAC-SHA256 signed) | ✅ v6.0 Shipped |
 

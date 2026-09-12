@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from '../../security/AuthContext'
 
 export interface ReconciliationItem {
   id: string
@@ -17,6 +18,14 @@ export default function EhrReconciliationQueue() {
   const [items, setItems] = useState<ReconciliationItem[]>([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
+  // A07: honest EHR state — never render fabricated triage items as live data.
+  const [ehrError, setEhrError] = useState<string | null>(null)
+  const [isDemo, setIsDemo] = useState(false)
+  const { user } = useAuth()
+  // A05: defense in depth — only dietitians/admins see enabled resolve actions.
+  // The server (requireDietitianOrAdmin) is the real gate; this just hides the
+  // buttons from roles that would be refused.
+  const canResolve = user?.role === 'dietitian' || user?.role === 'admin'
 
   const fetchQueue = async () => {
     try {
@@ -29,35 +38,24 @@ export default function EhrReconciliationQueue() {
       if (res.ok) {
         const data = await res.json()
         setItems(data.items || [])
+        setIsDemo(data.demo === true)
+        setEhrError(null)
       } else {
-        // Fallback demo triage data
-        setItems([
-          {
-            id: 'demo-1',
-            resident_name: 'Arthur Pendelton',
-            external_ehr_id: 'PCC-RES-102',
-            source_ehr: 'PointClickCare EHR',
-            change_type: 'TEXTURE_UPDATE',
-            incoming_payload: { texture: 'Pureed', dietOrder: 'Diabetic / NCS' },
-            conflict_reason: "Speech Therapy downgrade: Texture changed from 'Regular' to 'Pureed'. Puree Station batch scaling review required.",
-            status: 'PENDING_TRIAGE',
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 'demo-2',
-            resident_name: 'Margaret Holloway',
-            external_ehr_id: 'PCC-RES-103',
-            source_ehr: 'PointClickCare EHR',
-            change_type: 'NEW_ALLERGEN',
-            incoming_payload: { allergies: ['Gluten', 'Wheat', 'Tree Nuts'] },
-            conflict_reason: 'New critical food allergy [Tree Nuts] entered by attending physician. Menu cross-contact audit required.',
-            status: 'PENDING_TRIAGE',
-            created_at: new Date().toISOString(),
-          },
-        ])
+        // A07: honest empty state — the EHR is unreachable or not connected.
+        // Never inject fabricated demo triage items as real PointClickCare data.
+        setItems([])
+        setIsDemo(false)
+        setEhrError(
+          res.status === 503
+            ? 'EHR not connected — showing facility data only. No inbound EHR changes available.'
+            : 'Could not reach the EHR reconciliation service — showing facility data only.'
+        )
       }
     } catch {
-      // Offline fallback
+      // A07: offline / network failure — honest empty state, no fake items.
+      setItems([])
+      setIsDemo(false)
+      setEhrError('Could not reach the EHR reconciliation service — showing facility data only.')
     } finally {
       setLoading(false)
     }
@@ -73,10 +71,12 @@ export default function EhrReconciliationQueue() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
 
+      // A05: resolvedBy identity now comes from the JWT on the server —
+      // the client no longer self-certifies as "Registered Dietitian (RD)".
       const res = await fetch(`/api/ehr/reconciliation-queue/${id}/resolve`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ action, resolvedBy: 'Registered Dietitian (RD)' }),
+        body: JSON.stringify({ action }),
       })
 
       if (res.ok) {
@@ -121,6 +121,21 @@ export default function EhrReconciliationQueue() {
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
             🩺 EHR Clinical Inbound Reconciliation Queue
+            {isDemo && (
+              <span style={{
+                marginLeft: 10,
+                fontSize: 11,
+                fontWeight: 800,
+                padding: '3px 10px',
+                borderRadius: 6,
+                background: '#fef3c7',
+                color: '#92400e',
+                border: '1px dashed #d97706',
+                verticalAlign: 'middle',
+              }}>
+                DEMO DATA
+              </span>
+            )}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
             Registered Dietitian triage gate preventing conflicting EHR diet orders and new allergies from failing silently.
@@ -151,6 +166,19 @@ export default function EhrReconciliationQueue() {
 
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Loading triage queue...</div>
+      ) : ehrError ? (
+        <div style={{
+          padding: 24,
+          borderRadius: 'var(--radius-md)',
+          background: '#fffbeb',
+          border: '1px solid #fde68a',
+          textAlign: 'center',
+          color: '#92400e',
+          fontWeight: 700,
+          fontSize: 14,
+        }}>
+          ⚠️ {ehrError}
+        </div>
       ) : items.length === 0 ? (
         <div style={{
           padding: 24,
@@ -204,6 +232,8 @@ export default function EhrReconciliationQueue() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => resolveItem(item.id, 'REJECTED_BY_RD')}
+                    disabled={!canResolve}
+                    title={canResolve ? undefined : 'Requires the dietitian or admin role'}
                     style={{
                       padding: '8px 14px',
                       borderRadius: 'var(--radius-md)',
@@ -212,13 +242,16 @@ export default function EhrReconciliationQueue() {
                       color: '#991b1b',
                       fontSize: 12,
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      cursor: canResolve ? 'pointer' : 'not-allowed',
+                      opacity: canResolve ? 1 : 0.45,
                     }}
                   >
                     ❌ Reject Change
                   </button>
                   <button
                     onClick={() => resolveItem(item.id, 'APPROVED_BY_RD')}
+                    disabled={!canResolve}
+                    title={canResolve ? undefined : 'Requires the dietitian or admin role'}
                     style={{
                       padding: '8px 16px',
                       borderRadius: 'var(--radius-md)',
@@ -227,7 +260,8 @@ export default function EhrReconciliationQueue() {
                       color: 'white',
                       fontSize: 12,
                       fontWeight: 800,
-                      cursor: 'pointer',
+                      cursor: canResolve ? 'pointer' : 'not-allowed',
+                      opacity: canResolve ? 1 : 0.45,
                     }}
                   >
                     ✅ Approve &amp; Update Profile

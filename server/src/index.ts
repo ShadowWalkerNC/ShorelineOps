@@ -28,7 +28,7 @@ import { runSeed } from './db/seed'
 import crypto from 'crypto'
 
 const app = express()
-const PORT = process.env.PORT ?? 3015
+const PORT = process.env.PORT ?? 3001
 const isProd = process.env.NODE_ENV === 'production'
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -66,7 +66,15 @@ app.use(cors({
   origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
   credentials: true,
 }))
-app.use(express.json({ limit: '1mb' }))
+// Stripe webhook signature verification needs the RAW request bytes (A08), so the
+// webhook path is parsed with express.raw BEFORE the global JSON parser runs.
+app.use('/api/billing/webhook', express.raw({ type: 'application/json', limit: '1mb' }))
+// Stash the raw request bytes (req.rawBody) so HMAC-signed webhooks (EHR) can
+// verify signatures against the exact payload the sender signed.
+app.use(express.json({
+  limit: '1mb',
+  verify: (req: any, _res, buf: Buffer) => { req.rawBody = buf },
+}))
 
 // Rate limiting
 const limiter = rateLimit({
@@ -234,6 +242,12 @@ const server = app.listen(PORT, () => {
       globalHealerBot.startDaemon(300000) // Run self-healing background checks every 5 minutes
     })
     .catch((err) => {
+      // A02: schema drift is fail-closed — refuse to start rather than run
+      // against a database that is missing tables migrate.ts expects.
+      if (err && err.message && err.message.includes('[schema-drift]')) {
+        console.error('[Shoreline API] FATAL: refusing to start:', err.message)
+        process.exit(1)
+      }
       console.warn('[Shoreline API] Database initialization warning (will retry in background):', err.message)
       globalHealerBot.startDaemon(300000)
     })

@@ -1,7 +1,5 @@
 import { Pool } from 'pg'
 import path from 'path'
-import crypto from 'crypto'
-import bcrypt from 'bcryptjs'
 
 const isProd = process.env.NODE_ENV === 'production'
 const dbUrl = process.env.DATABASE_URL
@@ -40,43 +38,10 @@ function getSqlite(): any {
       console.log(`[DB] Using local offline SQLite database at ${sqlitePath}`)
       sqliteDb = new sqlite3.Database(sqlitePath)
 
-      sqliteDb.serialize(() => {
-        sqliteDb?.run('PRAGMA foreign_keys = ON')
-
-        sqliteDb?.run(`
-          CREATE TABLE IF NOT EXISTS users (
-            id          TEXT PRIMARY KEY,
-            name        TEXT NOT NULL,
-            email       TEXT UNIQUE NOT NULL,
-            password    TEXT NOT NULL,
-            role        TEXT NOT NULL,
-            mfa_enabled INTEGER DEFAULT 0,
-            active      INTEGER DEFAULT 1,
-            created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at  TEXT DEFAULT CURRENT_TIMESTAMP
-          )
-        `)
-
-        sqliteDb?.get('SELECT COUNT(*) as cnt FROM users', (err: any, row: any) => {
-          if (err || !row || row.cnt !== 0) return
-
-          const email = process.env.SEED_ADMIN_EMAIL || 'admin@shorelineops.local'
-          const password = process.env.SEED_ADMIN_PASSWORD || 'Shoreline2026!Ops'
-
-          const passHash = bcrypt.hashSync(password, 12)
-          sqliteDb?.run(
-            `INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)`,
-            [crypto.randomUUID(), 'Administrator', email.toLowerCase(), passHash, 'admin'],
-            (insertErr: any) => {
-              if (insertErr) {
-                console.error('[DB] Failed to seed SQLite admin:', insertErr.message)
-              } else {
-                console.log(`[DB] Seeded local SQLite admin: ${email}`)
-              }
-            }
-          )
-        })
-      })
+      // Schema and admin seeding are handled exclusively by the canonical
+      // migration path (server/src/db/migrate.ts runMigrations + db/seed.ts runSeed).
+      // No DDL lives here by design (A03 consolidation).
+      sqliteDb?.run('PRAGMA foreign_keys = ON')
     } catch (loadErr: any) {
       console.warn('[DB] SQLite native library could not be loaded:', loadErr.message)
       sqliteLoadFailed = true
@@ -111,7 +76,11 @@ function translateQuery(sql: string, params: any[] = []): { sql: string; params:
     .replace(/CREATE TRIGGER[\s\S]*?EXECUTE FUNCTION[\s\S]*?;/gi, '')
     .replace(/ALTER TABLE \w+ DROP CONSTRAINT[\s\S]*?;/gi, '')
     .replace(/ALTER TABLE \w+ ADD CONSTRAINT[\s\S]*?;/gi, '')
-    .replace(/COMMENT ON COLUMN[\s\S]*?;/gi, '')
+    // A02: strip COMMENT ON COLUMN statements for SQLite. The quoted-string-aware
+    // pattern is required because comment text may itself contain semicolons
+    // (e.g. 009's 'Base32 TOTP secret; null when MFA not enrolled'), which a
+    // naive non-greedy match would stop at, leaving broken SQL behind.
+    .replace(/COMMENT ON COLUMN(?:'[^']*'|[^;])*;/gi, '')
     .replace(/GENERATED ALWAYS AS[\s\S]*?STORED/gi, '')
 
   const translatedParams = params.map((p) => {
@@ -160,7 +129,14 @@ export const pool = {
         return resolve({ rows: [] })
       }
 
-      const isWrite = /^\s*(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|PRAGMA)\b/i.test(sQuery)
+      // A02: route on the comment-stripped SQL. Migration bodies (and some
+      // queries) begin with `--` comment lines; testing the raw text would
+      // misclassify them as reads, and node-sqlite3's db.all() then silently
+      // executes ONLY the first statement — dropping the remaining tables
+      // with no error (this is how 010/011/012 lost tables on SQLite).
+      // sqlCleaned is only used for the routing decision; the driver still
+      // receives the original sQuery unchanged.
+      const isWrite = /^\s*(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|PRAGMA)\b/i.test(sqlCleaned)
 
       if (isWrite) {
         const hasParams = sParams && sParams.length > 0

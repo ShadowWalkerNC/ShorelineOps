@@ -37,11 +37,13 @@ export async function runSeed() {
   console.log('[seed] Empty database detected — seeding...')
 
   const hash = await bcrypt.hash(adminPassword, 12)
+  // A02: explicit id — the uuid_generate_v4() column default only exists on
+  // PostgreSQL; pool's SQLite translation strips it, so generate client-side.
   await pool.query(
-    `INSERT INTO users (name, email, password, role)
-     VALUES ('Admin User', $1, $2, 'admin')
+    `INSERT INTO users (id, name, email, password, role)
+     VALUES ($1, 'Admin User', $2, $3, 'admin')
      ON CONFLICT (email) DO NOTHING`,
-    [adminEmail, hash]
+    [crypto.randomUUID(), adminEmail, hash]
   )
 
   if (generated) {
@@ -56,13 +58,13 @@ export async function runSeed() {
     for (const r of RESIDENTS) {
       await pool.query(
         `INSERT INTO residents
-          (name, room, status, diet_type, texture, portion_size, ensure_per_day,
+          (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
            allergies, beverages, birthday_month, birthday_day, serving_location,
            table_assignment, likes, dislikes, special_instructions)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          ON CONFLICT DO NOTHING`,
         [
-          r.name, r.room, r.status, r.diet_type, r.texture, r.portion_size,
+          crypto.randomUUID(), r.name, r.room, r.status, r.diet_type, r.texture, r.portion_size,
           r.ensure_per_day, r.allergies, r.beverages, r.birthday_month,
           r.birthday_day, r.serving_location, r.table_assignment,
           r.likes, r.dislikes, r.special_instructions,
@@ -159,15 +161,22 @@ export async function runSeed() {
     ]
 
     for (const rec of recipesToSeed) {
-      const { rows: [inserted] } = await pool.query(`
-        INSERT INTO recipes (name, category, base_servings, prep_time_mins, cook_time_mins, haccp_temp_f, iddsi_level, allergens, ingredients, steps, notes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        RETURNING id
+      // A02: no RETURNING clause — pool's SQLite write path returns no rows,
+      // so fetch the new id with a follow-up SELECT (this block only runs when
+      // the recipes table is empty, so the name lookup is unambiguous).
+      await pool.query(`
+        INSERT INTO recipes (id, name, category, base_servings, prep_time_mins, cook_time_mins, haccp_temp_f, iddsi_level, allergens, ingredients, steps, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       `, [
-        rec.name, rec.category, rec.baseServings, rec.prepTimeMins, rec.cookTimeMins,
+        crypto.randomUUID(), rec.name, rec.category, rec.baseServings, rec.prepTimeMins, rec.cookTimeMins,
         rec.haccpTempF, rec.iddsiLevel, rec.allergens,
         JSON.stringify(rec.ingredients), JSON.stringify(rec.steps), rec.notes
       ])
+
+      const { rows: [inserted] } = await pool.query(
+        `SELECT id FROM recipes WHERE name = $1`,
+        [rec.name]
+      )
 
       await pool.query(`
         INSERT INTO recipe_nutrients (recipe_id, calories, protein_g, carbs_g, fat_g, sat_fat_g, sodium_mg, potassium_mg, phosphorus_mg, fiber_g, sugar_g)

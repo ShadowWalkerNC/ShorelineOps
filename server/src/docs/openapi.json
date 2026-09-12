@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3015/api",
+      "url": "http://localhost:3001/api",
       "description": "Local Facility Gateway"
     },
     {

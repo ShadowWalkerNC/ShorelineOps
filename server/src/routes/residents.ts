@@ -25,6 +25,54 @@ const ResidentSchema = z.object({
   specialInstructions: z.string().default(''),
 })
 
+/** Normalize the allergies column (pg TEXT[] arrives as an array; SQLite stores JSON text). */
+function normAllergies(v: any): string[] {
+  if (Array.isArray(v)) return [...v].sort()
+  if (typeof v === 'string') {
+    try {
+      const p = JSON.parse(v)
+      if (Array.isArray(p)) return [...p].sort()
+    } catch { /* not JSON — treat as empty */ }
+  }
+  return []
+}
+
+/** Clinical fields tracked by resident_profile_history (migration 013). */
+function clinicalSnapshot(row: any) {
+  return {
+    dietType: row.diet_type ?? 'Regular',
+    texture: row.texture ?? 'Regular',
+    isNpo: Boolean(row.is_npo),
+    npoReason: row.npo_reason ?? '',
+    allergies: normAllergies(row.allergies),
+  }
+}
+
+function clinicalChanged(
+  before: ReturnType<typeof clinicalSnapshot>,
+  after: ReturnType<typeof clinicalSnapshot>,
+) {
+  return before.dietType !== after.dietType
+    || before.texture !== after.texture
+    || before.isNpo !== after.isNpo
+    || before.npoReason !== after.npoReason
+    || JSON.stringify(before.allergies) !== JSON.stringify(after.allergies)
+}
+
+/** Map DB resident_profile_history row → camelCase object */
+function toHistoryRow(row: any) {
+  return {
+    id: row.id,
+    residentId: row.resident_id,
+    profileVersion: row.profile_version,
+    dietType: row.diet_type,
+    texture: row.texture,
+    isNpo: Boolean(row.is_npo),
+    allergies: normAllergies(row.allergies),
+    createdAt: row.created_at,
+  }
+}
+
 /** Map DB snake_case row → frontend camelCase object */
 function toResident(row: any) {
   return {
@@ -100,6 +148,32 @@ residentsRouter.get('/:id', async (req: AuthRequest, res, next) => {
 })
 
 // ─────────────────────────────────────────────
+// GET /api/residents/:id/history
+// Diet/texture/allergy/NPO change trail, newest first (A06 audit trail).
+// Same auth as the resident read (requireAuth is mounted at the router level).
+// ─────────────────────────────────────────────
+residentsRouter.get('/:id/history', async (req: AuthRequest, res, next) => {
+  try {
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM residents WHERE id = $1', [req.params.id]
+    )
+    if (!existing[0]) return res.status(404).json({ error: 'Resident not found' })
+    const { rows } = await pool.query(
+      `SELECT * FROM resident_profile_history
+       WHERE resident_id = $1
+       ORDER BY created_at DESC, profile_version DESC`,
+      [req.params.id]
+    )
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
+       VALUES ('VIEW_DIET_HISTORY', $1, $2, 'resident', 'success')`,
+      [req.userId, req.params.id]
+    )
+    res.json(rows.map(toHistoryRow))
+  } catch (err) { next(err) }
+})
+
+// ─────────────────────────────────────────────
 // POST /api/residents
 // ─────────────────────────────────────────────
 residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, next) => {
@@ -136,9 +210,11 @@ residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, 
   try {
     const data = ResidentSchema.partial().parse(req.body)
     const { rows: existing } = await pool.query(
-      'SELECT id FROM residents WHERE id = $1', [req.params.id]
+      `SELECT diet_type, texture, allergies, is_npo, npo_reason, profile_version
+       FROM residents WHERE id = $1`, [req.params.id]
     )
     if (!existing[0]) return res.status(404).json({ error: 'Resident not found' })
+    const before = clinicalSnapshot(existing[0])
 
     const { rows } = await pool.query(`
       UPDATE residents SET
@@ -174,6 +250,29 @@ residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, 
        VALUES ('EDIT_RESIDENT', $1, $2, 'resident', 'success')`,
       [req.userId, req.params.id]
     )
+
+    // A06: clinical safety audit trail — diet, texture, allergy, or NPO changes
+    // write a versioned history row (before/after preserved across the trail).
+    const after = clinicalSnapshot(rows[0])
+    if (clinicalChanged(before, after)) {
+      const newVersion = (existing[0].profile_version ?? 1) + 1
+      await pool.query(
+        'UPDATE residents SET profile_version = $1, updated_at = NOW() WHERE id = $2',
+        [newVersion, req.params.id]
+      )
+      await pool.query(
+        `INSERT INTO resident_profile_history
+           (resident_id, profile_version, diet_type, texture, is_npo, allergies)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [req.params.id, newVersion, after.dietType, after.texture, after.isNpo, after.allergies]
+      )
+      await pool.query(
+        `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+         VALUES ('DIET_PROFILE_CHANGED', $1, $2, 'resident', 'success', $3)`,
+        [req.userId, req.params.id,
+         JSON.stringify({ before, after, profile_version: newVersion })]
+      )
+    }
     res.json(toResident(rows[0]))
   } catch (err) { next(err) }
 })

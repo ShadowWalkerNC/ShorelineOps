@@ -41,6 +41,25 @@ export class PointClickCareConnector implements EhrConnector {
   public readonly systemCode = 'pointclickcare'
   public readonly systemName = 'PointClickCare EHR'
 
+  /**
+   * A07: True only when live PointClickCare OAuth credentials are configured.
+   * With no credentials the census route refuses to serve data (503) rather
+   * than presenting the synthetic stub census below as live EHR data.
+   */
+  isConnected(): boolean {
+    return Boolean(
+      process.env.PCC_CLIENT_ID &&
+      process.env.PCC_CLIENT_SECRET &&
+      process.env.PCC_FACILITY_ID
+    )
+  }
+
+  /**
+   * A07: SYNTHETIC STUB — returns built-in sample residents; this is NOT live
+   * EHR data. The census route only calls this when isConnected() is true and
+   * flags the payload `demo: true`. Replace with a real PCC FHIR/OAuth call to
+   * serve live census (and drop the demo flag) once the live bridge exists.
+   */
   async getCensus(facilityId: string): Promise<EhrResidentUpdate[]> {
     return [
       {

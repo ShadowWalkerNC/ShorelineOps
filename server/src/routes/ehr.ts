@@ -5,24 +5,216 @@
  * dynamic meal validation, and therapeutic nutritional analysis.
  */
 
-import { Router, Request, Response } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
+import crypto from 'crypto'
+import jwt from 'jsonwebtoken'
 import { PointClickCareConnector } from '../integrations/pointclickcare'
 import { USDAFoodDataConnector } from '../integrations/usda'
-import { requireAuth } from '../middleware/requireAuth'
+import { requireAuth, getJwtSecret, API_ROLES } from '../middleware/requireAuth'
+import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
 
 export const ehrRouter = Router()
 const pcc = new PointClickCareConnector()
 const usda = new USDAFoodDataConnector()
 
+// ---------------------------------------------------------------------------
+// EHR webhook security (A04) — HMAC-SHA256, fail-closed, audit-logged
+// ---------------------------------------------------------------------------
+
+/** Minimum accepted EHR webhook secret length — mirrors the timecard kiosk rule. */
+const EHR_WEBHOOK_SECRET_MIN_LENGTH = 16
+const EHR_SIGNATURE_HEADER = 'x-ehr-signature'
+
+/** Roles allowed to run the triage simulator. Strict: dietitian or admin only. */
+const SIMULATOR_ROLES = ['dietitian', 'admin'] as const
+
+function getEhrWebhookSecret(): string | undefined {
+  const secret = process.env.EHR_WEBHOOK_SECRET
+  return secret && secret.length >= EHR_WEBHOOK_SECRET_MIN_LENGTH ? secret : undefined
+}
+
+// Boot warning + fail closed: with no usable secret the webhook refuses all traffic.
+if (!getEhrWebhookSecret()) {
+  console.warn(
+    '[EHR webhook] EHR_WEBHOOK_SECRET missing or <16 chars — ' +
+    'POST /api/ehr/webhook will refuse all traffic (fail closed)'
+  )
+}
+
+/**
+ * Pure HMAC-SHA256 signature check over the raw request bytes.
+ * Exported for unit testing; the middleware below supplies request state.
+ */
+export function verifyEhrHmacSignature(
+  rawBody: Buffer | undefined,
+  signatureHeader: string | undefined,
+  secret: string
+): boolean {
+  if (!rawBody || !signatureHeader) return false
+  // Accept the GitHub-style "sha256=<hex>" scheme, or a bare hex digest.
+  const provided = signatureHeader.startsWith('sha256=') ? signatureHeader.slice(7) : signatureHeader
+  if (!/^[0-9a-fA-F]{64}$/.test(provided)) return false
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
+  return crypto.timingSafeEqual(
+    Buffer.from(expected, 'utf8'),
+    Buffer.from(provided.toLowerCase(), 'utf8')
+  )
+}
+
+type EhrSecurityAction = 'ehr.webhook.rejected' | 'ehr.webhook.disabled' | 'ehr.simulate.denied'
+
+/** Best-effort security-event audit write. Never breaks the security response path. */
+async function auditEhrSecurityEvent(
+  req: Request,
+  action: EhrSecurityAction,
+  reason: string,
+  extra?: { userId?: string | null; role?: string | null }
+): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, ip_address, details)
+       VALUES ($1, $2, $3, 'failure', $4, $5)`,
+      [
+        action,
+        extra?.userId ?? null,
+        action === 'ehr.simulate.denied' ? 'ehr_simulation' : 'ehr_webhook',
+        req.ip ?? null,
+        JSON.stringify({ reason, at: new Date().toISOString(), role: extra?.role ?? null }),
+      ]
+    )
+  } catch (err) {
+    console.error(`[EHR security] audit write failed (${action}):`, (err as Error).message)
+  }
+}
+
+interface RawBodyRequest extends Request {
+  rawBody?: Buffer
+}
+
+/**
+ * A05: audit-logs every RD reconciliation decision (approve or reject).
+ * Actor identity comes from the verified JWT claims — never the request body.
+ * Best-effort: never breaks the resolve path.
+ */
+async function auditReconciliationDecision(
+  req: Request,
+  opts: {
+    itemId: string
+    residentId: string | null
+    residentName?: string | null
+    changeType: string
+    decision: string
+    actorUserId: string
+    actorRole: string
+  }
+): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, ip_address, details)
+       VALUES ('ehr.reconciliation.resolved', $1, 'ehr_reconciliation_queue', 'success', $2, $3)`,
+      [
+        opts.actorUserId,
+        req.ip ?? null,
+        JSON.stringify({
+          itemId: opts.itemId,
+          residentId: opts.residentId,
+          residentName: opts.residentName ?? null,
+          changeType: opts.changeType,
+          decision: opts.decision,
+          actorRole: opts.actorRole,
+          at: new Date().toISOString(),
+        }),
+      ]
+    )
+  } catch (err) {
+    console.error('[EHR reconciliation] audit write failed:', (err as Error).message)
+  }
+}
+
+/**
+ * Gates POST /api/ehr/webhook on HMAC-SHA256 verification against
+ * EHR_WEBHOOK_SECRET. Missing/invalid signature → 401 + audit-logged.
+ * Unset secret → 503 refusing all traffic (fail closed, kiosk pattern).
+ */
+function requireEhrWebhookSignature(req: RawBodyRequest, res: Response, next: NextFunction) {
+  const secret = getEhrWebhookSecret()
+  if (!secret) {
+    void auditEhrSecurityEvent(
+      req, 'ehr.webhook.disabled',
+      'EHR_WEBHOOK_SECRET not configured — refusing traffic (fail closed)'
+    )
+    return res.status(503).json({ error: 'EHR webhook disabled — EHR_WEBHOOK_SECRET not configured' })
+  }
+
+  const header = req.headers[EHR_SIGNATURE_HEADER]
+  const signatureHeader = Array.isArray(header) ? header[0] : header
+  if (!signatureHeader) {
+    void auditEhrSecurityEvent(req, 'ehr.webhook.rejected', 'missing X-EHR-Signature header')
+    return res.status(401).json({ error: 'Missing webhook signature' })
+  }
+
+  if (!verifyEhrHmacSignature(req.rawBody, signatureHeader, secret)) {
+    void auditEhrSecurityEvent(req, 'ehr.webhook.rejected', 'invalid webhook signature')
+    return res.status(401).json({ error: 'Invalid webhook signature' })
+  }
+
+  next()
+}
+
+/**
+ * Gates POST /api/ehr/simulate-inbound-triage: dietitian or admin only.
+ * Anonymous, bad-token, or insufficient-role calls → 403 + audit-logged.
+ * (Strict role equality: the rank-based requireRole('dietitian') would also admit
+ * frontdesk/manager, so this security gate checks the two privileged roles exactly.)
+ */
+function requireDietitianOrAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  const header = req.headers.authorization
+  if (!header?.startsWith('Bearer ')) {
+    void auditEhrSecurityEvent(req, 'ehr.simulate.denied', 'anonymous call — no bearer token')
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+
+  try {
+    const payload = jwt.verify(header.slice(7), getJwtSecret()) as { sub: string; role?: string }
+    if (!payload.sub) throw new Error('missing sub')
+    const role = payload.role && (API_ROLES as readonly string[]).includes(payload.role)
+      ? payload.role
+      : undefined
+    req.userId = payload.sub
+    if (!role || !(SIMULATOR_ROLES as readonly string[]).includes(role)) {
+      void auditEhrSecurityEvent(
+        req, 'ehr.simulate.denied', 'insufficient role',
+        { userId: payload.sub, role: role ?? 'unknown' }
+      )
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    req.userRole = role as AuthRequest['userRole']
+    next()
+  } catch {
+    void auditEhrSecurityEvent(req, 'ehr.simulate.denied', 'invalid or expired token')
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+}
+
 /**
  * GET /api/ehr/census
- * Pulls current active census from connected EHR
+ * Pulls current active census from connected EHR.
+ * A07: never serve synthetic data as live EHR data. With no EHR configured
+ * → 503 EHR_NOT_CONNECTED. The built-in connector is a synthetic stub, so a
+ * served payload is explicitly flagged `demo: true`.
  */
 ehrRouter.get('/census', requireAuth, requireTier('enterprise'), async (_req: Request, res: Response) => {
   try {
+    if (!pcc.isConnected()) {
+      return res.status(503).json({
+        success: false,
+        code: 'EHR_NOT_CONNECTED',
+        error: 'EHR not connected — configure PCC_CLIENT_ID, PCC_CLIENT_SECRET and PCC_FACILITY_ID to enable live census.',
+      })
+    }
     const census = await pcc.getCensus('FAC-DEFAULT')
-    res.json({ system: pcc.systemName, count: census.length, residents: census })
+    res.json({ system: pcc.systemName, count: census.length, residents: census, demo: true })
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to fetch EHR census' })
   }
@@ -30,9 +222,12 @@ ehrRouter.get('/census', requireAuth, requireTier('enterprise'), async (_req: Re
 
 /**
  * POST /api/ehr/webhook
- * Ingests inbound diet order, texture, or ADT update from PointClickCare / MatrixCare
+ * Ingests inbound diet order, texture, or ADT update from PointClickCare / MatrixCare.
+ * A04: gated on HMAC-SHA256 signature (X-EHR-Signature: sha256=<hex>) against
+ * EHR_WEBHOOK_SECRET. Missing/invalid signature → 401 + audit-logged.
+ * Unset secret → 503, route refuses all traffic (fail closed).
  */
-ehrRouter.post('/webhook', async (req: Request, res: Response) => {
+ehrRouter.post('/webhook', requireEhrWebhookSignature, async (req: Request, res: Response) => {
   try {
     const update = await pcc.processInboundUpdate(req.body)
     const validation = await pcc.validateResidentMeals(update)
@@ -103,11 +298,19 @@ ehrRouter.get('/reconciliation-queue', requireAuth, async (req: Request, res: Re
 /**
  * POST /api/ehr/reconciliation-queue/:id/resolve
  * RD resolves an inbound EHR change (APPROVE or REJECT)
+ * A05: dietitian or admin only — reuses A04's requireDietitianOrAdmin (strict
+ * role equality, not rank-based, so frontdesk/manager are refused). Denied
+ * calls → 403 + audit-logged by the middleware.
  */
-ehrRouter.post('/reconciliation-queue/:id/resolve', requireAuth, async (req: Request, res: Response) => {
+ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params
-    const { action, resolvedBy = 'Registered Dietitian' } = req.body // 'APPROVED_BY_RD' | 'REJECTED_BY_RD'
+    const { action } = req.body // 'APPROVED_BY_RD' | 'REJECTED_BY_RD'
+    // A05: any client-supplied `resolvedBy` is deliberately ignored — the actor
+    // identity comes from the verified JWT claims (req.userId/req.userRole) only.
+    const actorUserId = req.userId ?? 'unknown'
+    const actorRole = req.userRole ?? 'unknown'
+    const resolvedBy = actorUserId
 
     if (!action || !['APPROVED_BY_RD', 'REJECTED_BY_RD'].includes(action)) {
       return res.status(400).json({ error: "action must be 'APPROVED_BY_RD' or 'REJECTED_BY_RD'" })
@@ -127,6 +330,18 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireAuth, async (req: Req
       SET status = $1, resolved_by = $2, resolved_at = NOW()
       WHERE id = $3
     `, [action, resolvedBy, id])
+
+    // A05: audit-log every decision with the JWT-derived actor identity —
+    // item id, resident, change type, decision, actor, timestamp.
+    await auditReconciliationDecision(req, {
+      itemId: id,
+      residentId: triageItem.resident_id ?? null,
+      residentName: triageItem.resident_name ?? null,
+      changeType: triageItem.change_type,
+      decision: action,
+      actorUserId,
+      actorRole,
+    })
 
     // If approved, commit change to resident record and increment profile version
     if (action === 'APPROVED_BY_RD' && triageItem.resident_id) {
@@ -169,9 +384,10 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireAuth, async (req: Req
 
 /**
  * POST /api/ehr/simulate-inbound-triage
- * Simulates inbound EHR webhook with automated RD triage evaluation
+ * Simulates inbound EHR webhook with automated RD triage evaluation.
+ * A04: dietitian or admin only — anonymous/insufficient-role calls → 403 + audit-logged.
  */
-ehrRouter.post('/simulate-inbound-triage', async (req: Request, res: Response) => {
+ehrRouter.post('/simulate-inbound-triage', requireDietitianOrAdmin, async (req: Request, res: Response) => {
   try {
     const { residentId, incomingDiet, incomingTexture, newAllergens = [] } = req.body
 

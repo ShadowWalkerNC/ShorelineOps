@@ -98,7 +98,7 @@ export default defineConfig({
     hmr: false,   // Disable HMR — Electron's renderer blocks the WS upgrade (HTTP 400)
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:3015',
+        target: process.env.VITE_API_URL || 'http://localhost:3001',
         changeOrigin: true,
       },
     },

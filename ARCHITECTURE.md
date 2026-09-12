@@ -90,3 +90,19 @@ The user interface implements **shadcn/ui** primitives combined with Apple Human
 - **Audit Engine**: `scripts/operations_consultant_audit.js` runs automated operational audits across clinical safety, kitchen ergonomics, supply chain, CMS survey readiness, and open core licensing.
 - **Daily Log**: Master report generated at `docs/DAILY_OPERATIONS_AUDIT.md`.
 - **Recurring Schedule**: Standing background cron (`0 9 * * *` - Daily at 9:00 AM) runs proactive research and audits.
+
+---
+
+## 7. Database Schema — Single Source of Truth
+
+- **Canonical schema**: `server/src/db/migrate.ts`. `runMigrations()` is called once at
+  server boot (`server/src/index.ts`) and applies the ordered migration chain
+  (001–015). This is the **only** schema definition that executes.
+- **SQLite fallback**: `server/src/db/pool.ts` translates the canonical migration SQL
+  to SQLite-compatible syntax at query time. It contains **no DDL of its own** —
+  schema and admin seeding flow exclusively through `runMigrations()` + `runSeed()`
+  (`server/src/db/seed.ts`).
+- **Legacy archives**: superseded definitions live in `docs/archive/schema-legacy/`
+  (old `migrations/*.sql` copies, `db/schema.sql`, `supabase/schema.sql`) for
+  reference only — never execute them, and never resurrect tables from them.
+  Anything the app needs must be added as a new migration in `migrate.ts`.
