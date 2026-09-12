@@ -33,7 +33,7 @@ ShorelineOps is architected as a modular, high-reliability platform that bridges
 
 ## Database schema management (A02/A03)
 
-- Canonical migration path: `server/src/db/migrate.ts` → `runMigrations()`. Legacy schemas are archived under `docs/archive/schema-legacy/` and are not consulted by the server.
+- Canonical migration path: `server/src/db/migrate.ts` → `runMigrations()`. Legacy competing schema files (`server/src/db/schema.sql`, `server/src/db/migrations/001_initial_schema.sql`, `supabase/schema.sql`) were removed in Wave A and do not exist anywhere the server can read; the canonical schema is `server/src/db/*` (migrations under `server/src/db/migrations/`).
 - Migrations are append-only: existing migration bodies are never edited; gaps are healed with new migrations (e.g. `016_purchasing_reporting_backfill`, which creates the 8 tables defined in `010`/`011`/`012` but never created in databases where those migrations were already marked applied: `vendor_items`, `facility_item_maps`, `order_guides`, `purchase_orders`, `purchase_order_lines`, `daily_cost_log`, `recipe_nutrients`, `menu_item_recipes`).
-- `server/shoreline.db` (checked-in dev DB) is regenerated from a fresh `runMigrations()` + canonical `db/seed.ts` so it matches the schema definition exactly.
+- `server/shoreline.db` (checked-in dev DB) is regenerated from a fresh `runMigrations()` + canonical `server/src/db/seed.ts` so it matches the schema definition exactly.
 - Boot-time drift guard: after migrations, `assertSchemaIntegrity()` (same file) verifies all 28 expected tables exist; any missing table fails closed — the server refuses to start and names the missing tables.

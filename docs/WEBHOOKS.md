@@ -1,8 +1,9 @@
 # ShorelineOps Webhook Events — Developer Reference
 
-> **Version:** 6.0.0
+> **Version:** 6.1.0
 > **Base:** `POST /api/webhooks/subscribe`
 > **Signature header:** `X-Shoreline-Signature: sha256=<hex>`
+> **Wave A note (2026-09-12):** this document now also covers the two *inbound* webhook receivers — the Stripe billing webhook and the inbound EHR webhook — and their signature-verification requirements. The sections below describe outbound events ShorelineOps fires to your endpoints.
 
 ---
 
@@ -56,6 +57,25 @@ app.post('/hooks', (req, res) => {
   res.sendStatus(200)
 })
 ```
+
+---
+
+## Inbound Webhooks (Receivers ShorelineOps Hosts)
+
+These are endpoints *you* call into. Both verify signatures on the **raw request bytes before JSON parsing**, and both fail closed when their secret is not configured.
+
+### Stripe billing webhook — `POST /api/billing/webhook`
+
+- The raw body is preserved with `express.raw` (mounted before the global JSON parser), and the Stripe signature is checked against those exact bytes — the body is only parsed as JSON *after* verification.
+- The `Stripe-Signature` header is verified per Stripe's scheme: the signed payload is `<timestamp>.<raw body bytes>`, signed with HMAC-SHA256 using `STRIPE_WEBHOOK_SECRET`. Timestamps outside a 300-second tolerance are rejected.
+- If `STRIPE_WEBHOOK_SECRET` is missing (or too short), the endpoint refuses all traffic with `503` — it never accepts an unsigned event. An invalid or missing signature returns `400` and is logged.
+- Handled events: `invoice.payment_succeeded` → payment confirmed (dunning cleared), `invoice.payment_failed` → 14-day administrative grace period entered before any lockout. Clinical operations are never locked out by billing state.
+
+### Inbound EHR webhook — `POST /api/ehr/webhook`
+
+- Ingests inbound diet order, texture, or ADT updates from PointClickCare / MatrixCare. Every request must carry `X-EHR-Signature: sha256=<hex>`, where the hex digest is HMAC-SHA256 of the raw request body (stashed on `req.rawBody` before JSON parsing) using `EHR_WEBHOOK_SECRET` (minimum 16 chars).
+- Missing/invalid signature → `401`, and the rejection is audit-logged. If `EHR_WEBHOOK_SECRET` is not configured, the endpoint refuses all traffic with `503` (fail closed) — no inbound EHR data is accepted without a verifiable sender.
+- Accepted updates are processed by the PointClickCare connector (`processInboundUpdate`) and run through meal-safety validation (`validateResidentMeals`) before they can reach the RD triage queue.
 
 ---
 

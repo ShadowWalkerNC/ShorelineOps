@@ -61,7 +61,10 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
             </div>
             <span class="ml-2 truncate text-slate-500 dark:text-slate-400">Shoreline Executive Dashboard</span>
           </div>
-          <span class="text-[11px] text-emerald-600 font-bold">● Live Demo Facility</span>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-300/60 dark:border-amber-800/60 font-mono">DEMO DATA</span>
+            <span class="text-[11px] text-emerald-600 font-bold">● Live Demo Facility</span>
+          </div>
         </div>
         <img
           src="/screenshots/dashboard_overview.png"
@@ -81,12 +84,12 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
           <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Free software for independent homes</div>
         </div>
         <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <div class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 font-sans">Zero Diet Errors</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Prevents pureed & allergy mix-ups</div>
+          <div class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 font-sans">Auto Diet Blocks</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">NPO, allergy & pureed locks that can't be overridden</div>
         </div>
         <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
           <div class="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 font-sans">1-Click Inspections</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Print complete state survey logs instantly</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Print state survey logs instantly — Enterprise plan</div>
         </div>
       </div>
 
@@ -127,7 +130,7 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
             <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Automatic Price Comparison:</strong> We compare Dennis vs Sysco so you get the best deal on every box</li>
             <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Large Touch Tablet:</strong> Big buttons cooks can easily tap with gloves on</li>
             <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>Diet Safety Locks:</strong> Big red alerts prevent serving the wrong food to pureed or allergy residents</li>
-            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>1-Click Inspection Binder:</strong> All food safety and meal records ready in seconds</li>
+            <li class="flex items-start gap-2.5"><span class="text-emerald-500 font-bold">✓</span> <strong>1-Click Inspection Binder (Enterprise):</strong> All food safety and meal records ready in seconds</li>
           </ul>
         </div>
       </div>
@@ -183,7 +186,7 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
         <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
           <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Pureed, Minced, and Soft texture badges</li>
           <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Strict NPO and allergy stop-warnings</li>
-          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> Connected to PointClickCare EHR for automatic updates</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✓</span> PointClickCare EHR sync — connects with your PCC credentials (Enterprise)</li>
         </ul>
       </div>
     </div>
@@ -201,7 +204,7 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
         <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
           <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Big buttons designed for cooks wearing wet gloves</li>
           <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Hands-free voice temperature logging (165°F core temp)</li>
-          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Step-by-step meal tray assembly and resident hydration tracking</li>
+          <li class="flex items-center gap-2"><span class="text-rose-500 font-bold">✓</span> Step-by-step meal tray assembly with QR tray verification</li>
         </ul>
       </div>
       <div class="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
@@ -317,13 +320,13 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
             shoreline mcp tools
           </div>
         </div>
-        <!-- SDK Roadmap -->
+        <!-- SDK & Webhooks -->
         <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-apple-card">
           <div class="text-2xl mb-2">📦</div>
-          <h3 class="font-bold text-slate-900 dark:text-white text-sm mb-1">SDK & Webhooks <span class="text-xs text-violet-500 font-bold ml-1">v6.0</span></h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">TypeScript SDK and webhook events for EHR triage, HACCP alerts, and CPD budget variance.</p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-sm mb-1">SDK & Webhooks <span class="text-xs text-emerald-500 font-bold ml-1">Available</span></h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">TypeScript SDK plus signature-verified webhook events for billing, EHR triage, and HACCP alerts.</p>
           <div class="bg-slate-950 rounded-xl px-3 py-2 font-mono text-xs text-violet-400">
-            Coming in v6.0
+            npm i @shoreline/sdk
           </div>
         </div>
       </div>
