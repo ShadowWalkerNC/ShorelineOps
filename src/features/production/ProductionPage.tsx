@@ -8,9 +8,12 @@ import type { ProductionSheet } from '@/types/production'
 import { productionApi } from '@/api/production'
 import ProductionSheetView from './components/ProductionSheet'
 import HydrationPassTab from './components/HydrationPass'
+import TempLogPanel from '../kitchen/TempLogPanel' // C01: HACCP temperature logging tab (self-contained)
+import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from '../kitchen/KitchenModeContext'
+import ClinicalSafetyStrip from '../kitchen/ClinicalSafetyStrip'
 
 // ── Constants ─────────────────────────────────────────────────────────────────────
-type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists' | 'hydration'
+type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists' | 'hydration' | 'templog'
 
 const SERVICE_TABS: { id: ServiceTab; label: string; icon: string }[] = [
   { id: 'worksheet',       label: 'Worksheet',    icon: '📋' },
@@ -18,6 +21,7 @@ const SERVICE_TABS: { id: ServiceTab; label: string; icon: string }[] = [
   { id: 'preplist',        label: 'Prep List',    icon: '👨‍🍳' },
   { id: 'shiftchecklists', label: 'Shift Checks', icon: '✅' },
   { id: 'hydration',       label: 'Hydration',    icon: '💧' },
+  { id: 'templog',         label: 'Temp Log',     icon: '🌡️' }, // C01
 ]
 
 const DAYS: DayOfWeek[] = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -38,7 +42,7 @@ function StatCard({ label, value, color, sub }: { label: string; value: number |
     <div className="sl-stat-card">
       <div className="sl-eyebrow" style={{ marginBottom:'var(--space-1)' }}>{label}</div>
       <div style={{ fontSize:'var(--text-4xl)', fontWeight:'var(--weight-black)', fontFamily:'var(--font-display)', color: color ?? 'var(--color-primary)', lineHeight:1 }}>{value}</div>
-      {sub && <div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)', marginTop:'var(--space-1)' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'var(--text-base)', color:'var(--text-muted)', marginTop:'var(--space-1)' }}>{sub}</div>}
     </div>
   )
 }
@@ -230,7 +234,7 @@ function WorksheetTab() {
           </div>
 
           <div style={{ display:'flex', justifyContent:'flex-end' }}>
-            <button onClick={() => window.print()} className="btn btn-outline">🖸 Print Sheet</button>
+            <button onClick={() => window.print()} className="btn btn-outline" style={{ minHeight:44 }}>🖸 Print Sheet</button>
           </div>
         </>
       )}
@@ -381,14 +385,14 @@ function TrayTicketCard({ ticket:t, onRemove, onUpdate }: { ticket:TrayTicket; o
         </div>
       </div>
       <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', padding:'10px 12px', display:'flex', flexDirection:'column', gap:'var(--space-1)' }}>
-        <span style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>Diet: <b style={{ color:'var(--text-primary)' }}>{t.dietType}</b> · Texture: <b>{t.texture}</b> · Portion: <b>{t.portionSize}</b></span>
-        {t.allergies.length>0&&<span style={{ fontSize:'var(--text-sm)', color:'#dc2626', fontWeight:'var(--weight-bold)' }}>⚠ Allergies: {t.allergies.join(', ')}</span>}
+        <span style={{ fontSize:'var(--text-base)', color:'var(--text-secondary)' }}>Diet: <b style={{ color:'var(--text-primary)' }}>{t.dietType}</b> · Texture: <b>{t.texture}</b> · Portion: <b>{t.portionSize}</b></span>
+        {t.allergies.length>0&&<span style={{ fontSize:'var(--text-base)', color:'#dc2626', fontWeight:'var(--weight-bold)' }}>⚠ Allergies: {t.allergies.join(', ')}</span>}
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
         {([['entree','Entrée'],['sides','Sides'],['dessert','Dessert'],['beverages','Beverages'],['notes','Special Instructions']] as [keyof TrayTicket,string][]).map(([field,lbl])=>(
           (field!=='dessert'||t.dessert)?(
             <div key={field as string}>
-              <label style={{ fontSize:'var(--text-xs)' }}>{lbl}</label>
+              <label style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)' }}>{lbl}</label>
               <input className="sl-input" value={t[field] as string} onChange={e=>onUpdate(t.id,field,e.target.value)} />
             </div>
           ):null
@@ -483,7 +487,7 @@ function CulinaryPrepTab() {
                     </div>
                     {task.detail&&<div style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)', lineHeight:1.5 }}>{task.detail}</div>}
                   </div>
-                  <button onClick={e=>{e.stopPropagation();removeManual(task.id)}} style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:16, padding:'0 4px', flexShrink:0 }} aria-label="Remove task">×</button>
+                  <button onClick={e=>{e.stopPropagation();removeManual(task.id)}} style={{ background:'none', border:'none', color:'var(--color-danger)', cursor:'pointer', fontSize:20, fontWeight:700, padding:'10px 14px', minHeight:44, minWidth:44, flexShrink:0 }} aria-label="Remove task">×</button>
                 </div>
               )
             })}
@@ -517,7 +521,7 @@ function CulinaryPrepTab() {
         </div>
       </div>
       <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        <button onClick={()=>window.print()} className="btn btn-outline">🖸 Print Prep List</button>
+        <button onClick={()=>window.print()} className="btn btn-outline" style={{ minHeight:44 }}>🖸 Print Prep List</button>
       </div>
     </div>
   )
@@ -574,18 +578,26 @@ function ShiftChecklistsTab() {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────────────
-export default function ProductionPage() {
+function ProductionPageView() {
   const [activeTab,    setActiveTab]    = useState<ServiceTab>('worksheet')
-  const { fetch: fetchResidents }       = useResidentsStore()
+  const { residents, fetch: fetchResidents } = useResidentsStore()
   const { fetchWeeks, fetchItems }      = useMenuStore()
 
   useEffect(() => { fetchResidents(); fetchWeeks(); fetchItems() }, []) // eslint-disable-line
 
   return (
-    <div className="sl-page fade-in">
+    <KitchenFitShell className="sl-page fade-in">
       <div className="sl-page-header">
-        <h1 className="sl-page-title">Production &amp; Service</h1>
-        <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, shift checklists, and hydration passes.</p>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'var(--space-3)', flexWrap:'wrap' }}>
+          <div>
+            <h1 className="sl-page-title">Production &amp; Service</h1>
+            <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, shift checklists, and hydration passes.</p>
+          </div>
+          <KitchenModeToggle />
+        </div>
+        <div style={{ marginTop:'var(--space-3)' }}>
+          <ClinicalSafetyStrip residents={residents as any[]} />
+        </div>
       </div>
 
       <div
@@ -632,6 +644,7 @@ export default function ProductionPage() {
                 whiteSpace: 'nowrap',
                 transition: 'color 0.15s, border-color 0.15s',
                 marginBottom: -2,
+                minHeight: 44,
               }}
             >
               <span style={{ fontSize: 16 }}>{t.icon}</span>
@@ -653,7 +666,22 @@ export default function ProductionPage() {
         {activeTab==='preplist'        && <CulinaryPrepTab />}
         {activeTab==='shiftchecklists' && <ShiftChecklistsTab />}
         {activeTab==='hydration'       && <HydrationPassTab />}
+        {activeTab==='templog'         && <TempLogPanel />}
       </div>
-    </div>
+    </KitchenFitShell>
+  )
+}
+
+function ProductionPageInner() {
+  return <ProductionPageView />
+}
+
+/** C02: each kitchen page mounts its own provider so the per-device
+ *  kitchen-mode preference applies to this page's subtree. */
+export default function ProductionPage() {
+  return (
+    <KitchenModeProvider>
+      <ProductionPageInner />
+    </KitchenModeProvider>
   )
 }

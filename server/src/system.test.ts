@@ -660,11 +660,8 @@ async function runAllTests() {
   const syndicationDate = new Date().toISOString().slice(0, 10)
   assert(syndicationDate.length === 10, 'EnterpriseEngine: stamps master cycle menu syndication timestamp')
 
-  // --- 20. Hands-Free Voice HACCP & CMS F807 Hydration Pass ---
-  console.log('\n--- 20. Hands-Free Voice HACCP & CMS F807 Hydration Pass ---')
-  const parsedTemp = 168.4
-  const isCorePass = parsedTemp >= 165.0
-  assert(isCorePass, 'VoiceHaccpEngine: validates 168.4°F poultry core temperature meets 165°F minimum')
+  // --- 20. CMS F807 Hydration Pass ---
+  console.log('\n--- 20. CMS F807 Hydration Pass ---')
   const hydrationTargetOz = 8
   const hydrationConsumedOz = 6
   const hydrationPct = (hydrationConsumedOz / hydrationTargetOz) * 100

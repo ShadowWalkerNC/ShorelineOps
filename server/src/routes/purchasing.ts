@@ -42,7 +42,9 @@ import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
-import { MrpDemandForecastEngine, ScheduledMealDemand, InventoryItemStock } from '../engine/mrp'
+import { MrpDemandForecastEngine, InventoryItemStock } from '../engine/mrp'
+import { KitchenProductionEngine } from '../engine/production'
+import { rollupAvgUsage } from '../jobs/nightlyForecast'
 import { UnitConversionEngine, MASS_TO_GRAMS, VOLUME_TO_ML } from '../engine/units'
 
 export const purchasingRouter = Router()
@@ -421,33 +423,15 @@ purchasingRouter.post('/mrp-order', async (req: Request, res: Response, next: Ne
   try {
     const { vendorId } = req.body
 
-    // 1. Fetch active resident census
-    const { rows: residentRows } = await pool.query(
-      `SELECT count(*) as total FROM residents WHERE status = 'Active'`
-    )
-    const activeHeadcount = parseInt(residentRows[0]?.total || '50', 10)
+    // 1. Real forecast: active menu week × active census × meal slots, with
+    //    the census-trend buffer and Opt1/Opt2 choice splits (C05). Replaces the
+    //    hardcoded "Monday / lunchOpt1Meat" prototype scheduling — every recipe
+    //    is now placed on its real day/slot with real forecasted portions.
+    const forecast = await KitchenProductionEngine.buildScheduledMeals()
 
-    // 2. Fetch master recipes
-    const { rows: recipeRows } = await pool.query(`SELECT * FROM recipes`)
-    
-    // Build scheduled meals from active cycle or defaults
-    const scheduledMeals: ScheduledMealDemand[] = recipeRows.map(r => ({
-      dayOfWeek: 'Monday',
-      mealSlot: 'lunchOpt1Meat',
-      projectedPortions: activeHeadcount,
-      recipeLink: {
-        menuItemId: r.id,
-        menuItemName: r.name,
-        recipeId: r.id,
-        recipeName: r.name,
-        baseServings: parseFloat(r.base_servings || 10),
-        portionMultiplier: 1.0,
-        ingredients: r.ingredients || [],
-      },
-    }))
-
-    // 3. Explode BOM
-    const exploded = MrpDemandForecastEngine.explodeBillOfMaterials(scheduledMeals)
+    // 2. Explode BOM — the purchasing engines' ordering logic is untouched;
+    //    only their demand input is now the real scheduled-meals forecast.
+    const exploded = MrpDemandForecastEngine.explodeBillOfMaterials(forecast.meals)
 
     // 4. Fetch vendor inventory and order guide stock
     const { rows: guideRows } = await pool.query(`
@@ -473,7 +457,13 @@ purchasingRouter.post('/mrp-order', async (req: Request, res: Response, next: Ne
     const recommendations = MrpDemandForecastEngine.calculateMaterialRequirements(exploded, stockItems)
 
     res.json({
-      activeResidentHeadcount: activeHeadcount,
+      activeResidentHeadcount: forecast.census,
+      censusBuffer: forecast.buffer,
+      trendPct: forecast.trendPct,
+      bufferFormula: forecast.bufferFormula,
+      forecastWeek: { id: forecast.weekId, name: forecast.weekName, weekStartDate: forecast.weekStartDate },
+      scheduledMeals: forecast.meals.length,
+      skippedItems: forecast.skippedItems,
       totalExplodedIngredients: Object.keys(exploded).length,
       explodedDemands: exploded,
       purchaseOrderRecommendations: recommendations,
@@ -485,6 +475,20 @@ purchasingRouter.post('/mrp-order', async (req: Request, res: Response, next: Ne
 // ═══════════════════════════════════════════════════════════════════════════
 // PURCHASE ORDERS
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/purchasing/rollup-usage (C05)
+ * Manually trigger the nightly avg_usage rollup (same function the nightly
+ * daemon runs): trailing-28-day average daily consumption per order-guide
+ * line, from inventory_transactions issues + waste. See the formula doc in
+ * server/src/jobs/nightlyForecast.ts.
+ */
+purchasingRouter.post('/rollup-usage', requireRole('staff'), async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await rollupAvgUsage()
+    res.json(result)
+  } catch (e) { next(e) }
+})
 
 /** GET /api/purchasing/orders */
 purchasingRouter.get('/orders', async (_req: Request, res: Response, next: NextFunction) => {

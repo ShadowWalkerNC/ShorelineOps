@@ -311,13 +311,45 @@ kitchenRouter.post('/meals/batch', async (req, res, next) => {
 import { KitchenProductionEngine, ResidentServiceProfile } from '../engine/production'
 
 /**
+ * C05: resolve each resident's entrée for a service date from their REAL
+ * weekly choice (weekly_orders → meal_options dish name).
+ *
+ * Resolution order per resident (Opt1 is the standing default):
+ *   1. declined           → kitchen default entrée (nothing to serve a choice from)
+ *   2. standing alternative → their modifier_text (their actual alternative dish)
+ *   3. weekly_orders choice_selected (1/2) → meal_options dish for that choice
+ *   4. Opt1 fallback       → meal_options dish for choice 1
+ *   5. explicit `entree` query param (kitchen override)
+ *   6. 'Roasted Chicken Breast' last-resort default (labelled as such)
+ *
+ * NPO / allergen handling is unchanged — the engine still blocks NPO
+ * entrées and flags allergies after this resolution.
+ */
+function normalizeMealType(mealSlot: string): string | null {
+  const s = String(mealSlot ?? '').trim().toLowerCase()
+  if (s === 'supper') return 'Dinner'
+  const cap = s.charAt(0).toUpperCase() + s.slice(1)
+  return ['Breakfast', 'Lunch', 'Dinner'].includes(cap) ? cap : null
+}
+
+/**
  * GET /api/kitchen/traycards-generated
  * Dynamically generates full high-contrast clinical tray cards with resident room,
  * table assignment, diet orders, bold red allergy alerts, and IDDSI texture banners.
  */
 kitchenRouter.get('/traycards-generated', async (req, res, next) => {
   try {
-    const { mealSlot = 'Dinner', serviceDate = new Date().toISOString().slice(0, 10), entree = 'Roasted Chicken Breast', sides = 'Steamed Broccoli, Mashed Potatoes' } = req.query
+    const {
+      mealSlot = 'Dinner',
+      serviceDate = new Date().toISOString().slice(0, 10),
+      sides = 'Steamed Broccoli, Mashed Potatoes',
+    } = req.query
+    // Explicit kitchen override — honoured only when the real-choice chain
+    // has nothing to serve; never presented as data.
+    const entreeParam = typeof req.query.entree === 'string' && req.query.entree.trim() !== ''
+      ? String(req.query.entree)
+      : null
+    const KITCHEN_DEFAULT_ENTREE = 'Roasted Chicken Breast'
 
     // B01: full clinical columns — the engine must see real NPO status,
     // fluid restrictions, and profile versions (stale defaults caused
@@ -354,11 +386,73 @@ kitchenRouter.get('/traycards-generated', async (req, res, next) => {
 
     const sideArray = typeof sides === 'string' ? sides.split(',').map(s => s.trim()) : []
 
-    const cards = KitchenProductionEngine.generateTrayCards(profiles, {
-      mealSlot: String(mealSlot),
-      serviceDate: String(serviceDate),
-      entreeName: String(entree),
-      sideNames: sideArray,
+    // ── C05: per-resident entrée from their real weekly choice ────────────
+    const mealType = normalizeMealType(String(mealSlot))
+    const weekStart = KitchenProductionEngine.weekStartFor(String(serviceDate))
+    const dayName = KitchenProductionEngine.dayNameFor(String(serviceDate))
+
+    const orderByResident = new Map<string, any>()
+    const dishByChoice = new Map<number, string>()
+    if (mealType) {
+      const { rows: orderRows } = await pool.query(
+        `SELECT wo.resident_id, wo.choice_selected, wo.is_alternative, wo.is_declined, wo.modifier_text
+         FROM weekly_orders wo
+         WHERE wo.week_start_date = $1
+           AND wo.day_of_week = $2
+           AND ${KitchenProductionEngine.mealTypeMatch('wo.meal_type', '$3')}`,
+        [weekStart, dayName, mealType]
+      )
+      for (const o of orderRows) orderByResident.set(String(o.resident_id), o)
+
+      const { rows: optionRows } = await pool.query(
+        `SELECT choice_number, dish_name FROM meal_options
+         WHERE week_start_date = $1 AND day_of_week = $2
+           AND ${KitchenProductionEngine.mealTypeMatch('meal_type', '$3')}`,
+        [weekStart, dayName, mealType]
+      )
+      for (const o of optionRows) {
+        // Legacy 'Supper' rows are Dinner at read time; meal_typeMatch already
+        // normalises the filter, so keys here are canonical.
+        dishByChoice.set(Number(o.choice_number), String(o.dish_name))
+      }
+    }
+
+    const resolveEntree = (profile: ResidentServiceProfile): { entree: string; entreeSource: string } => {
+      const order = orderByResident.get(String(profile.id))
+      if (order) {
+        if (Number(order.is_declined) === 1) {
+          return {
+            entree: entreeParam ?? KITCHEN_DEFAULT_ENTREE,
+            entreeSource: entreeParam ? 'explicit-param (resident declined)' : 'kitchen-default (resident declined)',
+          }
+        }
+        if (Number(order.is_alternative) === 1 && String(order.modifier_text ?? '').trim() !== '') {
+          return { entree: String(order.modifier_text), entreeSource: 'standing-alternative' }
+        }
+        const choice = Number(order.choice_selected) === 2 ? 2 : 1 // Opt1 fallback
+        const dish = dishByChoice.get(choice) ?? dishByChoice.get(1)
+        if (dish) {
+          const chosen = Number(order.choice_selected) === 2 ? 'resident-choice-opt2' : 'resident-choice-opt1'
+          return { entree: dish, entreeSource: dishByChoice.has(choice) ? chosen : 'opt1-fallback' }
+        }
+      }
+      // No usable order row or no meal_options wiring for this slot.
+      if (entreeParam) return { entree: entreeParam, entreeSource: 'explicit-param' }
+      return { entree: KITCHEN_DEFAULT_ENTREE, entreeSource: 'kitchen-default' }
+    }
+
+    // generateTrayCards is per-resident so each card carries that resident's
+    // resolved entrée; NPO hard-blocks and allergen flags stay inside the
+    // engine and apply to every card regardless of resolution.
+    const cards = profiles.flatMap(profile => {
+      const { entree, entreeSource } = resolveEntree(profile)
+      const [card] = KitchenProductionEngine.generateTrayCards([profile], {
+        mealSlot: String(mealSlot),
+        serviceDate: String(serviceDate),
+        entreeName: entree,
+        sideNames: sideArray,
+      })
+      return [{ ...card, entreeSource }]
     })
 
     res.json({

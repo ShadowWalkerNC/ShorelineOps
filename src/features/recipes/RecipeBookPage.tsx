@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRecipesStore } from '@/state/recipesStore'
 import { RECIPE_CATEGORIES, RECIPE_ALLERGENS } from '@/types/recipe'
-import type { Recipe, RecipeCategory, RecipeAllergen, RecipeIngredient, RecipeStep } from '@/types/recipe'
+import type { Recipe, RecipeCategory, RecipeAllergen, RecipeIngredient, RecipeStep, CostProvenance } from '@/types/recipe'
 import { parseQuantity } from '@/lib/parseQuantity'
+import { api } from '@/api/client'
 import { AppleBadge, AppleButton, AppleCard, type AppleBadgeColor } from '@/apple-ui'
 import {
   BookOpen,
@@ -18,6 +19,8 @@ import {
   Sparkles,
   Flame,
   CheckCircle2,
+  DollarSign,
+  RefreshCw,
 } from 'lucide-react'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -38,6 +41,44 @@ function AllergenBadge({ label }: { label: string }) {
     <AppleBadge color={color} dot>
       {label}
     </AppleBadge>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// COST BADGE (C06) — per-recipe cost display with the provenance flag.
+// Estimated (non-SKU-matched) costs are visibly flagged everywhere they appear.
+// ────────────────────────────────────────────────────────────────────────────
+const PROVENANCE_LABEL: Record<CostProvenance, string> = {
+  'sku-matched': 'SKU-matched',
+  mixed: 'Mixed sources',
+  estimated: 'Estimated',
+  none: 'No cost data',
+}
+const PROVENANCE_COLOR: Record<CostProvenance, AppleBadgeColor> = {
+  'sku-matched': 'green',
+  mixed: 'orange',
+  estimated: 'orange',
+  none: 'gray',
+}
+
+function CostBadge({ recipe, large = false }: { recipe: Recipe; large?: boolean }) {
+  const provenance: CostProvenance = recipe.costProvenance ?? 'none'
+  const hasCost = (recipe.costPerServing ?? 0) > 0
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span
+        className={`inline-flex items-center gap-1 font-bold ${
+          large ? 'text-lg' : 'text-sm'
+        } text-slate-900 dark:text-white`}
+        title={hasCost ? 'Rolled up from vendor catalog / ingredient estimates' : 'No cost inputs on file for this recipe'}
+      >
+        <DollarSign className={large ? 'w-5 h-5' : 'w-4 h-4'} />
+        {hasCost ? `${recipe.costPerServing!.toFixed(2)}/serving` : '—'}
+      </span>
+      <AppleBadge color={PROVENANCE_COLOR[provenance]} dot>
+        {PROVENANCE_LABEL[provenance]}
+      </AppleBadge>
+    </div>
   )
 }
 
@@ -122,6 +163,28 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
           </div>
         </div>
 
+        {/* Cost line — per-serving cost with provenance flag + batch total at this scale */}
+        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">Food cost</div>
+              <CostBadge recipe={recipe} large />
+            </div>
+            <div className="text-right">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">Batch total</div>
+              <div className="text-lg font-black text-emerald-400 font-mono">
+                ${((recipe.costPerServing ?? 0) * servings).toFixed(2)}
+                <span className="text-xs font-semibold text-slate-400"> / {servings} portions</span>
+              </div>
+            </div>
+          </div>
+          {(recipe.costProvenance === 'estimated' || recipe.costProvenance === 'mixed') && (
+            <div className="mt-2 text-[11px] text-amber-300/90 font-medium">
+              Includes estimated ingredient costs — verify against vendor catalog before budgeting.
+            </div>
+          )}
+        </div>
+
         {/* Scaled Ingredients Table */}
         <div className="space-y-3 mb-6">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Scaled Ingredients Bill of Materials</div>
@@ -165,7 +228,7 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
 // ────────────────────────────────────────────────────────────────────────────
 // ADD / EDIT FORM MODAL
 // ────────────────────────────────────────────────────────────────────────────
-const blankIngredient = (): RecipeIngredient => ({ qty: '', item: '' })
+const blankIngredient = (): RecipeIngredient => ({ qty: '', item: '', vendorSku: '', estimatedCost: undefined })
 const blankStep = (): RecipeStep => ({ step: 1, instruction: '' })
 
 function RecipeFormModal({
@@ -215,6 +278,15 @@ function RecipeFormModal({
       detectAllergen(val)
     }
     setIngredients(prev => prev.map((ing, idx) => (idx === i ? { ...ing, [field]: val } : ing)))
+  }
+
+  function updateIngredientCost(i: number, val: string) {
+    const num = val.trim() === '' ? undefined : Number(val)
+    setIngredients(prev =>
+      prev.map((ing, idx) =>
+        idx === i ? { ...ing, estimatedCost: num !== undefined && Number.isFinite(num) ? num : undefined } : ing
+      )
+    )
   }
 
   function updateStep(i: number, val: string) {
@@ -321,26 +393,51 @@ function RecipeFormModal({
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Ingredients</label>
             <div className="space-y-2">
               {ingredients.map((ing, i) => (
-                <div key={i} className="flex gap-2">
-                  <input
-                    placeholder="Qty (e.g. 5 lbs)"
-                    className="w-32 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
-                    value={ing.qty}
-                    onChange={e => updateIngredient(i, 'qty', e.target.value)}
-                  />
-                  <input
-                    placeholder="Ingredient Name"
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
-                    value={ing.item}
-                    onChange={e => updateIngredient(i, 'item', e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIngredients(prev => prev.filter((_, idx) => idx !== i))}
-                    className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
-                  >
-                    &times;
-                  </button>
+                <div key={i} className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Qty (e.g. 5 lbs)"
+                      className="w-32 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                      value={ing.qty}
+                      onChange={e => updateIngredient(i, 'qty', e.target.value)}
+                    />
+                    <input
+                      placeholder="Ingredient Name"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                      value={ing.item}
+                      onChange={e => updateIngredient(i, 'item', e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIngredients(prev => prev.filter((_, idx) => idx !== i))}
+                      className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  <div className="flex gap-2 pl-1">
+                    <input
+                      placeholder="Vendor SKU (e.g. DNS-1004)"
+                      title="Vendor catalog SKU — matched against vendor_items.unit_cost for real costing"
+                      className="w-40 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 text-[11px] text-white font-mono"
+                      value={ing.vendorSku ?? ing.vendorItemSku ?? ''}
+                      onChange={e => updateIngredient(i, 'vendorSku', e.target.value)}
+                    />
+                    <input
+                      placeholder="Est. cost $ (fallback)"
+                      title="Estimated cost of the listed quantity — used and flagged as estimated when no SKU match exists"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      inputMode="decimal"
+                      className="w-36 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 text-[11px] text-white font-mono"
+                      value={ing.estimatedCost ?? ''}
+                      onChange={e => updateIngredientCost(i, e.target.value)}
+                    />
+                    <span className="text-[10px] text-slate-500 self-center">
+                      SKU wins; est. $ is a flagged fallback
+                    </span>
+                  </div>
                 </div>
               ))}
               <button
@@ -414,6 +511,7 @@ export default function RecipeBookPage() {
   const [viewRecipe, setViewRecipe] = useState<Recipe | null>(null)
   const [editRecipe, setEditRecipe] = useState<Recipe | null | 'new'>(null)
   const [purgeTarget, setPurgeTarget] = useState<Recipe | null>(null)
+  const [recalcStatus, setRecalcStatus] = useState<string>('')
 
   useEffect(() => { fetch() }, []) // eslint-disable-line
 
@@ -452,6 +550,19 @@ export default function RecipeBookPage() {
     setPurgeTarget(null)
   }
 
+  async function handleRecalcCosts() {
+    setRecalcStatus('Recalculating…')
+    try {
+      const { data } = await api.post('/recipes/recalc-costs', {})
+      const updated = data?.updated ?? 0
+      setRecalcStatus(`Updated ${updated} recipe${updated === 1 ? '' : 's'} — idempotent backfill complete.`)
+      await fetch()
+    } catch (e: any) {
+      setRecalcStatus(e?.response?.data?.error ?? 'Cost recalculation failed.')
+    }
+    setTimeout(() => setRecalcStatus(''), 6000)
+  }
+
   const tabCategories: (RecipeCategory | 'All')[] = ['All', ...RECIPE_CATEGORIES]
 
   return (
@@ -474,6 +585,15 @@ export default function RecipeBookPage() {
 
         <div className="flex items-center gap-2.5 shrink-0">
           <AppleButton
+            variant="secondary"
+            size="md"
+            icon={<RefreshCw className="w-4 h-4" />}
+            onClick={handleRecalcCosts}
+            title="Recompute cost_per_serving for all recipes from the current vendor catalog (idempotent)"
+          >
+            Recalc costs
+          </AppleButton>
+          <AppleButton
             variant="primary"
             size="md"
             icon={<Plus className="w-4 h-4" />}
@@ -483,6 +603,11 @@ export default function RecipeBookPage() {
           </AppleButton>
         </div>
       </div>
+      {recalcStatus && (
+        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 -mt-2">
+          {recalcStatus}
+        </div>
+      )}
 
       {/* ── Metric Telemetry Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -599,6 +724,8 @@ export default function RecipeBookPage() {
                   {recipe.allergens.map(a => <AllergenBadge key={a} label={a} />)}
                 </div>
               )}
+
+              <CostBadge recipe={recipe} />
 
               <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
                 {recipe.ingredients.map(i => `${i.qty} ${i.item}`).join(', ')}

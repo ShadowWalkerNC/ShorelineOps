@@ -115,7 +115,7 @@ function ResidentRow({ row, pass, onSaved }: { row: RosterRow; pass: Pass; onSav
       <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:'var(--space-2)' }}>
         <div style={{ minWidth:0 }}>
           <div style={{ fontWeight:'var(--weight-bold)', fontSize:'var(--text-base)' }}>{row.residentName}</div>
-          <div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)' }}>Room {row.room} · {row.liquidTexture} · target {row.targetOz} oz</div>
+          <div style={{ fontSize:'var(--text-base)', color:'var(--text-muted)' }}>Room {row.room} · {row.liquidTexture} · target {row.targetOz} oz</div>
         </div>
         <div style={{ marginLeft:'auto', display:'flex', gap:'var(--space-2)', alignItems:'center' }}>{statusBadge(row.status)}</div>
       </div>
@@ -161,7 +161,7 @@ function ResidentRow({ row, pass, onSaved }: { row: RosterRow; pass: Pass; onSav
       {!refusalOk && <div className="sl-alert sl-alert-danger" style={{ margin:0 }}>A refusal can&apos;t have consumed oz &gt; 0 — refusals are recorded distinctly from intake.</div>}
       {error && <div className="sl-alert sl-alert-danger" style={{ margin:0 }}>{error}</div>}
       {row.recordedAt && (
-        <div style={{ fontSize:'var(--text-xs)', color:'var(--text-muted)' }}>
+        <div style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>
           Last logged {new Date(row.recordedAt).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}
           {row.recordedBy ? ` by ${row.recordedBy}` : ''} · consumed {row.consumedOz ?? 0} / offered {row.offeredOz ?? 0} oz
           {row.supplement ? ` · ${row.supplement}` : ''}
@@ -202,7 +202,7 @@ export default function HydrationPassTab() {
         <div className="sl-pills">
           {PASSES.map(p => (
             <button key={p.id} onClick={() => setPass(p.id)} className={pass===p.id?'sl-pill active':'sl-pill'} style={{ minHeight:44 }}>
-              {p.label} <span style={{ opacity:0.65, fontSize:'var(--text-xs)' }}>{p.time}</span>
+              {p.label} <span style={{ opacity:0.65, fontSize:'var(--text-sm)' }}>{p.time}</span>
             </button>
           ))}
         </div>

@@ -9,7 +9,9 @@
     "test": "node dist/system.test.js",
     "start": "node dist/index.js",
     "db:migrate": "node dist/db/migrate.js",
-    "db:seed": "node dist/db/seed.js"
+    "db:seed": "node dist/db/seed.js",
+    "docs:generate": "node scripts/generate-openapi.mjs",
+    "docs:check": "node scripts/generate-openapi.mjs --check"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

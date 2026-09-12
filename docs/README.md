@@ -16,6 +16,7 @@ Welcome to the official technical wiki for **ShorelineOps** — the open-source 
 8. [Apple UI Design System Integration](AppleUIDesign.md) — Human Interface Guidelines (HIG) tokens, fluid animations, and Cupertino components.
 9. [Render Cloud Deployment Guide](RenderDeployment.md) — 1-Click multi-service Blueprint setup for the API, React Demo PWA, Astro Marketing, and PostgreSQL.
 10. [Vercel Deployment Guide](VercelDeployment.md) — Multi-project setup for static edge hosting.
+11. [Wave C — Kitchen Operations & Cost Transparency](WAVE_C.md) — Durable HACCP logging, census-trend forecasting, recipe costing with provenance, server-synced settings, kitchen fitness, accessibility baseline, OpenAPI docs.
 
 ---
 

@@ -3,6 +3,9 @@ import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import { ChefHat, Printer, Edit2, Calendar, Utensils, AlertCircle, AlertTriangle, CheckCircle2, UserX, ShieldAlert } from 'lucide-react'
 import { iddsiChipLabel } from '@/types/resident'
+import TempLogPanel from './TempLogPanel' // C01: HACCP temp entry (self-contained; sits below the sheet)
+import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from './KitchenModeContext'
+import ClinicalSafetyStrip from './ClinicalSafetyStrip'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 // B08: canonical meal slots — Breakfast / Lunch / Dinner. Legacy stored
@@ -51,15 +54,15 @@ function BatchClinicalStrip({
     <AppleCard className="p-4 space-y-2.5">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">{title}</div>
-          <div className="text-sm font-black text-slate-900 dark:text-white truncate">{dish}</div>
+          <div className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono">{title}</div>
+          <div className="text-base font-black text-slate-900 dark:text-white truncate">{dish}</div>
         </div>
-        <AppleBadge color="blue">{members.length} trays</AppleBadge>
+        <AppleBadge color="blue" className="text-sm">{members.length} trays</AppleBadge>
       </div>
 
       {npoViolations.length > 0 && (
-        <div className="flex items-start gap-1.5 p-2 rounded-lg bg-red-600 text-white text-[11px] font-black leading-snug">
-          <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-px" />
+        <div className="flex items-start gap-1.5 p-2 rounded-lg bg-red-600 text-white text-sm font-black leading-snug">
+          <ShieldAlert className="w-4 h-4 shrink-0 mt-px" />
           <span>
             NPO HARD-BLOCK — no tray:{' '}
             {npoViolations.map(m => `${m.name} (Rm ${m.room})`).join(', ')}
@@ -68,33 +71,33 @@ function BatchClinicalStrip({
       )}
 
       <div>
-        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono mb-1">Allergens in batch</div>
+        <div className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono mb-1">Allergens in batch</div>
         {allergens.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {allergens.map(a => (
               <span
                 key={a}
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                className="px-2 py-1 rounded-md text-sm font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
               >
                 ⚠ {a}
               </span>
             ))}
           </div>
         ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-            <CheckCircle2 className="w-3.5 h-3.5" /> NKDA — no allergens recorded in this batch
+          <span className="inline-flex items-center gap-1 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="w-4 h-4" /> NKDA — no allergens recorded in this batch
           </span>
         )}
       </div>
 
       <div>
-        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono mb-1">IDDSI textures</div>
+        <div className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono mb-1">IDDSI textures</div>
         {textures.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {textures.map(t => (
               <span
                 key={t}
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-black font-mono bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800"
+                className="px-2 py-1 rounded-md text-sm font-black font-mono bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800"
                 title={`Texture: ${t}`}
               >
                 {iddsiChipLabel(t)}
@@ -102,14 +105,14 @@ function BatchClinicalStrip({
             ))}
           </div>
         ) : (
-          <span className="text-[11px] text-slate-400">No texture data</span>
+          <span className="text-sm text-slate-400">No texture data</span>
         )}
       </div>
     </AppleCard>
   )
 }
 
-export default function KitchenSheetPage() {
+function KitchenSheetPageInner() {
   const [week, setWeek] = useState(getSunday())
   const [day, setDay] = useState(DAYS[new Date().getDay()])
   const [meal, setMeal] = useState('Lunch')
@@ -240,15 +243,15 @@ export default function KitchenSheetPage() {
   }, [sheetResidents])
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <KitchenFitShell className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
       {/* ── Apple Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
               Daily Cook &amp; Tally Sheet
             </h1>
-            <AppleBadge color="orange" dot>
+            <AppleBadge color="orange" dot className="text-sm">
               {day} &middot; {meal}
             </AppleBadge>
           </div>
@@ -258,9 +261,11 @@ export default function KitchenSheetPage() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <KitchenModeToggle />
           <AppleButton
             variant="secondary"
             size="md"
+            className="min-h-[44px]"
             icon={<Edit2 className="w-4 h-4" />}
             onClick={() => setEditMenuMode(true)}
           >
@@ -269,6 +274,7 @@ export default function KitchenSheetPage() {
           <AppleButton
             variant="primary"
             size="md"
+            className="min-h-[44px]"
             icon={<Printer className="w-4 h-4" />}
             onClick={() => window.print()}
           >
@@ -277,27 +283,30 @@ export default function KitchenSheetPage() {
         </div>
       </div>
 
+      {/* ── C02 clinical safety strip: current meal + live allergy/NPO counts ── */}
+      <ClinicalSafetyStrip residents={sheetResidents} meal={meal} />
+
       {/* ── Filter Controls ── */}
       <AppleCard className="p-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono mb-1.5 block">
+            <label className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono mb-1.5 block">
               Week Beginning
             </label>
             <input
               type="date"
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs sm:text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500/20"
+              className="w-full min-h-[44px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500/20"
               value={week}
               onChange={e => setWeek(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono mb-1.5 block">
+            <label className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono mb-1.5 block">
               Select Day
             </label>
             <select
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs sm:text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500/20"
+              className="w-full min-h-[44px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500/20"
               value={day}
               onChange={e => setDay(e.target.value)}
             >
@@ -306,11 +315,11 @@ export default function KitchenSheetPage() {
           </div>
 
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono mb-1.5 block">
+            <label className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono mb-1.5 block">
               Meal Service
             </label>
             <select
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs sm:text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500/20"
+              className="w-full min-h-[44px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500/20"
               value={meal}
               onChange={e => setMeal(e.target.value)}
             >
@@ -324,25 +333,25 @@ export default function KitchenSheetPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <AppleCard className="p-5 flex flex-col justify-between border-l-4 border-l-blue-500">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Primary Entree</div>
+            <div className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono">Primary Entree</div>
             <div className="text-3xl font-black text-slate-900 dark:text-white mt-2 font-mono">{tally.choice1 || 28}</div>
-            <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-1">{choice1Name}</div>
+            <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-1">{choice1Name}</div>
           </div>
         </AppleCard>
 
         <AppleCard className="p-5 flex flex-col justify-between border-l-4 border-l-purple-500">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Alternate Entree</div>
+            <div className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono">Alternate Entree</div>
             <div className="text-3xl font-black text-slate-900 dark:text-white mt-2 font-mono">{tally.choice2 || 14}</div>
-            <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-1">{choice2Name}</div>
+            <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-1">{choice2Name}</div>
           </div>
         </AppleCard>
 
         <AppleCard className="p-5 flex flex-col justify-between border-l-4 border-l-emerald-500">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Total Standard Orders</div>
+            <div className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono">Total Standard Orders</div>
             <div className="text-3xl font-black text-slate-900 dark:text-white mt-2 font-mono">{(tally.choice1 || 28) + (tally.choice2 || 14)}</div>
-            <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-1">Census Headcount Verified</div>
+            <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-1">Census Headcount Verified</div>
           </div>
         </AppleCard>
       </div>
@@ -351,7 +360,7 @@ export default function KitchenSheetPage() {
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <ShieldAlert className="w-4 h-4 text-rose-500" />
-          <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+          <h3 className="font-bold text-base text-slate-900 dark:text-white">
             Batch Clinical Safety — allergens &amp; IDDSI textures per production batch
           </h3>
         </div>
@@ -363,12 +372,12 @@ export default function KitchenSheetPage() {
               <BatchClinicalStrip title="Standing alternatives" dish="Individual alt plates" members={batches.alt} />
               <BatchClinicalStrip title="Declined" dish="No tray prepared" members={batches.declined} />
             </div>
-            <p className="text-[11px] text-slate-400 px-1">
+            <p className="text-sm text-slate-400 px-1">
               Built from recorded orders for this service. Residents with no recorded choice are not assigned to a batch.
             </p>
           </>
         ) : (
-          <AppleCard className="p-4 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+          <AppleCard className="p-4 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
             <span>No order data for this service yet — initialize the week on the order-entry page to populate batch allergens and textures.</span>
           </AppleCard>
@@ -384,13 +393,13 @@ export default function KitchenSheetPage() {
               Special Customizations &amp; Texture Exceptions
             </h3>
           </div>
-          <AppleBadge color="orange">
+          <AppleBadge color="orange" className="text-sm">
             {modifiers.length > 0 ? `${modifiers.length} Active` : '0 Exceptions'}
           </AppleBadge>
         </div>
 
         {modifiers.length === 0 ? (
-          <div className="text-center py-6 text-xs text-slate-400">
+          <div className="text-center py-6 text-sm text-slate-400">
             No special customized meal requests recorded for this service.
           </div>
         ) : (
@@ -402,7 +411,7 @@ export default function KitchenSheetPage() {
               const texture: string = r?.texture ?? 'Regular'
               const isNpo = Boolean(r?.is_npo ?? r?.isNpo ?? false)
               return (
-                <div key={idx} className="py-3 flex items-center justify-between text-xs gap-2 flex-wrap">
+                <div key={idx} className="py-3 flex items-center justify-between text-sm gap-2 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono font-bold text-slate-400">[{m.room_number}]</span>
                     <span className="font-bold text-slate-900 dark:text-white">{m.name}</span>
@@ -412,13 +421,13 @@ export default function KitchenSheetPage() {
                     {r && (
                       <>
                         <span
-                          className="px-1.5 py-0.5 rounded-md text-[10px] font-black font-mono bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800"
+                          className="px-2 py-1 rounded-md text-sm font-black font-mono bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800"
                           title={`Texture: ${texture}`}
                         >
                           {iddsiChipLabel(texture)}
                         </span>
                         {isNpo && (
-                          <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-600 text-white">
+                          <span className="px-2 py-1 rounded-md text-sm font-black bg-red-600 text-white">
                             NPO
                           </span>
                         )}
@@ -426,13 +435,13 @@ export default function KitchenSheetPage() {
                           allergies.map(a => (
                             <span
                               key={a}
-                              className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                              className="px-2 py-1 rounded-md text-sm font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
                             >
                               ⚠ {a}
                             </span>
                           ))
                         ) : (
-                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">NKDA</span>
+                          <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">NKDA</span>
                         )}
                       </>
                     )}
@@ -445,40 +454,56 @@ export default function KitchenSheetPage() {
         )}
       </AppleCard>
 
+      {/* C01: temperature logging — batch completion food temps live here so the
+          cook never leaves the sheet; equipment schedule + today's log included. */}
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <TempLogPanel />
+      </div>
+
       {/* Edit Dish Names Modal */}
       {editMenuMode && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSaveMenu} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4">
             <h3 className="text-lg font-bold text-white">Edit Meal Option Titles</h3>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400 mb-1 block">Choice 1 Name</label>
+              <label className="text-sm font-bold uppercase text-slate-400 mb-1 block">Choice 1 Name</label>
               <input
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white"
                 value={dish1}
                 onChange={e => setDish1(e.target.value)}
                 placeholder="e.g. Roast Turkey Breast"
               />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400 mb-1 block">Choice 2 Name</label>
+              <label className="text-sm font-bold uppercase text-slate-400 mb-1 block">Choice 2 Name</label>
               <input
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white"
                 value={dish2}
                 onChange={e => setDish2(e.target.value)}
                 placeholder="e.g. Vegetarian Lasagna"
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <AppleButton variant="secondary" onClick={() => setEditMenuMode(false)}>
+              <AppleButton variant="secondary" className="min-h-[44px]" onClick={() => setEditMenuMode(false)}>
                 Cancel
               </AppleButton>
-              <AppleButton variant="primary" type="submit">
+              <AppleButton variant="primary" type="submit" className="min-h-[44px]">
                 Save Dishes
               </AppleButton>
             </div>
           </form>
         </div>
       )}
-    </div>
+    </KitchenFitShell>
+  )
+}
+
+/** C02: each kitchen page mounts its own provider so the per-device
+ *  kitchen-mode preference applies to this page's subtree. */
+export default function KitchenSheetPage() {
+  return (
+    <KitchenModeProvider>
+      <KitchenSheetPageInner />
+    </KitchenModeProvider>
   )
 }

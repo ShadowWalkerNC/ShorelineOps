@@ -12,8 +12,8 @@ const migrations: { name: string; sql: string }[] = [
         email       TEXT UNIQUE NOT NULL,
         password    TEXT NOT NULL,
         role        TEXT NOT NULL CHECK (role IN (
-          'admin', 'manager', 'frontdesk', 'dietary',
-          'activities', 'server', 'staff', 'readonly'
+          'admin', 'manager', 'dietitian', 'frontdesk', 'dietary',
+          'distributor', 'activities', 'server', 'staff', 'readonly'
         )),
         mfa_enabled BOOLEAN NOT NULL DEFAULT false,
         active      BOOLEAN NOT NULL DEFAULT true,
@@ -805,6 +805,109 @@ const migrations: { name: string; sql: string }[] = [
         ON hydration_records(resident_id);
     `,
   },
+  {
+    // C00: align the users.role CHECK with the canonical 001 definition so
+    // 'dietitian' is a valid role on every database. Clinical dietitians
+    // write therapeutic diet orders (B04 Owner Decision 3), so a CHECK that
+    // rejects the role is a hard blocker. Follows the 008/019 precedent:
+    // effective on PostgreSQL; the SQLite translation layer strips
+    // ALTER TABLE … CONSTRAINT statements (see pool.ts translateQuery),
+    // where fresh databases instead pick up the widened CHECK from the
+    // updated CREATE TABLE users definition in 001 above.
+    name: '022_users_role_dietitian_check',
+    sql: `
+      ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+      ALTER TABLE users ADD CONSTRAINT users_role_check
+        CHECK (role IN (
+          'admin', 'manager', 'dietitian', 'frontdesk', 'dietary',
+          'distributor', 'activities', 'server', 'staff', 'readonly'
+        ));
+    `,
+  },
+  {
+    // C01: durable HACCP temperature logging. haccp_equipment holds the
+    // facility's monitored equipment (fridge/freezer/dishwasher/hot-hold)
+    // with target temps and check frequency; haccp_logs holds every temp
+    // check with the measured reading, server-computed compliance, and
+    // corrective action (violations cannot close without one).
+    // equipment_id is TEXT: haccp_equipment.id is UUID on pg / TEXT on
+    // sqlite (see pool.ts translation). Client code generates the id
+    // (A02 pattern: uuid_generate_v4() defaults do not exist on SQLite).
+    name: '023_haccp_temperature_logging',
+    sql: `
+      CREATE TABLE IF NOT EXISTS haccp_equipment (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name            TEXT NOT NULL,
+        type            TEXT NOT NULL
+                          CHECK (type IN ('fridge', 'freezer', 'dishwasher', 'hot-hold')),
+        target_temp_f   NUMERIC(6,2) NOT NULL,
+        check_frequency TEXT NOT NULL DEFAULT 'daily'
+                          CHECK (check_frequency IN ('shift', 'daily', 'weekly')),
+        active          BOOLEAN NOT NULL DEFAULT true,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS haccp_logs (
+        id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        check_type       TEXT NOT NULL
+                           CHECK (check_type IN ('food', 'equipment')),
+        item_name        TEXT NOT NULL DEFAULT '',
+        equipment_id     TEXT REFERENCES haccp_equipment(id) ON DELETE SET NULL,
+        temp_f           NUMERIC(6,2) NOT NULL,
+        target_temp_f    NUMERIC(6,2) NOT NULL,
+        compliant        BOOLEAN NOT NULL DEFAULT true,
+        violation_type   TEXT,
+        corrective_action TEXT NOT NULL DEFAULT '',
+        source           TEXT NOT NULL DEFAULT 'manual'
+                           CHECK (source IN ('manual', 'probe')),
+        probe_device     TEXT,
+        recorded_by      TEXT,
+        recorded_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_haccp_logs_recorded_at
+        ON haccp_logs(recorded_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_haccp_logs_equipment
+        ON haccp_logs(equipment_id);
+      CREATE INDEX IF NOT EXISTS idx_haccp_logs_compliant
+        ON haccp_logs(compliant);
+      CREATE INDEX IF NOT EXISTS idx_haccp_equipment_type
+        ON haccp_equipment(type);
+      CREATE INDEX IF NOT EXISTS idx_haccp_equipment_active
+        ON haccp_equipment(active);
+    `,
+  },
+  {
+    // C04: server-synced facility settings. facility_settings is the single
+    // server-side source of truth for the Settings page sections (facility
+    // profile, operations, integrations, security), keyed (facility_id, key)
+    // with JSON values. Writes are manager-gated and audit-logged at the
+    // API layer. Seed inserts mirror the client defaults and are idempotent
+    // (ON CONFLICT DO NOTHING) — they never clobber operator data.
+    name: '024_facility_settings',
+    sql: `
+      CREATE TABLE IF NOT EXISTS facility_settings (
+        facility_id TEXT NOT NULL DEFAULT 'default',
+        key         TEXT NOT NULL,
+        value       JSONB NOT NULL,
+        updated_by  TEXT,
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (facility_id, key)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_facility_settings_facility
+        ON facility_settings(facility_id);
+
+      INSERT INTO facility_settings (facility_id, key, value) VALUES
+      ('default', 'facility', '{"name":"Shoreline Healthcare & Rehabilitation","organization":"Shoreline Senior Living Group LLC","npiNumber":"1942857102","licenseNumber":"SNF-ME-40891","facilityType":"Skilled Nursing","address":"104 Shoreline Drive, Portland, ME 04101","phone":"(207) 555-0199","email":"dietary.ops@shorelinecare.com","directorOfDining":"Chef Marcus Vance, CDM, CFPP","registeredDietitian":"Sarah Jenkins, MS, RDN, LD"}'),
+      ('default', 'operations', '{"wings":["Coastal Wing (Assisted Living)","Harbor View (Memory Care)","Atlantic Rehab Unit"],"diningRooms":["Main Dining Hall","Harbor Bistro","In-Room Bedside Tray Service"],"targetCpd":8.75,"mealTimes":{"breakfast":"07:30","lunch":"12:00","dinner":"17:30","snack":"20:00"},"temperatureUnit":"F","iddsiStrictEnforcement":true,"fourteenHourRuleCheck":true}'),
+      ('default', 'integrations', '{"primaryDistributor":"dennis","distributorCustomerNumber":"DEN-884910","pccFacilityId":"FAC-PORTLAND-01","autoSyncCensus":true,"invoiceOcrAutoApprove":false}'),
+      ('default', 'security', '{"sessionTimeoutMinutes":30,"hipaaAuditRetentionDays":2555,"baaSignedDate":"2026-01-15","baaSignee":"Marcus Vance (Executive Director)"}')
+      ON CONFLICT (facility_id, key) DO NOTHING;
+    `,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.
@@ -847,6 +950,11 @@ export const EXPECTED_TABLES: string[] = [
   'tray_events',
   // B05: hydration pass log (migration 021).
   'hydration_records',
+  // C01: durable HACCP temperature logging (migration 023).
+  'haccp_logs',
+  'haccp_equipment',
+  // C04: server-synced facility settings (migration 024).
+  'facility_settings',
 ]
 
 /**

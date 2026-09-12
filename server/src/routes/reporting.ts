@@ -34,6 +34,7 @@ import { Router, Request, Response, NextFunction } from 'express'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { getMenuSlotCosts, rollupDailyCost } from '../engine/costing'
 
 export const reportingRouter = Router()
 
@@ -127,12 +128,27 @@ reportingRouter.get('/summary', async (req: Request, res: Response, next: NextFu
     const paperGoodsCost = +(totalFoodCost * 0.10).toFixed(2)
     const chemicalSanitationCost = +(totalFoodCost * 0.05).toFixed(2)
 
+    // C06: how much of the $/CPD input is rolled-up real cost vs manual entry
+    // (DB-agnostic: no Postgres FILTER clause — this pool also serves SQLite)
+    const { rows: srcRows } = await pool.query(
+      `SELECT
+         SUM(CASE WHEN notes LIKE '[auto-rollup]%' THEN 1 ELSE 0 END) AS auto_days,
+         SUM(CASE WHEN notes NOT LIKE '[auto-rollup]%' OR notes IS NULL THEN 1 ELSE 0 END) AS manual_days
+       FROM daily_cost_log
+       WHERE log_date BETWEEN $1 AND $2`,
+      [startDate, endDate]
+    )
+
     res.json({
       dateRange: { start: startDate, end: endDate },
       activeResidents,
       totalFoodCost: totalFoodCost.toFixed(2),
       totalResidentDays,
       costPerResidentDay: costPerResidentDay !== null ? costPerResidentDay.toFixed(2) : null,
+      costSourceCounts: {
+        rolledUpDays: parseInt(srcRows[0].auto_days, 10),
+        manualDays: parseInt(srcRows[0].manual_days, 10),
+      },
       breakdown: {
         perishableFoodCost,
         dryGroceryCost,
@@ -167,7 +183,12 @@ reportingRouter.get('/cost-log', async (req: Request, res: Response, next: NextF
        LIMIT 365`,
       [start ?? null, end ?? null]
     )
-    res.json(rows)
+    // C06: rolled-up entries carry an "[auto-rollup]" notes prefix; expose the
+    // origin so $/CPD views can show rolled costs vs manual entries.
+    res.json(rows.map(r => ({
+      ...r,
+      source: typeof r.notes === 'string' && r.notes.startsWith('[auto-rollup]') ? 'auto' : 'manual',
+    })))
   } catch (e) { next(e) }
 })
 
@@ -191,6 +212,63 @@ reportingRouter.post('/cost-log', requireRole('manager'), async (req: Request, r
       [logDate, residentCount, foodCost, notes, ar.userId ?? null]
     )
     res.status(201).json(rows[0])
+  } catch (e) { next(e) }
+})
+
+// ─── C06: Rolled cost → daily_cost_log → $/CPD ────────────────────────────
+// These endpoints are ADDITIVE to the cost/CPD region. They consume the
+// rolled-up costs from the costing engine; nothing else in this file changes.
+
+/**
+ * GET /api/reporting/cpd-breakdown?date=YYYY-MM-DD
+ * Menu-slot plate-cost breakdown for one service day: per-slot plate costs,
+ * per-item costs with provenance (SKU-matched vs estimated), per-resident-day
+ * rollup, and the resident census used for the daily total.
+ */
+reportingRouter.get('/cpd-breakdown', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const date = (req.query.date as string) || new Date().toISOString().slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return err(res, 400, 'date must be YYYY-MM-DD')
+    }
+    const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+      new Date(`${date}T12:00:00`).getDay()
+    ]
+    const { weekName, slots } = await getMenuSlotCosts(pool, dayName)
+    const perResidentDayCost = Math.round(slots.reduce((s, slot) => s + slot.slotPlateCost, 0) * 10000) / 10000
+    const { rows: censusRows } = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM residents WHERE status = 'active'`
+    )
+    const residentCount = parseInt(censusRows[0]?.cnt || '0', 10)
+    res.json({
+      date,
+      dayName,
+      weekName,
+      slots,
+      perResidentDayCost,
+      residentCount,
+      dailyFoodCost: Math.round(perResidentDayCost * residentCount * 100) / 100,
+      generatedAt: new Date().toISOString(),
+    })
+  } catch (e) { next(e) }
+})
+
+/**
+ * POST /api/reporting/cost-log/rollup
+ * Compute the day's food cost from the active menu (menu-slot plate costs ×
+ * census) and upsert it into daily_cost_log. Idempotent: re-running for the
+ * same date overwrites the auto-rollup entry, never duplicates it.
+ * Body: { date?: 'YYYY-MM-DD' } (defaults to today)
+ */
+reportingRouter.post('/cost-log/rollup', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+  const ar = req as AuthRequest
+  try {
+    const date = (req.body?.date as string) || new Date().toISOString().slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return err(res, 400, 'date must be YYYY-MM-DD')
+    }
+    const result = await rollupDailyCost(pool, date, ar.userId ?? null)
+    res.status(201).json(result)
   } catch (e) { next(e) }
 })
 
@@ -425,3 +503,96 @@ reportingRouter.get('/cms-survey-export', requireTier('enterprise'), async (req:
     res.json(auditPack)
   } catch (e) { next(e) }
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// C01 — HACCP TEMPERATURE LOG REPORT (survey-ready)
+// ─── additive region ──────────────────────────────────────────────────────
+// DO NOT merge with other report sections. A costing task also edits this
+// file — keep this region self-contained so it can compose cleanly.
+//   GET /api/reporting/haccp-temperature-log?start=YYYY-MM-DD&end=YYYY-MM-DD
+//       &equipmentId=&violationsOnly=true&format=json|binder
+// Returns every persisted temp log in the range with equipment names,
+// recorded-by staff, compliance flags, and corrective actions. format=binder
+// renders a plain-text survey-binder page for printing.
+// ═══════════════════════════════════════════════════════════════════════════
+reportingRouter.get('/haccp-temperature-log', async (req: Request, res: Response, next: NextFunction) => {
+  const { start, end, equipmentId, violationsOnly, format = 'json' } = req.query
+  const startDate = (start as string) ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const endDate   = (end   as string) ?? new Date().toISOString().slice(0, 10)
+  try {
+    const { rows } = await pool.query(
+      `SELECT l.*,
+              e.name AS equipment_name,
+              e.type AS equipment_type,
+              u.name AS recorded_by_name
+       FROM haccp_logs l
+       LEFT JOIN haccp_equipment e ON e.id = l.equipment_id
+       LEFT JOIN users u ON CAST(u.id AS TEXT) = l.recorded_by
+       WHERE date(l.recorded_at) >= date($1) AND date(l.recorded_at) <= date($2)
+         AND ($3 IS NULL OR l.equipment_id = $3)
+         AND ($4 IS NULL OR l.compliant = false)
+       ORDER BY l.recorded_at ASC
+       LIMIT 2000`,
+      [startDate, endDate, equipmentId ?? null, violationsOnly === 'true' ? 'x' : null]
+    )
+
+    const logs = rows.map(r => ({
+      id: r.id,
+      recordedAt: r.recorded_at,
+      checkType: r.check_type,
+      itemName: r.item_name,
+      equipmentId: r.equipment_id,
+      equipmentName: r.equipment_name,
+      equipmentType: r.equipment_type,
+      tempF: Number(r.temp_f),
+      targetTempF: Number(r.target_temp_f),
+      compliant: r.compliant === true || r.compliant === 1,
+      violationType: r.violation_type,
+      correctiveAction: r.corrective_action,
+      source: r.source,
+      probeDevice: r.probe_device,
+      recordedBy: r.recorded_by_name ?? r.recorded_by,
+    }))
+
+    const violations = logs.filter(l => !l.compliant)
+    const openViolations = violations.filter(l => !l.correctiveAction)
+    const summary = {
+      dateRange: { start: startDate, end: endDate },
+      totalChecks: logs.length,
+      compliantChecks: logs.length - violations.length,
+      violations: violations.length,
+      openViolations: openViolations.length,
+      complianceRatePct: logs.length ? +(((logs.length - violations.length) / logs.length) * 100).toFixed(1) : null,
+      generatedAt: new Date().toISOString(),
+    }
+
+    if (format === 'binder') {
+      const lines: string[] = [
+        'HACCP TEMPERATURE LOG — SURVEY BINDER',
+        `Date range: ${startDate} to ${endDate}`,
+        `Generated: ${summary.generatedAt}`,
+        '',
+        `Total checks: ${summary.totalChecks}   Compliant: ${summary.compliantChecks}   Violations: ${summary.violations}   Open (no corrective action): ${summary.openViolations}`,
+        '',
+        '—'.repeat(72),
+      ]
+      for (const l of logs) {
+        const who = l.equipmentName ?? l.itemName ?? '—'
+        const flag = l.compliant ? 'OK' : '*** VIOLATION ***'
+        lines.push(`${l.recordedAt} | ${l.checkType.toUpperCase()} | ${who}`)
+        lines.push(`  ${l.tempF} °F (target ${l.targetTempF} °F) — ${flag}${l.violationType ? ` [${l.violationType}]` : ''}`)
+        lines.push(`  Recorded by: ${l.recordedBy ?? 'unknown'}${l.source === 'probe' ? ` (probe: ${l.probeDevice ?? 'unknown'})` : ''}`)
+        if (!l.compliant) {
+          lines.push(`  Corrective action: ${l.correctiveAction ? l.correctiveAction : 'OPEN — NOT YET RECORDED'}`)
+        }
+        lines.push('')
+      }
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+      res.setHeader('Content-Disposition', `attachment; filename="haccp-temperature-log-${startDate}-to-${endDate}.txt"`)
+      return res.send(lines.join('\n'))
+    }
+
+    res.json({ reportTitle: 'HACCP Temperature Log', summary, logs })
+  } catch (e) { next(e) }
+})
+// ─── end C01 additive region ──────────────────────────────────────────────

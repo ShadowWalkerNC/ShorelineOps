@@ -35,13 +35,17 @@ export default function ReportingPage() {
   const [showAddCostModal, setShowAddCostModal] = useState(false)
   const [costForm, setCostForm] = useState({ logDate: todayStr, residentCount: 0, foodCost: 0, notes: '' })
 
+  // C06: rolled menu-slot plate-cost breakdown for the cost tab
+  const [cpdBreakdown, setCpdBreakdown] = useState<any | null>(null)
+  const [rollupStatus, setRollupStatus] = useState('')
+
   // Substitution form state
   const [showAddSubModal, setShowAddSubModal] = useState(false)
   const [subForm, setSubForm] = useState({ mealDate: todayStr, mealType: 'Lunch', originalItem: '', substituteItem: '', reason: '' })
 
   useEffect(() => {
     fetchSummary()
-    if (activeTab === 'cost') fetchCostLogs()
+    if (activeTab === 'cost') { fetchCostLogs(); fetchCpdBreakdown() }
     if (activeTab === 'substitutions') fetchSubstitutions()
     if (activeTab === 'allergies') fetchAllergyRisks()
     if (activeTab === 'mismatches') fetchDietMismatches()
@@ -86,6 +90,39 @@ export default function ReportingPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // C06: menu-slot plate-cost breakdown for the selected end date. Feeds the
+  // existing cost views — the breakdown shows which slot costs are SKU-matched
+  // vs estimated before anything is written to daily_cost_log.
+  const fetchCpdBreakdown = async () => {
+    try {
+      const res = await api.get(`/reporting/cpd-breakdown?date=${endDate}`)
+      setCpdBreakdown(res.data)
+    } catch (err) {
+      console.error(err)
+      setCpdBreakdown(null)
+    }
+  }
+
+  // C06: roll the active menu for the selected date into daily_cost_log.
+  // Idempotent — re-running overwrites the auto-rollup entry for that date.
+  const rollupDailyCost = async () => {
+    setRollupStatus('Rolling up menu costs…')
+    try {
+      const res = await api.post('/reporting/cost-log/rollup', { date: endDate })
+      const d = res.data
+      setRollupStatus(
+        `Rolled up $${d.dailyFoodCost?.toFixed(2) ?? '—'} for ${d.dayName ?? endDate} ` +
+        `(${d.provenance ?? 'unknown'} cost provenance, ${d.residentCount ?? 0} residents).`
+      )
+      fetchCostLogs()
+      fetchSummary()
+      fetchCpdBreakdown()
+    } catch (e: any) {
+      setRollupStatus(e?.response?.data?.error ?? 'Daily cost rollup failed.')
+    }
+    setTimeout(() => setRollupStatus(''), 8000)
   }
 
   const fetchAllergyRisks = async () => {
@@ -418,26 +455,56 @@ export default function ReportingPage() {
       {/* Cost per Resident Day Tab */}
       {activeTab === 'cost' && (
         <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
               Daily Food Cost & Resident Counts
             </h2>
-            <button
-              onClick={() => setShowAddCostModal(true)}
-              style={{
-                background: 'var(--color-primary)',
-                color: '#fff',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer'
-              }}
-            >
-              + Log Daily Cost Snapshot
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={rollupDailyCost}
+                title="Roll the active menu's slot plate costs into daily_cost_log for the selected end date (idempotent)"
+                style={{
+                  background: 'transparent',
+                  color: 'var(--color-primary)',
+                  border: '1px solid var(--color-primary)',
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer'
+                }}
+              >
+                Roll up from menu
+              </button>
+              <button
+                onClick={() => setShowAddCostModal(true)}
+                style={{
+                  background: 'var(--color-primary)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer'
+                }}
+              >
+                + Log Daily Cost Snapshot
+              </button>
+            </div>
           </div>
+          {rollupStatus && (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, fontWeight: 600 }}>
+              {rollupStatus}
+            </div>
+          )}
+          {summary?.costSourceCounts && (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
+              Cost input mix for this range:{' '}
+              <strong>{summary.costSourceCounts.rolledUpDays} day(s) rolled up</strong> from the menu,{' '}
+              <strong>{summary.costSourceCounts.manualDays} day(s) manual</strong> entries.
+            </div>
+          )}
 
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
             <thead>
@@ -446,6 +513,7 @@ export default function ReportingPage() {
                 <th style={{ padding: '10px 12px' }}>Resident Census</th>
                 <th style={{ padding: '10px 12px' }}>Daily Food Cost</th>
                 <th style={{ padding: '10px 12px' }}>Cost / Resident Day</th>
+                <th style={{ padding: '10px 12px' }}>Source</th>
                 <th style={{ padding: '10px 12px' }}>Notes</th>
               </tr>
             </thead>
@@ -458,11 +526,74 @@ export default function ReportingPage() {
                   <td style={{ padding: '12px', fontWeight: 700, color: 'var(--color-primary)' }}>
                     ${Number(log.cost_per_resident_day || (Number(log.food_cost) / log.resident_count)).toFixed(2)}
                   </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      background: log.source === 'auto' ? 'var(--color-primary-soft, #e8f0fe)' : 'var(--bg-muted, #f1f5f9)',
+                      color: log.source === 'auto' ? 'var(--color-primary)' : 'var(--text-secondary)'
+                    }}>
+                      {log.source === 'auto' ? 'Rolled up' : 'Manual'}
+                    </span>
+                  </td>
                   <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{log.notes || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          {/* C06: menu-slot plate-cost breakdown with cost provenance */}
+          {cpdBreakdown && cpdBreakdown.slots?.length > 0 && (
+            <div style={{ marginTop: 24 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
+                Menu cost breakdown — {cpdBreakdown.dayName}
+                {cpdBreakdown.weekName ? ` (${cpdBreakdown.weekName})` : ''}
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
+                ${cpdBreakdown.perResidentDayCost?.toFixed(2)} / resident-day × {cpdBreakdown.residentCount} residents
+                {' '}= <strong>${cpdBreakdown.dailyFoodCost?.toFixed(2)}</strong> daily food cost.
+                Provenance flags show which slot costs come from vendor SKU matches vs estimated inputs.
+              </p>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px 12px' }}>Meal slot</th>
+                    <th style={{ padding: '8px 12px' }}>Menu items</th>
+                    <th style={{ padding: '8px 12px' }}>Slot plate cost</th>
+                    <th style={{ padding: '8px 12px' }}>Provenance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cpdBreakdown.slots.map((slot: any) => (
+                    <tr key={slot.slot} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '10px 12px', fontWeight: 600, textTransform: 'capitalize' }}>{slot.slot}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                        {slot.items.map((it: any) => `${it.itemName} ($${Number(it.plateCost).toFixed(2)})`).join(' · ')}
+                      </td>
+                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>${Number(slot.slotPlateCost).toFixed(2)}</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          background: slot.provenance === 'sku-matched' ? '#dcfce7' : slot.provenance === 'none' ? '#f1f5f9' : '#fef3c7',
+                          color: slot.provenance === 'sku-matched' ? '#15803d' : slot.provenance === 'none' ? '#64748b' : '#b45309'
+                        }}>
+                          {slot.provenance === 'sku-matched' ? 'SKU-matched'
+                            : slot.provenance === 'mixed' ? 'Mixed sources'
+                            : slot.provenance === 'estimated' ? 'Estimated'
+                            : 'No cost data'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

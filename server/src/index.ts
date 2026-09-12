@@ -99,6 +99,7 @@ import { httpCacheMiddleware } from './middleware/cache'
 
 import { mcpRouter } from './routes/mcp'
 import { globalHealerBot } from './agent/healer'
+import { startNightlyForecastRollup } from './jobs/nightlyForecast'
 import { webhooksRouter } from './routes/webhooks'
 import { hardwareRouter } from './routes/hardware'
 import { billingRouter } from './routes/billing'
@@ -244,6 +245,7 @@ const server = app.listen(PORT, () => {
     .then(() => {
       console.log('[Shoreline API] Database migrations & seed verified.')
       globalHealerBot.startDaemon(300000) // Run self-healing background checks every 5 minutes
+      startNightlyForecastRollup() // C05: nightly avg_usage rollup from inventory transactions
     })
     .catch((err) => {
       // A02: schema drift is fail-closed — refuse to start rather than run
@@ -254,6 +256,7 @@ const server = app.listen(PORT, () => {
       }
       console.warn('[Shoreline API] Database initialization warning (will retry in background):', err.message)
       globalHealerBot.startDaemon(300000)
+      startNightlyForecastRollup() // C05: nightly avg_usage rollup (runs even if seed warned)
     })
 })
 

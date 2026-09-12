@@ -302,17 +302,20 @@ residentsRouter.get('/:id/history', async (req: AuthRequest, res, next) => {
 residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, next) => {
   try {
     const data = ResidentSchema.parse(req.body)
-    const { rows } = await pool.query(`
+    // Portable write: the pool's SQLite path drops RETURNING rows and
+    // uuid_generate_v4() defaults don't exist on SQLite, so generate the
+    // id client-side and re-read the row after INSERT (B05 inventory pattern).
+    const id = randomUUID()
+    await pool.query(`
       INSERT INTO residents
-        (name, room, status, diet_type, texture, portion_size, ensure_per_day,
+        (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
          allergies, beverages, birthday_month, birthday_day, serving_location,
          table_assignment, likes, dislikes, special_instructions,
          diet_ordered_by, diet_order_date, diet_effective_date)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
-              $17, NOW(), NOW())
-      RETURNING *`,
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
+              NOW(), NOW())`,
       [
-        data.name, data.room, data.status, data.dietType, data.texture,
+        id, data.name, data.room, data.status, data.dietType, data.texture,
         data.portionSize, data.ensurePerDay, data.allergies, data.beverages,
         data.birthdayMonth ?? null, data.birthdayDay ?? null,
         data.servingLocation, data.tableAssignment,
@@ -321,6 +324,10 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
         req.userId ?? null,
       ]
     )
+    const { rows } = await pool.query(
+      'SELECT * FROM residents WHERE id = $1', [id]
+    )
+    if (!rows[0]) throw new Error('Resident insert failed: row not readable after INSERT')
     await pool.query(
       `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
        VALUES ('CREATE_RESIDENT', $1, $2, 'resident', 'success')`,

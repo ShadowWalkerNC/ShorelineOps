@@ -13,6 +13,13 @@ import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { DietaryNutritionalEngine } from '../engine/nutrition'
 import { KitchenProductionEngine } from '../engine/production'
+import {
+  RecipeCostingEngine,
+  fetchVendorCatalog,
+  recalcRecipeCost,
+  recalcAllRecipeCosts,
+  type CostProvenance,
+} from '../engine/costing'
 
 export const recipesRouter = Router()
 
@@ -21,6 +28,7 @@ const RecipeIngredientSchema = z.object({
   item: z.string().min(1),
   vendorSku: z.string().optional(),
   estimatedCost: z.number().optional(),
+  yieldPct: z.number().optional(),
 })
 
 const RecipeStepSchema = z.object({
@@ -43,7 +51,9 @@ const RecipeBodySchema = z.object({
 
 /**
  * GET /api/recipes
- * List all master recipes with allergen tags and nutritional summary
+ * List all master recipes with allergen tags and nutritional summary.
+ * costProvenance is computed live from current vendor-catalog coverage so the
+ * SKU-matched vs estimated flag always reflects reality, never stale data.
  */
 recipesRouter.get('/', async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -54,6 +64,7 @@ recipesRouter.get('/', async (_req: Request, res: Response, next: NextFunction) 
       LEFT JOIN recipe_nutrients rn ON rn.recipe_id = r.id
       ORDER BY r.category, r.name ASC
     `)
+    const catalog = await fetchVendorCatalog(pool)
 
     res.json(rows.map(r => ({
       id: r.id,
@@ -69,6 +80,10 @@ recipesRouter.get('/', async (_req: Request, res: Response, next: NextFunction) 
       steps: r.steps || [],
       notes: r.notes || '',
       costPerServing: parseFloat(r.cost_per_serving || 0),
+      costProvenance: RecipeCostingEngine.ingredientProvenance(
+        (typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients) || [],
+        catalog
+      ) as CostProvenance,
       nutrition: r.calories !== null ? {
         calories: parseFloat(r.calories || 0),
         proteinG: parseFloat(r.protein_g || 0),
@@ -98,6 +113,15 @@ recipesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
     if (!rows[0]) return res.status(404).json({ error: 'Recipe not found' })
     const r = rows[0]
 
+    const ingredients = (typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients) || []
+    const catalog = await fetchVendorCatalog(pool)
+    const costBreakdown = RecipeCostingEngine.costRecipe(
+      ingredients,
+      parseFloat(r.base_servings) || 1,
+      catalog,
+      r.id
+    )
+
     res.json({
       id: r.id,
       name: r.name,
@@ -112,6 +136,8 @@ recipesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
       steps: r.steps || [],
       notes: r.notes || '',
       costPerServing: parseFloat(r.cost_per_serving || 0),
+      costProvenance: costBreakdown.provenance,
+      costBreakdown, // per-line source flags (sku / estimated / none)
       nutrition: {
         calories: parseFloat(r.calories || 0),
         proteinG: parseFloat(r.protein_g || 0),
@@ -161,6 +187,17 @@ recipesRouter.post('/', requireRole('staff'), async (req: AuthRequest, res: Resp
       data.notes,
     ])
 
+    // 1b. Roll up cost_per_serving from the vendor catalog (C06): SKU-matched
+    // vendor unit_cost wins; ingredient estimatedCost is the flagged fallback.
+    const costCatalog = await fetchVendorCatalog(client)
+    const costBreakdown = RecipeCostingEngine.costRecipe(
+      data.ingredients, data.baseServings, costCatalog, recipe.id
+    )
+    await client.query(
+      `UPDATE recipes SET cost_per_serving = $1 WHERE id = $2`,
+      [costBreakdown.costPerServing, recipe.id]
+    )
+
     // 2. Persist nutritional profile
     await client.query(`
       INSERT INTO recipe_nutrients 
@@ -196,6 +233,9 @@ recipesRouter.post('/', requireRole('staff'), async (req: AuthRequest, res: Resp
 
     res.status(201).json({
       ...recipe,
+      cost_per_serving: costBreakdown.costPerServing,
+      costProvenance: costBreakdown.provenance,
+      costBreakdown,
       nutrition: analysis.perServing,
       ingredientContributions: analysis.ingredientContributions,
     })
@@ -217,12 +257,21 @@ recipesRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res: Re
     const { rows: existing } = await pool.query('SELECT * FROM recipes WHERE id = $1', [req.params.id])
     if (!existing[0]) return res.status(404).json({ error: 'Recipe not found' })
 
-    const mergedIngredients = data.ingredients ?? existing[0].ingredients
+    const mergedIngredientsRaw = data.ingredients ?? existing[0].ingredients
+    const mergedIngredients = typeof mergedIngredientsRaw === 'string'
+      ? JSON.parse(mergedIngredientsRaw)
+      : mergedIngredientsRaw
     const mergedServings = data.baseServings ?? parseFloat(existing[0].base_servings)
 
     const analysis = DietaryNutritionalEngine.calculateRecipeNutrition(mergedIngredients, mergedServings)
 
     await client.query('BEGIN')
+
+    // C06: recompute cost_per_serving from current vendor catalog on every save
+    const costCatalogPut = await fetchVendorCatalog(client)
+    const costBreakdownPut = RecipeCostingEngine.costRecipe(
+      mergedIngredients, mergedServings, costCatalogPut, req.params.id
+    )
 
     const { rows: [updated] } = await client.query(`
       UPDATE recipes SET
@@ -237,8 +286,9 @@ recipesRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res: Re
         ingredients     = COALESCE($9, ingredients),
         steps           = COALESCE($10, steps),
         notes           = COALESCE($11, notes),
+        cost_per_serving = $12,
         updated_at      = NOW()
-      WHERE id = $12
+      WHERE id = $13
       RETURNING *
     `, [
       data.name ?? null,
@@ -252,6 +302,7 @@ recipesRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res: Re
       data.ingredients ? JSON.stringify(data.ingredients) : null,
       data.steps ? JSON.stringify(data.steps) : null,
       data.notes ?? null,
+      costBreakdownPut.costPerServing,
       req.params.id,
     ])
 
@@ -289,6 +340,8 @@ recipesRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res: Re
 
     res.json({
       ...updated,
+      costProvenance: costBreakdownPut.provenance,
+      costBreakdown: costBreakdownPut,
       nutrition: analysis.perServing,
     })
   } catch (err) {
@@ -312,8 +365,36 @@ recipesRouter.delete('/:id', requireRole('admin'), async (req: AuthRequest, res:
 })
 
 /**
+ * POST /api/recipes/recalc-costs
+ * Idempotent backfill: recompute cost_per_serving for recipes from the current
+ * vendor catalog and overwrite stored values. Safe to re-run any number of
+ * times — same inputs always produce the same stored values.
+ * Body: { recipeIds?: string[] } (omit to recalc all)
+ */
+recipesRouter.post('/recalc-costs', requireRole('staff'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { recipeIds } = (req.body ?? {}) as { recipeIds?: string[] }
+    if (Array.isArray(recipeIds) && recipeIds.length > 0) {
+      const results: Array<{ id: string; name: string; costPerServing: number; provenance: CostProvenance }> = []
+      for (const id of recipeIds) {
+        const breakdown = await recalcRecipeCost(pool, id)
+        if (breakdown) {
+          const { rows } = await pool.query(`SELECT name FROM recipes WHERE id = $1`, [id])
+          results.push({ id, name: rows[0]?.name ?? '', costPerServing: breakdown.costPerServing, provenance: breakdown.provenance })
+        }
+      }
+      return res.json({ updated: results.length, results, idempotent: true })
+    }
+    const result = await recalcAllRecipeCosts(pool)
+    res.json({ ...result, idempotent: true })
+  } catch (err) { next(err) }
+})
+
+/**
  * POST /api/recipes/:id/scale
- * Scales recipe to specified batch portion count for kitchen line cooks
+ * Scales recipe to specified batch portion count for kitchen line cooks.
+ * Cost per serving is invariant to scale; the response carries the stored
+ * cost_per_serving plus batch totals and the live cost-provenance flag.
  */
 recipesRouter.post('/:id/scale', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -330,7 +411,21 @@ recipesRouter.post('/:id/scale', async (req: Request, res: Response, next: NextF
       steps: rows[0].steps || [],
     }, portions, texture)
 
-    res.json(batch)
+    const ingredients = (typeof rows[0].ingredients === 'string'
+      ? JSON.parse(rows[0].ingredients)
+      : rows[0].ingredients) || []
+    const costPerServing = parseFloat(rows[0].cost_per_serving || 0)
+    const catalog = await fetchVendorCatalog(pool)
+
+    res.json({
+      ...batch,
+      cost: {
+        costPerServing,
+        batchCost: Math.round(costPerServing * portions * 10000) / 10000,
+        portions,
+        costProvenance: RecipeCostingEngine.ingredientProvenance(ingredients, catalog) as CostProvenance,
+      },
+    })
   } catch (err) { next(err) }
 })
 

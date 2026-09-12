@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { settingsApi, type FacilitySettingsPayload } from '@/api/admin'
 import { LicenseManager } from '@/security/license'
 
 export interface FacilityProfile {
@@ -44,6 +45,18 @@ export interface SecurityConfig {
   baaSignee: string
 }
 
+/**
+ * Sync state of the facility settings store.
+ * - 'synced': last server round-trip succeeded; local state == server.
+ * - 'syncing': a server round-trip is in flight.
+ * - 'offline-cached': server unreachable; showing localStorage cache.
+ * - 'error': last write failed (e.g. permission); local edits kept, flagged.
+ *
+ * Server is authoritative: on every successful read/write the server
+ * response replaces local state, and localStorage is only an offline cache.
+ */
+export type SettingsSyncState = 'synced' | 'syncing' | 'offline-cached' | 'error'
+
 export interface SettingsState {
   facility: FacilityProfile
   operations: OperationsConfig
@@ -51,6 +64,9 @@ export interface SettingsState {
   security: SecurityConfig
   isSaving: boolean
   lastSavedAt: string | null
+  syncState: SettingsSyncState
+  lastSyncedAt: string | null
+  syncError: string | null
 
   // Actions
   updateFacility: (updates: Partial<FacilityProfile>) => void
@@ -61,8 +77,12 @@ export interface SettingsState {
   removeWing: (wingName: string) => void
   addDiningRoom: (roomName: string) => void
   removeDiningRoom: (roomName: string) => void
+  /** Pull authoritative settings from the server (falls back to cache). */
+  loadFromServer: () => Promise<void>
+  /** Write-through save: PUT to server, then refresh localStorage cache. */
   saveSettings: () => Promise<void>
-  resetDefaults: () => void
+  /** Reset to factory defaults server-side (manager-gated). */
+  resetDefaults: () => Promise<void>
 }
 
 const STORAGE_KEY = 'shoreline_facility_settings'
@@ -114,14 +134,23 @@ const DEFAULT_SETTINGS: {
   },
 }
 
-function loadInitialSettings() {
+/** Deep-clone the defaults so no caller mutates the shared constant. */
+function freshDefaults() {
+  return JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as typeof DEFAULT_SETTINGS
+}
+
+function loadCachedSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
       return {
         facility: { ...DEFAULT_SETTINGS.facility, ...parsed.facility },
-        operations: { ...DEFAULT_SETTINGS.operations, ...parsed.operations },
+        operations: {
+          ...DEFAULT_SETTINGS.operations,
+          ...parsed.operations,
+          mealTimes: { ...DEFAULT_SETTINGS.operations.mealTimes, ...(parsed.operations?.mealTimes ?? {}) },
+        },
         integrations: { ...DEFAULT_SETTINGS.integrations, ...parsed.integrations },
         security: { ...DEFAULT_SETTINGS.security, ...parsed.security },
       }
@@ -129,10 +158,41 @@ function loadInitialSettings() {
   } catch (err) {
     console.warn('Failed to parse settings from storage:', err)
   }
-  return DEFAULT_SETTINGS
+  return freshDefaults()
 }
 
-const initial = loadInitialSettings()
+function applyServerPayload(
+  state: Pick<SettingsState, 'facility' | 'operations' | 'integrations' | 'security'>,
+  payload: FacilitySettingsPayload
+): Pick<SettingsState, 'facility' | 'operations' | 'integrations' | 'security'> {
+  const s = payload.settings
+  return {
+    facility: { ...DEFAULT_SETTINGS.facility, ...(s.facility ?? {}) },
+    operations: {
+      ...DEFAULT_SETTINGS.operations,
+      ...(s.operations ?? {}),
+      mealTimes: { ...DEFAULT_SETTINGS.operations.mealTimes, ...(s.operations?.mealTimes ?? {}) },
+    },
+    integrations: { ...DEFAULT_SETTINGS.integrations, ...(s.integrations ?? {}) },
+    security: { ...DEFAULT_SETTINGS.security, ...(s.security ?? {}) },
+  }
+}
+
+function writeCache(state: SettingsState) {
+  try {
+    const payload = {
+      facility: state.facility,
+      operations: state.operations,
+      integrations: state.integrations,
+      security: state.security,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+  } catch (err) {
+    console.warn('Failed to cache settings to local storage:', err)
+  }
+}
+
+const initial = loadCachedSettings()
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   facility: initial.facility,
@@ -141,6 +201,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   security: initial.security,
   isSaving: false,
   lastSavedAt: null,
+  // Start honest: we only have the offline cache until a server read succeeds.
+  syncState: 'offline-cached',
+  lastSyncedAt: null,
+  syncError: null,
 
   updateFacility: updates => {
     set(state => ({
@@ -212,27 +276,90 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }))
   },
 
+  loadFromServer: async () => {
+    // Avoid piling up parallel loads.
+    if (get().syncState === 'syncing') return
+    set({ syncState: 'syncing', syncError: null })
+    try {
+      const payload = await settingsApi.getFacilitySettings()
+      const applied = applyServerPayload(get(), payload)
+      const now = new Date().toISOString()
+      set({
+        ...applied,
+        syncState: 'synced',
+        lastSyncedAt: now,
+        syncError: null,
+      })
+      writeCache(get())
+    } catch (err: any) {
+      // Server unreachable (offline, expired session, etc.): keep the
+      // localStorage cache visible and say so — never silent.
+      set({
+        syncState: 'offline-cached',
+        syncError: err?.message ?? 'Settings server unreachable — showing cached settings.',
+      })
+    }
+  },
+
   saveSettings: async () => {
-    set({ isSaving: true })
+    set({ isSaving: true, syncError: null })
     try {
       const { facility, operations, integrations, security } = get()
-      const payload = { facility, operations, integrations, security }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-      set({ lastSavedAt: new Date().toISOString(), isSaving: false })
-    } catch (err) {
-      set({ isSaving: false })
+      // Write-through: server is authoritative. The response replaces local
+      // state (server wins) and then refreshes the offline cache.
+      const payload = await settingsApi.updateFacilitySettings({
+        facility,
+        operations,
+        integrations,
+        security,
+      })
+      const applied = applyServerPayload(get(), payload)
+      const now = new Date().toISOString()
+      set({
+        ...applied,
+        lastSavedAt: now,
+        lastSyncedAt: now,
+        syncState: 'synced',
+        syncError: null,
+        isSaving: false,
+      })
+      writeCache(get())
+    } catch (err: any) {
+      // Local edits are kept so nothing is silently lost, but the failure
+      // is surfaced honestly (permission denied, offline, …).
+      set({
+        isSaving: false,
+        syncState: 'error',
+        syncError: err?.message ?? 'Failed to save settings.',
+      })
       throw err
     }
   },
 
-  resetDefaults: () => {
-    localStorage.removeItem(STORAGE_KEY)
-    set({
-      facility: DEFAULT_SETTINGS.facility,
-      operations: DEFAULT_SETTINGS.operations,
-      integrations: DEFAULT_SETTINGS.integrations,
-      security: DEFAULT_SETTINGS.security,
-      lastSavedAt: new Date().toISOString(),
-    })
+  resetDefaults: async () => {
+    set({ isSaving: true, syncError: null })
+    try {
+      const defaults = freshDefaults()
+      // Reset happens server-side so every device converges; manager-gated.
+      const payload = await settingsApi.updateFacilitySettings(defaults)
+      const applied = applyServerPayload(get(), payload)
+      const now = new Date().toISOString()
+      set({
+        ...applied,
+        lastSavedAt: now,
+        lastSyncedAt: now,
+        syncState: 'synced',
+        syncError: null,
+        isSaving: false,
+      })
+      writeCache(get())
+    } catch (err: any) {
+      set({
+        isSaving: false,
+        syncState: 'error',
+        syncError: err?.message ?? 'Failed to reset settings.',
+      })
+      throw err
+    }
   },
 }))

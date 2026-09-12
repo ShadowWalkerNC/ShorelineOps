@@ -41,12 +41,12 @@ export default function ProductionSheetView({ sheet, onSaveNote }: Props) {
     <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
       {/* View mode toggle */}
       <div className="flex items-center gap-2 px-4 py-3 border-b bg-gray-50">
-        <span className="text-xs text-gray-500 font-medium">View by:</span>
+        <span className="text-sm text-gray-500 font-medium">View by:</span>
         {(['texture', 'diet', 'location'] as ViewMode[]).map(m => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+            className={`min-h-[44px] px-4 rounded-full text-sm font-medium transition inline-flex items-center ${
               viewMode === m ? 'bg-indigo-600 text-white' : 'bg-white border text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -54,7 +54,7 @@ export default function ProductionSheetView({ sheet, onSaveNote }: Props) {
           </button>
         ))}
         {sheet.signedOffBy && (
-          <span className="ml-auto text-xs text-green-700 font-medium">
+          <span className="ml-auto text-sm text-green-700 font-medium">
             ✓ Signed off by {sheet.signedOffBy}
           </span>
         )}
@@ -63,7 +63,7 @@ export default function ProductionSheetView({ sheet, onSaveNote }: Props) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
+            <tr className="bg-gray-50 text-left text-sm text-gray-500 uppercase tracking-wide">
               <th className="px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">Item</th>
               {columns.map(col => (
                 <th key={col} className="px-3 py-3 font-semibold text-center whitespace-nowrap">{col}</th>
@@ -85,7 +85,7 @@ export default function ProductionSheetView({ sheet, onSaveNote }: Props) {
                 <td className="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white z-10 whitespace-nowrap">
                   {row.menuItemName}
                   {row.textureModified && (
-                    <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">TM</span>
+                    <span className="ml-2 text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold">TM</span>
                   )}
                 </td>
                 {columns.map(col => (
@@ -110,12 +110,12 @@ export default function ProductionSheetView({ sheet, onSaveNote }: Props) {
                             if (e.key === 'Enter') handleNoteSubmit(row)
                             if (e.key === 'Escape') setEditingNote(null)
                           }}
-                          className="flex-1 border rounded px-2 py-1 text-xs"
+                          className="flex-1 border rounded px-3 py-2 min-h-[44px] text-sm"
                           placeholder="Add note…"
                         />
-                        <button onClick={() => handleNoteSubmit(row)} className="text-xs text-green-600 font-medium">Save</button>
+                        <button onClick={() => handleNoteSubmit(row)} className="min-h-[44px] px-4 text-sm text-green-600 font-bold">Save</button>
                       </div>
-                      {noteError && <div className="text-xs text-red-600 mt-1">{noteError}</div>}
+                      {noteError && <div className="text-sm text-red-600 mt-1">{noteError}</div>}
                     </div>
                   ) : (
                     <button
@@ -123,7 +123,7 @@ export default function ProductionSheetView({ sheet, onSaveNote }: Props) {
                         setEditingNote(row.menuItemId)
                         setNoteValue(row.kitchenNote ?? '')
                       }}
-                      className="text-xs text-gray-400 hover:text-gray-700 text-left"
+                      className="min-h-[44px] inline-flex items-center text-sm text-gray-400 hover:text-gray-700 text-left"
                     >
                       {row.kitchenNote || <span className="italic">+ add note</span>}
                     </button>

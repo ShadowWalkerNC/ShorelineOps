@@ -3,6 +3,8 @@ import { useResidentsStore } from '../../state/residentsStore'
 import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import { encodeQr, qrToSvg } from '../../lib/qrcode'
+import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from './KitchenModeContext'
+import ClinicalSafetyStrip from './ClinicalSafetyStrip'
 import {
   Printer,
   ShieldAlert,
@@ -60,7 +62,7 @@ function TrayQr({ token }: { token: string }) {
   }, [token])
   if (!svg) {
     return (
-      <div className="p-1 rounded bg-red-50 border border-red-300 text-[9px] font-bold text-red-700 text-center">
+      <div className="p-1 rounded bg-red-50 border border-red-300 text-xs font-bold text-red-700 text-center">
         QR UNAVAILABLE
       </div>
     )
@@ -76,7 +78,7 @@ function TrayQr({ token }: { token: string }) {
   )
 }
 
-export default function TrayCardGeneratorPage() {
+function TrayCardGeneratorPageInner() {
   const { residents } = useResidentsStore()
   const [selectedWing, setSelectedWing] = useState<string>('all')
   const [selectedMeal, setSelectedMeal] = useState<'Breakfast' | 'Lunch' | 'Dinner'>('Lunch')
@@ -125,7 +127,7 @@ export default function TrayCardGeneratorPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <KitchenFitShell className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
       {/* ── Apple Page Header (Hidden on Print) ── */}
       <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -133,7 +135,7 @@ export default function TrayCardGeneratorPage() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
               Clinical Tray Cards &amp; 4&times;6 Meal Tickets
             </h1>
-            <AppleBadge color="blue" dot>
+            <AppleBadge color="blue" dot className="text-sm">
               {filteredCards.length} Patient Trays
             </AppleBadge>
           </div>
@@ -147,7 +149,7 @@ export default function TrayCardGeneratorPage() {
           <select
             value={selectedWing}
             onChange={e => setSelectedWing(e.target.value)}
-            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20"
+            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 min-h-[44px] text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20"
           >
             <option value="all">All Care Units &amp; Wings</option>
             {wings.map((wing: any) => (
@@ -158,16 +160,18 @@ export default function TrayCardGeneratorPage() {
           <select
             value={selectedMeal}
             onChange={e => setSelectedMeal(e.target.value as any)}
-            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20"
+            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 min-h-[44px] text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20"
           >
             <option value="Breakfast">Breakfast Service (07:30 AM)</option>
             <option value="Lunch">Lunch Service (12:00 PM)</option>
             <option value="Dinner">Dinner Service (05:00 PM)</option>
           </select>
 
+          <KitchenModeToggle />
           <AppleButton
             variant="primary"
             size="md"
+            className="min-h-[44px]"
             icon={<Printer className="w-4 h-4" />}
             onClick={handlePrint}
             disabled={loading || filteredCards.length === 0}
@@ -175,6 +179,11 @@ export default function TrayCardGeneratorPage() {
             Print 4&times;6 Thermal Tray Cards
           </AppleButton>
         </div>
+      </div>
+
+      {/* ── C02 clinical safety strip: current meal + live allergy/NPO counts ── */}
+      <div className="no-print">
+        <ClinicalSafetyStrip residents={residents as any[]} meal={selectedMeal} />
       </div>
 
       {loading && (
@@ -211,7 +220,7 @@ export default function TrayCardGeneratorPage() {
                 <div className="flex items-start justify-between border-b-2 border-slate-200 dark:border-slate-800 pb-2.5">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-400 font-mono px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800">
+                      <span className="text-sm font-black uppercase tracking-wider text-teal-700 dark:text-teal-400 font-mono px-2 py-1 rounded bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800">
                         ROOM {card.room || '—'}
                       </span>
                       <span className="text-[10px] font-mono text-slate-400">v{card.profileVersion}</span>
@@ -219,14 +228,14 @@ export default function TrayCardGeneratorPage() {
                     <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight mt-1">
                       {card.residentName}
                     </h3>
-                    <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
+                    <div className="text-sm text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
                       <MapPin className="w-3 h-3 text-slate-400" />
                       <span>{card.table || 'Dining Room'}</span>
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-[10px] font-black uppercase text-teal-700 dark:text-teal-300 font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                    <span className="text-sm font-black uppercase text-teal-700 dark:text-teal-300 font-mono px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">
                       {card.mealSlot}
                     </span>
                     <div className="w-16 h-16">
@@ -237,14 +246,14 @@ export default function TrayCardGeneratorPage() {
 
                 {/* NPO BANNER — driven by the real is_npo flag, with reason */}
                 {card.isNpo && (
-                  <div className="p-2 rounded-xl bg-red-600 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs animate-pulse">
+                  <div className="p-2 rounded-xl bg-red-600 text-white font-black text-sm flex items-center justify-center gap-1.5 shadow-xs animate-pulse">
                     <AlertOctagon className="w-4 h-4" />
                     <span>NPO: DO NOT DELIVER TRAY (HOLD){card.npoReason ? ` — ${card.npoReason}` : ''}</span>
                   </div>
                 )}
 
                 {/* Diet Order & IDDSI Texture Block */}
-                <div className="space-y-1.5 text-xs">
+                <div className="space-y-1.5 text-sm">
                   <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
                     <span className="font-bold text-slate-500">Therapeutic Diet:</span>
                     <span className="font-black text-slate-900 dark:text-white">{card.dietOrder}</span>
@@ -267,41 +276,41 @@ export default function TrayCardGeneratorPage() {
                 </div>
 
                 {/* Entrée (NPO lockout text comes from the engine) */}
-                <div className={`p-2 rounded-xl text-xs font-black ${card.isNpo ? 'bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-200 border border-red-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100'}`}>
+                <div className={`p-2 rounded-xl text-sm font-black ${card.isNpo ? 'bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-200 border border-red-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100'}`}>
                   {card.selectedEntree}
                 </div>
 
                 {/* Allergy Alerts */}
                 {allergies.length > 0 ? (
-                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-800 text-xs">
-                    <div className="flex items-center gap-1 font-black text-rose-700 dark:text-rose-300 text-[11px] mb-1">
+                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-800 text-sm">
+                    <div className="flex items-center gap-1 font-black text-rose-700 dark:text-rose-300 text-sm mb-1">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       <span>CLINICAL ALLERGIES (NON-OVERRIDABLE)</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {allergies.map((a: string) => (
-                        <span key={a} className="px-1.5 py-0.5 rounded bg-white dark:bg-rose-900 font-black text-rose-700 dark:text-rose-200 text-[11px] border border-rose-300">
+                        <span key={a} className="px-2 py-1 rounded bg-white dark:bg-rose-900 font-black text-rose-700 dark:text-rose-200 text-sm border border-rose-300">
                           {a}
                         </span>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                  <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-sm font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>No Known Food Allergens (NKDA)</span>
                   </div>
                 )}
 
                 {card.specialNotes && (
-                  <div className="text-[11px] text-slate-500 font-medium">
+                  <div className="text-sm text-slate-500 font-medium">
                     <strong className="text-slate-700 dark:text-slate-300">Notes:</strong> {card.specialNotes}
                   </div>
                 )}
               </div>
 
               {/* Security & Verification Footer */}
-              <div className="pt-2.5 mt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+              <div className="pt-2.5 mt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono">
                 <div className="flex items-center gap-1 text-teal-600 dark:text-teal-400 font-bold">
                   <HeartPulse className="w-3 h-3" />
                   <span>SIGNED v{card.profileVersion}</span>
@@ -312,6 +321,16 @@ export default function TrayCardGeneratorPage() {
           )
         })}
       </div>
-    </div>
+    </KitchenFitShell>
+  )
+}
+
+/** C02: each kitchen page mounts its own provider so the per-device
+ *  kitchen-mode preference applies to this page's subtree. */
+export default function TrayCardGeneratorPage() {
+  return (
+    <KitchenModeProvider>
+      <TrayCardGeneratorPageInner />
+    </KitchenModeProvider>
   )
 }

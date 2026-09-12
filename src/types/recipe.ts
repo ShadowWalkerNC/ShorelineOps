@@ -13,11 +13,16 @@ export type RecipeIngredient = {
   qty: string             // e.g. "1 cup", "2 tbsp", "4 lbs"
   item: string            // e.g. "applesauce", "chicken breast"
   vendorItemSku?: string  // e.g. "DNS-1004" (Dennis Food Service SKU)
-  estimatedCost?: number  // e.g. 4.25
+  vendorSku?: string      // server-side alias for vendorItemSku (both accepted)
+  estimatedCost?: number  // e.g. 4.25 — fallback when no vendor SKU match (flagged as estimated)
   yieldPct?: number       // e.g. 75 for 75% yield (shrinkage / trim loss)
   ediblePortionCost?: number // auto-computed: estimatedCost / (yieldPct / 100)
   allergens?: RecipeAllergen[]
 }
+
+/** Cost provenance of a recipe's cost_per_serving: which inputs are vendor-SKU
+ *  matched vs explicitly estimated. 'none' = no cost inputs on file. */
+export type CostProvenance = 'sku-matched' | 'mixed' | 'estimated' | 'none'
 
 export type RecipeStep = {
   step: number
@@ -34,6 +39,7 @@ export type Recipe = {
   steps: RecipeStep[]
   notes: string
   costPerServing?: number       // auto-computed from linked vendor SKUs
+  costProvenance?: CostProvenance // which inputs are SKU-matched vs estimated
   createdAt?: string
   updatedAt?: string
 }

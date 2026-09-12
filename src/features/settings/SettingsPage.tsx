@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSettingsStore, type FacilityProfile, type OperationsConfig, type IntegrationsConfig, type SecurityConfig } from '@/state/settingsStore'
 import { LicenseManager } from '@/security/license'
 import { AppleBadge, AppleButton, AppleCard, AppleSegmentedControl } from '@/apple-ui'
@@ -21,9 +21,69 @@ import {
   Layers,
   HeartHandshake,
   DollarSign,
+  Wifi,
+  WifiOff,
+  Cloud,
+  RefreshCw,
 } from 'lucide-react'
 
 type SettingsTab = 'facility' | 'wings' | 'clinical' | 'integrations' | 'security'
+
+/**
+ * Honest sync indicator: green when the server round-trip succeeded, amber
+ * when showing the offline localStorage cache, red when the last write
+ * failed. Never silent — "server wins" conflicts surface via the toast on
+ * save, and this badge always reflects the last known state.
+ */
+function SyncBadge({
+  syncState,
+  lastSyncedAt,
+  onRetry,
+}: {
+  syncState: 'synced' | 'syncing' | 'offline-cached' | 'error'
+  lastSyncedAt: string | null
+  onRetry: () => void
+}) {
+  const syncedAt = lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : null
+  if (syncState === 'synced') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <Cloud className="w-3.5 h-3.5" />
+        Synced{syncedAt ? ` · ${syncedAt}` : ''}
+      </span>
+    )
+  }
+  if (syncState === 'syncing') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+        Syncing…
+      </span>
+    )
+  }
+  if (syncState === 'error') {
+    return (
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+        title="Last save failed — tap to retry sync"
+      >
+        <WifiOff className="w-3.5 h-3.5" />
+        Sync failed — tap to retry
+      </button>
+    )
+  }
+  return (
+    <button
+      onClick={onRetry}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+      title="Server unreachable — showing cached settings. Tap to retry."
+    >
+      <Wifi className="w-3.5 h-3.5" />
+      Offline — cached settings
+    </button>
+  )
+}
 
 export default function SettingsPage() {
   const {
@@ -33,6 +93,9 @@ export default function SettingsPage() {
     security,
     isSaving,
     lastSavedAt,
+    syncState,
+    lastSyncedAt,
+    syncError,
     updateFacility,
     updateOperations,
     updateIntegrations,
@@ -41,9 +104,16 @@ export default function SettingsPage() {
     removeWing,
     addDiningRoom,
     removeDiningRoom,
+    loadFromServer,
     saveSettings,
     resetDefaults,
   } = useSettingsStore()
+
+  // Server is authoritative: pull facility settings on page load so every
+  // device converges. localStorage stays as the offline cache only.
+  useEffect(() => {
+    loadFromServer()
+  }, [])
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('facility')
   const [newWing, setNewWing] = useState('')
@@ -61,16 +131,20 @@ export default function SettingsPage() {
     if (e) e.preventDefault()
     try {
       await saveSettings()
-      showToast('Facility settings saved and synced successfully!')
+      showToast('Facility settings saved and synced to all devices!')
     } catch (err: any) {
       showToast(err.message || 'Failed to save settings.', 'error')
     }
   }
 
-  const handleReset = () => {
-    if (!window.confirm('Reset all facility settings to factory defaults?')) return
-    resetDefaults()
-    showToast('Settings reset to default profile.')
+  const handleReset = async () => {
+    if (!window.confirm('Reset all facility settings to factory defaults? This applies to every device.')) return
+    try {
+      await resetDefaults()
+      showToast('Settings reset to defaults and synced to all devices.')
+    } catch (err: any) {
+      showToast(err.message || 'Failed to reset settings.', 'error')
+    }
   }
 
   const handleAddWingSubmit = (e: React.FormEvent) => {
@@ -93,13 +167,18 @@ export default function SettingsPage() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
               Facility & Operations Settings
             </h1>
             <AppleBadge color={license.tier === 'enterprise' ? 'purple' : license.tier === 'pro' ? 'blue' : 'green'}>
               {license.tier.toUpperCase()} TIER
             </AppleBadge>
+            <SyncBadge
+              syncState={syncState}
+              lastSyncedAt={lastSyncedAt}
+              onRetry={() => loadFromServer()}
+            />
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Configure healthcare community profile, residential wings, dining schedule, distributor accounts, and compliance parameters.
@@ -630,8 +709,20 @@ export default function SettingsPage() {
 
       {/* Save Button Bar */}
       <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 dark:border-slate-800/80">
-        <div className="text-xs text-slate-400">
-          {lastSavedAt ? `Last saved at ${new Date(lastSavedAt).toLocaleTimeString()}` : 'Unsaved changes are kept in local memory'}
+        <div className="text-xs text-slate-400 max-w-[60%]">
+          {syncState === 'offline-cached' && (
+            <span className="font-semibold text-amber-600">
+              Showing cached settings from this device — server unreachable. Changes may not reach other devices until you reconnect and save.
+            </span>
+          )}
+          {syncState === 'error' && syncError && (
+            <span className="font-semibold text-rose-600">{syncError}</span>
+          )}
+          {(syncState === 'synced' || syncState === 'syncing') && (
+            lastSavedAt
+              ? `Last saved & synced at ${new Date(lastSavedAt).toLocaleTimeString()}`
+              : 'Settings load from the server on this page — edits save to all devices.'
+          )}
         </div>
         <AppleButton variant="primary" size="md" icon={<Save className="w-4 h-4" />} onClick={() => handleSave()} disabled={isSaving}>
           {isSaving ? 'Saving…' : 'Save All Settings'}

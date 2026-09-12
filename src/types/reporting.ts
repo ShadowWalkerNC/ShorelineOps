@@ -4,6 +4,8 @@ export interface ReportingSummary {
   totalFoodCost: string
   totalResidentDays: number
   costPerResidentDay: string | null
+  /** C06: how many cost-log days in range are rolled up from the menu vs manual. */
+  costSourceCounts?: { rolledUpDays: number; manualDays: number }
   breakdown?: {
     perishableFoodCost: number
     dryGroceryCost: number
@@ -30,6 +32,8 @@ export interface DailyCostLog {
   notes?: string
   logged_by_name?: string
   created_at?: string
+  /** C06: 'auto' = rolled up from the menu by the costing engine, 'manual' = hand-entered. */
+  source?: 'auto' | 'manual'
 }
 
 export interface SubstitutionLogEntry {

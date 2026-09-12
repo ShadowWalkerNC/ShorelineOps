@@ -7,7 +7,7 @@
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
 [![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-design-system--uiux)
 [![Security: HIPAA Technical Safeguards](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
-[![Tests: 118/118 Passing](https://img.shields.io/badge/Tests-118%2F118%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
+[![Tests: 132/132 Passing](https://img.shields.io/badge/Tests-132%2F132%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
 **Engineered by a healthcare executive chef, not a venture fund.**  
@@ -46,7 +46,7 @@
 ![Residents & Diets](docs/screenshots/residents_iddsi_triage.png)
 
 ### 4. 🚚 Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
-*Compares live contract pricing line-by-line across Dennis Food Service, Sysco, and US Foods, generating optimal split purchase orders that save \$1.50–\$3.00 per resident day (\$2,500+/mo on a 60-bed building).*
+*Compares live contract pricing line-by-line across Dennis Food Service, Sysco, and US Foods, generating optimal split purchase orders — the lowest-cost vendor wins each line.*
 
 ![Split MRP Purchasing Comparator](docs/screenshots/split_mrp_purchasing.jpg)
 
@@ -60,7 +60,7 @@ In healthcare dining, culinary operations are clinical care:
 - **Dysphagia & Texture Modification**: Swallowing disorders require strict adherence to the **IDDSI framework** (Levels 0–7: Regular, Soft & Bite-Sized, Minced & Moist, Pureed, Liquidised, Thickened Liquids).
 - **Deterministic Allergen Intersection**: Food allergies (Dairy, Gluten, Shellfish, Tree Nuts, Soy, Egg) are cross-referenced against standardized recipe bill-of-materials in real-time with non-overridable hard-blocks.
 - **State Survey Readiness**: Federal regulations require comprehensive documentation under **CMS State Operations Manual Appendix PP (F-Tags F800–F814)**, including the 14-hour dinner-to-breakfast rule (F809).
-- **Distributor Spend Optimization**: Eliminates distributor lock-in by comparing Broadline order guides (**Dennis Food Service, Sysco, US Foods, Gordon Food Service, PFG**) to guarantee lowest case-pack costs.
+- **Distributor Spend Optimization**: Eliminates distributor lock-in by comparing Broadline order guides (**Dennis Food Service, Sysco, US Foods, Gordon Food Service, PFG**) line-by-line so the lowest-cost vendor wins each item.
 
 ---
 
@@ -79,7 +79,7 @@ In healthcare dining, culinary operations are clinical care:
 │ 2. MENU & RECIPE PLANNING     │ │ 3. KITCHEN TABLET & TRAY SCAN │ │ 4. MULTI-DISTRIBUTOR MRP      │
 │ • 4-Week Cycle Menu Engine    │ │ • Batch Cook Worksheets       │ │ • Lowest-Cost Split PO Engine │
 │ • USDA Nutritional Solver     │─┼▶ • Digital Tray Card Scanner  │─┼▶ • Dennis & Sysco EDI Sync    │
-│ • Bill of Materials Explosion │ │ • HACCP 165°F Voice Temp Logs │ │ • 3-Way Invoice Match & Memos │
+│ • Bill of Materials Explosion │ │ • Durable HACCP Temp Logs       │ │ • 3-Way Invoice Match & Memos │
 └───────────────────────────────┘ └───────────────────────────────┘ └───────────────────────────────┘
                                                   │
                                                   ▼
@@ -100,12 +100,22 @@ In healthcare dining, culinary operations are clinical care:
 | **Executive Dashboard** | `/` | Census telemetry, $/CPD cost gauges, IDDSI distribution chart, real-time safety alerts | Executive Dir / CDM |
 | **Residents & Diets** | `/residents` | Therapeutic diets (NAS, NCS, Renal), IDDSI levels, allergies, PointClickCare EHR triage queue | Registered Dietitian |
 | **Menu Cycle Planner** | `/menu` | 4-week cycle menus, Choice A/B alternates, recipe drawer, nutrition totals | Executive Chef |
-| **Batch Production** | `/production` | Scaled prep sheets, cooking stations (Hot Line, Cold Prep, Puree), 165°F HACCP temp logs | Line Cooks |
-| **Standardized Recipes** | `/recipes` | Master recipe book, ingredient scaling, Big 9 allergen detector, USDA nutrient solver | Cooks & Bakers |
-| **Digital Tray Cards** | `/kitchen/traycards` | High-contrast thermal tickets, signed QR tokens, barcode assembly verification | Dining Aides |
+| **Batch Production** | `/production` | Production sheets built from the scheduled menu × census forecast (with census-trend buffer), scaled prep sheets, cooking stations, durable HACCP temp logs | Line Cooks |
+| **Standardized Recipes** | `/recipes` | Master recipe book, ingredient scaling, Big 9 allergen detector, USDA nutrient solver, recipe costing with SKU/estimated provenance | Cooks & Bakers |
+| **Digital Tray Cards** | `/kitchen/traycards` | High-contrast thermal tickets, HMAC-signed QR tokens carrying the resident profile version (stale cards scan as `SUPERSEDED`), barcode assembly verification | Dining Aides |
 | **Purchasing & Split MRP** | `/purchasing` | Dennis/Sysco order guides, lowest-cost split POs, 3-way invoice match, credit memos | Dietary Director |
-| **CMS Survey Reporting** | `/reporting` | 1-click CMS-2567 digital survey binder (F800–F814), $/CPD cost audits, substitution logs, budget targets & spend | Administrator / CDM |
-| **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times | System Admin |
+| **CMS Survey Reporting** | `/reporting` | CMS-2567 digital survey binder export (F800–F814) incl. durable HACCP log evidence, $/CPD cost audits, substitution logs, budget targets & spend | Administrator / CDM |
+| **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times — server-synced across devices with offline cache & sync indicator | System Admin |
+
+## 🆕 Wave C — Kitchen Operations & Cost Transparency
+
+- **Durable HACCP Temperature Logging** (`haccp_equipment` / `haccp_logs` tables): every food and equipment temperature is persisted server-side — no fabricated records. An out-of-range temperature **cannot be saved without a corrective-action note** (server-enforced, HTTP 422). Equipment schedule shows due/overdue checks, and the log evidence feeds the CMS-2567 survey binder export. Bluetooth probes supported via `POST /api/hardware/probes/:id/log-haccp`.
+- **Census-Trend Production Forecasting**: production sheets are generated from the **real scheduled menu × current census**, plus a census-trend buffer (3% base + observed growth from up to 3 prior weeks). A nightly job rolls trailing-28-day `issue`/`waste` inventory usage into per-line average usage so purchasing order guides reflect what the kitchen actually uses.
+- **Recipe Costing with Provenance**: cost rolls up vendor catalog → ingredient → recipe → plate → daily cost log → **$/CPD**. Each ingredient line is flagged **SKU-matched** (live vendor unit cost) or **estimated** (fallback estimate), so the CPD breakdown shows exactly which slot costs are backed by real SKUs before anything is written to the daily cost log.
+- **Server-Synced Facility Settings**: the Settings page (facility profile, operations, integrations, security) is authoritative server-side (`facility_settings` table) and shared across devices, with an offline localStorage cache and an on-page sync-state indicator (`synced` / `syncing` / `offline-cached` / `error`).
+- **Kitchen Fitness**: the four kitchen workhorse pages (`/kitchen/orders`, `/kitchen/sheet`, `/production`, `/kitchen/traycards`) enforce 44px minimum touch targets and a 14px clinical type floor; a per-device **kitchen-mode toggle** switches to a dark, glare-safe, high-contrast theme with 56px targets; a clinical safety strip shows the current meal service plus live allergy and NPO counts.
+- **Accessibility Baseline**: visible focus rings on all interactive UI components, 16px form inputs (prevents iOS zoom-on-focus), and the high-contrast kitchen-mode theme for low-vision/glare conditions.
+- **OpenAPI 3.1 Docs**: the full REST API specification is served live at `/api/docs` (117 paths), generated from the Express route definitions via `npm run docs:generate` in `server/` — never edited by hand.
 
 ---
 
@@ -123,7 +133,7 @@ ShorelineOps uses an **Open Core** architecture:
 │ 💼 PRO CLOUD SAAS ($199 / month / facility)                                            │
 │ • Multi-Distributor Lowest-Cost Split MRP      • USDA FoodData Central 8,000+ Database │
 │ • Cloud Multi-Device Real-Time Sync            • Automated Distributor Order Export    │
-│ • Hands-Free Voice HACCP 165°F Temp Logger     • Signed Business Associate Agreement   │
+│ • Durable HACCP Temperature Logs (Corrective-Action Enforced)       • Signed Business Associate Agreement   │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │ 🏢 ENTERPRISE CARE NETWORK ($399 / month / facility)                                   │
 │ • PointClickCare Live 2-Way EHR Sync           • CMS-2567 Digital Survey Ready Binder  │
@@ -171,7 +181,7 @@ npm run dev:all
 ```bash
 npm test
 ```
-All **118 system integration, clinical dietary, and safety test suites** pass with 100% success rate across 26 operational domains.
+All **132 system integration, clinical dietary, and safety tests** pass with 100% success rate across 26 operational domains.
 
 ---
 

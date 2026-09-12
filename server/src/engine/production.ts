@@ -11,7 +11,9 @@
 
 import crypto from 'crypto'
 import { UnitConversionEngine } from './units'
-import { activeCensus } from '../db/census'
+import { activeCensus, activeCensusCount } from '../db/census'
+import { pool } from '../db/pool'
+import type { ScheduledMealDemand } from './mrp'
 
 export interface ResidentServiceProfile {
   id: string
@@ -77,6 +79,8 @@ export interface PrintableTrayCard {
   profileVersion: number
   qrToken: string // "ticketId:profileVersion:hash"
   selectedEntree: string
+  /** C05: how the entrée was resolved — 'resident-choice-opt1/2', 'standing-alternative', 'opt1-fallback', 'explicit-param', 'kitchen-default'. */
+  entreeSource?: string
   selectedSides: string[]
   selectedBeverages: string[]
   specialNotes: string
@@ -87,6 +91,60 @@ export interface RecipeVariantGraphResult {
   variants: ScaledBatchRecipe[]
   totalPortions: number
   stationSummary: Record<string, number>
+}
+
+// ── C05: real forecasting ───────────────────────────────────────────────────
+
+/** Opt1/Opt2 split ratios for one meal slot, with provenance. */
+export interface ChoiceSplit {
+  opt1Count: number
+  opt2Count: number
+  /** Share of real choices that were Choice 1 (Opt1). */
+  opt1Ratio: number
+  /** Share of real choices that were Choice 2 (Opt2). */
+  opt2Ratio: number
+  totalChoices: number
+  /** 'weekly_orders' = real choice data; 'fallback-opt1' = no choices recorded yet. */
+  source: 'weekly_orders' | 'fallback-opt1'
+}
+
+/** Result of the census-trend buffer formula (formula documented in computeCensusTrendBuffer). */
+export interface CensusBufferResult {
+  census: number
+  buffer: number
+  /** Latest-week vs prior-weeks census trend; null when no history exists yet. */
+  trendPct: number | null
+  historyWeeks: number
+  formula: string
+}
+
+/** One scheduled meal with a human-readable derivation note per line. */
+export interface ForecastMealDemand extends ScheduledMealDemand {
+  /** e.g. "census 58 + trend buffer 3 = 61 slot portions; choice 1 ratio 0.714 (source: weekly_orders)" */
+  forecastNote: string
+}
+
+/** Full-week forecast: the real input to sheet generation and MRP. */
+export interface ScheduledMealForecast {
+  weekId: string
+  weekName: string
+  weekStartDate: string
+  census: number
+  buffer: number
+  trendPct: number | null
+  bufferFormula: string
+  /** census + buffer — the per-slot base portions before choice splits. */
+  forecastPortionsPerSlot: number
+  meals: ForecastMealDemand[]
+  /** Scheduled items with no recipe — excluded from BOM explosion, reported for honesty. */
+  skippedItems: Array<{
+    day: string
+    slot: string
+    menuItemId: string
+    menuItemName: string
+    reason: string
+  }>
+  generatedAt: string
 }
 
 // ── B07: server-side mirror of B02's IDDSI texture mapping ───────────────────
@@ -491,5 +549,388 @@ export class KitchenProductionEngine {
             .join(' | '),
         }
       })
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // C05 — REAL FORECASTING
+  // Scheduled meals = ACTIVE MENU WEEK × ACTIVE CENSUS × meal slot, with a
+  // census-trend buffer and Opt1/Opt2 splits from real weekly_orders choices.
+  // Nothing here is hardcoded: every number is derived from menu_weeks,
+  // residents, weekly_orders, meal_options, and inventory_transactions.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /** Calendar day order used by menu_weeks.days and weekly_orders.day_of_week. */
+  static readonly FORECAST_DAYS = [
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+  ] as const
+
+  /** Menu-week slots. Snack slots have no Opt1/Opt2 choice model. */
+  static readonly FORECAST_SLOTS = [
+    'breakfast', 'morningSnack', 'lunch', 'afternoonSnack', 'dinner', 'eveningSnack',
+  ] as const
+
+  /**
+   * Menu-week slot (lowercase, B08) → kitchen meal vocabulary (weekly_orders
+   * meal_type, kitchen tallies). null = no choice model (snacks); their
+   * forecast is 100% of (census + buffer).
+   */
+  static readonly SLOT_TO_MEAL: Record<string, string | null> = {
+    breakfast: 'Breakfast',
+    morningSnack: null,
+    lunch: 'Lunch',
+    afternoonSnack: null,
+    dinner: 'Dinner',
+    eveningSnack: null,
+  }
+
+  /** Normalize a name for cross-table matching (menu item ↔ recipe ↔ dish). */
+  static normalizeForecastName(s: string | null | undefined): string {
+    return String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  }
+
+  /** menu_weeks.days arrives as an object on PG and as a JSON string on SQLite. */
+  static parseMenuDays(raw: any): Record<string, Record<string, { itemIds?: string[]; label?: string }>> {
+    if (!raw) return {}
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw)
+        return typeof parsed === 'object' && parsed !== null ? parsed : {}
+      } catch { return {} }
+    }
+    return raw as Record<string, Record<string, { itemIds?: string[]; label?: string }>>
+  }
+
+  /** Sunday (YYYY-MM-DD) of the week containing `dateISO` — weekly_orders weeks start Sunday. */
+  static weekStartFor(dateISO: string): string {
+    const d = new Date(`${dateISO}T12:00:00`)
+    const sunday = new Date(d)
+    sunday.setDate(d.getDate() - d.getDay())
+    return sunday.toISOString().slice(0, 10)
+  }
+
+  /** Day name ('Monday', …) for a YYYY-MM-DD date. */
+  static dayNameFor(dateISO: string): string {
+    return this.FORECAST_DAYS[new Date(`${dateISO}T12:00:00`).getDay()] as string
+  }
+
+  /** Portable predicate mapping legacy 'Supper' meal_type rows to 'Dinner' at read time (B08). */
+  static mealTypeMatch(col: string, param: string): string {
+    return `CASE WHEN ${col} = 'Supper' THEN 'Dinner' ELSE ${col} END = ${param}`
+  }
+
+  /** The active menu week, plus the week_start_date its days map to. */
+  static async getActiveMenuWeek(weekId?: string): Promise<{
+    id: string; name: string; days: Record<string, any>; weekStartDate: string
+  } | null> {
+    const { rows } = weekId
+      ? await pool.query('SELECT * FROM menu_weeks WHERE id = $1', [weekId])
+      : await pool.query(
+          "SELECT * FROM menu_weeks WHERE active = true ORDER BY created_at DESC LIMIT 1"
+        )
+    const w = rows[0]
+    if (!w) return null
+    const days = this.parseMenuDays(w.days)
+    const weekStartDate = w.effective_from
+      ? String(w.effective_from).slice(0, 10)
+      : this.weekStartFor(new Date().toISOString().slice(0, 10))
+    return { id: w.id, name: w.name, days, weekStartDate }
+  }
+
+  /**
+   * Opt1/Opt2 split ratios for one slot, from REAL weekly_orders choices.
+   *
+   * Counts choice_selected 1 (Opt1) / 2 (Opt2) for the given week/day/meal,
+   * restricted to active residents (B03) and to real selections (alternatives,
+   * declines, and un-chosen rows are excluded — they never inflate a ratio).
+   *
+   * When the facility has recorded no choices for the slot, the fallback is
+   * 100% Opt1 — the standing default the order grid pre-fills
+   * (initialize-week defaults every resident to Choice 1). It is labelled as
+   * a fallback in `source`; it is never a silent 50/50.
+   */
+  static async computeChoiceSplit(
+    weekStartDate: string,
+    dayOfWeek: string,
+    mealType: string | null
+  ): Promise<ChoiceSplit> {
+    if (!mealType) {
+      return { opt1Count: 0, opt2Count: 0, opt1Ratio: 1, opt2Ratio: 0, totalChoices: 0, source: 'fallback-opt1' }
+    }
+    const { rows } = await pool.query(
+      `SELECT choice_selected, COUNT(*) AS n
+       FROM weekly_orders wo
+       WHERE wo.week_start_date = $1
+         AND wo.day_of_week = $2
+         AND ${this.mealTypeMatch('wo.meal_type', '$3')}
+         AND wo.is_alternative = 0
+         AND wo.is_declined = 0
+         AND wo.choice_selected IS NOT NULL
+         AND wo.resident_id IN (SELECT id FROM residents WHERE status = 'Active')
+       GROUP BY choice_selected`,
+      [weekStartDate, dayOfWeek, mealType]
+    )
+    let opt1Count = 0
+    let opt2Count = 0
+    for (const r of rows) {
+      const n = parseInt(r.n ?? r['count(*)'] ?? '0', 10)
+      if (Number(r.choice_selected) === 1) opt1Count += n
+      else if (Number(r.choice_selected) === 2) opt2Count += n
+    }
+    const total = opt1Count + opt2Count
+    if (total === 0) {
+      return { opt1Count: 0, opt2Count: 0, opt1Ratio: 1, opt2Ratio: 0, totalChoices: 0, source: 'fallback-opt1' }
+    }
+    return {
+      opt1Count,
+      opt2Count,
+      opt1Ratio: opt1Count / total,
+      opt2Ratio: opt2Count / total,
+      totalChoices: total,
+      source: 'weekly_orders',
+    }
+  }
+
+  /**
+   * ── CENSUS-TREND BUFFER FORMULA (C05) ──────────────────────────────────
+   * The dietitian's explanation of the number:
+   *
+   *   1. MEASURE real census movement from ordering history:
+   *        weekly_census(w) = DISTINCT active residents who have at least one
+   *        weekly_orders row for week_start_date w, over the trailing 28 days.
+   *      (Recorded ordering participation — no external demand signals, no ML.)
+   *   2. trend = (latest_week_census − mean(up to 3 prior weeks)) / mean(up to 3 prior weeks)
+   *   3. growth = MAX(trend, 0)
+   *      A declining census never shrinks the kitchen below current census —
+   *      only observed growth adds buffer.
+   *   4. buffer = CEIL( current_census × (0.03 + growth) )
+   *      The 3% base rate is standing headroom for walk-ins, readmits, and
+   *      portioning loss; the trend term adds exactly the observed growth
+   *      rate on top. There is no fixed +5 and no blind 50/50 anywhere.
+   *   5. Forecast portions per slot = census + buffer, then split across
+   *      Opt1/Opt2 by the real choice ratios (computeChoiceSplit).
+   *
+   * With no order history yet (fresh database), trend is unknown and the
+   * buffer is the 3% base rate only.
+   * ─────────────────────────────────────────────────────────────────────────
+   */
+  static async computeCensusTrendBuffer(census?: number): Promise<CensusBufferResult> {
+    const current = census ?? await activeCensusCount()
+    const cutoff = new Date(Date.now() - 28 * 86_400_000).toISOString().slice(0, 10)
+    const { rows } = await pool.query(
+      `SELECT wo.week_start_date AS w, COUNT(DISTINCT wo.resident_id) AS n
+       FROM weekly_orders wo
+       JOIN residents r ON r.id = wo.resident_id
+       WHERE r.status = 'Active' AND wo.week_start_date >= $1
+       GROUP BY wo.week_start_date
+       ORDER BY wo.week_start_date DESC
+       LIMIT 4`,
+      [cutoff]
+    )
+    const weeks: number[] = rows.map((r: any) => parseInt(r.n, 10)).filter((n: number) => Number.isFinite(n))
+    let trendPct: number | null = null
+    if (weeks.length >= 2) {
+      const latest = weeks[0]
+      const prior = weeks.slice(1)
+      const meanPrior = prior.reduce((a, b) => a + b, 0) / prior.length
+      trendPct = meanPrior > 0 ? (latest - meanPrior) / meanPrior : 0
+    }
+    const growth = Math.max(0, trendPct ?? 0)
+    const buffer = Math.ceil(current * (0.03 + growth))
+    return {
+      census: current,
+      buffer,
+      trendPct,
+      historyWeeks: weeks.length,
+      formula:
+        'buffer = CEIL(census × (0.03 + MAX(census-trend, 0))); ' +
+        'trend = (latest weekly ordering census − mean of prior ≤3 weeks) / mean of prior ≤3 weeks ' +
+        'over the trailing 28 days of weekly_orders.',
+    }
+  }
+
+  /**
+   * Build the real forecast: ACTIVE MENU WEEK × ACTIVE CENSUS × meal slot.
+   *
+   * For every requested day × slot in the active menu week, each scheduled
+   * menu item becomes one ScheduledMealDemand with:
+   *   - projectedPortions = (census + census-trend buffer) × item choice share
+   *   - choice share from real weekly_orders ratios, classified per item via
+   *     meal_options (dish_name ↔ choice_number) name matching
+   *   - recipeLink resolved by menu-item-name → recipe-name matching
+   *
+   * Items with no matching recipe are skipped and reported in `skippedItems`
+   * (demo-honesty: the MRP can only explode recipes it actually has).
+   * Items with no meal_options classification share the slot's residual
+   * portions evenly — documented per item in the returned portions note.
+   */
+  static async buildScheduledMeals(opts: {
+    weekId?: string
+    days?: string[]
+    slots?: string[]
+  } = {}): Promise<ScheduledMealForecast> {
+    const week = await this.getActiveMenuWeek(opts.weekId)
+    if (!week) {
+      throw Object.assign(new Error('No active menu week — cannot build a forecast'), { status: 404 })
+    }
+
+    const days = opts.days ?? [...this.FORECAST_DAYS]
+    const slots = opts.slots ?? [...this.FORECAST_SLOTS]
+    const census = await activeCensusCount()
+    const buf = await this.computeCensusTrendBuffer(census)
+    const slotPortions = census + buf.buffer // per-slot base forecast portions
+
+    // Menu items referenced by this week (one query).
+    const itemIds = new Set<string>()
+    for (const day of days) {
+      const dayMenu = week.days[day] ?? {}
+      for (const slot of slots) {
+        for (const id of (dayMenu[slot]?.itemIds ?? [])) itemIds.add(String(id))
+      }
+    }
+    const itemById = new Map<string, any>()
+    if (itemIds.size > 0) {
+      const ids = [...itemIds]
+      const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
+      const { rows } = await pool.query(
+        `SELECT * FROM menu_items WHERE id IN (${placeholders})`, ids
+      )
+      for (const r of rows) itemById.set(String(r.id), r)
+    }
+
+    // Recipe index for menu-item → recipe BOM resolution (name match).
+    const { rows: recipeRows } = await pool.query(
+      'SELECT id, name, base_servings, ingredients FROM recipes'
+    )
+    const recipeByName = new Map<string, any>()
+    for (const r of recipeRows) recipeByName.set(this.normalizeForecastName(r.name), r)
+    const matchRecipe = (itemName: string): any | null => {
+      const key = this.normalizeForecastName(itemName)
+      if (recipeByName.has(key)) return recipeByName.get(key)
+      for (const [rkey, r] of recipeByName) {
+        if (rkey.includes(key) || key.includes(rkey)) return r
+      }
+      return null
+    }
+
+    // meal_options: (day, mealType, dishName) → choice number.
+    const optionChoice = new Map<string, number>()
+    {
+      const { rows } = await pool.query(
+        'SELECT day_of_week, meal_type, choice_number, dish_name FROM meal_options WHERE week_start_date = $1',
+        [week.weekStartDate]
+      )
+      for (const r of rows) {
+        const meal = r.meal_type === 'Supper' ? 'Dinner' : String(r.meal_type)
+        optionChoice.set(
+          `${r.day_of_week}|${meal}|${this.normalizeForecastName(r.dish_name)}`,
+          Number(r.choice_number)
+        )
+      }
+    }
+
+    // Choice splits, cached per (day, mealType).
+    const splitCache = new Map<string, ChoiceSplit>()
+    const splitFor = async (day: string, mealType: string | null): Promise<ChoiceSplit> => {
+      const key = `${day}|${mealType ?? 'snack'}`
+      if (!splitCache.has(key)) {
+        splitCache.set(key, await this.computeChoiceSplit(week.weekStartDate, day, mealType))
+      }
+      return splitCache.get(key)!
+    }
+
+    const meals: ForecastMealDemand[] = []
+    const skippedItems: ScheduledMealForecast['skippedItems'] = []
+
+    for (const day of days) {
+      const dayMenu = week.days[day] ?? {}
+      for (const slot of slots) {
+        const mealEntry = dayMenu[slot]
+        if (!mealEntry) continue
+        const mealType = this.SLOT_TO_MEAL[slot] ?? null
+        const split = await splitFor(day, mealType)
+
+        const slotItems: any[] = (mealEntry.itemIds ?? [])
+          .map((id: string) => itemById.get(String(id)))
+          .filter(Boolean)
+
+        // Classify each item as Opt1 / Opt2 / unclassified.
+        const classified: Array<{ item: any; share: number }> = []
+        const unclassified: any[] = []
+        for (const item of slotItems) {
+          const choice = mealType
+            ? optionChoice.get(`${day}|${mealType}|${this.normalizeForecastName(item.name)}`)
+            : undefined
+          if (choice === 1) classified.push({ item, share: split.opt1Ratio })
+          else if (choice === 2) classified.push({ item, share: split.opt2Ratio })
+          else unclassified.push(item)
+        }
+        const assigned = classified.reduce((s, c) => s + Math.round(slotPortions * c.share), 0)
+        const residual = Math.max(0, slotPortions - assigned)
+        const unclassifiedEach = unclassified.length > 0 ? residual / unclassified.length : 0
+
+        const allocations: Array<{ item: any; portions: number; shareNote: string }> = [
+          ...classified.map(c => ({
+            item: c.item,
+            portions: Math.round(slotPortions * c.share),
+            shareNote: `choice ${c.share === split.opt1Ratio ? 1 : 2} ratio ${c.share.toFixed(3)} (source: ${split.source})`,
+          })),
+          ...unclassified.map(item => ({
+            item,
+            portions: Math.round(unclassifiedEach),
+            shareNote:
+              unclassified.length === slotItems.length
+                ? `no meal_options classification for this slot — slot portions shared evenly across ${unclassified.length} item(s)`
+                : `unclassified item — residual slot portions shared evenly across ${unclassified.length} unclassified item(s)`,
+          })),
+        ]
+
+        for (const { item, portions, shareNote } of allocations) {
+          const recipe = matchRecipe(item.name)
+          if (!recipe) {
+            skippedItems.push({
+              day,
+              slot,
+              menuItemId: String(item.id),
+              menuItemName: item.name,
+              reason: 'No matching recipe in the recipe book — BOM explosion requires a recipe; portions excluded from MRP.',
+            })
+            continue
+          }
+          let ingredients = recipe.ingredients
+          if (typeof ingredients === 'string') {
+            try { ingredients = JSON.parse(ingredients) } catch { ingredients = [] }
+          }
+          meals.push({
+            dayOfWeek: day,
+            mealSlot: slot,
+            projectedPortions: portions,
+            forecastNote: `census ${census} + trend buffer ${buf.buffer} = ${slotPortions} slot portions; ${shareNote}`,
+            recipeLink: {
+              menuItemId: String(item.id),
+              menuItemName: item.name,
+              recipeId: String(recipe.id),
+              recipeName: recipe.name,
+              baseServings: parseFloat(recipe.base_servings ?? 10),
+              portionMultiplier: 1.0,
+              ingredients: Array.isArray(ingredients) ? ingredients : [],
+            },
+          })
+        }
+      }
+    }
+
+    return {
+      weekId: week.id,
+      weekName: week.name,
+      weekStartDate: week.weekStartDate,
+      census,
+      buffer: buf.buffer,
+      trendPct: buf.trendPct,
+      bufferFormula: buf.formula,
+      forecastPortionsPerSlot: slotPortions,
+      meals,
+      skippedItems,
+      generatedAt: new Date().toISOString(),
+    }
   }
 }
