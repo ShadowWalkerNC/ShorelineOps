@@ -4,7 +4,8 @@
  * The MCP tool-discovery/execution routes and self-healing diagnostics endpoints
  * served the cut HealerBot admin panel. They are parked, not removed: the code
  * stays mounted and compiling so a future decision can re-activate it, but no
- * UI surface reaches these endpoints anymore.
+ * UI surface reaches these endpoints anymore. Since 2026-09-13 every route on
+ * this router requires a valid JWT with manager rank or higher (401/403 otherwise).
  *
  * MCP & Self-Healing Diagnostics API Routes (parked)
  *
@@ -18,8 +19,13 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { SHORELINE_MCP_TOOLS, executeMcpTool } from '../mcp/server'
 import { globalHealerBot } from '../agent/healer'
+import { requireAuth, requireRole } from '../middleware/requireAuth'
 
 export const mcpRouter = Router()
+
+// Parked admin surface: every route requires an authenticated manager-or-higher JWT.
+// (Owner decision 2026-09-13: put the unauthenticated /api/mcp/* routes behind auth.)
+mcpRouter.use(requireAuth, requireRole('manager'))
 
 // MCP Tool Discovery
 mcpRouter.get('/tools', (_req: Request, res: Response) => {
