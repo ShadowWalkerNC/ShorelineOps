@@ -1,0 +1,203 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Icon from '../components/Icon.astro'
+
+const effectiveDate = 'March 18, 2026'
+---
+
+<BaseLayout
+  title="Healthcare Privacy Policy & HIPAA BAA"
+  description="ShorelineOps Care OS Healthcare Privacy Policy, Protected Health Information (PHI) Safeguards, and Business Associate Agreement (BAA) terms."
+  canonicalPath="/privacy"
+>
+  <div class="relative py-16 sm:py-24 overflow-hidden">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Header -->
+      <div class="mb-10 text-center sm:text-left">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-semibold mb-4">
+          <Icon name="shield-check" class="w-3.5 h-3.5" />
+          <span>HIPAA COMPLIANCE & PHI SAFEGUARDS</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white mb-3">
+          Healthcare Privacy Policy & HIPAA BAA
+        </h1>
+        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+          Effective Date: {effectiveDate} · Compliant with 45 CFR Parts 160 & 164 · Business Associate Terms
+        </p>
+      </div>
+
+      <!-- Trust Badges Frosted Card -->
+      <div class="p-6 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-12">
+        <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Patient Health Information Safeguards</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div class="flex items-start gap-2.5">
+            <Icon name="lock" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <div class="font-semibold text-slate-900 dark:text-white">AES-256 & TLS 1.3</div>
+              <p class="text-slate-500 dark:text-slate-400 mt-0.5">End-to-end encryption for all resident census data in-flight and at-rest.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <Icon name="clipboard-check" class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div>
+              <div class="font-semibold text-slate-900 dark:text-white">Immutable Audit Trail</div>
+              <p class="text-slate-500 dark:text-slate-400 mt-0.5">Every PHI view, triage approval, or order modification is permanently logged.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <Icon name="shield-check" class="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+            <div>
+              <div class="font-semibold text-slate-900 dark:text-white">Zero Data Resale</div>
+              <p class="text-slate-500 dark:text-slate-400 mt-0.5">Zero commercialization, advertising data brokers, or public AI model training.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Policy Body -->
+      <div class="space-y-10 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+        <!-- Section 1 -->
+        <section class="space-y-3">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400">01.</span>
+            Scope & Covered Entities
+          </h2>
+          <p>
+            This Healthcare Privacy Policy and Business Associate Agreement ("BAA") applies to all Protected Health Information ("PHI") and electronic Protected Health Information ("ePHI") processed by <strong>Shoreline Operations LLC</strong> ("Business Associate") on behalf of healthcare facilities, nursing homes, assisted living communities, and hospitals ("Covered Entity") using Shoreline Care OS.
+          </p>
+          <p>
+            All terms capitalized but not defined herein shall have the meanings ascribed to them in the Health Insurance Portability and Accountability Act of 1996 ("HIPAA"), the Health Information Technology for Economic and Clinical Health ("HITECH") Act, and their implementing regulations at 45 CFR Parts 160 and 164.
+          </p>
+        </section>
+
+        <!-- Section 2 -->
+        <section class="space-y-3">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400">02.</span>
+            Permitted Uses & Disclosures of PHI
+          </h2>
+          <p>
+            Shoreline processes PHI strictly and solely as necessary to fulfill clinical and dietary operations, including:
+          </p>
+          <ul class="list-disc pl-5 space-y-2">
+            <li>Ingesting admission, discharge, and transfer (ADT) records and therapeutic diet orders from PointClickCare or facility EHR systems.</li>
+            <li>Validating meal selections against physician orders, IDDSI 2.0 texture consistencies, and Big 9 food allergens.</li>
+            <li>Printing clinical tray cards, thermal kitchen tickets, and meal delivery sheets for food safety execution.</li>
+            <li>Compiling regulatory audit packs for CMS-2567 federal surveys and state health inspection binders.</li>
+          </ul>
+          <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-200">
+            <div class="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider mb-1">
+              <Icon name="check-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Absolute Zero Data Resale Guarantee</span>
+            </div>
+            <p class="text-xs leading-relaxed">
+              We never sell, lease, license, or monetize resident health information. We do not use PHI to serve advertisements or train public AI models. Data processed through Shoreline is strictly isolated to your facility tenant.
+            </p>
+          </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section class="space-y-3">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400">03.</span>
+            Technical Safeguards & Architecture
+          </h2>
+          <p>
+            Shoreline Care OS enforces strict technical and operational safeguards in compliance with 45 CFR § 164.312:
+          </p>
+          <ul class="list-disc pl-5 space-y-2">
+            <li>
+              <strong>Private Cache Isolation</strong>: Resident endpoints (including <code>/api/residents</code>) bypass intermediary caching and explicitly emit <code>Cache-Control: private, no-cache, must-revalidate</code> headers scoped to tenant facility IDs, preventing cross-tenant leakage.
+            </li>
+            <li>
+              <strong>Role-Based Access Control (RBAC)</strong>: Five distinct permission tiers (Admin, Dietitian, Kitchen Manager, Line Cook, Front Desk). Line cooks access only prep sheets and tray cards; full clinical profile edits require verified Dietitian or Admin credentials.
+            </li>
+            <li>
+              <strong>Cryptographic Storage</strong>: All database volumes and automated backups are encrypted using AES-256-GCM. In-transit communication requires TLS 1.3 with modern cipher suites.
+            </li>
+            <li>
+              <strong>Argon2id Password Hashing</strong>: User authentication utilizes memory-hard Argon2id key derivation with high work factors to prevent credential stuffing attacks.
+            </li>
+            <li>
+              <strong>Automatic Inactivity Logout</strong>: Kiosks and workstations enforce automatic 10-minute idle session termination to prevent unauthorized terminal access.
+            </li>
+          </ul>
+        </section>
+
+        <!-- Section 4 -->
+        <section class="space-y-3">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400">04.</span>
+            Business Associate Obligations
+          </h2>
+          <p>
+            In accordance with 45 CFR § 164.504(e), Shoreline agrees to:
+          </p>
+          <ul class="list-disc pl-5 space-y-2">
+            <li>Not use or further disclose PHI other than as permitted or required by this Agreement or as required by law.</li>
+            <li>Implement appropriate administrative, physical, and technical safeguards to prevent unauthorized use or disclosure of ePHI.</li>
+            <li>Report to Covered Entity any security incident or breach of unsecured PHI within seventy-two (72) hours of discovery.</li>
+            <li>Ensure that any subcontractors or cloud hosting providers who create, receive, maintain, or transmit PHI agree to the same restrictions.</li>
+            <li>Make available PHI for resident inspection, amendment, or accounting of disclosures upon written request.</li>
+            <li>Upon termination of service, return or cryptographically destroy all PHI maintained in any form, retaining zero unencrypted archival copies.</li>
+          </ul>
+        </section>
+
+        <!-- Section 5 -->
+        <section class="space-y-3">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400">05.</span>
+            Executing a Facility BAA
+          </h2>
+          <p>
+            Covered Entities subscribing to Shoreline Cloud SaaS can execute our standard HIPAA Business Associate Agreement directly through our automated onboarding portal or by requesting a counter-signed PDF copy from our compliance office.
+          </p>
+          <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+            <div>
+              <div class="font-semibold text-xs text-slate-900 dark:text-white">Download Standard BAA Template (PDF)</div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400">Standard American Health Lawyers Association (AHLA) aligned BAA</div>
+            </div>
+            <a
+              href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/docs/BAA_TEMPLATE.md"
+              target="_blank"
+              rel="noreferrer"
+              class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0"
+            >
+              View Template
+            </a>
+          </div>
+        </section>
+
+        <!-- Section 6 -->
+        <section class="space-y-3">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400">06.</span>
+            Privacy Officer Contact Information
+          </h2>
+          <p>
+            For questions regarding HIPAA compliance, breach notifications, or resident data rights, contact our designated privacy and security team:
+          </p>
+          <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-1 text-slate-600 dark:text-slate-400">
+            <div>Shoreline Operations LLC — HIPAA Compliance & Privacy Office</div>
+            <div>Attn: Healthcare Data Privacy Officer</div>
+            <div>412 Commercial Street, Suite 400</div>
+            <div>Portland, ME 04101</div>
+            <div>Email: privacy@shorelineops.com</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Action Navigation -->
+      <div class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-4 justify-between items-center text-xs">
+        <a href="/terms" class="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+          <span>View Terms of Service & MSA</span>
+          <Icon name="arrow-right" class="w-3.5 h-3.5" />
+        </a>
+        <a href="/security" class="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+          <span>Explore Technical Security Architecture</span>
+          <Icon name="arrow-right" class="w-3.5 h-3.5" />
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

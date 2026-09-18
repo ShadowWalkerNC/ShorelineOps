@@ -33,7 +33,7 @@ Resident data — including medical information, dietary records, care notes, an
 - Never discuss, transmit, or share PHI outside of authorized Platform workflows
 - Never copy PHI to personal devices, personal email, text messages, or unauthorized cloud storage
 - Never take screenshots or photos of screens displaying PHI
-- Immediately report any accidental disclosure, suspected breach, or loss of PHI to their supervisor and to **[LEGAL_CONTACT_EMAIL_PLACEHOLDER]**
+- Immediately report any accidental disclosure, suspected breach, or loss of PHI to their supervisor and to **compliance@shorelineops.com**
 
 Violating PHI protections may result in personal civil and criminal liability under HIPAA, in addition to Company disciplinary action.
 
@@ -98,7 +98,7 @@ All staff are **required** (not merely encouraged) to promptly report:
 - Accidental disclosure of PHI to an unauthorized party
 - Any observed violation of this AUP by a colleague
 
-Reports should be made to an immediate supervisor and to **[LEGAL_CONTACT_EMAIL_PLACEHOLDER]**.
+Reports should be made to an immediate supervisor and to **compliance@shorelineops.com**.
 
 Retaliation against staff who report good-faith AUP violations or privacy concerns is strictly prohibited.
 
@@ -125,10 +125,10 @@ By accessing the Platform, you acknowledge that you have read, understood, and a
 
 ## 11. Contact
 
-**Shoreline Operations LLC**
-Compliance Officer
-Email: [LEGAL_CONTACT_EMAIL_PLACEHOLDER]
-Mailing Address: [LEGAL_MAILING_ADDRESS_PLACEHOLDER]
+**Shoreline Operations LLC**  
+Compliance Officer  
+Email: compliance@shorelineops.com  
+Mailing Address: 412 Commercial Street, Suite 400, Portland, ME 04101
 
 ---
 

@@ -5,21 +5,21 @@
 ### Open-Source Healthcare Dietary Operations, Clinical Nutrition & Care Coordination Platform
 
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
-[![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-platform-interface-tour)
-[![Security: HIPAA Technical Safeguards](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
-[![Tests: 175/175 Passing](https://img.shields.io/badge/Tests-175%2F175%20Passing%20(100%25)-brightgreen.svg)](#-4-run-automated-test-suite)
+[![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#platform-interface-tour)
+[![Security: HIPAA Aligned](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
+[![Tests: 207/207 Passing](https://img.shields.io/badge/Tests-207%2F207%20Passing%20(100%25)-brightgreen.svg)](#4-run-automated-test-suite)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
 **Engineered by a healthcare executive chef, not a venture fund.**  
 *Bridging clinical resident diets, IDDSI dysphagia safety, touch tablet batch cookery, multi-distributor split MRP purchasing, and CMS-2567 federal survey readiness.*
 
-[🚀 Live Demo App](https://shoreline-demo.onrender.com/menu) • [🌐 Marketing & Pricing Portal](https://shoreline-marketing.onrender.com) • [🔑 Open Core Licensing](LICENSING.md) • [📋 Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [🎯 Pilot Acquisition Guide](docs/FACILITY_PILOT_ACQUISITION_AND_SCALE.md)
+[Live Demo App](https://shoreline-demo.onrender.com/menu) • [Marketing & Pricing Portal](https://shoreline-marketing.onrender.com) • [Open Core Licensing](LICENSING.md) • [Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [TypeScript SDK](sdk/README.md)
 
 </div>
 
 ---
 
-## 📸 Platform Interface Tour
+## Platform Interface Tour
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -30,41 +30,41 @@
 └──────────────────────────┴───────────────────────────┴─────────────────────────────────┘
 ```
 
-### 1. 📊 Executive Culinary & Clinical Dashboard (`/`)
+### 1. Executive Culinary & Clinical Dashboard (`/`)
 *Real-time census tracking, food cost per resident day ($/CPD) budget variance gauges, active IDDSI texture distribution, and clinical allergen alerts.*
 
 ![Executive Dashboard Overview](docs/screenshots/dashboard_overview.png)
 
-### 2. 📅 4-Week Seasonal Cycle Menu Planner (`/menu`)
+### 2. 4-Week Seasonal Cycle Menu Planner (`/menu`)
 *4-week institutional cycle menus with standardized recipes, IDDSI dysphagia texture options, and real-time allergen collision warnings.*
 
 ![Menu Cycle Planner](docs/screenshots/menu_cycle_planner.png)
 
-### 3. 👥 Clinical Residents Roster & IDDSI Dysphagia Orders (`/residents`)
+### 3. Clinical Residents Roster & IDDSI Dysphagia Orders (`/residents`)
 *Therapeutic diet orders (NAS, NCS, Renal), IDDSI Level 4 Pureed badges, allergen warnings, table seating, and PointClickCare EHR triage queue.*
 
 ![Residents & Diets](docs/screenshots/residents_iddsi_triage.png)
 
-### 4. 🚚 Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
+### 4. Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
 *Compares live contract pricing line-by-line across Dennis Food Service, Sysco, and US Foods, generating optimal split purchase orders — the lowest-cost vendor wins each line.*
 
 ![Split MRP Purchasing Comparator](docs/screenshots/split_mrp_purchasing.jpg)
 
 ---
 
-## 🍽️ What is ShorelineOps?
+## What is ShorelineOps?
 
 **ShorelineOps** is an open-source clinical nutrition and dietary operations platform designed for senior living and healthcare dining (Assisted Living, Memory Care, Skilled Nursing Facilities, CCRCs, and Acute Care Hospitals).
 
 In healthcare dining, culinary operations are clinical care:
-- **Dysphagia & Texture Modification**: Swallowing disorders require strict adherence to the **IDDSI framework** (Levels 0–7: Regular, Soft & Bite-Sized, Minced & Moist, Pureed, Liquidised, Thickened Liquids).
-- **Deterministic Allergen Intersection**: Food allergies (Dairy, Gluten, Shellfish, Tree Nuts, Soy, Egg) are cross-referenced against standardized recipe bill-of-materials in real-time with non-overridable hard-blocks.
+- **Dysphagia & Texture Modification**: Swallowing disorders require strict adherence to the **IDDSI framework** (Levels 0–7: Regular, Soft & Bite-Sized, Minced & Moist, Pureed, Liquidised, Thickened Liquids). Blank or unassigned textures automatically trigger a hard clinical hold.
+- **Deterministic Allergen Intersection**: Food allergies (Dairy, Gluten, Shellfish, Tree Nuts, Peanuts, Wheat, Soy, Egg, Sesame) are cross-referenced against standardized recipe bill-of-materials in real-time with non-overridable hard-blocks.
 - **State Survey Readiness**: Federal regulations require comprehensive documentation under **CMS State Operations Manual Appendix PP (F-Tags F800–F814)**, including the 14-hour dinner-to-breakfast rule (F809).
 - **Distributor Spend Optimization**: Eliminates distributor lock-in by comparing Broadline order guides (**Dennis Food Service, Sysco, US Foods, Gordon Food Service, PFG**) line-by-line so the lowest-cost vendor wins each item.
 
 ---
 
-## 🧭 Complete System Architecture
+## Complete System Architecture
 
 ```
                                   ┌───────────────────────────────┐
@@ -93,7 +93,7 @@ In healthcare dining, culinary operations are clinical care:
 
 ---
 
-## 🌟 Core Modules & Capabilities
+## Core Modules & Capabilities
 
 | Module | Route | Key Capabilities | Target User |
 |---|---|---|---|
@@ -107,52 +107,63 @@ In healthcare dining, culinary operations are clinical care:
 | **CMS Survey Reporting** | `/reporting` | CMS-2567 digital survey binder export (F800–F814) incl. durable HACCP log evidence, $/CPD cost audits, substitution logs, budget targets & spend | Administrator / CDM |
 | **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times — server-synced across devices with offline cache & sync indicator | System Admin |
 
-## 🛡️ Wave D — Clinical Safety Hardening & Zero Split-Brain Persistence
+---
 
-- **P0-1: Zero Split-Brain Data Layer Across Stores** (`server/src/db/migrate.ts` Migration 025): Centralized backend persistence for `staff_profiles`, `call_outs`, `budget_periods`, `budget_entries`, `communications`, `timecard_punches`, and `production_sheets`. Migrated `staffStore.ts`, `productionStore.ts`, `budgetStore.ts`, `communicationsStore.ts`, and `timecard.ts` to live Express API endpoints with SQLite/PostgreSQL auto-failover and boot-time schema integrity checks (`assertSchemaIntegrity()`).
-- **P0-2: Paper Tray Card Scanner Safety** (`TrayCardGeneratorPage.tsx`): Completely removed scannable QR codes (`<TrayQr />`) from printed paper tray cards, preventing false-positive scanner matches. Replaced with bold, high-contrast human-readable typography (room, portion size, meal slot).
-- **P0-3: Eliminate Simulated HACCP Telemetry** (`WebBluetoothProbe.ts`): Eliminated fake `165.4°F` readings and random variance. The probe now strictly requires an authentic Bluetooth connection and throws actionable errors if disconnected.
-- **P0-4: Safe Entrée Fallback** (`server/src/routes/kitchen.ts`): Replaced fake `"Roasted Chicken Breast"` fallback with `'NO SELECTION — CONFIRM WITH DIETARY'` and tagged audit provenance as `'no-selection-fallback'`.
-- **P0-5: 4" x 6" Thermal Card Print Formatting** (`TrayCardGeneratorPage.tsx`): Enforced `@page { size: 4in 6in; margin: 0.1in; }` CSS with `.tray-card-print` layout for thermal card printers.
-- **Decision 9: Bulk Census & Diet Order CSV Importer** (`/residents`, `/api/residents/import-csv`): Role-gated CSV importer with RFC-compliant parser, multi-allergen list handling, NPO flags, and automatic version history tracking in `resident_profile_history`.
+## Wave F — TypeScript SDK, SEO Optimization & Legal Policy Suite
 
-## 🆕 Wave C — Kitchen Operations & Cost Transparency
-
-- **Durable HACCP Temperature Logging** (`haccp_equipment` / `haccp_logs` tables): every food and equipment temperature is persisted server-side — no fabricated records. An out-of-range temperature **cannot be saved without a corrective-action note** (server-enforced, HTTP 422). Equipment schedule shows due/overdue checks, and the log evidence feeds the CMS-2567 survey binder export. Bluetooth probes supported via `POST /api/hardware/probes/:id/log-haccp`.
-- **Census-Trend Production Forecasting**: production sheets are generated from the **real scheduled menu × current census**, plus a census-trend buffer (3% base + observed growth from up to 3 prior weeks). A nightly job rolls trailing-28-day `issue`/`waste` inventory usage into per-line average usage so purchasing order guides reflect what the kitchen actually uses.
-- **Recipe Costing with Provenance**: cost rolls up vendor catalog → ingredient → recipe → plate → daily cost log → **$/CPD**. Each ingredient line is flagged **SKU-matched** (live vendor unit cost) or **estimated** (fallback estimate), so the CPD breakdown shows exactly which slot costs are backed by real SKUs before anything is written to the daily cost log.
-- **Server-Synced Facility Settings**: the Settings page (facility profile, operations, integrations, security) is authoritative server-side (`facility_settings` table) and shared across devices, with an offline localStorage cache and an on-page sync-state indicator (`synced` / `syncing` / `offline-cached` / `error`).
-- **Kitchen Fitness**: the four kitchen workhorse pages (`/kitchen/orders`, `/kitchen/sheet`, `/production`, `/kitchen/traycards`) enforce 44px minimum touch targets and a 14px clinical type floor; a per-device **kitchen-mode toggle** switches to a dark, glare-safe, high-contrast theme with 56px targets; a clinical safety strip shows the current meal service plus live allergy and NPO counts.
-- **Accessibility Baseline**: visible focus rings on all interactive UI components, 16px form inputs (prevents iOS zoom-on-focus), and the high-contrast kitchen-mode theme for low-vision/glare conditions.
-- **OpenAPI 3.1 Docs**: the full REST API specification is served live at `/api/docs` (117 paths), generated from the Express route definitions via `npm run docs:generate` in `server/` — never edited by hand.
+- **Full Enterprise TypeScript SDK (`@shoreline/sdk` v0.2.0)**:
+  - 100% typed client for all platform domains: Residents, Census, Recipe Validation, USDA Nutrition Analysis, Dennis/Sysco Split MRP, 3-Way Invoice Matching, EHR Reconciliation Triage, Kitchen HACCP Logging & Schedules, Tray Tracking, and CMS Survey Binder.
+  - Published in `sdk/` with comprehensive type declarations, README documentation, and zero external runtime dependencies.
+- **Search Engine Optimization (SEO) & Geolocation**:
+  - OpenGraph & Twitter Card metadata across all marketing views.
+  - Geolocation coordinates anchored to Portland, Maine (`geo.region: US-ME`, `geo.placename: Portland, Maine`, `geo.position: 43.6591;-70.2568`).
+  - Schema.org JSON-LD structured data for `SoftwareApplication` and `MedicalBusiness`.
+- **Complete Healthcare Legal & Policy Suite**:
+  - Terms of Service & Master Services Agreement (`/terms`).
+  - Healthcare Privacy Policy & HIPAA Business Associate Agreement (BAA) with standard provisions (`/privacy`).
+  - Technical Security Architecture, SOC 2 Type II Safeguards & 99.9% Uptime SLA Whitepaper (`/security`).
+  - Zero-resale guarantee: resident health data is never brokered, sold, or used to train third-party public AI models.
 
 ---
 
-## 🔑 Open Core Licensing Model
+## Wave E — Clinical Safety, EHR Triage Queue & Kitchen Hardware Ergonomics
+
+- **IDDSI 2.0 Hard Safety Hold & Drink Levels (`src/types/resident.ts`, `server/src/engine/production.ts`)**: Blank or unassigned textures trigger a non-overridable clinical hold (`level: -1, label: 'UNASSIGNED — CONFIRM WITH DIETARY'`). Expanded FDA Big 9 allergens (Milk, Eggs, Fish, Crustacean Shellfish, Tree Nuts, Peanuts, Wheat, Soybeans, Sesame), adaptive feeding equipment options, and IDDSI drink thickness levels 0–4.
+- **NPO Exclusion from Batch Cooking & Production Sheets (`src/features/kitchen/KitchenSheetPage.tsx`, `server/src/engine/production.ts`)**: Line cook batch cards exclude NPO residents from cookable counts (`members.filter(m => !m.isNpo)`), surfacing active tray counts vs NPO excluded counts with clean Lucide alert icons.
+- **PointClickCare Webhook Ingestion into RD Triage Queue (`server/src/routes/ehr.ts`)**: Connected `POST /api/ehr/webhook` to `pcc.evaluateInboundTriage()`. Automatically checks existing resident records and stores inbound NPO changes, texture downgrades, diet order modifications, and new allergens in `ehr_reconciliation_queue` with `status = 'PENDING_TRIAGE'`.
+- **HIPAA Security, PHI Cache Bypass & Private Cache-Control (`server/src/index.ts`, `server/src/middleware/cache.ts`)**: Removed HTTP cache middleware from `/api/residents` so 100% of PHI accesses are audited in `audit_log`. Upgraded cache control headers across non-PHI routes from `public` to `private, max-age=${ttlSeconds}, must-revalidate` and isolated cache keys with tenant `facilityId`.
+- **Database Fail-Closed PostgreSQL Integrity (`server/src/db/pool.ts`)**: Removed silent fallback to local SQLite when `DATABASE_URL` is set, eliminating split-brain data loss during network blips in enterprise PostgreSQL deployments.
+- **3-Way Invoice Match REST API Endpoint (`server/src/routes/purchasing.ts`)**: Exposed `POST /api/purchasing/invoices/evaluate` powered by `ThreeWayInvoiceMatchingEngine`. Evaluates line-by-line price variances, quantity short-ships, compound variances, and auto-generates vendor credit memo requests.
+- **Kitchen Kiosk Bluetooth LE Probe & Hands-Free Voice Logging (`src/features/kitchen/TempLogPanel.tsx`)**: Replaced all emojis with clean Lucide icons. Integrated `WebBluetoothProbeDriver` with 1-click BLE probe pairing and live temperature sync. Added hands-free Web Speech API temperature capture for kitchen tablet kiosks.
+- **Section 30 System Integration Test Suite Expansion (`server/src/system.test.ts`)**: **192/192 automated tests passing with 100% success rate** across 30 operational subsystems.
+
+---
+
+## Open Core Licensing Model
 
 ShorelineOps uses an **Open Core** architecture:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 🆓 COMMUNITY CORE (100% Free & Open Source)                                             │
+│ COMMUNITY CORE (100% Free & Open Source)                                               │
 │ • Unlimited Resident Census & Diet Orders      • 4-Week Cycle Menu Planner             │
 │ • Standardized Recipe Yield Scaler             • Kitchen Batch Worksheets & Tray Cards │
 │ • Local Timecard Punch Kiosk                   • Offline SQLite & PostgreSQL Support   │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│ 💼 PRO CLOUD SAAS ($199 / month / facility)                                            │
+│ PRO CLOUD SAAS ($199 / month / facility)                                              │
 │ • Multi-Distributor Lowest-Cost Split MRP      • USDA FoodData Central 8,000+ Database │
 │ • Cloud Multi-Device Real-Time Sync            • Automated Distributor Order Export    │
-│ • Durable HACCP Temperature Logs (Corrective-Action Enforced)       • Signed Business Associate Agreement   │
+│ • Durable HACCP Temperature Logs (Enforced)   • Signed Business Associate Agreement   │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│ 🏢 ENTERPRISE CARE NETWORK ($399 / month / facility)                                   │
+│ ENTERPRISE CARE NETWORK ($399 / month / facility)                                     │
 │ • PointClickCare Live 2-Way EHR Sync           • CMS-2567 Digital Survey Ready Binder  │
-│ • 3-Way Delivery Invoice OCR & Credit Memos                                              │
+│ • 3-Way Delivery Invoice Match & Credit Memos  • Full TypeScript SDK & Custom Webhooks │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🤖 Autonomous Dietary Operations Consultant
+## Autonomous Dietary Operations Consultant
 
 ShorelineOps includes an autonomous **Dietary Operations Consultant Agent** (`dietary_operations_consultant`):
 - **Continuous Auditing**: Evaluates clinical IDDSI constraints, kitchen ergonomics, supply chain price variances, and CMS survey compliance.
@@ -164,7 +175,7 @@ ShorelineOps includes an autonomous **Dietary Operations Consultant Agent** (`di
 
 ---
 
-## 🛠️ Quickstart & Local Development
+## Quickstart & Local Development
 
 ### 1. Prerequisites
 - Node.js $\ge 20.0.0$
@@ -190,11 +201,11 @@ npm run dev:all
 ```bash
 npm test
 ```
-All **175 system integration, clinical dietary, and safety tests** pass with 100% success rate across all operational domains.
+All **207 system integration, clinical dietary, safety, and SDK tests** pass with 100% success rate across all 31 operational domains.
 
 ---
 
-## 🚢 Render 1-Click Cloud Deployment
+## Cloud Deployment on Render
 
 Deploy the complete multi-service stack to Render using the official [`render.yaml`](render.yaml) Blueprint:
 
@@ -209,10 +220,11 @@ Deploy the complete multi-service stack to Render using the official [`render.ya
 
 See [`docs/RenderDeployment.md`](docs/RenderDeployment.md) for complete deployment instructions and troubleshooting.
 
+---
 
-## 🖥️ CLI & Developer Tools
+## CLI & Developer Tools
 
-ShorelineOps ships a unified **command-line interface** (also aliased as `culinaryos`) that gives programmatic control over every clinical, culinary, purchasing, and compliance module. Use it from your terminal, CI/CD pipeline, or as a backend for custom integrations, MCP agents, and SDK calls.
+ShorelineOps ships a unified **command-line interface** (also aliased as `culinaryos`) that gives programmatic control over every clinical, culinary, purchasing, and compliance module.
 
 ```bash
 # Via npm script
@@ -240,90 +252,70 @@ culinaryos <command>
 | `shoreline mcp tools` | List all MCP tools available for AI agent integration |
 | `shoreline doctor` | Full system health diagnostic scan |
 
-### Machine-Readable JSON Output
-
-Every command supports `--json` for structured output — ideal for piping into MCP agents, SDK calls, or custom integrations:
-
-```bash
-shoreline residents --json
-shoreline purchasing split-po --item="Boneless Turkey" --json
-shoreline survey cms-binder --json
-```
-
-### MCP & Agent Integration
-
-The built-in MCP server (`server/src/mcp/server.ts`) exposes 5 tool definitions:
-- `shoreline_get_facility_profile`
-- `shoreline_get_census_diets`
-- `shoreline_validate_recipe_dietary`
-- `shoreline_explode_mrp_bom`
-- `shoreline_run_self_healing_audit`
-
-### Developer Ecosystem Roadmap
-
-| Layer | Status |
-|---|---|
-| **CLI** (`shoreline` / `culinaryos`) | ✅ Production |
-| **MCP Server** (`server/src/mcp/server.ts`) | ✅ Production |
-| **REST API** (Express, port 3001) | ✅ Production |
-| **SDK** (`@shoreline/sdk` — TypeScript) | ✅ v6.0 Shipped |
-| **Webhook Events** (HMAC-SHA256 signed) | ✅ v6.0 Shipped |
-
-See [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md) for the complete command reference and [`docs/SDK_REFERENCE.md`](docs/SDK_REFERENCE.md) for the TypeScript SDK.
-
 ---
 
-## 🔧 v6.0 Hardware & Integration
+## TypeScript SDK (`@shoreline/sdk`)
 
-### TypeScript SDK
+Official client library for integrating facility systems, EHR gateways, and custom reporting pipelines:
 
-```ts
+```typescript
 import { ShorelineClient } from '@shoreline/sdk'
 
 const client = new ShorelineClient({
-  baseUrl: 'https://your-facility.shorelineops.com',
+  baseUrl: 'https://facility.shorelineops.com',
   apiKey: process.env.SHORELINE_API_KEY,
 })
 
-const residents = await client.getResidents()
-const po = await client.getMrpSplitPo('Turkey Breast', 45)
-const health = await client.runHealthCheck()
+// 1. Fetch census & active diets
+const census = await client.getCensus()
+
+// 2. Run lowest-cost split MRP comparison
+const mrp = await client.getMrpSplitPo('Turkey Breast', 50)
+
+// 3. Evaluate 3-way invoice match
+const match = await client.evaluateInvoiceMatch({
+  invoiceNumber: 'INV-44019',
+  vendorName: 'Dennis Food Service',
+  lines: [
+    {
+      itemSku: 'DNS-1002',
+      description: 'Raw Turkey Breast',
+      poQty: 10,
+      receivedQty: 9,
+      invoicedQty: 10,
+      poContractUnitPrice: 4.25,
+      invoicedUnitPrice: 4.85,
+    },
+  ],
+})
+
+// 4. Log verified HACCP food temperature
+await client.logHaccpTemperature({
+  checkType: 'food',
+  itemName: 'Roasted Turkey Breast',
+  tempF: 168.5,
+  source: 'probe',
+  probeDevice: 'Cooper-Atkins BLE #4',
+})
 ```
 
-### Webhook Events
-
-Register an endpoint to receive signed events from your facility:
-
-```bash
-curl -X POST https://your-api/api/webhooks/subscribe \
-  -d '{"url":"https://your-app.com/hooks","secret":"your-secret"}'
-```
-
-Events: `ehr.triage.pending` · `haccp.temp.violation` · `cpd.variance.alert` · `npo.block.triggered` · `mrp.po.generated`
-
-See [`docs/WEBHOOKS.md`](docs/WEBHOOKS.md) for HMAC verification and payload schemas.
-
-### Thermal Tray Card Printing & Bluetooth HACCP Probes
-
-```bash
-# List configured thermal printers (Zebra ZD421, Brother QL-1110NWB, etc.)
-shoreline hardware printers
-
-# Generate a 4×6 tray card label job
-shoreline hardware print-tray --resident-id=SH-001 --json
-
-# Read Bluetooth HACCP probe temperature (fires webhook on violation)
-shoreline hardware probe-temp --probe-id=PROBE-001
-```
-
-REST: `POST /api/hardware/print/tray-card` · `GET /api/hardware/probes` · `POST /api/hardware/probes/:id/log-haccp`
-
-See [`docs/HARDWARE.md`](docs/HARDWARE.md) for supported hardware models and integration guide.
+See [`sdk/README.md`](sdk/README.md) and [`docs/SDK_REFERENCE.md`](docs/SDK_REFERENCE.md) for full method documentation.
 
 ---
 
-## 📄 Compliance & Legal
-- [Master Commercial Services Agreement (MSA)](COMMERCIAL_AGREEMENT.md)
-- [Business Associate Agreement (BAA)](BAA.md)
+## Compliance & Legal Policies
+
+- [Terms of Service & Master Services Agreement (MSA)](TERMS.md) • [Web View](/terms)
+- [Healthcare Privacy Policy & HIPAA BAA](PRIVACY.md) • [Web View](/privacy)
+- [Technical Security Architecture & SLA Whitepaper](SECURITY.md) • [Web View](/security)
+- [Business Associate Agreement Standard Template](BAA.md)
 - [HIPAA Notice of Privacy Practices](HIPAA_NOTICE.md)
+- [Acceptable Use Policy (AUP)](AUP.md)
 - [Open Core Licensing Guide](LICENSING.md)
+
+---
+
+## License
+
+Core platform is licensed under **AGPLv3 / MIT Open Core**. Commercial SaaS features are proprietary to Shoreline Operations LLC.  
+Copyright © 2026 Shoreline Operations LLC. Built in Portland, Maine.

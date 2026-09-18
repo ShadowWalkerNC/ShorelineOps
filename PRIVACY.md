@@ -130,7 +130,7 @@ We implement industry-standard security measures including:
 - **Audit logging:** All data access and modification events are logged
 - **Vulnerability management:** Regular dependency auditing and security patching
 
-Despite these measures, no system is completely secure. Staff must immediately report suspected security incidents to management and to: **[LEGAL_CONTACT_EMAIL_PLACEHOLDER]**
+Despite these measures, no system is completely secure. Staff must immediately report suspected security incidents to management and to: **privacy@shorelineops.com**
 
 ---
 
@@ -182,10 +182,10 @@ We may update this Privacy Policy periodically. Updated versions will be posted 
 
 For privacy-related inquiries, requests, or to report a concern:
 
-**Shoreline Operations LLC**
-Privacy Officer
-Email: [LEGAL_CONTACT_EMAIL_PLACEHOLDER]
-Mailing Address: [LEGAL_MAILING_ADDRESS_PLACEHOLDER]
+**Shoreline Operations LLC**  
+Privacy Officer  
+Email: privacy@shorelineops.com  
+Mailing Address: 412 Commercial Street, Suite 400, Portland, ME 04101
 
 ---
 

@@ -13,7 +13,7 @@
 
 This Business Associate Agreement ("Agreement") is entered into as of **[EFFECTIVE_DATE]** ("Effective Date") between:
 
-**Shoreline Operations LLC**, a limited liability company organized under the laws of the State of **[GOVERNING_STATE_PLACEHOLDER]** ("Covered Entity"), and
+**Shoreline Operations LLC**, a limited liability company organized under the laws of the State of **Maine** ("Covered Entity"), and
 
 **[VENDOR_LEGAL_NAME]**, a **[VENDOR_ENTITY_TYPE]** organized under the laws of the State of **[VENDOR_STATE]** ("Business Associate").
 
@@ -130,7 +130,7 @@ Capitalized terms not defined herein have the meaning given to them in the HIPAA
 
 **5.5 Entire Agreement.** This Agreement, together with the Services Agreement, constitutes the entire agreement of the Parties regarding the subject matter hereof and supersedes all prior agreements and understandings.
 
-**5.6 Governing Law.** This Agreement is governed by federal law and, where applicable, the laws of the State of **[GOVERNING_STATE_PLACEHOLDER]**.
+**5.6 Governing Law.** This Agreement is governed by federal law and, where applicable, the laws of the State of **Maine**.
 
 **5.7 Severability.** If any provision of this Agreement is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
 
@@ -158,11 +158,11 @@ Date: ___________________________________
 
 ---
 
-**Notice Address — Covered Entity:**
-Shoreline Operations LLC
-Attn: Privacy Officer
-Email: [LEGAL_CONTACT_EMAIL_PLACEHOLDER]
-Mailing Address: [LEGAL_MAILING_ADDRESS_PLACEHOLDER]
+**Notice Address — Covered Entity:**  
+Shoreline Operations LLC  
+Attn: Privacy Officer  
+Email: privacy@shorelineops.com  
+Mailing Address: 412 Commercial Street, Suite 400, Portland, ME 04101
 
 **Notice Address — Business Associate:**
 [VENDOR_LEGAL_NAME]

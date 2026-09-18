@@ -1151,6 +1151,98 @@ async function runAllTests() {
     `HIPAA Security: cache headers must be private to prevent downstream proxy leaks (got "${capturedHeaders['cache-control']}")`
   )
 
+  // --- 31. Enterprise TypeScript SDK & Serialization ---
+  console.log('\n--- 31. Enterprise TypeScript SDK & Serialization ---')
+  const { ShorelineClient } = require('../../sdk/dist/index')
+
+  const client = new ShorelineClient({
+    baseUrl: 'https://demo.shorelineops.com/',
+    apiKey: 'sh_live_test_api_key_123',
+  })
+
+  // Test 1: URL trimming
+  assert((client as any).baseUrl === 'https://demo.shorelineops.com', 'SDK: trims trailing slash from baseUrl')
+  assert((client as any).apiKey === 'sh_live_test_api_key_123', 'SDK: stores apiKey for machine authentication')
+
+  // Save original fetch
+  const originalFetch = globalThis.fetch
+
+  try {
+    let capturedUrl = ''
+    let capturedOptions: any = null
+
+    // Mock fetch
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      capturedUrl = url.toString()
+      capturedOptions = options
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, mocked: true }),
+      } as any
+    }) as typeof fetch
+
+    // Test 2: getResidents
+    await client.getResidents()
+    assert(capturedUrl === 'https://demo.shorelineops.com/api/residents', 'SDK: getResidents hits /api/residents')
+    assert(capturedOptions.headers['Authorization'] === 'Bearer sh_live_test_api_key_123', 'SDK: sends Bearer token header')
+
+    // Test 3: evaluateInvoiceMatch
+    await client.evaluateInvoiceMatch({
+      invoiceNumber: 'INV-1001',
+      vendorName: 'Sysco',
+      lines: [],
+    })
+    assert(capturedUrl === 'https://demo.shorelineops.com/api/purchasing/invoices/evaluate', 'SDK: evaluateInvoiceMatch hits /api/purchasing/invoices/evaluate')
+    assert(capturedOptions.method === 'POST', 'SDK: evaluateInvoiceMatch uses POST')
+    assert(JSON.parse(capturedOptions.body).invoiceNumber === 'INV-1001', 'SDK: serializes invoice payload')
+
+    // Test 4: resolveReconciliationItem
+    await client.resolveReconciliationItem('item-uuid-44', 'APPROVED_BY_RD')
+    assert(capturedUrl === 'https://demo.shorelineops.com/api/ehr/reconciliation-queue/item-uuid-44/resolve', 'SDK: resolveReconciliationItem routes to item ID')
+    assert(JSON.parse(capturedOptions.body).action === 'APPROVED_BY_RD', 'SDK: serializes action')
+
+    // Test 5: logHaccpTemperature
+    await client.logHaccpTemperature({
+      checkType: 'food',
+      itemName: 'Haddock Fillet',
+      tempF: 168.0,
+      source: 'probe',
+      probeDevice: 'Probe-1',
+    })
+    assert(capturedUrl === 'https://demo.shorelineops.com/api/hardware/haccp/log-temp', 'SDK: logHaccpTemperature hits hardware temp endpoint')
+
+    // Test 6: importCensusCsv
+    await client.importCensusCsv('name,room\nJohn Doe,101')
+    assert(capturedUrl === 'https://demo.shorelineops.com/api/residents/import-csv', 'SDK: importCensusCsv hits import endpoint')
+
+    // Test 7: getTrayRuns
+    await client.getTrayRuns('2026-09-18', 'Lunch')
+    assert(capturedUrl.includes('/api/trayruns?serviceDate=2026-09-18&mealSlot=Lunch'), 'SDK: getTrayRuns formats query parameters correctly')
+
+    // Test 8: Error handling
+    globalThis.fetch = (async () => {
+      return {
+        ok: false,
+        status: 402,
+        statusText: 'Payment Required',
+        json: async () => ({ status: 402, error: 'Enterprise license required' }),
+      } as any
+    }) as typeof fetch
+
+    let caughtError: any = null
+    try {
+      await client.getCmsSurveyBinder()
+    } catch (e) {
+      caughtError = e
+    }
+    assert(caughtError !== null, 'SDK: throws on HTTP error responses')
+    assert(caughtError?.status === 402, 'SDK: enriches thrown error with status code')
+    assert(caughtError?.message?.includes('Enterprise license required'), 'SDK: extracts error message from API response')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)
   console.log('=======================================================\n')

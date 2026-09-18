@@ -133,9 +133,9 @@ We reserve the right to change the terms of this Notice. Changes will apply to a
 
 If you believe your privacy rights have been violated, you may file a complaint with:
 
-**Shoreline Operations LLC Privacy Officer**
-Email: [LEGAL_CONTACT_EMAIL_PLACEHOLDER]
-Mailing Address: [LEGAL_MAILING_ADDRESS_PLACEHOLDER]
+**Shoreline Operations LLC Privacy Officer**  
+Email: privacy@shorelineops.com  
+Mailing Address: 412 Commercial Street, Suite 400, Portland, ME 04101
 
 **U.S. Department of Health and Human Services**
 Office for Civil Rights

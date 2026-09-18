@@ -183,7 +183,7 @@ export default function Legal() {
                   color: 'var(--color-primary)',
                   fontWeight: 'var(--weight-semi)',
                 }}>
-                  [LEGAL_CONTACT_EMAIL_PLACEHOLDER]
+                  privacy@shorelineops.com
                 </span>{' '}
                 with any questions.
               </p>

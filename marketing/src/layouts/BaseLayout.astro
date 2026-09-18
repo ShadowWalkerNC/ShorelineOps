@@ -2,12 +2,77 @@
 interface Props {
   title: string
   description?: string
+  canonicalPath?: string
+  ogImage?: string
+  keywords?: string
 }
 
 import Icon from '../components/Icon.astro'
 
-const { title, description = 'The open-source dietary operations and care coordination platform for senior living facilities. Free core software with managed enterprise SaaS.' } = Astro.props
+const { 
+  title, 
+  description = 'The open-source clinical nutrition, dietary operations, and care coordination platform for senior living and healthcare dining. Free community core software with managed enterprise SaaS.',
+  canonicalPath = '',
+  ogImage = '/logo.png',
+  keywords = 'healthcare dietary operations, senior living clinical nutrition, IDDSI 2.0 dysphagia, skilled nursing facility food service, PointClickCare dietary sync, split MRP purchasing, Dennis Food Service EDI, Sysco EDI, CMS-2567 survey binder, HACCP temperature logging, institutional cycle menu planner, tray card scanner'
+} = Astro.props
+
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onrender.com/menu'
+const SITE_URL = 'https://shorelineops.com'
+const canonicalURL = canonicalPath ? new URL(canonicalPath, SITE_URL).toString() : Astro.url.href
+const fullOgImageUrl = new URL(ogImage, SITE_URL).toString()
+
+const schemaJson = JSON.stringify([
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    'name': 'ShorelineOps Care OS',
+    'operatingSystem': 'Web, iOS, Android, macOS, Windows, Linux',
+    'applicationCategory': 'HealthApplication, BusinessApplication',
+    'description': description,
+    'offers': {
+      '@type': 'AggregateOffer',
+      'priceCurrency': 'USD',
+      'lowPrice': '0',
+      'highPrice': '499',
+      'offerCount': '3'
+    },
+    'featureList': [
+      'IDDSI 2.0 Dysphagia Hard Safety Holds',
+      'Deterministic Big 9 Allergen Intersections',
+      'Multi-Distributor Dennis vs. Sysco Lowest-Cost Split MRP',
+      'PointClickCare 2-Way Clinical EHR Triage Queue',
+      'CMS-2567 F800-F814 Federal Survey Compliance Binder',
+      'Offline-First Kitchen Tablet Kiosks & BLE HACCP Probes',
+      '3-Way Invoice Matching & Vendor Credit Memos'
+    ],
+    'creator': {
+      '@type': 'Organization',
+      'name': 'Shoreline Operations LLC',
+      'url': 'https://shorelineops.com'
+    }
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'MedicalBusiness',
+    'name': 'Shoreline Operations LLC',
+    'url': 'https://shorelineops.com',
+    'logo': 'https://shorelineops.com/logo.png',
+    'description': 'Healthcare clinical nutrition technology and institutional dietary operations software for senior living, assisted living, and skilled nursing facilities.',
+    'address': {
+      '@type': 'PostalAddress',
+      'addressLocality': 'Portland',
+      'addressRegion': 'ME',
+      'postalCode': '04101',
+      'addressCountry': 'US'
+    },
+    'geo': {
+      '@type': 'GeoCoordinates',
+      'latitude': '43.6591',
+      'longitude': '-70.2568'
+    }
+  }
+])
 ---
 
 <!doctype html>
@@ -15,9 +80,39 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title} — ShorelineOps</title>
+    <title>{title} — ShorelineOps Care OS</title>
     <meta name="description" content={description} />
+    <meta name="keywords" content={keywords} />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href={canonicalURL} />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <!-- Geolocation Meta Tags (Maine Coastal Senior Living Origin) -->
+    <meta name="geo.region" content="US-ME" />
+    <meta name="geo.placename" content="Portland, Maine" />
+    <meta name="geo.position" content="43.6591;-70.2568" />
+    <meta name="ICBM" content="43.6591, -70.2568" />
+
+    <!-- OpenGraph Social Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ShorelineOps Care OS" />
+    <meta property="og:title" content={`${title} — ShorelineOps Care OS`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={fullOgImageUrl} />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@ShorelineOps" />
+    <meta name="twitter:creator" content="@ShorelineOps" />
+    <meta name="twitter:title" content={`${title} — ShorelineOps Care OS`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={fullOgImageUrl} />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json" set:html={schemaJson} />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
@@ -31,14 +126,15 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
             alt="Shoreline Care OS"
             class="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform"
           />
-          <span class="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/60 font-mono">CARE OS v5.0</span>
+          <span class="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/60 font-mono">CARE OS v6.3</span>
         </a>
 
         <nav class="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-600 dark:text-slate-300">
           <a href="/#features" class="hover:text-blue-600 dark:hover:text-white transition-colors">Features</a>
           <a href="/pricing" class="hover:text-blue-600 dark:hover:text-white transition-colors">Pricing & Free Core</a>
-          <a href="/distributors" class="hover:text-blue-600 dark:hover:text-white transition-colors">Distributors (Dennis & Sysco)</a>
+          <a href="/distributors" class="hover:text-blue-600 dark:hover:text-white transition-colors">Distributors</a>
           <a href="/story" class="hover:text-blue-600 dark:hover:text-white transition-colors">Chef's Story</a>
+          <a href="/security" class="hover:text-blue-600 dark:hover:text-white transition-colors">Security & SLA</a>
         </nav>
 
         <div class="flex items-center gap-2.5">
@@ -79,7 +175,7 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
           <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
             The open-source clinical nutrition & dietary operations platform built by an executive healthcare chef. Free community core software with managed enterprise SaaS.
           </p>
-          <div class="text-[11px] text-slate-400 font-mono">Built for Healthcare Dietary Operations · Zero Vendor Lock-In</div>
+          <div class="text-[11px] text-slate-400 font-mono">Portland, ME · Healthcare Dietary Operations · Zero Vendor Lock-In</div>
         </div>
 
         <div>
@@ -106,9 +202,9 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
         <div>
           <div class="font-bold text-slate-900 dark:text-white text-[11px] uppercase tracking-wider mb-2.5 font-mono">Compliance & Legal</div>
           <ul class="space-y-1.5 text-xs">
-            <li><a href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/COMMERCIAL_AGREEMENT.md" class="hover:text-blue-600 dark:hover:text-white transition-colors">Master Services Agreement (MSA)</a></li>
-            <li><a href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/BAA.md" class="hover:text-blue-600 dark:hover:text-white transition-colors">Business Associate Agreement (BAA)</a></li>
-            <li><a href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/HIPAA_NOTICE.md" class="hover:text-blue-600 dark:hover:text-white transition-colors">HIPAA Notice of Privacy Practices</a></li>
+            <li><a href="/terms" class="hover:text-blue-600 dark:hover:text-white transition-colors">Terms of Service & MSA</a></li>
+            <li><a href="/privacy" class="hover:text-blue-600 dark:hover:text-white transition-colors">Healthcare Privacy & HIPAA BAA</a></li>
+            <li><a href="/security" class="hover:text-blue-600 dark:hover:text-white transition-colors">Security Architecture & SLA</a></li>
             <li><a href="https://github.com/ShadowWalkerNC/ShorelineOps/blob/main/LICENSING.md" class="hover:text-blue-600 dark:hover:text-white transition-colors">Open Core License Architecture</a></li>
           </ul>
         </div>
@@ -116,7 +212,7 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-200/80 dark:border-slate-800/60 pt-5 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400">
         <div>© 2026 Shoreline Operations LLC. Free Open Source Core under AGPL/MIT License.</div>
-        <div class="mt-2 sm:mt-0 font-mono text-[11px]">Free Software · Enterprise Cloud SaaS</div>
+        <div class="mt-2 sm:mt-0 font-mono text-[11px]">Free Core Software · Enterprise Cloud SaaS · Maine Healthcare Tech</div>
       </div>
     </footer>
   </body>

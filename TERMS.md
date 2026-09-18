@@ -41,7 +41,7 @@ You may not:
 - Use another person's credentials to access the Platform
 
 ### 3.3 Reporting
-You must immediately notify your supervisor and the system administrator at **[LEGAL_CONTACT_EMAIL_PLACEHOLDER]** if you:
+You must immediately notify your supervisor and the system administrator at **legal@shorelineops.com** if you:
 - Suspect your credentials have been compromised
 - Observe unauthorized access or suspicious activity
 - Lose a device that was used to access the Platform
@@ -129,7 +129,7 @@ Termination does not relieve you of confidentiality or data handling obligations
 
 ## 12. Governing Law
 
-These Terms are governed by the laws of the State of **[GOVERNING_STATE_PLACEHOLDER]**, without regard to conflict of law principles. Any disputes arising under these Terms shall be resolved in the courts of **[GOVERNING_STATE_PLACEHOLDER]**.
+These Terms are governed by the laws of the State of **Maine**, without regard to conflict of law principles. Any disputes arising under these Terms shall be resolved in the courts of **Cumberland County, Maine**.
 
 ---
 
@@ -141,9 +141,9 @@ We reserve the right to update these Terms at any time. Updated versions will be
 
 ## 14. Contact
 
-**Shoreline Operations LLC**
-Email: [LEGAL_CONTACT_EMAIL_PLACEHOLDER]
-Mailing Address: [LEGAL_MAILING_ADDRESS_PLACEHOLDER]
+**Shoreline Operations LLC**  
+Email: legal@shorelineops.com  
+Mailing Address: 412 Commercial Street, Suite 400, Portland, ME 04101
 
 ---
 

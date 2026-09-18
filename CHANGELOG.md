@@ -4,6 +4,33 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.4.0] — 2026-09-18
+### Added & Enhanced
+- **Enterprise TypeScript SDK Expansion (`@shoreline/sdk` v0.2.0)**:
+  - Expanded `ShorelineClient` with 8 new methods covering the complete operational surface:
+    - `evaluateInvoiceMatch`: 3-way match across PO contract, dock receiving, and distributor invoice.
+    - `getReconciliationQueue` & `resolveReconciliationItem`: Inbound EHR triage queue with Registered Dietitian decision audit trail.
+    - `logHaccpTemperature` & `getHaccpSchedule`: Hardware-integrated temperature monitoring with mandatory corrective action enforcement.
+    - `importCensusCsv`: Role-gated bulk resident roster & clinical diet order importer.
+    - `getTrayRuns` & `recordTrayEvent`: Real-time tray line assembly, dispatch, and delivery SLA tracking.
+    - `analyzeRecipeNutrition` & `getRecipe`: Automated macro/micronutrient calculation and recipe bill-of-materials.
+  - Published comprehensive `sdk/README.md` and updated `docs/SDK_REFERENCE.md` with full code examples.
+- **Search Engine Optimization & Healthcare Geolocation** (`marketing/src/layouts/BaseLayout.astro`):
+  - Injected OpenGraph and Twitter Card metadata across all marketing views.
+  - Added geographic coordinates for Portland, Maine coastal senior living origin (`geo.region: US-ME`, `geo.placename: Portland, Maine`, `geo.position: 43.6591;-70.2568`, `ICBM`).
+  - Added schema.org JSON-LD structured data for `SoftwareApplication` and `MedicalBusiness`.
+- **Public Healthcare Legal & Policy Suite** (`marketing/src/pages/`):
+  - `/terms`: Master Services Agreement (MSA), Open Core licensing architecture, and deterministic clinical safety disclaimer.
+  - `/privacy`: Healthcare Privacy Policy, HIPAA Business Associate Agreement (BAA) provisions, and strict zero-resale policy.
+  - `/security`: Technical Security Whitepaper, SOC 2 Type II controls mapping, and 99.9% uptime Service Level Agreement (SLA).
+- **Repository-Wide Legal & Policy Normalization**:
+  - Replaced all placeholder tokens across `TERMS.md`, `PRIVACY.md`, `BAA.md`, `HIPAA_NOTICE.md`, `AUP.md`, and `src/pages/Legal.tsx` with verified Portland, Maine headquarters and privacy officer contacts.
+  - Enforced 100% emoji-free compliance across `README.md` and documentation with updated 207/207 test badges.
+- **Section 31 System Integration Test Suite Expansion** (`server/src/system.test.ts`):
+  - Added Section 31 tests covering client SDK serialization, error status mapping, and endpoint routing: **207/207 tests passing 100%**.
+
+---
+
 ## [v6.3.0] — 2026-09-18
 ### Added & Hardened
 - **IDDSI 2.0 Hard Safety Hold & Big 9 Allergens** (`src/types/resident.ts`, `server/src/engine/production.ts`):
