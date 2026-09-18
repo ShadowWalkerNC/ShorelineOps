@@ -1,6 +1,9 @@
 import { create } from 'zustand'
+import { api } from '@/api/client'
 import { supabase } from '@/lib/supabase'
 import type { DayMenu, DayOfWeek, MenuWeek as CanonicalMenuWeek } from '@/types/menu'
+
+const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export type { DayMenu, DayOfWeek }
 
@@ -92,12 +95,54 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   fetchWeeks: async () => {
     set({ loading: true, error: null })
+    if (!isDemo) {
+      try {
+        const res = await api.get('/menu/weeks')
+        if (Array.isArray(res.data)) {
+          set({
+            weeks: res.data.map((w: any) => ({
+              id: w.id,
+              name: w.name || w.label,
+              active: Boolean(w.active),
+              effectiveFrom: w.effectiveFrom,
+              days: w.days || {},
+              createdAt: w.createdAt,
+              updatedAt: w.updatedAt,
+            })),
+            loading: false,
+          })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[menuStore] Live API fetch failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { data, error } = await supabase.from('menu_weeks').select('*').order('created_at')
     if (error) { set({ error: error.message, loading: false }); return }
     set({ weeks: (data ?? []).map((w: any) => rowToWeek(w as Record<string, unknown>)), loading: false })
   },
 
   addWeek: async (label) => {
+    if (!isDemo) {
+      try {
+        const res = await api.post('/menu/weeks', { name: label, active: false, days: {} })
+        if (res.data?.id) {
+          const week: MenuWeek = {
+            id: res.data.id,
+            name: res.data.name || label,
+            active: Boolean(res.data.active),
+            effectiveFrom: res.data.effectiveFrom,
+            days: res.data.days || {},
+            createdAt: res.data.createdAt,
+            updatedAt: res.data.updatedAt,
+          }
+          set(s => ({ weeks: [...s.weeks, week] }))
+          return week
+        }
+      } catch (err: any) {
+        console.warn('[menuStore] Live API addWeek failed, falling back to local adapter:', err?.message)
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from('menu_weeks') as any)
       .insert({ label, active: false, days: {} }).select().single()
@@ -108,6 +153,29 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   updateWeek: async (id, patch) => {
+    if (!isDemo) {
+      try {
+        const res = await api.put(`/menu/weeks/${id}`, {
+          ...(patch.name !== undefined && { name: patch.name }),
+          ...(patch.active !== undefined && { active: patch.active }),
+          ...(patch.days !== undefined && { days: patch.days }),
+        })
+        if (res.data?.id) {
+          set(s => ({
+            weeks: s.weeks.map(w => w.id === id ? {
+              ...w,
+              ...(res.data.name && { name: res.data.name }),
+              ...(res.data.active !== undefined && { active: Boolean(res.data.active) }),
+              ...(res.data.days && { days: res.data.days }),
+              updatedAt: res.data.updatedAt,
+            } : w)
+          }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[menuStore] Live API updateWeek failed, falling back to local adapter:', err?.message)
+      }
+    }
     const update: Record<string, unknown> = {}
     if (patch.name   !== undefined) update.label  = patch.name
     if (patch.active !== undefined) update.active = patch.active
@@ -130,6 +198,15 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   setActiveWeek: async (id) => {
+    if (!isDemo) {
+      try {
+        await api.post(`/menu/weeks/${id}/activate`)
+        set(s => ({ weeks: s.weeks.map(w => ({ ...w, active: w.id === id })) }))
+        return
+      } catch (err: any) {
+        console.warn('[menuStore] Live API setActiveWeek failed, falling back to local adapter:', err?.message)
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase.from('menu_weeks') as any).update({ active: false }).neq('id', id)
     await get().updateWeek(id, { active: true })
@@ -139,6 +216,15 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   selectWeek: (id) => set({ selectedWeekId: id }),
 
   removeWeek: async (id) => {
+    if (!isDemo) {
+      try {
+        await api.delete(`/menu/weeks/${id}`)
+        set(s => ({ weeks: s.weeks.filter(w => w.id !== id) }))
+        return
+      } catch (err: any) {
+        console.warn('[menuStore] Live API removeWeek failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { error } = await supabase.from('menu_weeks').delete().eq('id', id)
     if (error) throw new Error(error.message)
     set(s => ({ weeks: s.weeks.filter(w => w.id !== id) }))
@@ -146,6 +232,28 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   deleteWeek: async (id) => get().removeWeek(id),
 
   fetchItems: async () => {
+    if (!isDemo) {
+      try {
+        const res = await api.get('/menu/items')
+        if (Array.isArray(res.data)) {
+          set({
+            items: res.data.map((i: any) => ({
+              id: i.id,
+              name: i.name,
+              category: i.category ?? null,
+              textureModified: Boolean(i.textureModified),
+              mealCategory: toMealCategory(i.mealCategory),
+              dietaryTags: toDietaryTags(i.dietaryTags),
+              recipeId: i.recipeId,
+              notes: i.notes,
+            })),
+          })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[menuStore] Live API items fetch failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { data, error } = await supabase.from('menu_items').select('*').order('name')
     if (error) { set({ error: error.message }); return }
     set({ items: (data ?? []).map((r: any) => rowToItem(r as Record<string, unknown>)) })
@@ -154,6 +262,31 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   addItem: async (data) => {
     const isString = typeof data === 'string'
     const name     = isString ? data : data.name
+    if (!isDemo) {
+      try {
+        const res = await api.post('/menu/items', {
+          name,
+          notes: (!isString && data.notes) ? data.notes : '',
+          textureModified: isString ? false : (data.textureModified ?? false),
+        })
+        if (res.data?.id) {
+          const item: MenuItem = {
+            id: res.data.id,
+            name: res.data.name,
+            textureModified: Boolean(res.data.textureModified),
+            category: (!isString && data.category) ? data.category : null,
+            mealCategory: (!isString && data.mealCategory) ? data.mealCategory : 'All',
+            dietaryTags: (!isString && data.dietaryTags) ? data.dietaryTags : [],
+            recipeId: (!isString && data.recipeId) ? data.recipeId : undefined,
+            notes: res.data.notes,
+          }
+          set(s => ({ items: [...s.items, item].sort((a, b) => a.name.localeCompare(b.name)) }))
+          return item
+        }
+      } catch (err: any) {
+        console.warn('[menuStore] Live API addItem failed, falling back to local adapter:', err?.message)
+      }
+    }
     const row: Record<string, unknown> = {
       name,
       texture_modified: isString ? false : (data.textureModified ?? false),
@@ -172,6 +305,32 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   updateItem: async (id, patch) => {
+    if (!isDemo) {
+      try {
+        const res = await api.put(`/menu/items/${id}`, {
+          ...(patch.name !== undefined && { name: patch.name }),
+          ...(patch.notes !== undefined && { notes: patch.notes }),
+          ...(patch.textureModified !== undefined && { textureModified: patch.textureModified }),
+        })
+        if (res.data?.id) {
+          set(s => ({
+            items: s.items.map(i => i.id === id ? {
+              ...i,
+              ...(patch.name !== undefined && { name: patch.name }),
+              ...(patch.category !== undefined && { category: patch.category }),
+              ...(patch.textureModified !== undefined && { textureModified: patch.textureModified }),
+              ...(patch.mealCategory !== undefined && { mealCategory: patch.mealCategory }),
+              ...(patch.dietaryTags !== undefined && { dietaryTags: patch.dietaryTags }),
+              ...(patch.recipeId !== undefined && { recipeId: patch.recipeId }),
+              ...(patch.notes !== undefined && { notes: patch.notes }),
+            } : i)
+          }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[menuStore] Live API updateItem failed, falling back to local adapter:', err?.message)
+      }
+    }
     const update: Record<string, unknown> = {}
     if (patch.name            !== undefined) update.name             = patch.name
     if (patch.category        !== undefined) update.category         = patch.category
@@ -188,6 +347,15 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   removeItem: async (id) => {
+    if (!isDemo) {
+      try {
+        await api.delete(`/menu/items/${id}`)
+        set(s => ({ items: s.items.filter(i => i.id !== id) }))
+        return
+      } catch (err: any) {
+        console.warn('[menuStore] Live API removeItem failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { error } = await supabase.from('menu_items').delete().eq('id', id)
     if (error) throw new Error(error.message)
     set(s => ({ items: s.items.filter(i => i.id !== id) }))

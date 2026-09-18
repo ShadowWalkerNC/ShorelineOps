@@ -16,3 +16,5 @@ server/dist
 coverage
 *.log
 dist-installer
+.agents
+ORIGINAL_REQUEST.md

@@ -81,6 +81,7 @@ function translateQuery(sql: string, params: any[] = []): { sql: string; params:
     // (e.g. 009's 'Base32 TOTP secret; null when MFA not enrolled'), which a
     // naive non-greedy match would stop at, leaving broken SQL behind.
     .replace(/COMMENT ON COLUMN(?:'[^']*'|[^;])*;/gi, '')
+    .replace(/SET LOCAL.*/gi, '-- SET LOCAL ignored')
     .replace(/GENERATED ALWAYS AS[\s\S]*?STORED/gi, '')
 
   const translatedParams = params.map((p) => {
