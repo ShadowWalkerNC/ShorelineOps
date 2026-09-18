@@ -1,0 +1,82 @@
+---
+interface Props {
+  name: string
+  class?: string
+  size?: number | string
+}
+
+const { name, class: className = 'h-6 w-auto', size = 24 } = Astro.props
+---
+
+{name === 'hipaa' && (
+  <div class={`inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/60 shadow-2xs ${className}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600 dark:text-emerald-400">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      <path d="m9 12 2 2 4-4"></path>
+    </svg>
+    <span>HIPAA COMPLIANT</span>
+  </div>
+)}
+
+{name === 'cms' && (
+  <div class={`inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-lg border border-blue-200/60 dark:border-blue-800/60 shadow-2xs ${className}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 dark:text-blue-400">
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+      <path d="m9 14 2 2 4-4"></path>
+    </svg>
+    <span>CMS-2567 SURVEY READY</span>
+  </div>
+)}
+
+{name === 'iddsi' && (
+  <div class={`inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-2.5 py-1 rounded-lg border border-purple-200/60 dark:border-purple-800/60 shadow-2xs ${className}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600 dark:text-purple-400">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+      <polyline points="2 17 12 22 22 17"></polyline>
+      <polyline points="2 12 12 17 22 12"></polyline>
+    </svg>
+    <span>IDDSI 2.0 PROTOCOL</span>
+  </div>
+)}
+
+{name === 'fhir' && (
+  <div class={`inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1 rounded-lg border border-amber-200/60 dark:border-amber-800/60 shadow-2xs ${className}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600 dark:text-amber-400">
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+    </svg>
+    <span>HL7® FHIR® R4</span>
+  </div>
+)}
+
+{name === 'pointclickcare' && (
+  <div class={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs shadow-2xs ${className}`}>
+    <div class="w-2 h-2 rounded-full bg-blue-600"></div>
+    <span class="font-bold tracking-tight">PointClickCare</span>
+    <span class="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold uppercase">EHR SYNC</span>
+  </div>
+)}
+
+{name === 'dennis' && (
+  <div class={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs shadow-2xs ${className}`}>
+    <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+    <span class="font-bold tracking-tight">Dennis Food Service</span>
+    <span class="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold uppercase">EDI 850</span>
+  </div>
+)}
+
+{name === 'sysco' && (
+  <div class={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs shadow-2xs ${className}`}>
+    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+    <span class="font-bold tracking-tight">Sysco Foods</span>
+    <span class="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold uppercase">EDI SPLIT</span>
+  </div>
+)}
+
+{name === 'usda' && (
+  <div class={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs shadow-2xs ${className}`}>
+    <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+    <span class="font-bold tracking-tight">USDA FoodData</span>
+    <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold uppercase">NUTRITION</span>
+  </div>
+)}

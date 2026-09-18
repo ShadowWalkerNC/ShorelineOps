@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
+import Icon from '../components/Icon.astro'
 
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onrender.com/distributor'
 ---
@@ -64,7 +65,9 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
       <!-- 3 Key Distributor Value Props -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 max-w-6xl mx-auto">
         <div class="p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-500/40 transition-all shadow-apple-card">
-          <div class="text-3xl mb-3">📈</div>
+          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
+            <Icon name="bar-chart" class="w-5 h-5" />
+          </div>
           <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">Higher, Predictable Order Volume</h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Facilities using Shoreline's suggested MRP order generator maintain strict par levels, ordering weekly truck deliveries without skipping replenishment cycles.
@@ -72,7 +75,9 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
         </div>
 
         <div class="p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-500/40 transition-all shadow-apple-card">
-          <div class="text-3xl mb-3">⚡</div>
+          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
+            <Icon name="zap" class="w-5 h-5" />
+          </div>
           <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">Zero IT Integration Headaches</h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             No expensive custom EDI development or proprietary hardware required. Reps simply provide standard CSV order guides and receive clean, formatted purchase orders.
@@ -80,7 +85,9 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
         </div>
 
         <div class="p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-500/40 transition-all shadow-apple-card">
-          <div class="text-3xl mb-3">🛡️</div>
+          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
+            <Icon name="shield-check" class="w-5 h-5" />
+          </div>
           <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">Dedicated Rep Portal (`/distributor`)</h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Sales reps get direct portal access to update item SKUs, pack sizes, and contract unit pricing—keeping order guides up to date with zero friction.
@@ -99,9 +106,10 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
             href="https://shoreline-demo.onrender.com/purchasing"
             target="_blank"
             rel="noreferrer"
-            class="text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 transition-colors"
+            class="text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
           >
-            Launch Live MRP Engine &rarr;
+            <span>Launch Live MRP Engine</span>
+            <Icon name="arrow-right" class="w-3.5 h-3.5" />
           </a>
         </div>
         <div class="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
@@ -120,9 +128,10 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
             href={DEMO_URL}
             target="_blank"
             rel="noreferrer"
-            class="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-amber-500/20"
+            class="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-amber-500/20 inline-flex items-center justify-center gap-1.5"
           >
-            Explore the Distributor Portal (`/distributor`) &rarr;
+            <span>Explore the Distributor Portal (`/distributor`)</span>
+            <Icon name="arrow-right" class="w-4 h-4" />
           </a>
           <a
             href="https://shoreline-demo.onrender.com/enterprise"

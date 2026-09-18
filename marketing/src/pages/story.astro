@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
+import Icon from '../components/Icon.astro'
 
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onrender.com/menu'
 ---
@@ -65,21 +66,21 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
         <p class="text-xs sm:text-sm">
           I built <strong>ShorelineOps</strong> to be the tool I needed in the kitchen every single morning:
         </p>
-        <ul class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+        <ul class="space-y-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
           <li class="flex items-start gap-2.5">
-            <span class="text-emerald-500 font-bold">✓</span>
+            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <span><strong>100% Free Open-Source Core:</strong> Any independent care home, hospice, or non-profit assisted living community can run our software completely free. Clinical safety should never be paywalled.</span>
           </li>
           <li class="flex items-start gap-2.5">
-            <span class="text-emerald-500 font-bold">✓</span>
+            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <span><strong>Big, High-Contrast Touch Targets (44px+):</strong> Touch tablet kiosk mode designed specifically for gloved line cooks to tap easily during hot line service.</span>
           </li>
           <li class="flex items-start gap-2.5">
-            <span class="text-emerald-500 font-bold">✓</span>
+            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <span><strong>IDDSI 2.0 Hard-Blocks:</strong> Strict clinical safety rules preventing a Regular texture plate from ever being served to an IDDSI Level 4 Pureed resident.</span>
           </li>
           <li class="flex items-start gap-2.5">
-            <span class="text-emerald-500 font-bold">✓</span>
+            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <span><strong>Algorithmic Split MRP Purchasing:</strong> Automatically compares line-item contract quotes across Dennis Food Service, Sysco, and US Foods, awarding each line to the lowest-cost vendor.</span>
           </li>
         </ul>
@@ -100,9 +101,10 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onre
               href={DEMO_URL}
               target="_blank"
               rel="noreferrer"
-              class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30"
+              class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30 inline-flex items-center justify-center gap-1.5"
             >
-              Launch Interactive Demo App &rarr;
+              <span>Launch Interactive Demo App</span>
+              <Icon name="arrow-right" class="w-3.5 h-3.5" />
             </a>
             <a
               href="/distributors"
