@@ -4,6 +4,20 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.4.2] — 2026-09-18
+### Added & Hardened
+- **Facility Pilot Deployment & Go-Live Runbook** (`docs/PILOT_GO_LIVE_RUNBOOK.md`):
+  - Published comprehensive healthcare operational runbook codifying **Paper-First Clinical Safety & Regulatory Compliance** for 40–120 bed facilities.
+  - Formally established the **Docked Workstation + Zebra/Laser Printer** topology as the operational anchor, positioning kitchen tablet kiosks as optional digital companions.
+  - Specified the mandatory **3-Meal Parallel Service Protocol** (Breakfast, Lunch, Dinner dry-run side-by-side with legacy paper) with required Registered Dietitian sign-off before full cutover.
+  - Codified the **Manager-Confirmed Split MRP Distributor Protocol** ensuring zero blind automated dispatch and 100% purchasing governance.
+- **Physical HACCP Clipboard Log Sheet Printing** (`src/features/kitchen/TempLogPanel.tsx`):
+  - Added 1-click **Print Daily Temperature Log** button to the `Today's Log` panel for physical clipboard binder compliance under CMS F812.
+- **Purchasing UI Emoji Elimination & Iconography Normalization** (`src/features/purchasing/PurchasingPage.tsx`):
+  - Replaced legacy emojis on `Print Sheet`, `Export CSV`, `Create Purchase Order`, `Build PO from Low Items`, `Approve`, `Mark Submitted`, and `Receive` with accessible Lucide SVG icons (`Printer`, `Download`, `CheckCircle2`, `ShoppingCart`, `Send`, `Package`).
+
+---
+
 ## [v6.4.1] — 2026-09-18
 ### Added & Polished
 - **CMS-2567 Digital Survey Binder UI & Surveyor Guest Mode** (`src/features/reporting/CmsSurveyBinderSection.tsx`, `src/features/reporting/ReportingPage.tsx`):

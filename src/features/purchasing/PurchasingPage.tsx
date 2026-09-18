@@ -3,6 +3,15 @@ import { api } from '../../api/client'
 import { useAuth } from '../../security/AuthContext'
 import { Vendor, VendorItem, OrderGuideEntry, SuggestedOrderLine, PurchaseOrder, PurchaseOrderLine } from '../../types/purchasing'
 import DennisImportModal from './DennisImportModal'
+import {
+  Printer,
+  Download,
+  CheckCircle2,
+  ShoppingCart,
+  Send,
+  Package,
+  Plus
+} from 'lucide-react'
 
 /** PO line joined with its order-guide match state (for receiving). */
 interface ReceiveLine extends PurchaseOrderLine {
@@ -600,10 +609,14 @@ export default function PurchasingPage() {
                   borderRadius: 'var(--radius-md)',
                   fontWeight: 600,
                   fontSize: 13,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
                 }}
               >
-                🖨️ Print Sheet
+                <Printer style={{ width: 15, height: 15 }} />
+                Print Sheet
               </button>
               <button
                 onClick={handleExportCSV}
@@ -615,10 +628,14 @@ export default function PurchasingPage() {
                   borderRadius: 'var(--radius-md)',
                   fontWeight: 600,
                   fontSize: 13,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
                 }}
               >
-                📥 Export CSV
+                <Download style={{ width: 15, height: 15 }} />
+                Export CSV
               </button>
               <button
                 onClick={handleCreateOrderFromSuggested}
@@ -630,10 +647,14 @@ export default function PurchasingPage() {
                   borderRadius: 'var(--radius-md)',
                   fontWeight: 600,
                   fontSize: 13,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
                 }}
               >
-                ✅ Create Purchase Order
+                <CheckCircle2 style={{ width: 15, height: 15 }} />
+                Create Purchase Order
               </button>
             </div>
           </div>
@@ -759,10 +780,14 @@ export default function PurchasingPage() {
                 fontWeight: 600,
                 fontSize: 13,
                 cursor: 'pointer',
-                minHeight: 44
+                minHeight: 44,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
               }}
             >
-              🛒 Build PO from Low Items
+              <ShoppingCart style={{ width: 16, height: 16 }} />
+              Build PO from Low Items
             </button>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
@@ -813,10 +838,14 @@ export default function PurchasingPage() {
                             fontWeight: 600,
                             fontSize: 13,
                             cursor: 'pointer',
-                            minHeight: 44
+                            minHeight: 44,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6
                           }}
                         >
-                          ✅ Approve
+                          <CheckCircle2 style={{ width: 15, height: 15 }} />
+                          Approve
                         </button>
                       )}
                       {order.status === 'draft' && !canApprove && (
@@ -836,10 +865,14 @@ export default function PurchasingPage() {
                             fontWeight: 600,
                             fontSize: 13,
                             cursor: 'pointer',
-                            minHeight: 44
+                            minHeight: 44,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6
                           }}
                         >
-                          📤 Mark Submitted
+                          <Send style={{ width: 15, height: 15 }} />
+                          Mark Submitted
                         </button>
                       )}
                       {RECEIVABLE_STATUSES.includes(order.status) && (
@@ -854,10 +887,14 @@ export default function PurchasingPage() {
                             fontWeight: 600,
                             fontSize: 13,
                             cursor: 'pointer',
-                            minHeight: 44
+                            minHeight: 44,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6
                           }}
                         >
-                          📦 Receive
+                          <Package style={{ width: 15, height: 15 }} />
+                          Receive
                         </button>
                       )}
                     </div>
@@ -878,8 +915,9 @@ export default function PurchasingPage() {
           {receiveOrder && (
             <div style={{ marginTop: 24, border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 20, background: 'var(--bg-app)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                  📦 Receiving — {receiveOrder.vendor_name} · {receiveOrder.order_date}
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Package style={{ width: 18, height: 18 }} />
+                  <span>Receiving — {receiveOrder.vendor_name} · {receiveOrder.order_date}</span>
                 </h3>
                 <button
                   onClick={() => { setReceiveOrder(null); setReceiveLines([]) }}
@@ -978,7 +1016,7 @@ export default function PurchasingPage() {
                                   minHeight: 44
                                 }}
                               >
-                                {line.id && assigning[line.id] ? 'Assigning…' : '＋ Add to order guide'}
+                                {line.id && assigning[line.id] ? 'Assigning…' : '+ Add to order guide'}
                               </button>
                             </div>
                           )}

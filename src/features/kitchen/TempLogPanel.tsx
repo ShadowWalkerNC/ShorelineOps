@@ -10,6 +10,7 @@ import {
   MicOff,
   Radio,
   Edit3,
+  Printer,
 } from 'lucide-react'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -559,6 +560,31 @@ export default function TempLogPanel() {
       {/* ── TODAY'S LOGS ── */}
       {tab === 'logs' && (
         <div style={{ display: 'grid', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+              Physical clipboard audit logs for CMS F812 survey binder.
+            </span>
+            <button
+              onClick={() => window.print()}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-app)',
+                color: 'var(--text-primary)',
+                fontWeight: 600,
+                fontSize: 12,
+                cursor: 'pointer',
+                minHeight: 38
+              }}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print Daily Temperature Log
+            </button>
+          </div>
           {openViolations.length > 0 && (
             <div style={{ background: '#fee2e2', color: '#991b1b', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontWeight: 700 }}>
               {openViolations.length} open violation{openViolations.length > 1 ? 's' : ''} need{openViolations.length === 1 ? 's' : ''} a corrective action.

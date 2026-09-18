@@ -172,6 +172,9 @@
 - [x] **G02: Ephemeral Surveyor Read-Only Mode (`src/features/reporting/CmsSurveyBinderSection.tsx`)**: Instant privacy-preserving inspector mode designed for state survey tablets, masking confidential financial $/CPD metrics and proprietary distributor pricing while exposing clinical F-Tags, 14-hour meal spans, and corrective action temperature logs.
 - [x] **G03: Complete Emoji-Free Reporting UI**: Replaced all remaining unicode emojis across reporting tabs and warning banners with clean, accessible Lucide SVG icons.
 - [x] **G04: Test Harness Determinism**: Hardened CircuitBreaker test recovery window (10,000ms) against CPU load and event-loop jitter, maintaining **207/207 automated tests passing with 100% success rate**.
+- [x] **G05: Facility Pilot Deployment & Go-Live Runbook (`docs/PILOT_GO_LIVE_RUNBOOK.md`)**: Complete healthcare operational onboarding standard codifying paper-first compliance, 3-meal parallel dry-run protocol, and manager-approved distributor split MRP ordering.
+- [x] **G06: Physical HACCP Clipboard Log Sheet Printing (`src/features/kitchen/TempLogPanel.tsx`)**: 1-click print button on Today's Log view for physical clipboard compliance binders under CMS F812.
+- [x] **G07: Purchasing UI Emoji Elimination & Normalization (`src/features/purchasing/PurchasingPage.tsx`)**: Replaced all legacy unicode emojis with clean Lucide SVG icons (`Printer`, `Download`, `CheckCircle2`, `ShoppingCart`, `Send`, `Package`).
 
 ---
 
