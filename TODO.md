@@ -104,12 +104,42 @@
 
 ---
 
+## ✅ Wave A Milestones — Clinical Safety, Audit & Migration Consolidation (Completed & Verified)
+- [x] **A01: API Port Mismatch Resolution**: Synchronized frontend proxy (`vite.config.ts`), backend (`PORT=3001`), Docker Compose, and client Axios base URL.
+- [x] **A02 & A03: Canonical Database Migrations Consolidation (`server/src/db/migrate.ts`)**: Consolidated SQLite & PostgreSQL schema initialization into ordered migrations (001–015), removing redundant and conflicting DDL scripts.
+- [x] **A04: EHR Webhook HMAC-SHA256 Authentication (`server/src/routes/ehr.ts`)**: Implemented raw request body buffering (`req.rawBody`) and HMAC-SHA256 signature verification (`X-EHR-Signature`), refusing unsigned/forged inbound EHR events.
+- [x] **A05: RD-Gated EHR Reconciliation Resolution (`server/src/routes/ehr.ts`, `src/features/residents/EhrReconciliationQueue.tsx`)**: Enforced Registered Dietitian signoff on clinical diet/texture changes before updating resident profiles.
+- [x] **A06: Diet Change History Ledger & Auditing (`server/src/routes/residents.ts`)**: Immutable `diet_history` logging on every clinical order modification with dedicated REST audit endpoint (`GET /api/residents/:id/diet-history`).
+- [x] **A07: Honest EHR Census State Representation**: Eliminated fabricated synthetic status banners, accurately reporting live connection state.
+- [x] **A08: Stripe Webhook Signature Verification (`server/src/routes/billing.ts`)**: Integrated `express.raw` parser before global JSON middleware, enforcing Stripe cryptographic signature checks (`STRIPE_WEBHOOK_SECRET`).
+
+---
+
+## ✅ Wave B Milestones — Care Operations Foundation & Tray Tracking (Completed & Verified)
+- [x] **B07: Auto-Derive Therapeutic Variant Headcounts (`server/src/engine/production.ts`)**: Automatically calculates Regular, Pureed L4, Minced L5, Low Sodium (NAS), and Carb-Controlled (NCS) portion headcounts from active census and diet orders.
+- [x] **B09: Server-Backed Inventory Store & Transaction Ledger (`server/src/routes/inventory.ts`, `src/state/inventoryStore.ts`)**: Replaced local storage mock inventory with persistent Express backend endpoints (`/api/inventory`), tracking items, stock movements, and waste logs.
+- [x] **B12: Tray Tracking State Machine & 30-Minute SLA Overdue Engine (`server/src/engine/trayTracking.ts`, `server/src/routes/trayruns.ts`, `src/features/traydispatch/TrayDispatchPage.tsx`)**: Enforces state transitions (`assembled` → `dispatched` → `delivered` / `missed` / `remade`) with automated SLA overdue alerts.
+
+---
+
+## ✅ Wave C Milestones — Kitchen Operations & Cost Transparency (Completed & Verified)
+- [x] **C01: Durable HACCP Temperature Logging (`server/src/db/migrate.ts` Migration 023, `server/src/routes/hardware.ts`, `src/features/kitchen/TempLogPanel.tsx`)**: Persisted `haccp_equipment` and `haccp_logs` tables. Server strictly rejects out-of-range temperatures without mandatory corrective-action documentation (HTTP 422).
+- [x] **C02: Kitchen Fitness Ergonomics (`src/features/kitchen/kitchen-fitness.css`, `src/features/kitchen/KitchenModeContext.tsx`, `src/features/kitchen/ClinicalSafetyStrip.tsx`)**: Enforces 44px touch targets and 14px type floor across kitchen pages, plus a high-contrast dark theme with 56px touch targets and persistent clinical safety header.
+- [x] **C03: Accessibility Baseline (`src/components/ui/`)**: Visible focus rings (`focus-visible:ring`), 16px minimum form inputs preventing mobile zoom, and high-contrast modes.
+- [x] **C04: Server-Synced Facility Settings (`server/src/db/migrate.ts` Migration 024, `server/src/routes/admin.ts`, `src/state/settingsStore.ts`)**: Authoritative backend `facility_settings` table (`GET/PUT /api/admin/facility-settings`) with offline cache fallback and real-time sync status indicator.
+- [x] **C05: Production Forecasting with Census-Trend Buffer & Nightly Usage Rollup (`server/src/engine/production.ts`, `server/src/jobs/nightlyForecast.ts`)**: Calculates production worksheets from scheduled menu × current census + trend buffer (`buffer = ceil(census * (0.03 + growth))`). Nightly job computes 28-day trailing usage from inventory transactions.
+- [x] **C06: Recipe Costing with Provenance (`server/src/engine/costing.ts`, `server/src/routes/recipes.ts`, `src/features/reporting/ReportingPage.tsx`)**: Recomputes recipe serving costs tagged with SKU-matched vs. estimated provenance, rolling up to daily cost logs and $/CPD breakdowns.
+- [x] **C07: Live OpenAPI 3.1 Documentation (`server/src/docs/openapi.json`, `server/scripts/generate-openapi.mjs`)**: Complete REST API specification mounted live at `/api/docs`.
+- [x] **Comprehensive End-to-End System Test Suite (`server/src/system.test.ts`)**: **155/155 automated tests passing with 100% success rate** across all 28 test sections.
+
+---
+
 ## 🏆 Project Status: All Milestones & Stages 100% Complete & Production Ready
-- [x] Core Clinical Care & Resident Operations (`/residents`)
-- [x] 4-Week Seasonal Cycle Menu Planning (`/menu`)
-- [x] Smart Master Recipe Book & Allergen Auto-Scanner (`/recipes`)
-- [x] Touch Kitchen Tablet Kiosk & Voice HACCP 165°F Logger (`/kitchen/tablet`)
-- [x] Material Requirements Planning (MRP) BOM Purchasing (`/purchasing`)
+- [x] Core Clinical Care & Resident Operations (`/residents`, `/api/residents`)
+- [x] 4-Week Seasonal Cycle Menu Planning (`/menu`, `/api/menu`)
+- [x] Smart Master Recipe Book & Allergen Auto-Scanner (`/recipes`, `/api/recipes`)
+- [x] Touch Kitchen Tablet Kiosk & Durable HACCP Logger (`/kitchen/orders`, `/kitchen/sheet`, `TempLogPanel`)
+- [x] Material Requirements Planning (MRP) BOM Purchasing (`/purchasing`, `/api/purchasing/mrp-order`)
 - [x] Clinical EHR & PointClickCare Sync (`/api/ehr`)
 - [x] Model Context Protocol (MCP) Server for CulinaryOS (`/api/mcp`)
 - [x] Autonomous Self-Healing Bot Daemon (`/api/mcp/diagnostics/self-healing`)
@@ -119,6 +149,7 @@
 - [x] 3-Way Invoice Matching & Vendor Credit Memos (`/api/purchasing/invoices/match`)
 - [x] Inbound EHR Clinical Triage Queue (`/api/ehr/reconciliation-queue`)
 - [x] Open Core Tier Separation & FeatureGate Protection (`/settings`, `src/components/FeatureGate.tsx`)
-- [x] Facility & Operations Settings (`/settings`)
-- [x] Corporate Headquarters Multi-Facility Portal (`/enterprise`, `/api/enterprise`)
-- [x] Autonomous Operations Consultant Audit Engine (`npm run audit:operations`)
+- [x] Server-Synced Facility & Operations Settings (`/settings`, `/api/admin/facility-settings`)
+- [x] Tray Tracking SLA State Machine (`/features/traydispatch`, `/api/trayruns`)
+- [x] Server-Backed Inventory Ledger & Transactions (`/api/inventory`)
+- [x] Live OpenAPI 3.1 Specification (`/api/docs`)
