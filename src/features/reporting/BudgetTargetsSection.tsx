@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, BarChart3, DollarSign, Users, Settings, FileText, type LucideIcon } from 'lucide-react'
 import { useBudgetStore, type BudgetPeriod, type SpendCategory, type SpendEntry } from '../../state/budgetStore'
 
 const CATEGORIES: SpendCategory[] = [
@@ -108,8 +109,18 @@ function OverviewTab({ entries, period, prevEntries, prevPeriod }: { entries: Sp
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'var(--text-muted)', marginTop:6 }}>
           <span>$0</span><span>Budget: {fmt$(totalBudget)}</span>
         </div>
-        {overBudget && <div style={{ marginTop:10, padding:'8px 14px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:'var(--radius-md)', fontSize:13, color:'#991b1b', fontWeight:600 }}>⚠ Over budget by {fmt$(Math.abs(remaining))} — review spending log and contact administrator.</div>}
-        {!overBudget && projectedTotal > totalBudget && <div style={{ marginTop:10, padding:'8px 14px', background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'var(--radius-md)', fontSize:13, color:'#92400e', fontWeight:600 }}>⚠ Projected month-end {fmt$(projectedTotal)} exceeds budget by {fmt$(projectedTotal - totalBudget)} — consider reducing order quantities.</div>}
+        {overBudget && (
+          <div style={{ marginTop:10, padding:'8px 14px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:'var(--radius-md)', fontSize:13, color:'#991b1b', fontWeight:600, display:'flex', alignItems:'center', gap:8 }}>
+            <AlertTriangle size={16} className="text-red-600 shrink-0" />
+            <span>Over budget by {fmt$(Math.abs(remaining))} — review spending log and contact administrator.</span>
+          </div>
+        )}
+        {!overBudget && projectedTotal > totalBudget && (
+          <div style={{ marginTop:10, padding:'8px 14px', background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'var(--radius-md)', fontSize:13, color:'#92400e', fontWeight:600, display:'flex', alignItems:'center', gap:8 }}>
+            <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+            <span>Projected month-end {fmt$(projectedTotal)} exceeds budget by {fmt$(projectedTotal - totalBudget)} — consider reducing order quantities.</span>
+          </div>
+        )}
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'var(--space-4)' }}>
@@ -262,7 +273,12 @@ function SpendingLogTab({ entries, addEntry, removeEntry, period }: { entries: S
           </table>
         </div>
       </div>
-      {filtered.length === 0 && <div className="sl-empty"><div style={{ fontSize:36 }}>💸</div><div className="sl-empty-title">No entries match your filter.</div></div>}
+      {filtered.length === 0 && (
+        <div className="sl-empty">
+          <div style={{ display:'flex', justifyContent:'center', marginBottom:8 }}><DollarSign size={36} className="text-muted-foreground" /></div>
+          <div className="sl-empty-title">No entries match your filter.</div>
+        </div>
+      )}
     </div>
   )
 }
@@ -335,8 +351,9 @@ function PerResidentTab({ entries, period }: { entries: SpendEntry[]; period: Bu
         ))}
       </div>
 
-      <div className="sl-alert sl-alert-info" style={{ fontSize:'var(--text-sm)' }}>
-        <b>📋 Note:</b> Per-resident cost includes all logged spend categories. Labor, equipment, and repair costs are included in the total but tracked separately. Food-only cost should stay within 75–80% of the daily budget per resident ({fmt$(period.budgetPerResidentPerDay * 0.80)}/res/day).
+      <div className="sl-alert sl-alert-info flex items-center gap-2" style={{ fontSize:'var(--text-sm)' }}>
+        <FileText size={16} className="text-blue-600 shrink-0 inline" />
+        <div><b>Note:</b> Per-resident cost includes all logged spend categories. Labor, equipment, and repair costs are included in the total but tracked separately. Food-only cost should stay within 75–80% of the daily budget per resident ({fmt$(period.budgetPerResidentPerDay * 0.80)}/res/day).</div>
       </div>
     </div>
   )
@@ -385,11 +402,11 @@ function SettingsTab({ period, setPeriod }: { period: BudgetPeriod; setPeriod: (
 }
 
 type BudgetTab = 'overview' | 'log' | 'per-resident' | 'settings'
-const BUDGET_TABS: { id: BudgetTab; label: string; icon: string }[] = [
-  { id:'overview',      label:'Overview',          icon:'📊' },
-  { id:'log',           label:'Spending Log',       icon:'💸' },
-  { id:'per-resident',  label:'Per-Resident Cost',  icon:'👤' },
-  { id:'settings',      label:'Period Settings',    icon:'⚙️' },
+const BUDGET_TABS: { id: BudgetTab; label: string; icon: LucideIcon }[] = [
+  { id:'overview',      label:'Overview',          icon: BarChart3 },
+  { id:'log',           label:'Spending Log',       icon: DollarSign },
+  { id:'per-resident',  label:'Per-Resident Cost',  icon: Users },
+  { id:'settings',      label:'Period Settings',    icon: Settings },
 ]
 
 export default function BudgetTargetsSection() {
@@ -433,15 +450,19 @@ export default function BudgetTargetsSection() {
           </div>
           <span style={{ fontSize:11, fontWeight:700, color: overBudget ? '#dc2626' : pctUsed > 75 ? '#d97706' : '#059669' }}>{pctUsed.toFixed(1)}%</span>
         </div>
-        {overBudget && <span style={{ fontSize:12, fontWeight:700, color:'#dc2626' }}>⚠ Over budget</span>}
+        {overBudget && <span style={{ fontSize:12, fontWeight:700, color:'#dc2626', display:'inline-flex', alignItems:'center', gap:4 }}><AlertTriangle size={14} /> Over budget</span>}
       </div>
 
       <div className="sl-pills" style={{ marginBottom:'var(--space-6)', flexWrap:'wrap' }}>
-        {BUDGET_TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={tab === t.id ? 'sl-pill active' : 'sl-pill'}>
-            <span style={{ marginRight:'var(--space-1)' }}>{t.icon}</span>{t.label}
-          </button>
-        ))}
+        {BUDGET_TABS.map(t => {
+          const TabIcon = t.icon
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} className={tab === t.id ? 'sl-pill active inline-flex items-center gap-1.5' : 'sl-pill inline-flex items-center gap-1.5'}>
+              <TabIcon size={14} />
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
       <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-6)', boxShadow:'var(--shadow-sm)' }}>

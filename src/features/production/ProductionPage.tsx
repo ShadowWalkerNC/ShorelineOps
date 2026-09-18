@@ -11,17 +11,30 @@ import HydrationPassTab from './components/HydrationPass'
 import TempLogPanel from '../kitchen/TempLogPanel' // C01: HACCP temperature logging tab (self-contained)
 import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from '../kitchen/KitchenModeContext'
 import ClinicalSafetyStrip from '../kitchen/ClinicalSafetyStrip'
+import {
+  FileText,
+  Utensils,
+  ChefHat,
+  CheckSquare,
+  Droplets,
+  Thermometer,
+  CheckCircle2,
+  Printer,
+  Bed,
+  Edit3,
+  type LucideIcon
+} from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────────
 type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists' | 'hydration' | 'templog'
 
-const SERVICE_TABS: { id: ServiceTab; label: string; icon: string }[] = [
-  { id: 'worksheet',       label: 'Worksheet',    icon: '📋' },
-  { id: 'traytickets',     label: 'Tray Tickets', icon: '🍽️' },
-  { id: 'preplist',        label: 'Prep List',    icon: '👨‍🍳' },
-  { id: 'shiftchecklists', label: 'Shift Checks', icon: '✅' },
-  { id: 'hydration',       label: 'Hydration',    icon: '💧' },
-  { id: 'templog',         label: 'Temp Log',     icon: '🌡️' }, // C01
+const SERVICE_TABS: { id: ServiceTab; label: string; icon: LucideIcon }[] = [
+  { id: 'worksheet',       label: 'Worksheet',    icon: FileText },
+  { id: 'traytickets',     label: 'Tray Tickets', icon: Utensils },
+  { id: 'preplist',        label: 'Prep List',    icon: ChefHat },
+  { id: 'shiftchecklists', label: 'Shift Checks', icon: CheckSquare },
+  { id: 'hydration',       label: 'Hydration',    icon: Droplets },
+  { id: 'templog',         label: 'Temp Log',     icon: Thermometer }, // C01
 ]
 
 const DAYS: DayOfWeek[] = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -203,10 +216,13 @@ function WorksheetTab() {
 
           <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-lg)', padding:'var(--space-4)' }}>
             {sheet.signedOffBy ? (
-              <div className="sl-alert sl-alert-success" style={{ margin:0 }}>
-                ✓ <b>Signed off by {sheet.signedOffBy}</b>
-                {sheet.signedOffAt && <> at {new Date(sheet.signedOffAt).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}</>}
-                <div style={{ fontSize:'var(--text-xs)', marginTop:4, opacity:0.8 }}>Audit entry recorded.</div>
+              <div className="sl-alert sl-alert-success" style={{ margin:0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div>
+                  <b>Signed off by {sheet.signedOffBy}</b>
+                  {sheet.signedOffAt && <> at {new Date(sheet.signedOffAt).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}</>}
+                  <div style={{ fontSize:'var(--text-xs)', marginTop:4, opacity:0.8 }}>Audit entry recorded.</div>
+                </div>
               </div>
             ) : (
               <div style={{ display:'flex', flexWrap:'wrap', gap:'var(--space-3)', alignItems:'flex-end' }}>
@@ -224,9 +240,10 @@ function WorksheetTab() {
                   onClick={handleSignOff}
                   className="btn btn-primary"
                   disabled={!staffName.trim() || signing}
-                  style={{ minHeight:44, flexShrink:0 }}
+                  style={{ minHeight:44, flexShrink:0, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
-                  {signing ? 'Signing off…' : '✓ Sign Off Sheet'}
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{signing ? 'Signing off…' : 'Sign Off Sheet'}</span>
                 </button>
               </div>
             )}
@@ -234,7 +251,10 @@ function WorksheetTab() {
           </div>
 
           <div style={{ display:'flex', justifyContent:'flex-end' }}>
-            <button onClick={() => window.print()} className="btn btn-outline" style={{ minHeight:44 }}>🖸 Print Sheet</button>
+            <button onClick={() => window.print()} className="btn btn-outline" style={{ minHeight:44, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Printer className="w-4 h-4" />
+              <span>Print Sheet</span>
+            </button>
           </div>
         </>
       )}
@@ -334,7 +354,7 @@ function TrayTicketsTab() {
               {suggestions.map(r=>(
                 <button key={r.id} onClick={()=>addTicket(r)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'none', border:'none', borderBottom:'1px solid var(--border-color)', padding:'10px 14px', cursor:'pointer', textAlign:'left' }}>
                   <span style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)' }}>{r.name}</span>
-                  <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>Rm {r.room} · {r.servingLocation} · {r.dietType}{r.allergies.length>0?' · ⚠ '+r.allergies.join(', '):''}</span>
+                  <span style={{ fontSize:'var(--text-sm)', color:'var(--text-muted)' }}>Rm {r.room} · {r.servingLocation} · {r.dietType}{r.allergies.length>0?' · Allergies: '+r.allergies.join(', '):''}</span>
                 </button>
               ))}
             </div>
@@ -343,14 +363,17 @@ function TrayTicketsTab() {
         {roomServiceCount>0&&(
           <div style={{ display:'flex', alignItems:'center', gap:'var(--space-3)', paddingTop:'var(--space-2)', borderTop:'1px dashed var(--border-color)' }}>
             <span style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}><b>{roomServiceCount}</b> residents need delivery for {mealPick}.</span>
-            <button onClick={generateRoomService} className="btn btn-outline btn-sm" style={{ whiteSpace:'nowrap' }}>🛌 Generate All Room Service Tickets</button>
+            <button onClick={generateRoomService} className="btn btn-outline btn-sm" style={{ whiteSpace:'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Bed className="w-3.5 h-3.5" />
+              <span>Generate All Room Service Tickets</span>
+            </button>
           </div>
         )}
       </div>
 
       {tickets.length===0&&(
         <div className="sl-empty">
-          <div style={{ fontSize:36, marginBottom:'var(--space-3)' }}>🍽️</div>
+          <Utensils className="w-9 h-9 text-slate-400" style={{ margin: '0 auto var(--space-3)' }} />
           <div className="sl-empty-title">No tray tickets yet.</div>
           <div className="sl-empty-subtitle">Search a resident above, or use "Generate All Room Service Tickets" to create delivery tickets in one click.</div>
         </div>
@@ -359,7 +382,10 @@ function TrayTicketsTab() {
       {tickets.length>0&&(
         <div style={{ display:'flex', justifyContent:'flex-end', gap:'var(--space-2)' }}>
           <button onClick={()=>setTickets([])} className="btn btn-outline btn-sm">Clear All</button>
-          <button onClick={()=>window.print()} className="btn btn-primary btn-sm">🖸 Print Tickets</button>
+          <button onClick={()=>window.print()} className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Tickets</span>
+          </button>
         </div>
       )}
 
@@ -386,7 +412,7 @@ function TrayTicketCard({ ticket:t, onRemove, onUpdate }: { ticket:TrayTicket; o
       </div>
       <div style={{ background:'var(--bg-app)', border:'1px solid var(--border-color)', borderRadius:'var(--radius-md)', padding:'10px 12px', display:'flex', flexDirection:'column', gap:'var(--space-1)' }}>
         <span style={{ fontSize:'var(--text-base)', color:'var(--text-secondary)' }}>Diet: <b style={{ color:'var(--text-primary)' }}>{t.dietType}</b> · Texture: <b>{t.texture}</b> · Portion: <b>{t.portionSize}</b></span>
-        {t.allergies.length>0&&<span style={{ fontSize:'var(--text-base)', color:'#dc2626', fontWeight:'var(--weight-bold)' }}>⚠ Allergies: {t.allergies.join(', ')}</span>}
+        {t.allergies.length>0&&<span style={{ fontSize:'var(--text-base)', color:'#dc2626', fontWeight:'var(--weight-bold)' }}>Allergies: {t.allergies.join(', ')}</span>}
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:'var(--space-2)' }}>
         {([['entree','Entrée'],['sides','Sides'],['dessert','Dessert'],['beverages','Beverages'],['notes','Special Instructions']] as [keyof TrayTicket,string][]).map(([field,lbl])=>(
@@ -478,8 +504,8 @@ function CulinaryPrepTab() {
                   <div style={{ flex:1 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'var(--space-2)', flexWrap:'wrap', marginBottom:4 }}>
                       <span style={{ fontSize:'var(--text-base)', fontWeight:'var(--weight-semi)', color:'var(--text-primary)', textDecoration:isDone?'line-through':'none' }}>{task.task}</span>
-                      <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:'#7c3aed', color:'#fff', textTransform:'uppercase', letterSpacing:'0.5px', flexShrink:0 }}>
-                        ✏️ Manual
+                      <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:'#7c3aed', color:'#fff', textTransform:'uppercase', letterSpacing:'0.5px', flexShrink:0, display:'inline-flex', alignItems:'center', gap:4 }}>
+                        <Edit3 size={11} /> Manual
                       </span>
                       <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:'var(--bg-app)', color:'var(--text-secondary)', border:'1px solid var(--border-color)', textTransform:'uppercase', letterSpacing:'0.5px', flexShrink:0 }}>
                         {task.meal==='prep'?'All Meals':task.meal}
@@ -497,7 +523,7 @@ function CulinaryPrepTab() {
 
       {allTasks.length===0&&(
         <div className="sl-empty">
-          <div style={{ fontSize:36, marginBottom:'var(--space-3)' }}>👨‍🍳</div>
+          <div style={{ display:'flex', justifyContent:'center', marginBottom:'var(--space-3)' }}><ChefHat size={36} className="text-muted-foreground" /></div>
           <div className="sl-empty-title">No manual prep tasks.</div>
           <div className="sl-empty-subtitle">Add tasks below to track anything the worksheet doesn&apos;t cover.</div>
         </div>
@@ -521,7 +547,9 @@ function CulinaryPrepTab() {
         </div>
       </div>
       <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        <button onClick={()=>window.print()} className="btn btn-outline" style={{ minHeight:44 }}>🖸 Print Prep List</button>
+        <button onClick={()=>window.print()} className="btn btn-outline" style={{ minHeight:44, display:'inline-flex', alignItems:'center', gap:6 }}>
+          <Printer size={16} /> Print Prep List
+        </button>
       </div>
     </div>
   )
@@ -647,8 +675,8 @@ function ProductionPageView() {
                 minHeight: 44,
               }}
             >
-              <span style={{ fontSize: 16 }}>{t.icon}</span>
-              {t.label}
+              <t.icon className="w-4 h-4" />
+              <span>{t.label}</span>
             </button>
           )
         })}

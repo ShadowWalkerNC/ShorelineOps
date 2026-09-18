@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AlertTriangle, Droplet } from 'lucide-react'
 import { api } from '../../../api/client'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -121,13 +122,15 @@ function ResidentRow({ row, pass, onSaved }: { row: RosterRow; pass: Pass; onSav
       </div>
 
       {restricted && (
-        <div className="sl-alert sl-alert-warning" style={{ margin:0 }}>
-          ⚠️ <b>Fluid restriction: {row.fluidRestrictionMl} ml/day</b> (≈{restrictedOz.toFixed(0)} oz). Restriction is display-only — it is never overridden here.
+        <div className="sl-alert sl-alert-warning flex items-center gap-2" style={{ margin:0 }}>
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 inline" />
+          <span><b>Fluid restriction: {row.fluidRestrictionMl} ml/day</b> (≈{restrictedOz.toFixed(0)} oz). Restriction is display-only — it is never overridden here.</span>
         </div>
       )}
       {row.ensurePerDay > 0 && (
-        <div className="sl-alert sl-alert-info" style={{ margin:0 }}>
-          🥛 <b>Supplement ordered: Ensure ×{row.ensurePerDay}/day.</b> Log cans in the supplement field below.
+        <div className="sl-alert sl-alert-info flex items-center gap-2" style={{ margin:0 }}>
+          <Droplet className="w-4 h-4 text-sky-600 shrink-0 inline" />
+          <span><b>Supplement ordered: Ensure ×{row.ensurePerDay}/day.</b> Log cans in the supplement field below.</span>
         </div>
       )}
 

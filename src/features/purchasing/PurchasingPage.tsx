@@ -291,9 +291,9 @@ export default function PurchasingPage() {
 
   const receiveFlag = (total: number, ordered: number) => {
     if (!(total > 0)) return { label: 'Not received', bg: '#F3F4F6', fg: '#6B7280' }
-    if (total > ordered) return { label: '⚠ Over-received', bg: '#FEE2E2', fg: '#991B1B' }
+    if (total > ordered) return { label: 'Over-received', bg: '#FEE2E2', fg: '#991B1B' }
     if (total < ordered) return { label: 'Partial', bg: '#FEF3C7', fg: '#92400E' }
-    return { label: '✓ Complete', bg: '#DCFCE7', fg: '#166534' }
+    return { label: 'Complete', bg: '#DCFCE7', fg: '#166534' }
   }
 
   const openReceive = async (order: PurchaseOrder) => {

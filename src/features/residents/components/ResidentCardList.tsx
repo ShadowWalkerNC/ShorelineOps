@@ -320,8 +320,9 @@ export default function ResidentCardList({ residents, onEdit, onDelete }: Props)
                       </td>
                       <td className="p-3">
                         {r.allergies && r.allergies.length > 0 ? (
-                          <span className="font-bold text-rose-600 dark:text-rose-400">
-                            ⚠️ {r.allergies.join(', ')}
+                          <span className="font-bold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 inline shrink-0" />
+                            {r.allergies.join(', ')}
                           </span>
                         ) : (
                           <span className="text-emerald-600 dark:text-emerald-400">NKDA</span>

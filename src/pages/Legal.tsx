@@ -1,39 +1,48 @@
 import { useState } from 'react'
+import { Lock, FileText, CheckCircle2, ShieldCheck, Handshake, LucideIcon } from 'lucide-react'
 
-const DOCS = [
+interface LegalDoc {
+  id: string
+  title: string
+  file: string
+  icon: LucideIcon
+  description: string
+}
+
+const DOCS: LegalDoc[] = [
   {
     id: 'privacy',
     title: 'Privacy Policy',
     file: 'PRIVACY.md',
-    icon: '🔒',
+    icon: Lock,
     description: 'How we collect, use, and protect staff and resident data across all U.S. states.',
   },
   {
     id: 'terms',
     title: 'Terms of Use',
     file: 'TERMS.md',
-    icon: '📋',
+    icon: FileText,
     description: 'Rules governing authorized access and use of the Shoreline platform.',
   },
   {
     id: 'aup',
     title: 'Acceptable Use Policy',
     file: 'AUP.md',
-    icon: '✅',
+    icon: CheckCircle2,
     description: 'Standards for responsible, ethical, and lawful platform use by staff.',
   },
   {
     id: 'hipaa',
     title: 'HIPAA Notice of Privacy Practices',
     file: 'HIPAA_NOTICE.md',
-    icon: '🏥',
+    icon: ShieldCheck,
     description: 'How Protected Health Information (PHI) may be used and disclosed.',
   },
   {
     id: 'baa',
     title: 'Business Associate Agreement',
     file: 'BAA.md',
-    icon: '🤝',
+    icon: Handshake,
     description: 'Template BAA for vendors who process PHI on behalf of Shoreline Operations LLC.',
   },
 ]
@@ -80,9 +89,9 @@ export default function Legal() {
                 ;(e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--shadow-sm)'
               }}
             >
-              <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
-                {doc.icon}
-              </span>
+              <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <doc.icon className="w-5 h-5 text-primary" />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontSize: 'var(--text-base)',
@@ -140,7 +149,9 @@ export default function Legal() {
               borderBottom: '1px solid var(--border-color)',
               background: 'var(--color-primary-light)',
             }}>
-              <span style={{ fontSize: 28 }}>{activeDoc?.icon}</span>
+              <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {activeDoc && <activeDoc.icon className="w-6 h-6 text-primary" />}
+              </div>
               <div>
                 <h2 style={{
                   fontSize: 'var(--text-xl)',

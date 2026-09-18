@@ -175,6 +175,34 @@ ShorelineOps includes an autonomous **Dietary Operations Consultant Agent** (`di
 
 ---
 
+## Turnkey Installation & Deployment
+
+Shoreline Care OS is engineered for zero-friction turnkey deployment across workstations, kitchen tablets, bare-metal servers, and cloud infrastructure.
+
+### Option A: Turnkey Linux / macOS / Cloud Script (Recommended for Unix)
+```bash
+git clone https://github.com/ShadowWalkerNC/ShorelineOps.git
+cd ShorelineOps
+chmod +x install.sh
+./install.sh
+```
+*Auto-verifies Node 20+, creates local data directories, generates high-entropy `JWT_SECRET`, compiles client/server assets, and installs a persistent `systemd` service.*
+
+### Option B: Turnkey Windows 1-Click Desktop Setup
+In PowerShell (as Administrator or standard user):
+```powershell
+.\Setup.ps1
+```
+*Provisions `%APPDATA%\ShorelineOps\data`, installs dependencies, and pins desktop and Start Menu shortcuts. Launch instantly via `ShorelineOps-Launcher.bat`.*
+
+### Option C: Turnkey Multi-Container Docker Stack
+```bash
+docker compose up -d
+```
+*Orchestrates a hardened PostgreSQL 16 Alpine database with healthchecks, Node.js API server (port 3001), and Vite/React web client.*
+
+---
+
 ## Quickstart & Local Development
 
 ### 1. Prerequisites

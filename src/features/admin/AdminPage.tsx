@@ -15,7 +15,7 @@ type AdminTab =
   | 'license' | 'scheduling' | 'users' | 'callouts' | 'data' | 'audit'
 
 const TABS: { id: AdminTab; label: string }[] = [
-  { id: 'license',     label: '🔑 SaaS Licensing & Entitlements' },
+  { id: 'license',     label: 'SaaS Licensing & Entitlements' },
   { id: 'scheduling',  label: 'Staff Scheduling (Parked)' },
   { id: 'users',       label: 'User Accounts' },
   { id: 'callouts',    label: 'Call-Outs' },

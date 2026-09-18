@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { AppleButton, AppleBadge } from '@/apple-ui'
+import { QrCode, CheckCircle2, AlertOctagon, Ban, ShieldAlert, HelpCircle } from 'lucide-react'
 import { tokenManager } from '../../../security/tokenManager'
 
 export interface ScanValidationResult {
@@ -173,8 +174,9 @@ export default function TrayAssemblyScanner() {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            📸 Digital Tray Line Assembly Scanner
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <QrCode className="w-5 h-5 text-teal-600" />
+            <span>Digital Tray Line Assembly Scanner</span>
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
             Scan signed QR tokens on physical tray cards to detect stale diet orders or NPO halts in real-time.
@@ -187,7 +189,7 @@ export default function TrayAssemblyScanner() {
             size="sm"
             onClick={() => handleScan('TKT-res101:1:validhash123')}
           >
-            🧪 Test Valid Scan
+            Test Valid Scan
           </AppleButton>
           <AppleButton
             type="button"
@@ -195,7 +197,7 @@ export default function TrayAssemblyScanner() {
             size="sm"
             onClick={() => handleScan('TKT-res102:1:stalehash999')}
           >
-            🧪 Test Stale Ticket
+            Test Stale Ticket
           </AppleButton>
         </div>
       </div>
@@ -210,12 +212,14 @@ export default function TrayAssemblyScanner() {
           autoFocus
           style={{
             flex: 1,
-            padding: '12px 16px',
-            fontSize: 15,
-            fontWeight: 600,
+            height: 'var(--btn-height-md)',
+            padding: '0 16px',
+            fontSize: 14,
+            fontFamily: 'var(--font-mono)',
+            border: '2px solid var(--border-color)',
             borderRadius: 'var(--radius-md)',
-            border: '2px solid var(--color-primary, #6366f1)',
-            background: 'var(--bg-subtle, #f8fafc)',
+            outline: 'none',
+            background: 'var(--bg-app)',
             color: 'var(--text-primary)',
           }}
         />
@@ -225,7 +229,7 @@ export default function TrayAssemblyScanner() {
           size="md"
           disabled={loading || !scanInput.trim()}
         >
-          {loading ? 'Verifying...' : '⚡ Verify Scan'}
+          {loading ? 'Verifying...' : 'Verify Scan'}
         </AppleButton>
       </form>
 
@@ -244,7 +248,7 @@ export default function TrayAssemblyScanner() {
         }}>
           {scanResult.status === 'VALID' ? (
             <div>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" style={{ marginBottom: 8 }} />
               {scanResult.simulated && (
                 <AppleBadge color="orange">SIMULATED — not a real scan verification</AppleBadge>
               )}
@@ -260,7 +264,7 @@ export default function TrayAssemblyScanner() {
             </div>
           ) : scanResult.status === 'SUPERSEDED' ? (
             <div>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️ 🛑</div>
+              <AlertOctagon className="w-10 h-10 text-rose-600 mx-auto" style={{ marginBottom: 8 }} />
               {scanResult.simulated && (
                 <AppleBadge color="orange">SIMULATED — not a real scan verification</AppleBadge>
               )}
@@ -283,13 +287,13 @@ export default function TrayAssemblyScanner() {
                   fontWeight: 800,
                   display: 'inline-block',
                 }}>
-                  🖨️ Reprint Fresh Tray Ticket (v{scanResult.currentProfileVersion})
+                  Reprint Fresh Tray Ticket (v{scanResult.currentProfileVersion})
                 </span>
               </div>
             </div>
           ) : scanResult.status === 'NPO_ALERT' ? (
             <div>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>⛔ 🛑</div>
+              <Ban className="w-10 h-10 text-rose-700 mx-auto" style={{ marginBottom: 8 }} />
               <h3 style={{ fontSize: 24, fontWeight: 900, color: '#991b1b', margin: 0, textTransform: 'uppercase' }}>
                 STRICT NPO - DO NOT SERVE MEAL
               </h3>
@@ -302,7 +306,7 @@ export default function TrayAssemblyScanner() {
             </div>
           ) : scanResult.status === 'HOLD_TRAY_RD_SIGNOFF' ? (
             <div>
-              <div style={{ fontSize: 38, marginBottom: 8 }}>🛑 🔒 📋</div>
+              <ShieldAlert className="w-10 h-10 text-rose-700 mx-auto" style={{ marginBottom: 8 }} />
               <h3 style={{ fontSize: 24, fontWeight: 900, color: '#991b1b', margin: 0, textTransform: 'uppercase' }}>
                 CLINICAL HOLD: EHR DIET UPDATE PENDING RD SIGN-OFF
               </h3>
@@ -334,13 +338,13 @@ export default function TrayAssemblyScanner() {
                   display: 'inline-block',
                   letterSpacing: '0.05em'
                 }}>
-                  ⛔ HARD-BLOCK: TRAY HELD AT PASS UNTIL RD RECONCILIATION
+                  HARD-BLOCK: TRAY HELD AT PASS UNTIL RD RECONCILIATION
                 </span>
               </div>
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>❓</div>
+              <HelpCircle className="w-10 h-10 text-amber-600 mx-auto" style={{ marginBottom: 8 }} />
               <h3 style={{ fontSize: 20, fontWeight: 900, color: '#92400e', margin: 0 }}>
                 UNRECOGNIZED TRAY CARD HASH
               </h3>

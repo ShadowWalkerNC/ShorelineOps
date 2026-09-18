@@ -73,7 +73,7 @@ export const COMMON_CERTIFICATIONS = [
 export type CommonCertification = typeof COMMON_CERTIFICATIONS[number]
 
 // ── Call-Outs ─────────────────────────────────────────────────────────────────
-// ⚠️  A staff member must NEVER see their own call-out records.
+// NOTE (SECURITY): A staff member must NEVER see their own call-out records.
 //     Filter using: callouts.filter(c => c.staffId !== viewer.staffId)
 //     unless viewer.role is 'manager' or 'admin'.
 export interface CallOut {

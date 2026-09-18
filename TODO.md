@@ -178,6 +178,15 @@
 
 ---
 
+## ✅ Wave H Milestones — Turnkey Bootstrap, 100% UI Emoji Eradication & Mobile Hardening (Completed & Verified)
+- [x] **H01: 100% Unicode Emoji Eradication Across Web Application**: Completely purged all remaining emoji pictographics from `src/features/` and `src/components/` (`BudgetTargetsSection`, `ResidentProfilePage`, `DietReviewFlags`, `ProductionPage`, `HydrationPass`, `ResidentCardList`, `ResidentFormModal`, `StaffProfilePage`, `OrderEntryPage`, `DayEditorModal`, `WeekGrid`). Replaced with uniform, high-contrast, accessible Lucide SVG icons and pure typography.
+- [x] **H02: Universal Turnkey Linux / macOS / Cloud Bootstrap (`install.sh`)**: Created production-grade Unix installer validating Node 20+ LTS, provisioning `~/.shoreline/data` and `~/.shoreline/logs`, generating high-entropy 32-byte hexadecimal `JWT_SECRET`, compiling client/server bundles, and installing persistent `systemd` service (`/etc/systemd/system/shoreline.service`).
+- [x] **H03: Windows Turnkey Desktop Launcher & Shortcuts (`Setup.ps1`, `launcher.js`)**: Cleaned launcher banner formatting, verified `%APPDATA%\ShorelineOps\data` persistence, and 1-click desktop/Start Menu shortcut generation.
+- [x] **H04: Multi-Device Form Factor & Jakob's Law Validation**: Adheres to standard thumb-zone ergonomics for mobile phones, sticky bottom navigation bar, large $\ge 44\text{px}$ touch targets for kitchen tablets, and expanded data density tables for desktop dietary offices.
+- [x] **H05: Open Core SaaS Purity & Zero Clinical Lockout Guarantee**: Formalized non-negotiable architectural invariant: billing/license lapses fall back gracefully to Community Core and will NEVER interrupt tray delivery, allergen safety checks, or temperature logging.
+
+---
+
 ## 🏆 Project Status: All Milestones & Stages 100% Complete & Production Ready
 - [x] Core Clinical Care & Resident Operations (`/residents`, `/api/residents`)
 - [x] Bulk Census & Diet Order CSV Importer with Audit Provenance (`/residents`, `/api/residents/import-csv`)
@@ -201,5 +210,7 @@
 - [x] Live OpenAPI 3.1 Specification (`/api/docs`)
 - [x] Full Enterprise TypeScript SDK (`@shoreline/sdk` v0.2.0)
 - [x] Complete Marketing Portal with SEO, Geolocation & Legal Policies (`/terms`, `/privacy`, `/security`)
+- [x] Turnkey Multi-Platform Installers (`install.sh`, `Setup.ps1`, `docker-compose.yml`)
+- [x] 100% Strict Emoji-Free UI with Accessible Lucide SVG Icons Across All Modules
 
 

@@ -1,5 +1,17 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  ShieldCheck,
+  AlertTriangle,
+  Lock,
+  Clock,
+  FileText,
+  FlaskConical,
+  Sparkles,
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft
+} from 'lucide-react'
 
 export default function SetupWizardPage() {
   const navigate = useNavigate()
@@ -162,7 +174,8 @@ export default function SetupWizardPage() {
               marginBottom: 12
             }}
           >
-            🛡️ HIPAA & SOC 2 COMPLIANT FACILITY ONBOARDING
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            <span>HIPAA & SOC 2 COMPLIANT FACILITY ONBOARDING</span>
           </div>
           <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--weight-black)', color: 'var(--text-primary)', marginBottom: 8 }}>
             ShorelineOps Setup Wizard
@@ -223,7 +236,7 @@ export default function SetupWizardPage() {
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    {isPassed ? '✓' : s.id}
+                    {isPassed ? <CheckCircle2 className="w-4 h-4" /> : s.id}
                   </div>
                   <span
                     style={{
@@ -242,8 +255,9 @@ export default function SetupWizardPage() {
 
         {/* Error Alert Box */}
         {error && (
-          <div style={{ backgroundColor: 'var(--color-danger-light)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', padding: '14px 18px', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)' }}>
-            ⚠️ {error}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--color-danger-light)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', padding: '14px 18px', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)' }}>
+            <AlertTriangle className="w-4 h-4 text-danger shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -640,7 +654,9 @@ export default function SetupWizardPage() {
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', gap: 14 }}>
-                <div style={{ fontSize: 24 }}>🔐</div>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Lock className="w-5 h-5 text-primary" />
+                </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
                     AES-256 Storage & TLS 1.3 Transport Encryption
@@ -652,7 +668,9 @@ export default function SetupWizardPage() {
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', gap: 14 }}>
-                <div style={{ fontSize: 24 }}>⌛</div>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Clock className="w-5 h-5 text-primary" />
+                </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
                     Automatic 15-Minute Inactivity Session Lockout
@@ -664,7 +682,9 @@ export default function SetupWizardPage() {
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', gap: 14 }}>
-                <div style={{ fontSize: 24 }}>📋</div>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText className="w-5 h-5 text-primary" />
+                </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
                     Immutable Audit Trail Logging (§164.312(b))
@@ -797,8 +817,9 @@ export default function SetupWizardPage() {
                     gap: 8
                   }}
                 >
-                  <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
-                    🧪 Sample Demo Data
+                  <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <FlaskConical className="w-5 h-5 text-teal-600" />
+                    <span>Sample Demo Data</span>
                   </div>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     Populates anonymized sample resident records, diet orders, recipes, and shift rosters for instant staff evaluation and testing.
@@ -818,8 +839,9 @@ export default function SetupWizardPage() {
                     gap: 8
                   }}
                 >
-                  <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
-                    ✨ Clean Production Slate
+                  <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Sparkles className="w-5 h-5 text-blue-600" />
+                    <span>Clean Production Slate</span>
                   </div>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     Initializes a clean slate with zero resident records. Ready for live resident admissions and actual staff onboarding.
@@ -883,10 +905,20 @@ export default function SetupWizardPage() {
                 backgroundColor: 'var(--color-success)',
                 color: '#ffffff',
                 fontWeight: 'var(--weight-bold)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8
               }}
             >
-              {loading ? 'Initializing Setup...' : '🚀 Complete Setup & Launch Facility'}
+              {loading ? (
+                'Initializing Setup...'
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span>Complete Setup &amp; Launch Facility</span>
+                </>
+              )}
             </button>
           )}
         </div>

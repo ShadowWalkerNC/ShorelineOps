@@ -92,7 +92,10 @@ function ClinicalBadges({ resident }: { resident: any }) {
             key={a}
             className="px-2 py-1 rounded-md text-sm font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
           >
-            ⚠ {a}
+            <span className="inline-flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 inline shrink-0" />
+              {a}
+            </span>
           </span>
         ))
       ) : (

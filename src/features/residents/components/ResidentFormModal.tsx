@@ -8,6 +8,7 @@ import {
 } from '@/types/resident'
 import { useResidentForm } from '@/hooks/useResidentForm'
 import { useAuth } from '@/security/AuthContext'
+import { Flag } from 'lucide-react'
 import FormField from '@/components/FormField'
 import CheckboxGroup from '@/components/CheckboxGroup'
 
@@ -375,7 +376,9 @@ export default function ResidentFormModal({ resident, onSave, onClose }: Props) 
                     onClick={() => setFlagOpen(true)}
                     className="px-4 py-2 text-sm font-medium rounded border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors"
                   >
-                    🚩 Flag for RD review
+                    <span className="inline-flex items-center gap-1.5">
+                      <Flag className="w-3.5 h-3.5 inline" /> Flag for RD review
+                    </span>
                   </button>
                 ) : (
                   <div className="space-y-3">

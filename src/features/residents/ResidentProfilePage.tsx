@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { Calendar } from 'lucide-react'
 import { useResidentsStore } from '@/state/residentsStore'
 import ResidentFormModal from './components/ResidentFormModal'
 import type { Resident } from '@/types/resident'
@@ -143,8 +144,8 @@ export default function ResidentProfilePage() {
               <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[resident.status]}`}>
                 {resident.status}
               </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">
-                🎂 {birthday}
+              <span className="text-xs text-slate-400 dark:text-slate-500 inline-flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 inline" /> Born: {birthday}
               </span>
             </div>
           </div>

@@ -4,6 +4,33 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.5.0] — 2026-09-18
+### Added & Standardized
+- **Turnkey Multi-Platform Deployment Engine** (`install.sh`, `Setup.ps1`, `docker-compose.yml`):
+  - Created universal Unix/Linux/macOS bootstrap script (`install.sh`) that automates Node.js 20+ LTS detection, data directory setup (`~/.shoreline/data`), cryptographic 32-byte hexadecimal `JWT_SECRET` generation, asset compilation, and automatic `systemd` service provisioning (`/etc/systemd/system/shoreline.service`).
+  - Hardened Windows 1-click desktop setup (`Setup.ps1`) and launcher (`ShorelineOps-Launcher.bat` + `launcher.js`) for local workstation deployment with offline SQLite persistence.
+  - Multi-container Docker deployment (`docker-compose.yml`) orchestrating PostgreSQL 16 Alpine with continuous healthchecks and Vite/Express services.
+- **100% Comprehensive Unicode Emoji Eradication Across Application Surface**:
+  - Completely purged all remaining emoji pictographics from `src/features/` and `src/components/`:
+    - `BudgetTargetsSection.tsx`: Replaced tab emojis and empty state symbols with `BarChart3`, `DollarSign`, `Users`, `Settings`, `FileText`, and `AlertTriangle`.
+    - `ResidentProfilePage.tsx`: Replaced birthday cake glyph with `Calendar` icon and clear "Born: {birthday}" label.
+    - `DietReviewFlags.tsx`: Replaced flag and refresh glyphs with `Flag`, `RotateCw`, and `Check` icons.
+    - `ProductionPage.tsx`: Replaced prep list and chef icons with `Edit3`, `ChefHat`, and `Printer` icons.
+    - `HydrationPass.tsx`: Replaced fluid restriction warning and milk emoji with `AlertTriangle` and `Droplet` icons.
+    - `ResidentCardList.tsx`: Replaced allergy table warning emoji with `AlertTriangle`.
+    - `ResidentFormModal.tsx`: Replaced RD review flag emoji with `Flag` icon.
+    - `StaffProfilePage.tsx`: Replaced confidential notes warning emoji with `AlertTriangle`.
+    - `OrderEntryPage.tsx`: Replaced allergy warning emoji with `AlertTriangle`.
+    - `DayEditorModal.tsx` & `WeekGrid.tsx`: Replaced dessert cake emojis with clean text labels.
+- **Mobile-First & Touch Kiosk Ergonomic Validation (Jakob's Law)**:
+  - Validated adherence to standard mobile navigation conventions: persistent sticky bottom navigation bar with thumb-zone ergonomics for everyday workflows (`Dashboard`, `Residents`, `Menu`, `Kitchen`, `More`).
+  - Verified touch targets meet iOS HIG ($\ge 44\text{px}$) and Android Material ($\ge 48\text{px}$) standards across all touch kiosks, meal order tally sheets, and temperature logging panels.
+- **Open Core Architectural Purity & Zero Clinical Lockout Invariant**:
+  - Re-verified non-negotiable healthcare safety policy: Community Core features (resident census, diet orders, IDDSI textures, recipe scaling, cycle menus, tray cards, batch cooking, paper HACCP logs) are 100% free, open-source, and offline-capable forever.
+  - SaaS license expiration strictly disables advanced automation (2-way PCC sync, split MRP purchasing comparator, CMS-2567 digital binder) while guaranteeing that patient meal service, allergen checking, and dining operations are never locked out.
+
+---
+
 ## [v6.4.2] — 2026-09-18
 ### Added & Hardened
 - **Facility Pilot Deployment & Go-Live Runbook** (`docs/PILOT_GO_LIVE_RUNBOOK.md`):

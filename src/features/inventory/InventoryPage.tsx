@@ -6,6 +6,15 @@
 // NotificationBell and DashboardPage immediately.
 // ============================================================
 import { useEffect, useState, useMemo } from 'react'
+import {
+  Package,
+  Trash2,
+  Hash,
+  BarChart3,
+  AlertTriangle,
+  ClipboardList,
+  type LucideIcon,
+} from 'lucide-react'
 import { useStaffStore } from '../../state/staffStore'
 import { useAuth } from '../../security/AuthContext'
 import {
@@ -40,50 +49,58 @@ function LowBadge() { return <Badge color="#d97706">LOW</Badge> }
 const TH: React.CSSProperties = { padding: '8px 12px', textAlign: 'left', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }
 const TD: React.CSSProperties = { padding: '9px 12px', verticalAlign: 'middle' }
 
-// ── STOCK INVENTORY TAB ───────────────────────────────────────────────────────
+// ── STOCK TAB ─────────────────────────────────────────────────────────────────
 function StockTab() {
-  const { stockItems, updateItem, addItem, getLowParItems } = useInventoryStore()
-  const [search, setSearch]     = useState('')
-  const [filterCat, setFilter]  = useState<InventoryCategory | 'All'>('All')
-  const [editing, setEditing]   = useState<string | null>(null)
-  const [editVals, setEditVals] = useState<Partial<StockItem>>({})
-  const [showAdd, setShowAdd]   = useState(false)
-  const [newItem, setNewItem]   = useState<Partial<StockItem>>({ category: 'Dry Goods', qty: 0, unit: '', min: 0 })
-
-  const lowItems = getLowParItems()
+  const { stockItems: stock, addItem: addStock, updateItem: updateStock } = useInventoryStore()
+  const [search,    setSearch]    = useState('')
+  const [filterCat, setFilter]    = useState<InventoryCategory | 'All'>('All')
+  const [editing,   setEditing]   = useState<string | null>(null)
+  const [editVals,  setEditVals]  = useState<Partial<StockItem>>({})
+  const [showAdd,   setShowAdd]   = useState(false)
+  const [newItem,   setNewItem]   = useState<Partial<StockItem>>({ category: 'Dry Goods', min: 5, qty: 0 })
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim()
-    return stockItems.filter(i =>
-      (filterCat === 'All' || i.category === filterCat) &&
-      (!q || i.item.toLowerCase().includes(q) || i.category.toLowerCase().includes(q))
-    )
-  }, [stockItems, search, filterCat])
+    return stock.filter(item => {
+      const matchCat  = filterCat === 'All' || item.category === filterCat
+      const matchText = !search || item.item.toLowerCase().includes(search.toLowerCase())
+      return matchCat && matchText
+    })
+  }, [stock, filterCat, search])
 
   const grouped = useMemo(() => {
-    const map: Partial<Record<InventoryCategory, StockItem[]>> = {}
-    filtered.forEach(i => { (map[i.category] ??= []).push(i) })
+    const map: Record<string, StockItem[]> = {}
+    for (const cat of INVENTORY_CATEGORIES) map[cat] = []
+    for (const item of filtered) {
+      if (!map[item.category]) map[item.category] = []
+      map[item.category].push(item)
+    }
     return map
   }, [filtered])
 
+  const lowItems = useMemo(() => stock.filter(i => i.qty < i.min), [stock])
+
   function startEdit(item: StockItem) {
     setEditing(item.id)
-    setEditVals({ qty: item.qty, min: item.min, notes: item.notes ?? '' })
+    setEditVals({ qty: item.qty, notes: item.notes })
   }
 
-  function saveEdit(id: string) {
-    updateItem(id, editVals)
+  async function saveEdit(id: string) {
+    await updateStock(id, editVals)
     setEditing(null)
   }
 
-  function handleAdd() {
-    if (!newItem.item?.trim() || !newItem.unit?.trim()) return
-    addItem({
-      item: newItem.item!, category: newItem.category as InventoryCategory,
-      qty: newItem.qty ?? 0, unit: newItem.unit!, min: newItem.min ?? 0,
-      cost: newItem.cost, notes: newItem.notes,
+  async function handleAdd() {
+    if (!newItem.item?.trim()) return
+    await addStock({
+      item:     newItem.item.trim(),
+      category: (newItem.category as InventoryCategory) || 'Dry Goods',
+      qty:      Number(newItem.qty) || 0,
+      unit:     newItem.unit?.trim() || 'units',
+      min:      Number(newItem.min) || 5,
+      cost:     newItem.cost ? Number(newItem.cost) : undefined,
+      notes:    newItem.notes?.trim() || undefined,
     })
-    setNewItem({ category: 'Dry Goods', qty: 0, unit: '', min: 0 })
+    setNewItem({ category: 'Dry Goods', min: 5, qty: 0 })
     setShowAdd(false)
   }
 
@@ -91,7 +108,8 @@ function StockTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
       {lowItems.length > 0 && (
         <div className="sl-alert sl-alert-warning" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <b>⚠ {lowItems.length} item{lowItems.length > 1 ? 's' : ''} below par:</b>
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <b>{lowItems.length} item{lowItems.length > 1 ? 's' : ''} below par:</b>
           {lowItems.map(i => <span key={i.id} style={{ fontSize: 'var(--text-sm)' }}>{i.item} ({i.qty}/{i.min} {i.unit})</span>)}
         </div>
       )}
@@ -178,7 +196,7 @@ function StockTab() {
       })}
       {filtered.length === 0 && (
         <div className="sl-empty">
-          <div style={{ fontSize: 36, marginBottom: 'var(--space-3)' }}>📦</div>
+          <Package className="w-10 h-10 text-slate-400 mx-auto" style={{ marginBottom: 'var(--space-3)' }} />
           <div className="sl-empty-title">No items match your search.</div>
         </div>
       )}
@@ -360,8 +378,9 @@ function ZeroBalanceTab() {
             </div>
           </div>
           {discrepancyItems.length > 0 && (
-            <div style={{ padding: '10px 18px', background: '#fef2f2', borderBottom: '1px solid #fecaca', fontSize: 12, color: '#991b1b', fontWeight: 600 }}>
-              ⚠ {discrepancyItems.length} item{discrepancyItems.length > 1 ? 's' : ''} with variance &gt; ±2 — will flag as Discrepancy on submit
+            <div style={{ padding: '10px 18px', background: '#fef2f2', borderBottom: '1px solid #fecaca', fontSize: 12, color: '#991b1b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{discrepancyItems.length} item{discrepancyItems.length > 1 ? 's' : ''} with variance &gt; ±2 — will flag as Discrepancy on submit</span>
             </div>
           )}
           <div style={{ overflowX: 'auto' }}>
@@ -408,7 +427,7 @@ function ZeroBalanceTab() {
           </div>
           {counts.length === 0 && (
             <div className="sl-empty">
-              <div style={{ fontSize: 36, marginBottom: 'var(--space-3)' }}>📋</div>
+              <ClipboardList className="w-10 h-10 text-slate-400 mx-auto" style={{ marginBottom: 'var(--space-3)' }} />
               <div className="sl-empty-title">No counts recorded yet.</div>
               <div className="sl-empty-desc">Start a new zero-balance count to log physical quantities.</div>
             </div>
@@ -481,7 +500,7 @@ function TrendsTab() {
         </div>
       </div>
       <div className="sl-alert sl-alert-info" style={{ fontSize: 'var(--text-sm)' }}>
-        <b>📊 Tip:</b> Track waste consistently over 2–4 weeks to identify overproduction patterns. Use the data to adjust recipe scale-out quantities in the Production Worksheet.
+        <b>Tip:</b> Track waste consistently over 2–4 weeks to identify overproduction patterns. Use the data to adjust recipe scale-out quantities in the Production Worksheet.
       </div>
     </div>
   )
@@ -489,11 +508,11 @@ function TrendsTab() {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 type InventoryTab = 'stock' | 'waste' | 'count' | 'trends'
-const INV_TABS: { id: InventoryTab; label: string; icon: string }[] = [
-  { id: 'stock',  label: 'Stock Inventory', icon: '📋' },
-  { id: 'waste',  label: 'Waste Log',       icon: '🗑️' },
-  { id: 'count',  label: 'Zero-Balance',    icon: '🔢' },
-  { id: 'trends', label: 'Trends',          icon: '📊' },
+const INV_TABS: { id: InventoryTab; label: string; icon: LucideIcon }[] = [
+  { id: 'stock',  label: 'Stock Inventory', icon: Package },
+  { id: 'waste',  label: 'Waste Log',       icon: Trash2 },
+  { id: 'count',  label: 'Zero-Balance',    icon: Hash },
+  { id: 'trends', label: 'Trends',          icon: BarChart3 },
 ]
 
 export default function InventoryPage() {
@@ -518,8 +537,9 @@ export default function InventoryPage() {
       </div>
       <div className="sl-pills" style={{ marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
         {INV_TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={tab === t.id ? 'sl-pill active' : 'sl-pill'}>
-            <span style={{ marginRight: 'var(--space-1)' }}>{t.icon}</span>{t.label}
+          <button key={t.id} onClick={() => setTab(t.id)} className={tab === t.id ? 'sl-pill active' : 'sl-pill'} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <t.icon className="w-4 h-4" />
+            <span>{t.label}</span>
           </button>
         ))}
       </div>

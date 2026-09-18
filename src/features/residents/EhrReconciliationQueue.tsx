@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Stethoscope, RotateCw, CheckCircle2, AlertTriangle, X, Check } from 'lucide-react'
 import { useAuth } from '../../security/AuthContext'
 
 export interface ReconciliationItem {
@@ -98,11 +99,11 @@ export default function EhrReconciliationQueue() {
     switch (type) {
       case 'NPO_ORDER':
       case 'NEW_ALLERGEN':
-        return { bg: '#fee2e2', color: '#991b1b', label: '🚨 CRITICAL SAFETY TRIAGE' }
+        return { bg: '#fee2e2', color: '#991b1b', label: 'CRITICAL SAFETY TRIAGE' }
       case 'TEXTURE_UPDATE':
-        return { bg: '#fef3c7', color: '#92400e', label: '⚠️ IDDSI TEXTURE REVIEW' }
+        return { bg: '#fef3c7', color: '#92400e', label: 'IDDSI TEXTURE REVIEW' }
       case 'DIET_ORDER':
-        return { bg: '#e0e7ff', color: '#3730a3', label: '📋 THERAPEUTIC DIET ORDER' }
+        return { bg: '#e0e7ff', color: '#3730a3', label: 'THERAPEUTIC DIET ORDER' }
       default:
         return { bg: '#f3f4f6', color: '#4b5563', label: 'ADT NOTICE' }
     }
@@ -119,8 +120,9 @@ export default function EhrReconciliationQueue() {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            🩺 EHR Clinical Inbound Reconciliation Queue
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Stethoscope className="w-5 h-5 text-indigo-600" />
+            <span>EHR Clinical Inbound Reconciliation Queue</span>
             {isDemo && (
               <span style={{
                 marginLeft: 10,
@@ -144,6 +146,9 @@ export default function EhrReconciliationQueue() {
         <button
           onClick={fetchQueue}
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
             padding: '6px 12px',
             fontSize: 12,
             fontWeight: 700,
@@ -154,13 +159,15 @@ export default function EhrReconciliationQueue() {
             cursor: 'pointer',
           }}
         >
-          🔄 Refresh Queue
+          <RotateCw className="w-3.5 h-3.5" />
+          <span>Refresh Queue</span>
         </button>
       </div>
 
       {toast && (
-        <div style={{ padding: '10px 14px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 8, color: '#065f46', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-          ✅ {toast}
+        <div style={{ padding: '10px 14px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 8, color: '#065f46', fontSize: 13, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{toast}</span>
         </div>
       )}
 
@@ -176,8 +183,13 @@ export default function EhrReconciliationQueue() {
           color: '#92400e',
           fontWeight: 700,
           fontSize: 14,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
         }}>
-          ⚠️ {ehrError}
+          <AlertTriangle className="w-4 h-4 text-amber-600" />
+          <span>{ehrError}</span>
         </div>
       ) : items.length === 0 ? (
         <div style={{
@@ -188,8 +200,13 @@ export default function EhrReconciliationQueue() {
           textAlign: 'center',
           color: '#166534',
           fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
         }}>
-          ✨ All Inbound EHR Diet Orders Reconciled. Zero Pending Clinical Exceptions.
+          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+          <span>All Inbound EHR Diet Orders Reconciled. Zero Pending Clinical Exceptions.</span>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -235,6 +252,9 @@ export default function EhrReconciliationQueue() {
                     disabled={!canResolve}
                     title={canResolve ? undefined : 'Requires the dietitian or admin role'}
                     style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
                       padding: '8px 14px',
                       borderRadius: 'var(--radius-md)',
                       border: '1px solid #ef4444',
@@ -246,13 +266,17 @@ export default function EhrReconciliationQueue() {
                       opacity: canResolve ? 1 : 0.45,
                     }}
                   >
-                    ❌ Reject Change
+                    <X className="w-3.5 h-3.5" />
+                    <span>Reject Change</span>
                   </button>
                   <button
                     onClick={() => resolveItem(item.id, 'APPROVED_BY_RD')}
                     disabled={!canResolve}
                     title={canResolve ? undefined : 'Requires the dietitian or admin role'}
                     style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
                       padding: '8px 16px',
                       borderRadius: 'var(--radius-md)',
                       border: 'none',
@@ -264,7 +288,8 @@ export default function EhrReconciliationQueue() {
                       opacity: canResolve ? 1 : 0.45,
                     }}
                   >
-                    ✅ Approve &amp; Update Profile
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Approve &amp; Update Profile</span>
                   </button>
                 </div>
               </div>

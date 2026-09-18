@@ -13,6 +13,7 @@
 // ============================================================
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { AlertTriangle } from 'lucide-react'
 import { useStaffStore } from '../../state/staffStore'
 import { useNotificationsStore } from '../../state/notificationsStore'
 import { useAuth } from '../../security/AuthContext'
@@ -234,8 +235,9 @@ function NotesTab({ p, canEdit }: { p: StaffProfile; canEdit: boolean }) {
 
   return (
     <SectionCard title="Manager Notes">
-      <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-muted)' }}>
-        ⚠️ These notes are visible to managers and administrators only and are never shown to the employee.
+      <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <AlertTriangle size={14} className="text-amber-600 inline shrink-0" />
+        <span>These notes are visible to managers and administrators only and are never shown to the employee.</span>
       </p>
       {editing ? (
         <>

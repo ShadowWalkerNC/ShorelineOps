@@ -332,7 +332,7 @@ export default function NotificationBell() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                       <TypeIcon type={a.type} color={c.dot} />
                       <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', color: c.text }}>
-                        {a.severity === 'critical' ? '🚨 Critical' : a.severity === 'warning' ? '⚠️ Warning' : 'ℹ️ Info'}
+                        {a.severity === 'critical' ? 'Critical' : a.severity === 'warning' ? 'Warning' : 'Info'}
                       </span>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{a.subject}</div>

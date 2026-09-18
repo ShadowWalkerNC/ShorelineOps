@@ -390,8 +390,9 @@ function HistoryTab() {
                       <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">{fmtMins(s.totalMinutes)}</td>
                       <td className="py-3 px-4">
                         {s.overtimeMinutes > 0 ? (
-                          <span className="font-bold text-amber-600 dark:text-amber-400">
-                            ⚠ {fmtMins(s.overtimeMinutes)}
+                          <span className="font-bold text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>{fmtMins(s.overtimeMinutes)}</span>
                           </span>
                         ) : (
                           <span className="text-slate-400">—</span>

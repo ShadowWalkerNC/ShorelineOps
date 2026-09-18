@@ -16,7 +16,7 @@ const SERVER_SCRIPT = path.join(ROOT_DIR, 'server', 'dist', 'index.js')
 const APP_URL = `http://localhost:${PORT}`
 
 console.log('======================================================================')
-console.log('🌟 SHORELINE CARE OS — LAUNCHER')
+console.log('  SHORELINE CARE OS — LAUNCHER')
 console.log('======================================================================\n')
 
 // 1. Ensure Data Directory

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Flag, RotateCw, Check } from 'lucide-react'
 import { useAuth } from '../../security/AuthContext'
 
 export interface DietReviewFlag {
@@ -89,12 +90,13 @@ export default function DietReviewFlags() {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            🚩 Diet Review Flags
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Flag size={18} className="text-amber-600 inline shrink-0" />
+            <span>Diet Review Flags</span>
             {flags.length > 0 && (
               <span
                 style={{
-                  marginLeft: 10,
+                  marginLeft: 6,
                   fontSize: 11,
                   fontWeight: 800,
                   padding: '3px 10px',
@@ -123,9 +125,12 @@ export default function DietReviewFlags() {
             background: 'var(--bg-app)',
             color: 'var(--text-primary)',
             cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
           }}
         >
-          🔄 Refresh
+          <RotateCw size={13} /> Refresh
         </button>
       </div>
 
@@ -178,10 +183,12 @@ export default function DietReviewFlags() {
                     border: 'none',
                     background: '#15803d',
                     color: '#fff',
-                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}
                 >
-                  ✓ Resolve
+                  <Check size={13} /> Resolve
                 </button>
                 <button
                   onClick={() => resolveFlag(f.id, 'DISMISSED')}

@@ -41,7 +41,7 @@ export default function WeekGrid({ week, items, onEditDay }: Props) {
       }
     }
     if (group.dessertSlot) {
-      rows.push({ kind: 'slot', slot: group.dessertSlot, rowLabel: '🍰 Dessert', isDessert: true })
+      rows.push({ kind: 'slot', slot: group.dessertSlot, rowLabel: 'Dessert', isDessert: true })
     }
   }
 

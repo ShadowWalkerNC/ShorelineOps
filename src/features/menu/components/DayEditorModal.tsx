@@ -161,7 +161,7 @@ export default function DayEditorModal({ day, weekName, dayMenu, allItems, onSav
 
             {group.dessertSlot && (
               <div style={{ padding: '8px 12px', background: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', marginBottom: 4 }}>
-                <p style={{ ...rowLabel, fontSize: 9, color: 'var(--text-muted)', marginBottom: 6 }}>🍰 Dessert</p>
+                <p style={{ ...rowLabel, fontSize: 9, color: 'var(--text-muted)', marginBottom: 6 }}>Dessert</p>
                 <SlotPicker slot={group.dessertSlot} draft={draft} allItems={allItems} onChange={handleSlotChange} />
               </div>
             )}

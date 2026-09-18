@@ -202,9 +202,12 @@ export default function LicenseManagerPanel() {
       )}
 
       {/* Open Core Architecture Explanation */}
-      <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-300 leading-relaxed">
-        <span className="font-bold">🛡️ Open-Core Security Notice: </span>
-        The source code repository on GitHub contains the free single-facility Community Core. Proprietary EHR live bridges (PointClickCare API OAuth endpoints), OCR invoice scanning pipelines, and multi-distributor lowest-cost split solvers are SaaS Cloud microservices protected by HMAC cryptographic license keys.
+      <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-300 leading-relaxed flex items-start gap-2.5">
+        <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold">Open-Core Security Notice: </span>
+          The source code repository on GitHub contains the free single-facility Community Core. Proprietary EHR live bridges (PointClickCare API OAuth endpoints), OCR invoice scanning pipelines, and multi-distributor lowest-cost split solvers are SaaS Cloud microservices protected by HMAC cryptographic license keys.
+        </div>
       </div>
     </div>
   )

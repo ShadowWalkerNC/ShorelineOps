@@ -8,6 +8,7 @@ import { useInventoryStore } from '@/state/inventoryStore'
 import { useBudgetStore } from '@/state/budgetStore'
 import { useAuth } from '@/security/AuthContext'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { Zap, ClipboardList, AlertOctagon, AlertTriangle, Utensils, Calendar, CheckCircle2 } from 'lucide-react'
 import type { DayOfWeek } from '@/types'
 
 function getGreeting() {
@@ -369,7 +370,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.3px', margin: 0 }}>
-            {getGreeting()}, {user?.name?.split(' ')[0] ?? 'there'} 👋
+            {getGreeting()}, {user?.name?.split(' ')[0] ?? 'there'}
           </h2>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{todayStr}</p>
         </div>
@@ -399,7 +400,7 @@ export default function DashboardPage() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>⚡</span>
+              <Zap className="w-4 h-4 text-emerald-600" />
               <span style={{ fontSize: 13, fontWeight: 700, color: '#248a3d' }}>Multi-Distributor MRP</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Dennis vs. Sysco lowest $/gram</div>
@@ -421,7 +422,7 @@ export default function DashboardPage() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>📋</span>
+              <ClipboardList className="w-4 h-4 text-purple-600" />
               <span style={{ fontSize: 13, fontWeight: 700, color: '#8944ab' }}>CMS-2567 Survey</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>90-Day HACCP & F-Tag binder</div>
@@ -508,7 +509,7 @@ export default function DashboardPage() {
       {lowParItems.length > 0 && (
         <Link to="/inventory" style={{ textDecoration: 'none', display: 'block', marginBottom: 14 }}>
           <div style={{ padding: '10px 16px', background: zeroItems.length > 0 ? '#fef2f2' : '#fffbeb', border: `1px solid ${zeroItems.length > 0 ? '#fecaca' : '#fde68a'}`, borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 15 }}>{zeroItems.length > 0 ? '🚨' : '⚠️'}</span>
+            {zeroItems.length > 0 ? <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
             <span style={{ fontSize: 12, fontWeight: 700, color: zeroItems.length > 0 ? '#991b1b' : '#92400e', flex: 1 }}>
               {zeroItems.length > 0 ? `${zeroItems.length} item(s) completely out of stock — ` : ''}
               {lowParItems.length} item(s) below par level:
@@ -523,7 +524,10 @@ export default function DashboardPage() {
       {hasAnyPrep && (
         <div className="sl-section-card" style={{ marginBottom: 14 }}>
           <div className="sl-section-header">
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0 }}>⚠️ Special Prep Today</h3>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <span>Special Prep Today</span>
+            </h3>
             <Link to="/residents" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>View residents →</Link>
           </div>
           <div className="sl-section-body">
@@ -542,7 +546,10 @@ export default function DashboardPage() {
       {/* ── Today's menu ── */}
       <div className="sl-section-card" style={{ marginBottom: 14 }}>
         <div className="sl-section-header">
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0 }}>🍴 Today's Menu — {todayDay}</h3>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Utensils className="w-4 h-4 text-primary" />
+            <span>Today's Menu — {todayDay}</span>
+          </h3>
           <Link to="/menu" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Edit menu →</Link>
         </div>
         <div className="sl-section-body">
@@ -552,14 +559,14 @@ export default function DashboardPage() {
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No menu entries for {todayDay} yet.</p>
           ) : (
             <div className="menu-meal-grid">
-              <MealColumn mealLabel="🌞 Lunch"  opt1Names={lunchOpt1}  opt2Names={lunchOpt2} />
-              <MealColumn mealLabel="🌙 Dinner" opt1Names={dinnerOpt1} opt2Names={dinnerOpt2} />
+              <MealColumn mealLabel="Lunch"  opt1Names={lunchOpt1}  opt2Names={lunchOpt2} />
+              <MealColumn mealLabel="Dinner" opt1Names={dinnerOpt1} opt2Names={dinnerOpt2} />
             </div>
           )}
           {(lunchDessert || dinnerDessert) && (
             <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'var(--color-success-light)', border: '1px solid rgba(74,163,104,.2)', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              {lunchDessert  && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🍰 <strong>Lunch dessert:</strong> {lunchDessert}</span>}
-              {dinnerDessert && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🍰 <strong>Dinner dessert:</strong> {dinnerDessert}</span>}
+              {lunchDessert  && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}><strong>Lunch dessert:</strong> {lunchDessert}</span>}
+              {dinnerDessert && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}><strong>Dinner dessert:</strong> {dinnerDessert}</span>}
             </div>
           )}
         </div>
@@ -568,7 +575,7 @@ export default function DashboardPage() {
       {/* ── Three-col: Birthdays + Dietary + Production status ── */}
       <div className="dash-three-col">
         <SectionCard
-          title="🎂 Upcoming Birthdays"
+          title="Upcoming Birthdays"
           action={upcomingBirthdays.length > 3 ? <Link to="/residents" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>See all →</Link> : undefined}
         >
           {upcomingBirthdays.length === 0 ? (
@@ -579,14 +586,16 @@ export default function DashboardPage() {
                 {upcomingBirthdays.slice(0, 3).map((b, i) => (
                   <div key={i} className="bday-row">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>🎂</div>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Calendar className="w-4 h-4 text-primary" />
+                      </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Room {b.room} · {b.monthDay}</div>
                       </div>
                     </div>
                     <span style={{ background: b.daysUntil === 0 ? 'var(--color-success)' : b.daysUntil <= 7 ? 'var(--color-warning-light)' : 'var(--bg-app)', color: b.daysUntil === 0 ? '#fff' : b.daysUntil <= 7 ? 'var(--color-warning-hover)' : 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '3px 9px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                      {b.daysUntil === 0 ? '🎉 Today' : `${b.daysUntil}d`}
+                      {b.daysUntil === 0 ? 'Today' : `${b.daysUntil}d`}
                     </span>
                   </div>
                 ))}
@@ -602,7 +611,7 @@ export default function DashboardPage() {
                         <td style={{ padding: '8px', fontSize: 12, fontWeight: 700, color: 'var(--color-primary)' }}>{b.room}</td>
                         <td style={{ padding: '8px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{b.name}</td>
                         <td style={{ padding: '8px', fontSize: 12, color: 'var(--text-secondary)' }}>{b.monthDay}</td>
-                        <td style={{ padding: '8px' }}><span style={{ background: b.daysUntil === 0 ? 'var(--color-success)' : b.daysUntil <= 7 ? 'var(--color-warning-light)' : 'var(--bg-app)', color: b.daysUntil === 0 ? '#fff' : b.daysUntil <= 7 ? 'var(--color-warning-hover)' : 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '2px 7px', fontWeight: 600, fontSize: 11 }}>{b.daysUntil === 0 ? '🎉 Today!' : `${b.daysUntil}d`}</span></td>
+                        <td style={{ padding: '8px' }}><span style={{ background: b.daysUntil === 0 ? 'var(--color-success)' : b.daysUntil <= 7 ? 'var(--color-warning-light)' : 'var(--bg-app)', color: b.daysUntil === 0 ? '#fff' : b.daysUntil <= 7 ? 'var(--color-warning-hover)' : 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '2px 7px', fontWeight: 600, fontSize: 11 }}>{b.daysUntil === 0 ? 'Today!' : `${b.daysUntil}d`}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -612,7 +621,7 @@ export default function DashboardPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="🥑 Active Dietary Breakdown">
+        <SectionCard title="Active Dietary Breakdown">
           {loading ? <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading…</p> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
@@ -636,7 +645,7 @@ export default function DashboardPage() {
         </SectionCard>
 
         <SectionCard
-          title="📋 Production Status"
+          title="Production Status"
           action={<Link to="/production" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Open →</Link>}
         >
           {totalSheets === 0 ? (
@@ -650,7 +659,7 @@ export default function DashboardPage() {
                 <span style={{ fontSize: 13, fontWeight: 800, color: prodPct === 100 ? '#059669' : 'var(--color-primary)', minWidth: 40, textAlign: 'right' }}>{prodPct}%</span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{completedSheets} of {totalSheets} sheets signed off</div>
-              {prodPct === 100 && <div style={{ padding: '6px 12px', background: 'var(--color-success-light)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, color: 'var(--color-success-hover)' }}>✅ All sheets complete!</div>}
+              {prodPct === 100 && <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--color-success-light)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, color: 'var(--color-success-hover)' }}><CheckCircle2 className="w-4 h-4 text-emerald-600" /> All sheets complete!</div>}
             </div>
           )}
         </SectionCard>

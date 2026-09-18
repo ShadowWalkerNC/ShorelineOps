@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Bell, Truck, CheckCircle2, AlertTriangle, RotateCcw, Plus } from 'lucide-react'
 import { tokenManager } from '../../security/tokenManager'
 
 /**
@@ -254,7 +255,10 @@ export default function TrayDispatchPage() {
 
   return (
     <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>🛎️ Tray Dispatch</h1>
+      <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Bell className="w-6 h-6 text-teal-600" />
+        <span>Tray Dispatch</span>
+      </h1>
       <p style={{ color: '#64748b', margin: '0 0 16px', fontSize: 14 }}>
         Track every tray from assembly to the bedside. Today: {todayString()}
       </p>
@@ -305,8 +309,9 @@ export default function TrayDispatchPage() {
       {/* Missed-tray SLA alert (in-app surface) */}
       {checklist && checklist.missed.length > 0 && (
         <div style={{ background: '#fef2f2', border: '2px solid #ef4444', borderRadius: 12, padding: 12, marginBottom: 12 }}>
-          <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: 16, marginBottom: 8 }}>
-            ⚠️ {checklist.missed.length} tray{checklist.missed.length > 1 ? 's' : ''} need{checklist.missed.length === 1 ? 's' : ''} attention (SLA {checklist.slaMinutes} min)
+          <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertTriangle className="w-4 h-4 text-rose-600" />
+            <span>{checklist.missed.length} tray{checklist.missed.length > 1 ? 's' : ''} need{checklist.missed.length === 1 ? 's' : ''} attention (SLA {checklist.slaMinutes} min)</span>
           </div>
           {checklist.missed.map((m) => (
             <div key={m.key} style={{ padding: '8px 0', borderTop: '1px solid #fecaca', fontSize: 15, color: '#7f1d1d' }}>
@@ -375,26 +380,30 @@ export default function TrayDispatchPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                 {line.allowedNext.includes('dispatched') && (
                   <button onClick={() => postEvent(line, 'dispatched')} disabled={busy}
-                    style={{ ...btnBase, background: '#2563eb', color: '#fff', flex: '1 1 140px' }}>
-                    🚚 Mark dispatched
+                    style={{ ...btnBase, background: '#2563eb', color: '#fff', flex: '1 1 140px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Truck className="w-4 h-4" />
+                    <span>Mark dispatched</span>
                   </button>
                 )}
                 {line.allowedNext.includes('delivered') && (
                   <button onClick={() => postEvent(line, 'delivered')} disabled={busy}
-                    style={{ ...btnBase, background: '#16a34a', color: '#fff', flex: '1 1 140px' }}>
-                    ✅ Mark delivered
+                    style={{ ...btnBase, background: '#16a34a', color: '#fff', flex: '1 1 140px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Mark delivered</span>
                   </button>
                 )}
                 {line.allowedNext.includes('missed') && (
                   <button onClick={() => postEvent(line, 'missed')} disabled={busy}
-                    style={{ ...btnBase, background: '#dc2626', color: '#fff', flex: '1 1 140px' }}>
-                    ⚠️ Missed…
+                    style={{ ...btnBase, background: '#dc2626', color: '#fff', flex: '1 1 140px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Missed…</span>
                   </button>
                 )}
                 {line.allowedNext.includes('remade') && (
                   <button onClick={() => postEvent(line, 'remade')} disabled={busy}
-                    style={{ ...btnBase, background: '#7c3aed', color: '#fff', flex: '1 1 140px' }}>
-                    🔁 Remake…
+                    style={{ ...btnBase, background: '#7c3aed', color: '#fff', flex: '1 1 140px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Remake…</span>
                   </button>
                 )}
               </div>
@@ -406,7 +415,10 @@ export default function TrayDispatchPage() {
       {/* Manual add-tray */}
       {activeRunId && (
         <div style={{ background: 'var(--bg-card, #fff)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 12, padding: 12, marginTop: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>➕ Add tray to run</div>
+          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Plus className="w-4 h-4 text-teal-600" />
+            <span>Add tray to run</span>
+          </div>
           <input value={residentQuery} onChange={(e) => searchResidents(e.target.value)}
             placeholder="Search resident by name or room…"
             style={{ ...btnBase, width: '100%', background: '#f8fafc', border: '1px solid #cbd5e1', fontSize: 15, marginBottom: 8 }} />
