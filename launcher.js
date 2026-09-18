@@ -26,9 +26,10 @@ if (!fs.existsSync(appDataDir)) {
   fs.mkdirSync(appDataDir, { recursive: true })
 }
 
-// 2. Check if Server Build Exists
-if (!fs.existsSync(SERVER_SCRIPT)) {
-  console.log('[Launcher] Server build not found. Running build...')
+// 2. Check if Server and Client Builds Exist
+const clientHtml = path.join(ROOT_DIR, 'dist', 'index.html')
+if (!fs.existsSync(SERVER_SCRIPT) || !fs.existsSync(clientHtml)) {
+  console.log('[Launcher] Production build assets not found. Running build...')
   try {
     const { execSync } = require('child_process')
     execSync('npm run build:all', { cwd: ROOT_DIR, stdio: 'inherit' })
@@ -41,13 +42,16 @@ if (!fs.existsSync(SERVER_SCRIPT)) {
 // 3. Start Backend Process
 console.log(`[Launcher] Starting Shoreline Care OS Server on port ${PORT}...`)
 
+const defaultDbPath = path.join(ROOT_DIR, 'server', 'shoreline.db')
+const dbPath = process.env.SQLITE_PATH || defaultDbPath
+
 const serverProcess = spawn('node', [SERVER_SCRIPT], {
   cwd: ROOT_DIR,
   env: {
     ...process.env,
     PORT: String(PORT),
     NODE_ENV: 'production',
-    DATABASE_URL: `file:${path.join(appDataDir, 'shoreline.db')}`,
+    SQLITE_PATH: dbPath,
     FRONTEND_URL: APP_URL,
   },
   stdio: 'inherit',

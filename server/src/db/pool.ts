@@ -4,11 +4,13 @@ import path from 'path'
 const isProd = process.env.NODE_ENV === 'production'
 const dbUrl = process.env.DATABASE_URL
 
-if (isProd && !dbUrl) {
-  console.warn('[DB] WARNING: DATABASE_URL is not set in production environment. Please configure DATABASE_URL in Render environment variables.')
+const isPostgresUrl = Boolean(dbUrl && /^(postgres|postgresql):\/\//i.test(dbUrl))
+
+if (isProd && !isPostgresUrl) {
+  console.warn('[DB] Operating with local offline SQLite database (PostgreSQL DATABASE_URL not set).')
 }
 
-let pgPool: Pool | null = dbUrl
+let pgPool: Pool | null = isPostgresUrl
   ? new Pool({
       connectionString: dbUrl,
       ssl: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true'
@@ -20,11 +22,12 @@ let pgPool: Pool | null = dbUrl
     })
   : null
 
-let useSqlite = !dbUrl
+let useSqlite = !isPostgresUrl
 let sqliteDb: any = null
 let sqliteLoadFailed = false
 
-const sqlitePath = path.join(__dirname, '..', '..', 'shoreline.db')
+const rawCustomPath = process.env.SQLITE_PATH || (dbUrl && !isPostgresUrl ? dbUrl.replace(/^(file|sqlite):(\/\/)?/i, '') : null)
+const sqlitePath = rawCustomPath ? path.resolve(rawCustomPath) : path.join(__dirname, '..', '..', 'shoreline.db')
 
 function getSqlite(): any {
   if (sqliteLoadFailed) {

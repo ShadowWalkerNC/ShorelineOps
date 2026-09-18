@@ -137,6 +137,42 @@ if (process.env.ENABLE_TIMECARD_PLUGIN !== 'false') {
 import path from 'path'
 import fs from 'fs'
 
+// Health and Readiness Probes for Kubernetes / Docker / Cloud Load Balancers / Render
+const handleHealth = (_req: express.Request, res: express.Response) => {
+  res.json({
+    status: 'ok',
+    service: 'ShorelineOps API',
+    version: '6.0.0',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  })
+}
+
+const handleReady = async (_req: express.Request, res: express.Response) => {
+  try {
+    const { rows } = await pool.query('SELECT 1 as ready')
+    if (rows && rows.length > 0) {
+      return res.json({
+        status: 'ready',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+      })
+    }
+    return res.status(503).json({ status: 'unready', database: 'no_rows' })
+  } catch (err: any) {
+    return res.status(503).json({
+      status: 'unready',
+      database: 'disconnected',
+      error: err.message,
+    })
+  }
+}
+
+app.get('/health', handleHealth)
+app.get('/api/health', handleHealth)
+app.get('/ready', handleReady)
+app.get('/api/ready', handleReady)
+
 // Check if frontend build exists to serve single-port container
 const clientDistPath = path.resolve(__dirname, '../../dist')
 if (fs.existsSync(clientDistPath)) {
@@ -152,7 +188,7 @@ if (fs.existsSync(clientDistPath)) {
 
   app.use(express.static(clientDistPath))
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path === '/health') {
+    if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ready') {
       return next()
     }
     res.sendFile(path.join(clientDistPath, 'index.html'))
@@ -166,6 +202,7 @@ if (fs.existsSync(clientDistPath)) {
       version: '5.0.0',
       documentation: '/api/docs',
       health: '/health',
+      ready: '/ready',
       frontend: 'http://localhost:3000',
       endpoints: [
         '/api/setup',
@@ -184,40 +221,6 @@ if (fs.existsSync(clientDistPath)) {
     })
   })
 }
-
-// Health and Readiness Probes for Kubernetes / Docker / Cloud Load Balancers / Render
-const handleHealth = (_req: express.Request, res: express.Response) => {
-  res.json({
-    status: 'ok',
-    service: 'ShorelineOps API',
-    version: '6.0.0',
-    uptimeSeconds: Math.floor(process.uptime()),
-    timestamp: new Date().toISOString(),
-  })
-}
-
-app.get('/health', handleHealth)
-app.get('/api/health', handleHealth)
-
-app.get('/ready', async (_req, res) => {
-  try {
-    const { rows } = await pool.query('SELECT 1 as ready')
-    if (rows && rows.length > 0) {
-      return res.json({
-        status: 'ready',
-        database: 'connected',
-        timestamp: new Date().toISOString(),
-      })
-    }
-    return res.status(503).json({ status: 'unready', database: 'no_rows' })
-  } catch (err: any) {
-    return res.status(503).json({
-      status: 'unready',
-      database: 'disconnected',
-      error: err.message,
-    })
-  }
-})
 
 // Global error handler
 app.use(errorHandler)

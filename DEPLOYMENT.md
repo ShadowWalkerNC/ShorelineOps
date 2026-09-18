@@ -4,7 +4,42 @@ This guide covers deployment options, production configuration, database managem
 
 ---
 
-## 1. Quick Start: Production Docker Compose
+## 1. Local Facility Workstation & Kitchen Kiosk (Offline-First Standalone)
+
+The most popular option for individual senior living communities, dietary kitchens, and clinical care facilities. Runs entirely offline on standard Windows, Mac, or Linux workstations without requiring Docker or cloud infrastructure.
+
+### Instant Workstation Startup
+
+1. **Windows**: Double-click `start.bat` or run:
+   ```cmd
+   start.bat
+   ```
+   - **Fast Startup (<2s)**: Reuses pre-compiled production bundles (`dist/index.html` and `server/dist/index.js`).
+   - **Force Rebuild**: Pass `start.bat --rebuild` to trigger a clean compile of client and server assets.
+   - **Automatic Browser Launch**: Automatically opens your default browser to `http://localhost:3001/`.
+
+2. **Linux / macOS**: Run:
+   ```bash
+   ./start.sh
+   # Or to force a clean recompile:
+   ./start.sh --rebuild
+   ```
+
+3. **1-Click Desktop Shortcut Setup (Windows)**:
+   - Run `Setup.bat` to provision a desktop shortcut `"Shoreline Care OS"`, start menu entry, and initialize the local database.
+   - Launches via `ShorelineOps-Launcher.bat`.
+
+### Default Production Credentials
+
+- **Super-Admin Login**: `admin@shorelineops.local`
+- **Password**: `ComplexAdminPass2026!`
+- **Database File**: `server/shoreline.db` (override via `SQLITE_PATH` in `.env`)
+- **API Health Check**: `http://localhost:3001/health`
+- **Kitchen Tablet Kiosk**: `http://localhost:3001/kitchen/tablet`
+
+---
+
+## 2. Quick Start: Production Docker Compose
 
 The simplest and most resilient way to run ShorelineOps on any VPS, dedicated server, or local facility server.
 
