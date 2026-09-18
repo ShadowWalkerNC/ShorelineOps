@@ -163,10 +163,11 @@ const IDDSI_FOOD_LEVEL_FOR_TEXTURE: Record<string, 3 | 4 | 5 | 6 | 7> = {
   'Liquid': 3,
 }
 
-/** Server-side mirror of B02's iddsiForTexture. Unknown texture → 7 (Regular). */
-function iddsiFoodLevelForTexture(texture: string | null | undefined): 3 | 4 | 5 | 6 | 7 {
+/** Server-side mirror of B02's iddsiForTexture. Unknown texture → -1 (Unassigned Safety Hold). */
+export function iddsiFoodLevelForTexture(texture: string | null | undefined): -1 | 3 | 4 | 5 | 6 | 7 {
   const key = (texture ?? '').trim()
-  return IDDSI_FOOD_LEVEL_FOR_TEXTURE[key] ?? 7
+  if (!key) return -1
+  return IDDSI_FOOD_LEVEL_FOR_TEXTURE[key] ?? -1
 }
 
 // ── B07: therapeutic diet → variant bucket mapping ───────────────────────────

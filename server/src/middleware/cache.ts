@@ -96,14 +96,15 @@ export function httpCacheMiddleware(ttlSeconds: number = 60, cacheTag?: string) 
     // worklist); a role-blind key would serve one role's 200 to another
     // role's request, defeating server-side authorization.
     const role = (req as unknown as { userRole?: string }).userRole ?? 'anon'
-    const cacheKey = `${req.originalUrl || req.url}|role:${role}`
+    const facilityId = (req as any).facilityId ?? (req.headers['x-facility-id'] as string) ?? 'default'
+    const cacheKey = `fac:${facilityId}|${req.originalUrl || req.url}|role:${role}`
     const cached = serverCache.get(cacheKey)
 
     // Check Client ETag (If-None-Match)
     const clientEtag = req.headers['if-none-match']
     if (cached && clientEtag && clientEtag === cached.eTag) {
       res.setHeader('ETag', cached.eTag)
-      res.setHeader('Cache-Control', `public, max-age=${ttlSeconds}, must-revalidate`)
+      res.setHeader('Cache-Control', `private, max-age=${ttlSeconds}, must-revalidate`)
       return res.status(304).end()
     }
 
@@ -111,7 +112,7 @@ export function httpCacheMiddleware(ttlSeconds: number = 60, cacheTag?: string) 
     if (cached) {
       res.setHeader('ETag', cached.eTag)
       res.setHeader('X-Cache', 'HIT')
-      res.setHeader('Cache-Control', `public, max-age=${ttlSeconds}, must-revalidate`)
+      res.setHeader('Cache-Control', `private, max-age=${ttlSeconds}, must-revalidate`)
       return res.json(cached.value)
     }
 
@@ -122,7 +123,7 @@ export function httpCacheMiddleware(ttlSeconds: number = 60, cacheTag?: string) 
         const entry = serverCache.set(cacheKey, body, ttlSeconds, cacheTag)
         res.setHeader('ETag', entry.eTag)
         res.setHeader('X-Cache', 'MISS')
-        res.setHeader('Cache-Control', `public, max-age=${ttlSeconds}, must-revalidate`)
+        res.setHeader('Cache-Control', `private, max-age=${ttlSeconds}, must-revalidate`)
       }
       return originalJson(body)
     }

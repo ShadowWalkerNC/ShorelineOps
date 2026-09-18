@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../../api/client'
+import { WebBluetoothProbeDriver } from './WebBluetoothProbe'
+import {
+  Thermometer,
+  AlertTriangle,
+  CheckCircle2,
+  Bluetooth,
+  Mic,
+  MicOff,
+  Radio,
+  Edit3,
+} from 'lucide-react'
 
 // ────────────────────────────────────────────────────────────────────────────
 // TEMP LOG PANEL (C01) — durable HACCP temperature logging (CMS F812)
@@ -88,6 +99,95 @@ export default function TempLogPanel() {
   const [fixAction, setFixAction] = useState('')
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+
+  // — Hardware & Voice Ergonomics —
+  const [bluetoothConnecting, setBluetoothConnecting] = useState(false)
+  const [bluetoothConnected, setBluetoothConnected] = useState(false)
+  const [bluetoothDeviceName, setBluetoothDeviceName] = useState<string | null>(null)
+  const [voiceListening, setVoiceListening] = useState(false)
+  const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null)
+
+  const handlePairBluetooth = async () => {
+    setError(null)
+    setNotice(null)
+    if (!WebBluetoothProbeDriver.isSupported()) {
+      setError('Web Bluetooth is not supported in this browser. Please use Chrome or Edge.')
+      return
+    }
+
+    const driver = new WebBluetoothProbeDriver()
+    setBluetoothConnecting(true)
+    try {
+      const res = await driver.connect((reading) => {
+        setTempF(String(reading.temperatureF))
+        setNotice(`Live BLE reading: ${reading.temperatureF}°F (${reading.deviceName})`)
+      })
+      if (res.success) {
+        setBluetoothConnected(true)
+        setBluetoothDeviceName(res.deviceName || 'HACCP BLE Probe')
+        setProbeDevice(res.deviceName || 'HACCP BLE Probe')
+        setSource('probe')
+        setNotice(`Paired with ${res.deviceName || 'HACCP BLE Probe'}. Ready for live readings.`)
+      } else if (res.error) {
+        setError(res.error)
+      }
+    } catch (e: any) {
+      setError(e.message || 'Bluetooth pairing failed')
+    } finally {
+      setBluetoothConnecting(false)
+    }
+  }
+
+  const handleToggleVoice = () => {
+    setError(null)
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRec) {
+      setError('Hands-free voice recognition is not supported in this browser. Please use Chrome or Edge.')
+      return
+    }
+    if (voiceListening) {
+      setVoiceListening(false)
+      setVoiceTranscript(null)
+      return
+    }
+
+    try {
+      const recognition = new SpeechRec()
+      recognition.continuous = false
+      recognition.interimResults = false
+      recognition.lang = 'en-US'
+      setVoiceListening(true)
+      setVoiceTranscript('Listening... Speak temperature (e.g., "165 degrees")')
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        setVoiceTranscript(`Heard: "${transcript}"`)
+        const match = transcript.match(/\d+(\.\d+)?/)
+        if (match) {
+          setTempF(match[0])
+          setNotice(`Voice captured temperature: ${match[0]}°F`)
+        } else {
+          setError(`Could not detect temperature number in: "${transcript}"`)
+        }
+        setVoiceListening(false)
+      }
+
+      recognition.onerror = (event: any) => {
+        setError(`Voice error: ${event.error}`)
+        setVoiceListening(false)
+        setVoiceTranscript(null)
+      }
+
+      recognition.onend = () => {
+        setVoiceListening(false)
+      }
+
+      recognition.start()
+    } catch (err: any) {
+      setError(err.message || 'Failed to start voice recognition')
+      setVoiceListening(false)
+    }
+  }
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -212,26 +312,31 @@ export default function TempLogPanel() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>🌡️ Temperature Log (HACCP)</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Thermometer className="w-5 h-5 text-sky-500" />
+            <span>Temperature Log (HACCP)</span>
+          </h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
             Every check is persisted with user + timestamp for the survey binder. Out-of-range temps require a corrective action before the log closes.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {tabBtn('log', 'Log Temp')}
-          {tabBtn('schedule', `Schedule${schedule.some(s => s.status !== 'ok') ? ' ⚠️' : ''}`)}
+          {tabBtn('schedule', `Schedule${schedule.some(s => s.status !== 'ok') ? ' (Needs Attention)' : ''}`)}
           {tabBtn('logs', "Today's Log")}
         </div>
       </div>
 
       {error && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
-          {error}
+        <div style={{ background: '#fee2e2', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle className="w-4 h-4 shrink-0 text-red-700" />
+          <span>{error}</span>
         </div>
       )}
       {notice && (
-        <div style={{ background: '#e7f6ec', color: '#166534', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
-          {notice}
+        <div style={{ background: '#e7f6ec', color: '#166534', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+          <span>{notice}</span>
         </div>
       )}
 
@@ -245,8 +350,19 @@ export default function TempLogPanel() {
                 <button key={t} onClick={() => { setCheckType(t); setViolation(null) }}
                   style={{ ...inputStyle, width: 'auto', flex: 1, cursor: 'pointer',
                     background: checkType === t ? 'var(--color-primary)' : 'var(--bg-app)',
-                    color: checkType === t ? '#fff' : 'var(--text-primary)', fontWeight: 700 }}>
-                  {t === 'food' ? '🍲 Food temp' : '❄️ Equipment temp'}
+                    color: checkType === t ? '#fff' : 'var(--text-primary)', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {t === 'food' ? (
+                    <>
+                      <Radio className="w-4 h-4" />
+                      <span>Food Temp</span>
+                    </>
+                  ) : (
+                    <>
+                      <Thermometer className="w-4 h-4" />
+                      <span>Equipment Temp</span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
@@ -275,9 +391,36 @@ export default function TempLogPanel() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle} htmlFor="haccp-temp">Measured temp (°F)</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }} htmlFor="haccp-temp">Measured temp (°F)</label>
+                <button
+                  type="button"
+                  onClick={handleToggleVoice}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    border: '1px solid var(--border-color)',
+                    background: voiceListening ? '#fee2e2' : 'var(--bg-card)',
+                    color: voiceListening ? '#991b1b' : 'var(--text-muted)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    minHeight: 28,
+                  }}
+                  title="Tap to speak temperature hands-free"
+                >
+                  {voiceListening ? <MicOff className="w-3 h-3 text-red-600 animate-pulse" /> : <Mic className="w-3 h-3 text-sky-600" />}
+                  <span>{voiceListening ? 'Listening…' : 'Tap to Speak'}</span>
+                </button>
+              </div>
               <input id="haccp-temp" inputMode="decimal" value={tempF} onChange={e => setTempF(e.target.value)}
                 placeholder="e.g. 168" style={inputStyle} />
+              {voiceTranscript && (
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>{voiceTranscript}</p>
+              )}
             </div>
             <div>
               <label style={labelStyle} htmlFor="haccp-target">Target (°F)</label>
@@ -292,18 +435,55 @@ export default function TempLogPanel() {
                 <button key={s} onClick={() => setSource(s)}
                   style={{ ...inputStyle, width: 'auto', flex: 1, cursor: 'pointer',
                     background: source === s ? 'var(--color-primary)' : 'var(--bg-app)',
-                    color: source === s ? '#fff' : 'var(--text-primary)', fontWeight: 700 }}>
-                  {s === 'manual' ? '✍️ Manual entry' : '📡 Probe reading'}
+                    color: source === s ? '#fff' : 'var(--text-primary)', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {s === 'manual' ? (
+                    <>
+                      <Edit3 className="w-4 h-4" />
+                      <span>Manual Entry</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bluetooth className="w-4 h-4" />
+                      <span>Probe Reading</span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
             {source === 'probe' && (
-              <div style={{ marginTop: 8 }}>
-                <label style={labelStyle} htmlFor="haccp-probe">Probe device name (required)</label>
+              <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }} htmlFor="haccp-probe">Probe device name (required)</label>
+                  <button
+                    type="button"
+                    onClick={handlePairBluetooth}
+                    disabled={bluetoothConnecting}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      border: '1px solid #0071e3',
+                      background: bluetoothConnected ? '#e7f6ec' : 'rgba(0, 113, 227, 0.08)',
+                      color: bluetoothConnected ? '#166534' : '#0071e3',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      minHeight: 36,
+                    }}
+                  >
+                    <Bluetooth className="w-3.5 h-3.5" />
+                    <span>{bluetoothConnecting ? 'Connecting…' : bluetoothConnected ? `Paired (${bluetoothDeviceName})` : 'Pair Bluetooth Probe'}</span>
+                  </button>
+                </div>
                 <input id="haccp-probe" value={probeDevice} onChange={e => setProbeDevice(e.target.value)}
                   placeholder="e.g. ThermoWorks Signals BT — Hot Line" style={inputStyle} />
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-                  Enter the temperature shown on the probe; only real probe readings are accepted — nothing is auto-generated.
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                  {bluetoothConnected
+                    ? 'Connected to Bluetooth probe. Measured temperature auto-syncs on probe reading.'
+                    : 'Zero-driver Web Bluetooth pairing for ThermoWorks, Inkbird, and standard BLE probes.'}
                 </p>
               </div>
             )}
@@ -312,8 +492,9 @@ export default function TempLogPanel() {
           {/* Violation → corrective action required before the log can close */}
           {violation && (
             <div style={{ border: '2px solid #991b1b', borderRadius: 12, padding: 14, background: '#fef2f2' }}>
-              <div style={{ fontWeight: 800, color: '#991b1b', marginBottom: 6 }}>
-                ⚠️ Temperature violation — {violation.measuredTempF}°F vs target {violation.targetTempF}°F
+              <div style={{ fontWeight: 800, color: '#991b1b', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AlertTriangle className="w-4 h-4 text-red-700 shrink-0" />
+                <span>Temperature violation — {violation.measuredTempF}°F vs target {violation.targetTempF}°F</span>
                 <span style={{ fontWeight: 600, fontSize: 12 }}> ({violation.violationType})</span>
               </div>
               <p style={{ fontSize: 13, color: '#7f1d1d', margin: '0 0 8px' }}>
@@ -393,8 +574,13 @@ export default function TempLogPanel() {
               <div key={l.id} style={{ border: '1px solid var(--border-color)', borderRadius: 12, padding: '10px 14px',
                 background: ok ? 'var(--bg-card)' : '#fef2f2', borderLeft: ok ? undefined : '4px solid #991b1b' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>
-                    {ok ? '✅' : '⚠️'} {l.check_type === 'equipment' ? (l.equipment_name ?? 'Equipment') : l.item_name || 'Food item'}
+                  <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center' }}>
+                    {ok ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 inline mr-1.5 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-600 inline mr-1.5 shrink-0" />
+                    )}
+                    <span>{l.check_type === 'equipment' ? (l.equipment_name ?? 'Equipment') : l.item_name || 'Food item'}</span>
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{fmtTime(l.recorded_at)}</div>
                 </div>

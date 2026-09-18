@@ -50,6 +50,7 @@ function BatchClinicalStrip({
   const allergens = distinctSorted(members.flatMap(m => m.allergies))
   const textures = distinctSorted(members.map(m => m.texture))
   const npoViolations = members.filter(m => m.isNpo)
+  const cookableMembers = members.filter(m => !m.isNpo)
   return (
     <AppleCard className="p-4 space-y-2.5">
       <div className="flex items-center justify-between">
@@ -57,14 +58,19 @@ function BatchClinicalStrip({
           <div className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono">{title}</div>
           <div className="text-base font-black text-slate-900 dark:text-white truncate">{dish}</div>
         </div>
-        <AppleBadge color="blue" className="text-sm">{members.length} trays</AppleBadge>
+        <div className="flex items-center gap-2">
+          <AppleBadge color="blue" className="text-sm">{cookableMembers.length} active trays</AppleBadge>
+          {npoViolations.length > 0 && (
+            <AppleBadge color="red" className="text-sm font-bold">{npoViolations.length} NPO excluded</AppleBadge>
+          )}
+        </div>
       </div>
 
       {npoViolations.length > 0 && (
         <div className="flex items-start gap-1.5 p-2 rounded-lg bg-red-600 text-white text-sm font-black leading-snug">
           <ShieldAlert className="w-4 h-4 shrink-0 mt-px" />
           <span>
-            NPO HARD-BLOCK — no tray:{' '}
+            NPO HARD-BLOCK — no tray prepared:{' '}
             {npoViolations.map(m => `${m.name} (Rm ${m.room})`).join(', ')}
           </span>
         </div>
@@ -77,9 +83,10 @@ function BatchClinicalStrip({
             {allergens.map(a => (
               <span
                 key={a}
-                className="px-2 py-1 rounded-md text-sm font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
               >
-                ⚠ {a}
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {a}
               </span>
             ))}
           </div>
@@ -435,9 +442,10 @@ function KitchenSheetPageInner() {
                           allergies.map(a => (
                             <span
                               key={a}
-                              className="px-2 py-1 rounded-md text-sm font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-black bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
                             >
-                              ⚠ {a}
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              {a}
                             </span>
                           ))
                         ) : (

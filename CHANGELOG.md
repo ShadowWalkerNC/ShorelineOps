@@ -4,6 +4,37 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.3.0] — 2026-09-18
+### Added & Hardened
+- **IDDSI 2.0 Hard Safety Hold & Big 9 Allergens** (`src/types/resident.ts`, `server/src/engine/production.ts`):
+  - Replaced unsafe Level 7 Regular fallback with clinical hard-stop (`level: -1, label: 'UNASSIGNED — CONFIRM WITH DIETARY'`).
+  - Added full FDA FASTER Act Big 9 major food allergen taxonomy + adaptive equipment options.
+  - Implemented IDDSI drink thickness levels 0–4 (`Thin`, `Slightly Thick`, `Mildly Thick`, `Moderately Thick`, `Extremely Thick`).
+- **NPO Tray Line Production Hard-Block** (`src/features/kitchen/KitchenSheetPage.tsx`):
+  - Excluded NPO residents from cookable batch tray totals (`members.filter(m => !m.isNpo)`).
+  - Added dedicated NPO exclusion badge and AlertTriangle iconography (100% emoji-free).
+- **PointClickCare Inbound Webhook Ingestion into RD Triage Queue** (`server/src/routes/ehr.ts`):
+  - Connected `POST /api/ehr/webhook` to `pcc.evaluateInboundTriage()`.
+  - Automatically queries existing resident records and stores inbound NPO changes, texture downgrades, diet order modifications, and new allergens in `ehr_reconciliation_queue` with `status = 'PENDING_TRIAGE'`.
+- **HIPAA PHI Cache Bypass & Private Cache-Control** (`server/src/index.ts`, `server/src/middleware/cache.ts`):
+  - Removed HTTP caching from `/api/residents` so every access to resident PHI is audited in `audit_log`.
+  - Upgraded cache control headers from `public` to `private, max-age=${ttlSeconds}, must-revalidate` and isolated cache keys with tenant `facilityId`.
+- **PostgreSQL Fail-Closed Split-Brain Prevention** (`server/src/db/pool.ts`):
+  - Removed permanent local SQLite downgrade on transient PostgreSQL connection errors, failing closed and throwing errors to preserve database integrity.
+- **Three-Way Invoice Match REST API Endpoint** (`server/src/routes/purchasing.ts`, `server/src/engine/invoicing.ts`):
+  - Exposed `POST /api/purchasing/invoices/evaluate` powered by `ThreeWayInvoiceMatchingEngine`.
+  - Evaluates line-by-line price variances, quantity shortages, compound variances, and auto-generates vendor credit memo requests.
+- **Kitchen Kiosk Bluetooth LE Probe & Hands-Free Web Speech API Voice Logging** (`src/features/kitchen/TempLogPanel.tsx`):
+  - 100% emoji-free interface with Lucide SVG icons.
+  - Integrated `WebBluetoothProbeDriver` with 1-click BLE probe pairing and live temperature sync.
+  - Integrated Web Speech API for hands-free voice temperature logging ("Tap to Speak Temp") for kitchen tablet kiosks.
+- **Marketing Site Apple HIG Design & SVG Icon Overhaul** (`marketing/src/`):
+  - Fully emoji-free marketing site with 30+ custom Lucide-style SVG icons (`Icon.astro`) and vendor/regulatory badges (`Logo.astro`).
+- **Automated System Test Expansion** (`server/src/system.test.ts`):
+  - Added Section 30 tests: **192/192 tests passing 100%**.
+
+---
+
 ## [v6.2.0] — 2026-09-05
 ### Added
 - **Stripe Per-Bed / Per-Census Metered Billing Engine** (`server/src/billing/stripeEngine.ts`, `server/src/routes/billing.ts`):

@@ -46,6 +46,7 @@ import { MrpDemandForecastEngine, InventoryItemStock } from '../engine/mrp'
 import { KitchenProductionEngine } from '../engine/production'
 import { rollupAvgUsage } from '../jobs/nightlyForecast'
 import { UnitConversionEngine, MASS_TO_GRAMS, VOLUME_TO_ML } from '../engine/units'
+import { ThreeWayInvoiceMatchingEngine } from '../engine/invoicing'
 
 export const purchasingRouter = Router()
 
@@ -1005,5 +1006,32 @@ purchasingRouter.get('/invoices', requireTier('enterprise'), async (_req: Reques
       SELECT * FROM distributor_invoices ORDER BY invoice_date DESC LIMIT 50
     `)
     res.json(rows)
+  } catch (e) { next(e) }
+})
+
+/**
+ * POST /api/purchasing/invoices/evaluate
+ * Evaluates 3-way match across PO contract rates, receiving dock counts, and distributor invoice.
+ * Flags line-by-line price variances, quantity shortages, and creates vendor credit memo proposals.
+ */
+purchasingRouter.post('/invoices/evaluate', requireTier('enterprise'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { invoiceNumber, vendorName, invoiceDate, poReference, lines } = req.body
+    if (!invoiceNumber || !vendorName || !Array.isArray(lines)) {
+      return err(res, 400, 'invoiceNumber, vendorName, and lines array are required')
+    }
+
+    const report = ThreeWayInvoiceMatchingEngine.evaluateThreeWayMatch({
+      invoiceNumber,
+      vendorName,
+      invoiceDate: invoiceDate || new Date().toISOString().slice(0, 10),
+      poReference: poReference || 'N/A',
+      lines,
+    })
+
+    res.json({
+      success: true,
+      report,
+    })
   } catch (e) { next(e) }
 })

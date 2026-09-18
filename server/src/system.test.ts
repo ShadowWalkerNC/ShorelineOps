@@ -12,8 +12,9 @@ import { DennisConnector } from './integrations/dennis'
 import { SyscoConnector, UsFoodsConnector } from './integrations/broadline'
 import { PointClickCareConnector } from './integrations/pointclickcare'
 import { USDAFoodDataConnector } from './integrations/usda'
+import { randomUUID } from 'crypto'
 import { MrpDemandForecastEngine } from './engine/mrp'
-import { KitchenProductionEngine } from './engine/production'
+import { KitchenProductionEngine, iddsiFoodLevelForTexture } from './engine/production'
 import { SafetyEvaluatorEngine } from './engine/safetyEvaluator'
 import { ThreeWayInvoiceMatchingEngine } from './engine/invoicing'
 import { CmsDietarySurveyEngine } from './engine/cmsSurvey'
@@ -21,6 +22,7 @@ import { DeterministicDietaryEngine } from './engine/dietaryFormulation'
 import { allowedNextEvents, computeTrayLines, computeMissedTrays } from './engine/trayTracking'
 import { KITCHEN_DEFAULT_ENTREE } from './routes/kitchen'
 import { parseCsvRows } from './routes/residents'
+import { httpCacheMiddleware } from './middleware/cache'
 import { pool } from './db/pool'
 import { runMigrations, assertSchemaIntegrity } from './db/migrate'
 import fs from 'fs'
@@ -1057,6 +1059,97 @@ async function runAllTests() {
   assert(sheetRows.length === 1 && sheetRows[0].slot === 'Lunch', 'ProductionSheets: persists and reads batch cook sheet with zero split-brain')
   await pool.query('DELETE FROM production_sheets WHERE id = $1', [testSheetId])
   await pool.query('DELETE FROM menu_weeks WHERE id = $1', [testWeekId])
+
+  // --- 30. Clinical Dietary Safety, EHR Triage Queue, HIPAA Cache & Invoice Match ---
+  console.log('\n--- 30. Clinical Dietary Safety, EHR Triage Queue, HIPAA Cache & Invoice Match ---')
+
+  // 1. IDDSI 2.0 Hard Safety Hold Fallback
+  assert(iddsiFoodLevelForTexture('Regular') === 7, 'IDDSI 2.0: Regular maps to Level 7')
+  assert(iddsiFoodLevelForTexture('Cut-Up') === 6, 'IDDSI 2.0: Cut-Up maps to Level 6')
+  assert(iddsiFoodLevelForTexture('Minced') === 5, 'IDDSI 2.0: Minced maps to Level 5')
+  assert(iddsiFoodLevelForTexture('Pureed') === 4, 'IDDSI 2.0: Pureed maps to Level 4')
+  assert(iddsiFoodLevelForTexture('Liquid') === 3, 'IDDSI 2.0: Liquid maps to Level 3')
+  assert(iddsiFoodLevelForTexture('UnknownTexture') === -1, 'IDDSI 2.0: Unknown texture triggers safety hold (-1)')
+  assert(iddsiFoodLevelForTexture('') === -1, 'IDDSI 2.0: Blank texture triggers safety hold (-1)')
+  assert(iddsiFoodLevelForTexture(null) === -1, 'IDDSI 2.0: Null texture triggers safety hold (-1)')
+
+  // 2. EHR Inbound Webhook Triage Queue Persistence
+  const testTriageId = randomUUID()
+  await pool.query(`
+    INSERT INTO ehr_reconciliation_queue (
+      id, resident_name, external_ehr_id, source_ehr, change_type,
+      incoming_payload, conflict_reason, status, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+  `, [
+    testTriageId,
+    'Eleanor Vance',
+    'PCC-101',
+    'PointClickCare',
+    'NPO_ORDER',
+    JSON.stringify({ dietOrder: 'NPO', effectiveAt: new Date().toISOString() }),
+    'CRITICAL: Inbound physician NPO order received.',
+    'PENDING_TRIAGE'
+  ])
+
+  const { rows: queueRows } = await pool.query(
+    'SELECT * FROM ehr_reconciliation_queue WHERE id = $1',
+    [testTriageId]
+  )
+  assert(queueRows.length === 1, 'EHR Queue: persists inbound triage record')
+  assert(queueRows[0].status === 'PENDING_TRIAGE', 'EHR Queue: status defaults to PENDING_TRIAGE')
+  assert(queueRows[0].change_type === 'NPO_ORDER', 'EHR Queue: registers NPO_ORDER change type')
+  await pool.query('DELETE FROM ehr_reconciliation_queue WHERE id = $1', [testTriageId])
+
+  // 3. Three-Way Invoice Match Engine
+  const invoiceReport = ThreeWayInvoiceMatchingEngine.evaluateThreeWayMatch({
+    invoiceNumber: 'INV-DNS-9921',
+    vendorName: 'Dennis Food Service',
+    invoiceDate: '2026-09-18',
+    poReference: 'PO-2026-0042',
+    lines: [
+      {
+        itemSku: 'DNS-1001',
+        description: 'Boneless Turkey Breast 2/10 lb',
+        poQty: 4,
+        receivedQty: 3, // short 1 case
+        invoicedQty: 4,
+        poContractUnitPrice: 45.00,
+        invoicedUnitPrice: 48.50, // price overcharge of $3.50/unit
+      },
+      {
+        itemSku: 'DNS-1002',
+        description: 'Yukon Gold Potatoes 50 lb',
+        poQty: 2,
+        receivedQty: 2,
+        invoicedQty: 2,
+        poContractUnitPrice: 22.00,
+        invoicedUnitPrice: 22.00,
+      }
+    ]
+  })
+
+  assert(invoiceReport.overallStatus === 'DISPUTED', '3-Way Match: detects both price variance and quantity shortage')
+  assert(invoiceReport.totalBilledAmount === (4 * 48.50 + 2 * 22.00), '3-Way Match: calculates correct total billed')
+  assert(invoiceReport.totalCreditDisputedAmount > 0, '3-Way Match: computes non-zero credit dispute amount')
+  assert(invoiceReport.creditMemo !== undefined, '3-Way Match: auto-generates vendor credit memo proposal')
+  assert(invoiceReport.creditMemo?.vendorName === 'Dennis Food Service', '3-Way Match: credit memo routes to correct vendor')
+
+  // 4. Non-PHI Cache Control Security (Private Cache Header)
+  let capturedHeaders: Record<string, string> = {}
+  const mockReq: any = { method: 'GET', url: '/api/menu', originalUrl: '/api/menu', headers: {} }
+  const mockRes: any = {
+    statusCode: 200,
+    setHeader: (key: string, val: string) => { capturedHeaders[key.toLowerCase()] = val },
+    json: (body: any) => body,
+  }
+  const cacheMw = httpCacheMiddleware(60, 'test')
+  cacheMw(mockReq, mockRes, () => {
+    mockRes.json({ success: true })
+  })
+  assert(
+    capturedHeaders['cache-control']?.includes('private'),
+    `HIPAA Security: cache headers must be private to prevent downstream proxy leaks (got "${capturedHeaders['cache-control']}")`
+  )
 
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)

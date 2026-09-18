@@ -13,6 +13,7 @@ import { USDAFoodDataConnector } from '../integrations/usda'
 import { requireAuth, getJwtSecret, API_ROLES } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
+import { pool } from '../db/pool'
 
 export const ehrRouter = Router()
 const pcc = new PointClickCareConnector()
@@ -233,11 +234,75 @@ ehrRouter.post('/webhook', requireEhrWebhookSignature, async (req: Request, res:
     const update = await pcc.processInboundUpdate(req.body)
     const validation = await pcc.validateResidentMeals(update)
 
+    // Lookup existing resident record to determine if this update constitutes a clinical change
+    let existingResident: any = undefined
+    if (update.residentExternalId) {
+      const { rows } = await pool.query(
+        'SELECT id, name, room, diet_type, texture, allergies, is_npo FROM residents WHERE external_ehr_id = $1 OR id = $1 LIMIT 1',
+        [update.residentExternalId]
+      )
+      if (rows.length > 0) {
+        const r = rows[0]
+        existingResident = {
+          id: r.id,
+          dietType: r.diet_type || 'Regular',
+          texture: r.texture || 'Regular',
+          allergies: typeof r.allergies === 'string' ? JSON.parse(r.allergies || '[]') : (r.allergies || []),
+          isNpo: Boolean(r.is_npo),
+        }
+      }
+    }
+    if (!existingResident && (update.firstName || update.lastName)) {
+      const fullName = `${update.firstName ?? ''} ${update.lastName ?? ''}`.trim()
+      if (fullName) {
+        const { rows } = await pool.query(
+          'SELECT id, name, room, diet_type, texture, allergies, is_npo FROM residents WHERE LOWER(name) = LOWER($1) LIMIT 1',
+          [fullName]
+        )
+        if (rows.length > 0) {
+          const r = rows[0]
+          existingResident = {
+            id: r.id,
+            dietType: r.diet_type || 'Regular',
+            texture: r.texture || 'Regular',
+            allergies: typeof r.allergies === 'string' ? JSON.parse(r.allergies || '[]') : (r.allergies || []),
+            isNpo: Boolean(r.is_npo),
+          }
+        }
+      }
+    }
+
+    const triageItem = pcc.evaluateInboundTriage(update, existingResident)
+    let queueEntry = null
+
+    if (triageItem) {
+      const incomingPayloadStr = JSON.stringify(triageItem.incomingPayload)
+      const { rows: [inserted] } = await pool.query(`
+        INSERT INTO ehr_reconciliation_queue (
+          resident_id, resident_name, external_ehr_id, source_ehr,
+          change_type, incoming_payload, conflict_reason, status, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        RETURNING *
+      `, [
+        existingResident?.id || null,
+        triageItem.residentName,
+        triageItem.externalEhrId,
+        triageItem.sourceEhr,
+        triageItem.changeType,
+        incomingPayloadStr,
+        triageItem.conflictReason,
+        'PENDING_TRIAGE'
+      ])
+      queueEntry = inserted
+    }
+
     res.json({
       success: true,
       processedAt: new Date().toISOString(),
       resident: update,
       validation,
+      triageItem: queueEntry || triageItem || null,
+      queuedForTriage: Boolean(triageItem),
     })
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Webhook processing failed' })
@@ -271,8 +336,6 @@ ehrRouter.post('/nutrients/usda', requireAuth, async (req: Request, res: Respons
     res.status(400).json({ error: err.message || 'USDA nutrient analysis failed' })
   }
 })
-
-import { pool } from '../db/pool'
 
 /**
  * GET /api/ehr/reconciliation-queue

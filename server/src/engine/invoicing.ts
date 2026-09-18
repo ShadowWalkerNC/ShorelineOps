@@ -135,8 +135,8 @@ export class ThreeWayInvoiceMatchingEngine {
 
     let overallStatus: InvoiceMatchStatus = 'MATCHED'
     if (totalCreditDisputed > 0) {
-      const hasPriceVar = lineVariances.some(l => l.varianceType === 'PRICE_OVERCHARGE')
-      const hasQtyVar = lineVariances.some(l => l.varianceType === 'QUANTITY_SHORT')
+      const hasPriceVar = lineVariances.some(l => l.varianceType === 'PRICE_OVERCHARGE' || l.invoicedPrice > l.poContractPrice)
+      const hasQtyVar = lineVariances.some(l => l.varianceType === 'QUANTITY_SHORT' || l.invoicedQty > l.receivedQty)
       if (hasPriceVar && hasQtyVar) overallStatus = 'DISPUTED'
       else if (hasPriceVar) overallStatus = 'PRICE_VARIANCE'
       else overallStatus = 'QUANTITY_SHORT'

@@ -102,20 +102,8 @@ export const pool = {
       try {
         return await pgPool.query(sql, params)
       } catch (err: any) {
-        const isConnError =
-          err.code === 'ECONNREFUSED' ||
-          err.code === 'ENOTFOUND' ||
-          err.code === 'ETIMEDOUT' ||
-          err.message?.includes('connect') ||
-          err.message?.includes('getaddrinfo')
-
-        if (isConnError) {
-          console.warn(`[DB] PostgreSQL connection unreachable (${err.message}). Falling back to local offline SQLite database.`)
-          useSqlite = true
-          pgPool = null
-        } else {
-          throw err
-        }
+        console.error(`[DB] PostgreSQL query error: ${err.message}`)
+        throw err
       }
     }
 
@@ -203,20 +191,8 @@ export const pool = {
       try {
         return await pgPool.connect()
       } catch (err: any) {
-        const isConnError =
-          err.code === 'ECONNREFUSED' ||
-          err.code === 'ENOTFOUND' ||
-          err.code === 'ETIMEDOUT' ||
-          err.message?.includes('connect') ||
-          err.message?.includes('getaddrinfo')
-
-        if (isConnError) {
-          console.warn(`[DB] PostgreSQL connection unreachable (${err.message}). Falling back to local offline SQLite database.`)
-          useSqlite = true
-          pgPool = null
-        } else {
-          throw err
-        }
+        console.error(`[DB] PostgreSQL connect error: ${err.message}`)
+        throw err
       }
     }
 
