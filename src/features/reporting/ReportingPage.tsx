@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { api } from '../../api/client'
 import { useAuth } from '../../security/AuthContext'
 import BudgetTargetsSection from './BudgetTargetsSection'
+import CmsSurveyBinderSection from './CmsSurveyBinderSection'
+import {
+  DollarSign,
+  RefreshCw,
+  AlertTriangle,
+  Utensils,
+  BarChart3,
+  Wallet,
+  FileCheck
+} from 'lucide-react'
 import {
   ReportingSummary,
   DailyCostLog,
@@ -11,7 +21,7 @@ import {
 } from '../../types/reporting'
 
 export default function ReportingPage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'substitutions' | 'allergies' | 'mismatches' | 'variance' | 'budget'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'substitutions' | 'allergies' | 'mismatches' | 'variance' | 'budget' | 'cms-survey'>('dashboard')
   // Budget Targets section preserves the old /budget page's manager-only access
   const { atLeast } = useAuth()
   const canSeeBudget = atLeast('manager')
@@ -210,8 +220,9 @@ export default function ReportingPage() {
       {/* B14 demo-honesty: explicit empty state when the reporting service is
           unreachable — never fabricate figures. */}
       {summary === null && !loading && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-lg)', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#92400e' }}>
-          ⚠️ Reporting service unavailable — figures show as "—" until real data loads. No sample numbers are displayed.
+        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-lg)', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0 }} />
+          <span>Reporting service unavailable — figures show as "—" until real data loads. No sample numbers are displayed.</span>
         </div>
       )}        {/* Date Filter & Print */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -368,10 +379,14 @@ export default function ReportingPage() {
             color: activeTab === 'cost' ? 'var(--color-primary)' : 'var(--text-secondary)',
             fontWeight: activeTab === 'cost' ? 700 : 500,
             fontSize: 14,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
           }}
         >
-          💵 Daily Cost per Resident Day
+          <DollarSign style={{ width: 16, height: 16 }} />
+          Daily Cost per Resident Day
         </button>
         <button
           onClick={() => setActiveTab('substitutions')}
@@ -383,10 +398,14 @@ export default function ReportingPage() {
             color: activeTab === 'substitutions' ? 'var(--color-primary)' : 'var(--text-secondary)',
             fontWeight: activeTab === 'substitutions' ? 700 : 500,
             fontSize: 14,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
           }}
         >
-          🔄 Substitution Log
+          <RefreshCw style={{ width: 16, height: 16 }} />
+          Substitution Log
         </button>
         <button
           onClick={() => setActiveTab('allergies')}
@@ -398,10 +417,14 @@ export default function ReportingPage() {
             color: activeTab === 'allergies' ? 'var(--color-primary)' : 'var(--text-secondary)',
             fontWeight: activeTab === 'allergies' ? 700 : 500,
             fontSize: 14,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
           }}
         >
-          ⚠️ Allergy Risk Summary
+          <AlertTriangle style={{ width: 16, height: 16 }} />
+          Allergy Risk Summary
         </button>
         <button
           onClick={() => setActiveTab('mismatches')}
@@ -413,10 +436,14 @@ export default function ReportingPage() {
             color: activeTab === 'mismatches' ? 'var(--color-primary)' : 'var(--text-secondary)',
             fontWeight: activeTab === 'mismatches' ? 700 : 500,
             fontSize: 14,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
           }}
         >
-          🥗 Special Diets & Textures
+          <Utensils style={{ width: 16, height: 16 }} />
+          Special Diets & Textures
         </button>
         <button
           onClick={() => setActiveTab('variance')}
@@ -428,10 +455,14 @@ export default function ReportingPage() {
             color: activeTab === 'variance' ? 'var(--color-primary)' : 'var(--text-secondary)',
             fontWeight: activeTab === 'variance' ? 700 : 500,
             fontSize: 14,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
           }}
         >
-          📊 Production Variance
+          <BarChart3 style={{ width: 16, height: 16 }} />
+          Production Variance
         </button>
         {canSeeBudget && (
           <button
@@ -444,12 +475,35 @@ export default function ReportingPage() {
               color: activeTab === 'budget' ? 'var(--color-primary)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'budget' ? 700 : 500,
               fontSize: 14,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
             }}
           >
-            💰 Budget Targets
+            <Wallet style={{ width: 16, height: 16 }} />
+            Budget Targets
           </button>
         )}
+        <button
+          onClick={() => setActiveTab('cms-survey')}
+          style={{
+            padding: '10px 18px',
+            border: 'none',
+            background: 'none',
+            borderBottom: activeTab === 'cms-survey' ? '3px solid var(--color-primary)' : '3px solid transparent',
+            color: activeTab === 'cms-survey' ? 'var(--color-primary)' : 'var(--text-secondary)',
+            fontWeight: activeTab === 'cms-survey' ? 700 : 500,
+            fontSize: 14,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+        >
+          <FileCheck style={{ width: 16, height: 16 }} />
+          CMS-2567 Survey Binder
+        </button>
       </div>
 
       {/* Cost per Resident Day Tab */}
@@ -758,6 +812,11 @@ export default function ReportingPage() {
         <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', padding: 20, boxShadow: 'var(--shadow-sm)' }}>
           <BudgetTargetsSection />
         </div>
+      )}
+
+      {/* CMS-2567 Survey Binder Tab */}
+      {activeTab === 'cms-survey' && (
+        <CmsSurveyBinderSection />
       )}
 
       {/* Modal: Add Cost Snapshot */}

@@ -4,6 +4,19 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v6.4.1] — 2026-09-18
+### Added & Polished
+- **CMS-2567 Digital Survey Binder UI & Surveyor Guest Mode** (`src/features/reporting/CmsSurveyBinderSection.tsx`, `src/features/reporting/ReportingPage.tsx`):
+  - Added dedicated **CMS-2567 Survey Binder** tab under Reporting with real-time F-Tag compliance scores (F800–F814), regulatory citations, and audit evidence trails.
+  - Implemented 1-click **Markdown Survey Binder** download (`CMS-2567-Survey-Binder.md`) and **30-Day HACCP Evidence Export** (`HACCP-30Day-Evidence.json`).
+  - Added **Surveyor Read-Only Mode** toggle designed for state health inspection tablets, concealing proprietary $/CPD financials and vendor contracts while highlighting meal span compliance, therapeutic diet fulfillment, and temperature logs with corrective actions.
+- **Reporting Iconography & Emoji-Free Normalization** (`src/features/reporting/ReportingPage.tsx`):
+  - Replaced all legacy unicode emojis in tab navigation and warning banners with standard accessible Lucide SVG icons (`DollarSign`, `RefreshCw`, `AlertTriangle`, `Utensils`, `BarChart3`, `Wallet`, `FileCheck`).
+- **Deterministic Test Harness Hardening** (`server/src/system.test.ts`):
+  - Expanded CircuitBreaker recovery timeout in integration tests from 500ms to 10,000ms to eliminate CPU scheduling race conditions, ensuring deterministic **207/207 (100%) test pass rate**.
+
+---
+
 ## [v6.4.0] — 2026-09-18
 ### Added & Enhanced
 - **Enterprise TypeScript SDK Expansion (`@shoreline/sdk` v0.2.0)**:

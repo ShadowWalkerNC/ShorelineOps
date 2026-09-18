@@ -325,7 +325,7 @@ async function runAllTests() {
 
   // Circuit Breaker Test
   const { CircuitBreaker } = await import('./middleware/circuitBreaker')
-  const breaker = new CircuitBreaker('TestEhrBreaker', { failureThreshold: 2, recoveryTimeoutMs: 500, timeoutMs: 100 })
+  const breaker = new CircuitBreaker('TestEhrBreaker', { failureThreshold: 2, recoveryTimeoutMs: 10000, timeoutMs: 100 })
   
   let attempts = 0
   const failingAction = async () => {

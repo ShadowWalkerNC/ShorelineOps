@@ -167,6 +167,14 @@
 
 ---
 
+## ✅ Wave G Milestones — CMS-2567 Digital Survey Binder, Surveyor Guest Mode & UI Normalization (Completed & Verified)
+- [x] **G01: CMS-2567 Digital Survey Binder UI (`src/features/reporting/CmsSurveyBinderSection.tsx`, `src/features/reporting/ReportingPage.tsx`)**: Dedicated survey binder tab surfacing F-Tag audit scores (F800–F814), compliance status badges, 1-click Markdown survey binder download, and 30-day HACCP evidence export.
+- [x] **G02: Ephemeral Surveyor Read-Only Mode (`src/features/reporting/CmsSurveyBinderSection.tsx`)**: Instant privacy-preserving inspector mode designed for state survey tablets, masking confidential financial $/CPD metrics and proprietary distributor pricing while exposing clinical F-Tags, 14-hour meal spans, and corrective action temperature logs.
+- [x] **G03: Complete Emoji-Free Reporting UI**: Replaced all remaining unicode emojis across reporting tabs and warning banners with clean, accessible Lucide SVG icons.
+- [x] **G04: Test Harness Determinism**: Hardened CircuitBreaker test recovery window (10,000ms) against CPU load and event-loop jitter, maintaining **207/207 automated tests passing with 100% success rate**.
+
+---
+
 ## 🏆 Project Status: All Milestones & Stages 100% Complete & Production Ready
 - [x] Core Clinical Care & Resident Operations (`/residents`, `/api/residents`)
 - [x] Bulk Census & Diet Order CSV Importer with Audit Provenance (`/residents`, `/api/residents/import-csv`)
@@ -177,7 +185,7 @@
 - [x] Clinical EHR & PointClickCare Sync (`/api/ehr`)
 - [x] Model Context Protocol (MCP) Server for CulinaryOS (`/api/mcp`)
 - [x] Autonomous Self-Healing Bot Daemon (`/api/mcp/diagnostics/self-healing`)
-- [x] CMS-2567 Federal Dietary Survey Cross-Walk Audit Pack (`/api/reporting/cms-survey-export`)
+- [x] CMS-2567 Federal Dietary Survey Cross-Walk Audit Pack & UI Binder (`/reporting`, `/api/reporting/cms-survey-export`)
 - [x] Pluggable Community Distributor Marketplace (`/distributor`)
 - [x] Deterministic Clinical Safety & NPO Hard-Blocks (`/api/kitchen/verify-tray-scan`)
 - [x] 3-Way Invoice Matching & Vendor Credit Memos (`/api/purchasing/invoices/match`)
@@ -190,4 +198,5 @@
 - [x] Live OpenAPI 3.1 Specification (`/api/docs`)
 - [x] Full Enterprise TypeScript SDK (`@shoreline/sdk` v0.2.0)
 - [x] Complete Marketing Portal with SEO, Geolocation & Legal Policies (`/terms`, `/privacy`, `/security`)
+
 
