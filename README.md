@@ -7,7 +7,7 @@
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
 [![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-platform-interface-tour)
 [![Security: HIPAA Technical Safeguards](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
-[![Tests: 155/155 Passing](https://img.shields.io/badge/Tests-155%2F155%20Passing%20(100%25)-brightgreen.svg)](#-4-run-automated-test-suite)
+[![Tests: 175/175 Passing](https://img.shields.io/badge/Tests-175%2F175%20Passing%20(100%25)-brightgreen.svg)](#-4-run-automated-test-suite)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
 **Engineered by a healthcare executive chef, not a venture fund.**  
@@ -98,14 +98,23 @@ In healthcare dining, culinary operations are clinical care:
 | Module | Route | Key Capabilities | Target User |
 |---|---|---|---|
 | **Executive Dashboard** | `/` | Census telemetry, $/CPD cost gauges, IDDSI distribution chart, real-time safety alerts | Executive Dir / CDM |
-| **Residents & Diets** | `/residents` | Therapeutic diets (NAS, NCS, Renal), IDDSI levels, allergies, PointClickCare EHR triage queue | Registered Dietitian |
+| **Residents & Diets** | `/residents` | Therapeutic diets (NAS, NCS, Renal), IDDSI levels, allergies, PointClickCare EHR triage queue, and Bulk Census CSV Importer | Registered Dietitian |
 | **Menu Cycle Planner** | `/menu` | 4-week cycle menus, Choice A/B alternates, recipe drawer, nutrition totals | Executive Chef |
 | **Batch Production** | `/production` | Production sheets built from the scheduled menu × census forecast (with census-trend buffer), scaled prep sheets, cooking stations, durable HACCP temp logs | Line Cooks |
 | **Standardized Recipes** | `/recipes` | Master recipe book, ingredient scaling, Big 9 allergen detector, USDA nutrient solver, recipe costing with SKU/estimated provenance | Cooks & Bakers |
-| **Digital Tray Cards** | `/kitchen/traycards` | High-contrast thermal tickets, HMAC-signed QR tokens carrying the resident profile version (stale cards scan as `SUPERSEDED`), barcode assembly verification | Dining Aides |
+| **Digital Tray Cards** | `/kitchen/traycards` | High-contrast 4" x 6" thermal meal tickets with human-readable typography, strict "NO SELECTION" fallback, and scanner verification | Dining Aides |
 | **Purchasing & Split MRP** | `/purchasing` | Dennis/Sysco order guides, lowest-cost split POs, 3-way invoice match, credit memos | Dietary Director |
 | **CMS Survey Reporting** | `/reporting` | CMS-2567 digital survey binder export (F800–F814) incl. durable HACCP log evidence, $/CPD cost audits, substitution logs, budget targets & spend | Administrator / CDM |
 | **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times — server-synced across devices with offline cache & sync indicator | System Admin |
+
+## 🛡️ Wave D — Clinical Safety Hardening & Zero Split-Brain Persistence
+
+- **P0-1: Zero Split-Brain Data Layer Across Stores** (`server/src/db/migrate.ts` Migration 025): Centralized backend persistence for `staff_profiles`, `call_outs`, `budget_periods`, `budget_entries`, `communications`, `timecard_punches`, and `production_sheets`. Migrated `staffStore.ts`, `productionStore.ts`, `budgetStore.ts`, `communicationsStore.ts`, and `timecard.ts` to live Express API endpoints with SQLite/PostgreSQL auto-failover and boot-time schema integrity checks (`assertSchemaIntegrity()`).
+- **P0-2: Paper Tray Card Scanner Safety** (`TrayCardGeneratorPage.tsx`): Completely removed scannable QR codes (`<TrayQr />`) from printed paper tray cards, preventing false-positive scanner matches. Replaced with bold, high-contrast human-readable typography (room, portion size, meal slot).
+- **P0-3: Eliminate Simulated HACCP Telemetry** (`WebBluetoothProbe.ts`): Eliminated fake `165.4°F` readings and random variance. The probe now strictly requires an authentic Bluetooth connection and throws actionable errors if disconnected.
+- **P0-4: Safe Entrée Fallback** (`server/src/routes/kitchen.ts`): Replaced fake `"Roasted Chicken Breast"` fallback with `'NO SELECTION — CONFIRM WITH DIETARY'` and tagged audit provenance as `'no-selection-fallback'`.
+- **P0-5: 4" x 6" Thermal Card Print Formatting** (`TrayCardGeneratorPage.tsx`): Enforced `@page { size: 4in 6in; margin: 0.1in; }` CSS with `.tray-card-print` layout for thermal card printers.
+- **Decision 9: Bulk Census & Diet Order CSV Importer** (`/residents`, `/api/residents/import-csv`): Role-gated CSV importer with RFC-compliant parser, multi-allergen list handling, NPO flags, and automatic version history tracking in `resident_profile_history`.
 
 ## 🆕 Wave C — Kitchen Operations & Cost Transparency
 
@@ -181,7 +190,7 @@ npm run dev:all
 ```bash
 npm test
 ```
-All **155 system integration, clinical dietary, and safety tests** pass with 100% success rate across all operational domains.
+All **175 system integration, clinical dietary, and safety tests** pass with 100% success rate across all operational domains.
 
 ---
 

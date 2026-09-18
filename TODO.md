@@ -130,12 +130,23 @@
 - [x] **C05: Production Forecasting with Census-Trend Buffer & Nightly Usage Rollup (`server/src/engine/production.ts`, `server/src/jobs/nightlyForecast.ts`)**: Calculates production worksheets from scheduled menu × current census + trend buffer (`buffer = ceil(census * (0.03 + growth))`). Nightly job computes 28-day trailing usage from inventory transactions.
 - [x] **C06: Recipe Costing with Provenance (`server/src/engine/costing.ts`, `server/src/routes/recipes.ts`, `src/features/reporting/ReportingPage.tsx`)**: Recomputes recipe serving costs tagged with SKU-matched vs. estimated provenance, rolling up to daily cost logs and $/CPD breakdowns.
 - [x] **C07: Live OpenAPI 3.1 Documentation (`server/src/docs/openapi.json`, `server/scripts/generate-openapi.mjs`)**: Complete REST API specification mounted live at `/api/docs`.
-- [x] **Comprehensive End-to-End System Test Suite (`server/src/system.test.ts`)**: **155/155 automated tests passing with 100% success rate** across all 28 test sections.
+
+---
+
+## ✅ Wave D Milestones — Clinical Safety Defect Hardening, Zero Split-Brain Data Layer & Census CSV Importer (Completed & Verified)
+- [x] **P0-1: Zero Split-Brain Data Layer Across Stores (`server/src/db/migrate.ts` Migration 025)**: Centralized backend persistence for `staff_profiles`, `call_outs`, `budget_periods`, `budget_entries`, `communications`, `timecard_punches`, and `production_sheets`. Migrated `staffStore.ts`, `productionStore.ts`, `budgetStore.ts`, `communicationsStore.ts`, and `timecard.ts` to live Express API endpoints with SQLite/Postgres auto-failover and boot-time schema integrity checks.
+- [x] **P0-2: Paper Tray Card Scanner Safety (`src/features/kitchen/TrayCardGeneratorPage.tsx`)**: Removed `<TrayQr>` and `qrcode.react` imports from paper tray cards, eliminating false-positive scanner match risks. Upgraded to high-contrast, human-readable bold clinical typography.
+- [x] **P0-3: Eliminate Simulated HACCP Probe Readings (`src/features/kitchen/WebBluetoothProbe.ts`)**: Completely eliminated fabricated 165.4°F readings and `Math.random` variance. Disconnected or missing Bluetooth GATT telemetry now strictly throws actionable errors, preventing false compliance records.
+- [x] **P0-4: Safe Fallback Entree Enforcement (`server/src/routes/kitchen.ts`)**: Replaced fake `"Roasted Chicken Breast"` fallback with `'NO SELECTION — CONFIRM WITH DIETARY'` and tagged audit provenance as `'no-selection-fallback'` to prevent serving unverified meat or allergens to residents without diet selections.
+- [x] **P0-5: Thermal Card Print Media Formatting (`src/features/kitchen/TrayCardGeneratorPage.tsx`)**: Enforced `@page { size: 4in 6in; margin: 0.1in; }` CSS with `.tray-card-print` layout for clean, unclipped 4" x 6" thermal meal tickets.
+- [x] **Decision 9: Bulk Census & Diet Order CSV Importer (`server/src/routes/residents.ts`, `src/features/residents/components/CensusImportModal.tsx`)**: Built RFC-compliant CSV parser supporting quoted strings, multi-allergen arrays, NPO flags/reasons, and fluid restrictions. Automatically increments `resident_profile_history` version and writes immutable audit logs. Added modal with drag-and-drop, raw paste, sample template download, and real-time validation summary.
+- [x] **System Integration Test Suite Expansion (`server/src/system.test.ts`)**: **175/175 automated tests passing with 100% success rate** across all 29 operational subsystems.
 
 ---
 
 ## 🏆 Project Status: All Milestones & Stages 100% Complete & Production Ready
 - [x] Core Clinical Care & Resident Operations (`/residents`, `/api/residents`)
+- [x] Bulk Census & Diet Order CSV Importer with Audit Provenance (`/residents`, `/api/residents/import-csv`)
 - [x] 4-Week Seasonal Cycle Menu Planning (`/menu`, `/api/menu`)
 - [x] Smart Master Recipe Book & Allergen Auto-Scanner (`/recipes`, `/api/recipes`)
 - [x] Touch Kitchen Tablet Kiosk & Durable HACCP Logger (`/kitchen/orders`, `/kitchen/sheet`, `TempLogPanel`)
@@ -152,4 +163,5 @@
 - [x] Server-Synced Facility & Operations Settings (`/settings`, `/api/admin/facility-settings`)
 - [x] Tray Tracking SLA State Machine (`/features/traydispatch`, `/api/trayruns`)
 - [x] Server-Backed Inventory Ledger & Transactions (`/api/inventory`)
+- [x] Zero Split-Brain Data Layer Across All Kiosks & Workstations (`server/src/db/migrate.ts` Migration 025)
 - [x] Live OpenAPI 3.1 Specification (`/api/docs`)
