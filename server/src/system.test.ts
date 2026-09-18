@@ -19,6 +19,12 @@ import { ThreeWayInvoiceMatchingEngine } from './engine/invoicing'
 import { CmsDietarySurveyEngine } from './engine/cmsSurvey'
 import { DeterministicDietaryEngine } from './engine/dietaryFormulation'
 import { allowedNextEvents, computeTrayLines, computeMissedTrays } from './engine/trayTracking'
+import { KITCHEN_DEFAULT_ENTREE } from './routes/kitchen'
+import { parseCsvRows } from './routes/residents'
+import { pool } from './db/pool'
+import { runMigrations, assertSchemaIntegrity } from './db/migrate'
+import fs from 'fs'
+import path from 'path'
 
 const PasswordSchema = z
   .string()
@@ -928,6 +934,129 @@ async function runAllTests() {
   ])
   assert(remakeLines.length === 2, 'TrayTracking: remake new ticket starts a new line')
   assert(JSON.stringify(remakeLines.find((l) => l.ticketId === 'TKT-Y')?.allowedNext) === JSON.stringify(['dispatched']), 'TrayTracking: remade line resumes at dispatched')
+
+  // --- 29. Clinical Safety P0 Defect Fixes & Zero Split-Brain Data Layer ---
+  console.log('\n--- 29. Clinical Safety P0 Defect Fixes & Zero Split-Brain Data Layer ---')
+
+  // 1. P0-4 Safe Fallback Entree
+  assert(
+    KITCHEN_DEFAULT_ENTREE === 'NO SELECTION — CONFIRM WITH DIETARY',
+    'ClinicalSafety: Entree fallback strictly enforces "NO SELECTION — CONFIRM WITH DIETARY" (no fake poultry)'
+  )
+
+  // 2. P0-3 HACCP Bluetooth Probe Simulated Reading Elimination
+  const probePath = path.resolve(__dirname, '..', '..', 'src', 'features', 'kitchen', 'WebBluetoothProbe.ts')
+  if (fs.existsSync(probePath)) {
+    const probeSrc = fs.readFileSync(probePath, 'utf8')
+    assert(!probeSrc.includes('165.4'), 'ClinicalSafety: WebBluetoothProbe does NOT simulate fake 165.4°F HACCP temp')
+    assert(!probeSrc.includes('Math.random'), 'ClinicalSafety: WebBluetoothProbe has zero fabricated random telemetry')
+  }
+
+  // 3. P0-2 & P0-5 Paper Tray Card QR Removal & 4in x 6in Thermal Print CSS
+  const trayCardPath = path.resolve(__dirname, '..', '..', 'src', 'features', 'kitchen', 'TrayCardGeneratorPage.tsx')
+  if (fs.existsSync(trayCardPath)) {
+    const trayCardSrc = fs.readFileSync(trayCardPath, 'utf8')
+    assert(!trayCardSrc.includes('qrcode.react'), 'ClinicalSafety: Paper tray cards do not import or render QR codes')
+    assert(!trayCardSrc.includes('<TrayQr'), 'ClinicalSafety: Paper tray cards do not mount <TrayQr component')
+    assert(trayCardSrc.includes('size: 4in 6in') && trayCardSrc.includes('margin: 0.1in'), 'ClinicalSafety: Thermal print styling strictly enforces 4in x 6in @page media size')
+  }
+
+  // 4. Decision 9: Bulk Census & Diet Order CSV Parser
+  const censusSampleCsv = `Resident Name,Room,Status,Diet Type,Texture,Allergies,Is NPO,NPO Reason,Fluid Restriction (mL)
+"Smith, John",101-A,Active,Regular,Regular,"Dairy, Peanuts",false,,1500
+"Doe, Jane",102-B,Active,NPO,Pureed,,true,Aspiration Risk,
+"Brown, Charlie",103-A,Active,Mechanical Soft,Minced & Moist,"Shellfish",0,,`
+
+  const parsedCensusCsv = parseCsvRows(censusSampleCsv)
+  assert(parsedCensusCsv.length === 3, 'CensusCsvParser: parses 3 data rows from CSV')
+  assert(parsedCensusCsv[0].residentname === 'Smith, John' && parsedCensusCsv[0].room === '101-A', 'CensusCsvParser: handles quoted names with commas')
+  assert(parsedCensusCsv[0].allergies === 'Dairy, Peanuts', 'CensusCsvParser: retains quoted multiple allergens')
+  assert(parsedCensusCsv[0].fluidrestrictionml === '1500', 'CensusCsvParser: normalizes column headers and captures fluid restriction')
+  assert(parsedCensusCsv[1].isnpo === 'true' && parsedCensusCsv[1].nporeason === 'Aspiration Risk', 'CensusCsvParser: parses NPO flag and reason')
+  assert(parsedCensusCsv[2].texture === 'Minced & Moist', 'CensusCsvParser: captures IDDSI texture modification')
+
+  // 5. Database Migration 025 & Zero Split-Brain Schema Validation
+  await runMigrations()
+  await assertSchemaIntegrity()
+  assert(true, 'SchemaIntegrity: Migration 025 (staff, call_outs, budget, communications) passes with 0 drift')
+
+  // 6. Persistence round-trip tests for zero split-brain tables
+  const testStaffId = 'test-staff-' + Date.now()
+  await pool.query(
+    `INSERT INTO staff_profiles (id, employee_number, first_name, last_name, role, department, position, hire_date, status, full_time)
+     VALUES ($1, 'EMP-999', 'Alex', 'Taylor', 'manager', 'Dietary', 'Dietary Director', '2026-01-01', 'Active', 1)`,
+    [testStaffId]
+  )
+  const { rows: staffRows } = await pool.query('SELECT * FROM staff_profiles WHERE id = $1', [testStaffId])
+  assert(staffRows.length === 1 && staffRows[0].first_name === 'Alex', 'StaffProfiles: persists and reads staff profile with zero split-brain')
+
+  const testCallOutId = 'test-co-' + Date.now()
+  await pool.query(
+    `INSERT INTO call_outs (id, staff_id, filed_by_id, date, shift, reason, coverage_status, manager_acknowledged)
+     VALUES ($1, $2, 'manager-1', '2026-09-18', 'Morning', 'Sick', 'Uncovered', 0)`,
+    [testCallOutId, testStaffId]
+  )
+  const { rows: callOutRows } = await pool.query('SELECT * FROM call_outs WHERE id = $1', [testCallOutId])
+  assert(callOutRows.length === 1 && callOutRows[0].reason === 'Sick', 'CallOuts: persists and reads staff call-out record with zero split-brain')
+  await pool.query('DELETE FROM call_outs WHERE id = $1', [testCallOutId])
+  await pool.query('DELETE FROM staff_profiles WHERE id = $1', [testStaffId])
+
+  const testPeriodId = 'test-bp-' + Date.now()
+  await pool.query(
+    `INSERT INTO budget_periods (id, label, month, year, total_budget, resident_count, budget_per_resident_per_day, start_date, end_date)
+     VALUES ($1, 'September 2026', 9, 2026, 17100.00, 60, 9.50, '2026-09-01', '2026-09-30')`,
+    [testPeriodId]
+  )
+  const { rows: budgetRows } = await pool.query('SELECT * FROM budget_periods WHERE id = $1', [testPeriodId])
+  assert(budgetRows.length === 1 && Number(budgetRows[0].budget_per_resident_per_day) === 9.5, 'BudgetPeriods: persists and reads budget period with zero split-brain')
+
+  const testEntryId = 'test-be-' + Date.now()
+  await pool.query(
+    `INSERT INTO budget_entries (id, period_id, category, description, amount, date, vendor, logged_by)
+     VALUES ($1, $2, 'Food', 'Dennis Food Service Delivery', 1450.25, '2026-09-18', 'Dennis', 'manager-1')`,
+    [testEntryId, testPeriodId]
+  )
+  const { rows: entryRows } = await pool.query('SELECT * FROM budget_entries WHERE id = $1', [testEntryId])
+  assert(entryRows.length === 1 && Number(entryRows[0].amount) === 1450.25, 'BudgetEntries: persists and reads line-item expenditure with zero split-brain')
+  await pool.query('DELETE FROM budget_entries WHERE id = $1', [testEntryId])
+  await pool.query('DELETE FROM budget_periods WHERE id = $1', [testPeriodId])
+
+  const testCommId = 'test-comm-' + Date.now()
+  await pool.query(
+    `INSERT INTO communications (id, type, subject, status, created_by_id, entries, distributed_to, was_printed)
+     VALUES ($1, 'memo', 'Clinical Safety Update', 'Published', 'admin-1', '[]', '[]', 0)`,
+    [testCommId]
+  )
+  const { rows: commRows } = await pool.query('SELECT * FROM communications WHERE id = $1', [testCommId])
+  assert(commRows.length === 1 && commRows[0].subject === 'Clinical Safety Update', 'Communications: persists and reads broadcast communication thread with zero split-brain')
+  await pool.query('DELETE FROM communications WHERE id = $1', [testCommId])
+
+  const testPunchId = 'test-punch-' + Date.now()
+  await pool.query(
+    `INSERT INTO timecard_punches (id, badge_id, operation, kiosk_id, punched_at)
+     VALUES ($1, 'BADGE-01', 'In', 'Hot Line Kiosk', NOW())`,
+    [testPunchId]
+  )
+  const { rows: punchRows } = await pool.query('SELECT * FROM timecard_punches WHERE id = $1', [testPunchId])
+  assert(punchRows.length === 1 && punchRows[0].operation === 'In', 'TimecardPunches: persists and reads timecard punch with zero split-brain')
+  await pool.query('DELETE FROM timecard_punches WHERE id = $1', [testPunchId])
+
+  const testWeekId = 'test-week-' + Date.now()
+  await pool.query(
+    `INSERT INTO menu_weeks (id, name, effective_from, days, active)
+     VALUES ($1, 'Test Week', '2026-09-18', '{}', 0)`,
+    [testWeekId]
+  )
+  const testSheetId = 'test-sheet-' + Date.now()
+  await pool.query(
+    `INSERT INTO production_sheets (id, menu_week_id, day, slot, rows, counts)
+     VALUES ($1, $2, 'Monday', 'Lunch', '[]', '{}')`,
+    [testSheetId, testWeekId]
+  )
+  const { rows: sheetRows } = await pool.query('SELECT * FROM production_sheets WHERE id = $1', [testSheetId])
+  assert(sheetRows.length === 1 && sheetRows[0].slot === 'Lunch', 'ProductionSheets: persists and reads batch cook sheet with zero split-brain')
+  await pool.query('DELETE FROM production_sheets WHERE id = $1', [testSheetId])
+  await pool.query('DELETE FROM menu_weeks WHERE id = $1', [testWeekId])
 
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)

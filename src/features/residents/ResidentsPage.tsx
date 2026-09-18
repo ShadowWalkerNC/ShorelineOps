@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useResidentsStore } from '@/state/residentsStore'
 import ResidentCardList from './components/ResidentCardList'
 import ResidentFormModal from './components/ResidentFormModal'
+import CensusImportModal from './components/CensusImportModal'
 import EhrReconciliationQueue from './EhrReconciliationQueue'
 import DietReviewFlags from './DietReviewFlags'
 import FeatureGate from '@/components/FeatureGate'
@@ -19,6 +20,7 @@ import {
   ShieldCheck,
   RefreshCw,
   X,
+  FileSpreadsheet,
 } from 'lucide-react'
 
 // Skeleton card for loading state
@@ -54,6 +56,7 @@ export default function ResidentsPage() {
   }, [debouncedQuery])
 
   const [editing, setEditing] = useState<Resident | null | undefined>(undefined)
+  const [showImportModal, setShowImportModal] = useState(false)
   const isModalOpen = editing !== undefined
 
   const handleSave = useCallback(
@@ -115,7 +118,15 @@ export default function ResidentsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <AppleButton
+            variant="secondary"
+            size="md"
+            icon={<FileSpreadsheet className="w-4 h-4" />}
+            onClick={() => setShowImportModal(true)}
+          >
+            Import Census CSV
+          </AppleButton>
           <AppleButton
             variant="primary"
             size="md"
@@ -303,6 +314,13 @@ export default function ResidentsPage() {
           onClose={() => setEditing(undefined)}
         />
       )}
+
+      {/* CSV Census & Diet Order Importer Modal */}
+      <CensusImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => fetchRef.current(debouncedQuery || undefined)}
+      />
     </div>
   )
 }

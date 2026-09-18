@@ -17,6 +17,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 export const CANONICAL_MEALS = ['Breakfast', 'Lunch', 'Dinner'] as const
 export const CANONICAL_SNACK_SLOTS = ['morningSnack', 'afternoonSnack', 'eveningSnack'] as const
 const MEALS = CANONICAL_MEALS
+export const KITCHEN_DEFAULT_ENTREE = 'NO SELECTION — CONFIRM WITH DIETARY'
 
 // B08: read-time legacy mapping — stored 'Supper' rows count as 'Dinner'.
 // Portable CASE expression works on both SQLite and PostgreSQL.
@@ -320,7 +321,7 @@ import { KitchenProductionEngine, ResidentServiceProfile } from '../engine/produ
  *   3. weekly_orders choice_selected (1/2) → meal_options dish for that choice
  *   4. Opt1 fallback       → meal_options dish for choice 1
  *   5. explicit `entree` query param (kitchen override)
- *   6. 'Roasted Chicken Breast' last-resort default (labelled as such)
+ *   6. 'NO SELECTION — CONFIRM WITH DIETARY' last-resort default (labelled as such)
  *
  * NPO / allergen handling is unchanged — the engine still blocks NPO
  * entrées and flags allergies after this resolution.
@@ -349,7 +350,6 @@ kitchenRouter.get('/traycards-generated', async (req, res, next) => {
     const entreeParam = typeof req.query.entree === 'string' && req.query.entree.trim() !== ''
       ? String(req.query.entree)
       : null
-    const KITCHEN_DEFAULT_ENTREE = 'Roasted Chicken Breast'
 
     // B01: full clinical columns — the engine must see real NPO status,
     // fluid restrictions, and profile versions (stale defaults caused
@@ -423,7 +423,7 @@ kitchenRouter.get('/traycards-generated', async (req, res, next) => {
         if (Number(order.is_declined) === 1) {
           return {
             entree: entreeParam ?? KITCHEN_DEFAULT_ENTREE,
-            entreeSource: entreeParam ? 'explicit-param (resident declined)' : 'kitchen-default (resident declined)',
+            entreeSource: entreeParam ? 'explicit-param (resident declined)' : 'no-selection-fallback (resident declined)',
           }
         }
         if (Number(order.is_alternative) === 1 && String(order.modifier_text ?? '').trim() !== '') {
@@ -438,7 +438,7 @@ kitchenRouter.get('/traycards-generated', async (req, res, next) => {
       }
       // No usable order row or no meal_options wiring for this slot.
       if (entreeParam) return { entree: entreeParam, entreeSource: 'explicit-param' }
-      return { entree: KITCHEN_DEFAULT_ENTREE, entreeSource: 'kitchen-default' }
+      return { entree: KITCHEN_DEFAULT_ENTREE, entreeSource: 'no-selection-fallback' }
     }
 
     // generateTrayCards is per-resident so each card carries that resident's

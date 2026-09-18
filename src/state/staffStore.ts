@@ -10,6 +10,7 @@
 // ============================================================
 
 import { create } from 'zustand'
+import { api } from '@/api/client'
 import { supabase } from '@/lib/supabase'
 import type { StaffProfile, CallOut, ScheduleEntry } from '../types/staff'
 import type { UserRole } from '../types/roles'
@@ -18,25 +19,25 @@ import type { UserRole } from '../types/roles'
 
 function toProfile(row: Record<string, unknown>): StaffProfile {
   return {
-    id:              row.id             as string,
-    authUserId:      (row.auth_user_id  as string) ?? '',
-    employeeNumber:  (row.employee_number as string) ?? '',
-    firstName:       (row.first_name    as string) ?? '',
-    lastName:        (row.last_name     as string) ?? '',
-    preferredName:   row.preferred_name as string | undefined,
-    role:            (row.role          as UserRole) ?? 'staff',
-    department:      (row.department    as StaffProfile['department']) ?? 'Dietary',
-    position:        (row.position      as string) ?? '',
-    hireDate:        (row.hire_date     as string) ?? '',
-    status:          (row.status        as StaffProfile['status']) ?? 'Active',
-    fullTime:        Boolean(row.full_time ?? false),
-    phone:           row.phone          as string | undefined,
-    email:           row.email          as string | undefined,
-    emergencyContact: row.emergency_contact as StaffProfile['emergencyContact'] | undefined,
-    certifications:  (row.certifications as StaffProfile['certifications']) ?? [],
-    managerNotes:    row.manager_notes  as string | undefined,
-    createdAt:       (row.created_at    as string) ?? new Date().toISOString(),
-    updatedAt:       (row.updated_at    as string) ?? new Date().toISOString(),
+    id:              (row.id as string) ?? '',
+    authUserId:      ((row.auth_user_id ?? row.authUserId) as string) ?? '',
+    employeeNumber:  ((row.employee_number ?? row.employeeNumber) as string) ?? '',
+    firstName:       ((row.first_name ?? row.firstName) as string) ?? '',
+    lastName:        ((row.last_name ?? row.lastName) as string) ?? '',
+    preferredName:   (row.preferred_name ?? row.preferredName) as string | undefined,
+    role:            ((row.role as UserRole) ?? 'staff'),
+    department:      ((row.department as StaffProfile['department']) ?? 'Dietary'),
+    position:        ((row.position as string) ?? ''),
+    hireDate:        ((row.hire_date ?? row.hireDate) as string) ?? '',
+    status:          ((row.status as StaffProfile['status']) ?? 'Active'),
+    fullTime:        Boolean(row.full_time ?? row.fullTime ?? false),
+    phone:           (row.phone as string) || undefined,
+    email:           (row.email as string) || undefined,
+    emergencyContact: (row.emergency_contact ?? row.emergencyContact) as StaffProfile['emergencyContact'] | undefined,
+    certifications:  ((row.certifications as StaffProfile['certifications']) ?? []),
+    managerNotes:    (row.manager_notes ?? row.managerNotes) as string | undefined,
+    createdAt:       ((row.created_at ?? row.createdAt) as string) ?? new Date().toISOString(),
+    updatedAt:       ((row.updated_at ?? row.updatedAt) as string) ?? new Date().toISOString(),
   }
 }
 
@@ -63,19 +64,19 @@ function profileToRow(data: Partial<StaffProfile>): Record<string, unknown> {
 
 function toCallOut(row: Record<string, unknown>): CallOut {
   return {
-    id:               row.id               as string,
-    staffId:          (row.staff_id        as string) ?? '',
-    filedById:        (row.filed_by_id     as string) ?? '',
-    date:             (row.date            as string) ?? '',
-    shift:            (row.shift           as CallOut['shift']) ?? 'Morning',
-    reason:           (row.reason          as CallOut['reason']) ?? 'Other',
-    notes:            row.notes            as string | undefined,
-    followUpRequired: Boolean(row.follow_up_required ?? false),
-    followUpNotes:    row.follow_up_notes  as string | undefined,
-    wasCovered:       Boolean(row.was_covered ?? false),
-    coveredById:      row.covered_by_id    as string | undefined,
-    createdAt:        (row.created_at      as string) ?? new Date().toISOString(),
-    updatedAt:        (row.updated_at      as string) ?? new Date().toISOString(),
+    id:               (row.id as string) ?? '',
+    staffId:          ((row.staff_id ?? row.staffId) as string) ?? '',
+    filedById:        ((row.filed_by_id ?? row.filedById) as string) ?? '',
+    date:             ((row.date as string) ?? ''),
+    shift:            ((row.shift as CallOut['shift']) ?? 'Morning'),
+    reason:           ((row.reason as CallOut['reason']) ?? 'Other'),
+    notes:            (row.notes as string) || undefined,
+    followUpRequired: Boolean(row.follow_up_required ?? row.followUpRequired ?? false),
+    followUpNotes:    (row.follow_up_notes ?? row.followUpNotes) as string | undefined,
+    wasCovered:       Boolean(row.was_covered ?? row.wasCovered ?? (row.coverage_status === 'Covered')),
+    coveredById:      ((row.covered_by_id ?? row.coveredById ?? row.replacement_staff_id) as string) || undefined,
+    createdAt:        ((row.created_at ?? row.createdAt) as string) ?? new Date().toISOString(),
+    updatedAt:        ((row.updated_at ?? row.updatedAt) as string) ?? new Date().toISOString(),
   }
 }
 
@@ -94,31 +95,25 @@ function callOutToRow(data: Partial<CallOut>): Record<string, unknown> {
   return r
 }
 
-// ── Store ────────────────────────────────────────────────────────────────────
+// ── State interface ──────────────────────────────────────────────────────────
 
-interface StaffState {
+export interface StaffState {
   profiles:  StaffProfile[]
   callOuts:  CallOut[]
   schedule:  ScheduleEntry[]
   isLoading: boolean
   error:     string | null
 
-  fetch: () => Promise<void>
+  fetch:               () => Promise<void>
+  addProfile:          (data: Omit<StaffProfile, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateProfile:       (id: string, data: Partial<StaffProfile>) => Promise<void>
+  removeProfile:       (id: string) => Promise<void>
 
-  addProfile:    (profile: Omit<StaffProfile, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
-  updateProfile: (id: string, updates: Partial<StaffProfile>) => Promise<void>
-  removeProfile: (id: string) => Promise<void>
+  addCallOut:          (data: Omit<CallOut, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateCallOut:       (id: string, data: Partial<CallOut>) => Promise<void>
+  removeCallOut:       (id: string) => Promise<void>
 
-  addCallOut:    (callOut: Omit<CallOut, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
-  updateCallOut: (id: string, updates: Partial<CallOut>) => Promise<void>
-  removeCallOut: (id: string) => Promise<void>
-
-  /**
-   * Returns call-outs filtered by viewer identity.
-   * A staff member (role < manager) can NEVER see their own call-outs.
-   * Enforce at Postgres RLS level as well.
-   */
-  getCallOuts: (viewerAuthUserId: string, viewerRole: UserRole) => CallOut[]
+  getCallOuts:         (viewerAuthUserId: string, viewerRole: UserRole) => CallOut[]
 
   addScheduleEntry:    (entry: ScheduleEntry) => void
   updateScheduleEntry: (id: string, updates: Partial<ScheduleEntry>) => void
@@ -126,6 +121,8 @@ interface StaffState {
 
   profileByAuthId: (authUserId: string) => StaffProfile | undefined
 }
+
+const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export const useStaffStore = create<StaffState>((set, get) => ({
   profiles:  [],
@@ -136,6 +133,24 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   fetch: async () => {
     set({ isLoading: true, error: null })
+    if (!isDemo) {
+      try {
+        const [profilesRes, callOutsRes] = await Promise.all([
+          api.get('/admin/staff'),
+          api.get('/admin/call-outs'),
+        ])
+        if (Array.isArray(profilesRes.data) && Array.isArray(callOutsRes.data)) {
+          set({
+            profiles: profilesRes.data.map(toProfile),
+            callOuts: callOutsRes.data.map(toCallOut),
+            isLoading: false,
+          })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[staffStore] Live API fetch failed, falling back to local adapter:', err?.message)
+      }
+    }
     try {
       const [profilesRes, callOutsRes] = await Promise.all([
         supabase.from('staff_profiles').select('*').order('last_name'),
@@ -154,6 +169,17 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   },
 
   addProfile: async (data) => {
+    if (!isDemo) {
+      try {
+        const res = await api.post('/admin/staff', data)
+        if (res.data?.id) {
+          set(s => ({ profiles: [...s.profiles, toProfile(res.data)] }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[staffStore] Live API addProfile failed, falling back to local adapter:', err?.message)
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: row, error } = await (supabase.from('staff_profiles') as any)
       .insert(profileToRow(data as Partial<StaffProfile>)).select().single()
@@ -162,6 +188,17 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   },
 
   updateProfile: async (id, updates) => {
+    if (!isDemo) {
+      try {
+        const res = await api.put(`/admin/staff/${id}`, updates)
+        if (res.data?.id) {
+          set(s => ({ profiles: s.profiles.map(p => p.id === id ? toProfile(res.data) : p) }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[staffStore] Live API updateProfile failed, falling back to local adapter:', err?.message)
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: row, error } = await (supabase.from('staff_profiles') as any)
       .update({ ...profileToRow(updates), updated_at: new Date().toISOString() })
@@ -171,12 +208,32 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   },
 
   removeProfile: async (id) => {
+    if (!isDemo) {
+      try {
+        await api.delete(`/admin/staff/${id}`)
+        set(s => ({ profiles: s.profiles.filter(p => p.id !== id) }))
+        return
+      } catch (err: any) {
+        console.warn('[staffStore] Live API removeProfile failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { error } = await supabase.from('staff_profiles').delete().eq('id', id)
     if (error) throw new Error(error.message)
     set(s => ({ profiles: s.profiles.filter(p => p.id !== id) }))
   },
 
   addCallOut: async (data) => {
+    if (!isDemo) {
+      try {
+        const res = await api.post('/admin/call-outs', data)
+        if (res.data?.id) {
+          set(s => ({ callOuts: [toCallOut(res.data), ...s.callOuts] }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[staffStore] Live API addCallOut failed, falling back to local adapter:', err?.message)
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: row, error } = await (supabase.from('call_outs') as any)
       .insert(callOutToRow(data as Partial<CallOut>)).select().single()
@@ -194,6 +251,15 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   },
 
   removeCallOut: async (id) => {
+    if (!isDemo) {
+      try {
+        await api.delete(`/admin/call-outs/${id}`)
+        set(s => ({ callOuts: s.callOuts.filter(c => c.id !== id) }))
+        return
+      } catch (err: any) {
+        console.warn('[staffStore] Live API removeCallOut failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { error } = await supabase.from('call_outs').delete().eq('id', id)
     if (error) throw new Error(error.message)
     set(s => ({ callOuts: s.callOuts.filter(c => c.id !== id) }))

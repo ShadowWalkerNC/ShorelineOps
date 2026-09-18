@@ -31,6 +31,7 @@
  *     → production_sheets: planned vs produced
  */
 import { Router, Request, Response, NextFunction } from 'express'
+import { randomUUID } from 'crypto'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
@@ -596,3 +597,136 @@ reportingRouter.get('/haccp-temperature-log', async (req: Request, res: Response
   } catch (e) { next(e) }
 })
 // ─── end C01 additive region ──────────────────────────────────────────────
+
+// ════════════════════════════════════════════════════════════════════════════
+// BUDGET PERIODS & ENTRIES (Zero Split-Brain Persistence)
+// ════════════════════════════════════════════════════════════════════════════
+
+function toBudgetPeriod(row: any) {
+  return {
+    id: row.id,
+    label: row.label,
+    month: Number(row.month),
+    year: Number(row.year),
+    totalBudget: Number(row.total_budget ?? 0),
+    residentCount: Number(row.resident_count ?? 1),
+    budgetPerResidentPerDay: Number(row.budget_per_resident_per_day ?? 0),
+    startDate: row.start_date,
+    endDate: row.end_date,
+    createdAt: row.created_at,
+  }
+}
+
+function toBudgetEntry(row: any) {
+  return {
+    id: row.id,
+    periodId: row.period_id,
+    date: row.date,
+    vendor: row.vendor || null,
+    description: row.description || '',
+    amount: Number(row.amount ?? 0),
+    category: row.category || null,
+    invoiceRef: row.invoice_ref || null,
+    loggedBy: row.logged_by || null,
+    createdAt: row.created_at,
+  }
+}
+
+// GET /api/reporting/budget-periods
+reportingRouter.get('/budget-periods', async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM budget_periods ORDER BY year DESC, month DESC')
+    res.json(rows.map(toBudgetPeriod))
+  } catch (err) { next(err) }
+})
+
+// POST /api/reporting/budget-periods
+reportingRouter.post('/budget-periods', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    const id = d.id || randomUUID()
+    await pool.query(
+      `INSERT INTO budget_periods (id, label, month, year, total_budget, resident_count, budget_per_resident_per_day, start_date, end_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (id) DO UPDATE SET
+         label = EXCLUDED.label,
+         total_budget = EXCLUDED.total_budget,
+         resident_count = EXCLUDED.resident_count,
+         budget_per_resident_per_day = EXCLUDED.budget_per_resident_per_day,
+         start_date = EXCLUDED.start_date,
+         end_date = EXCLUDED.end_date`,
+      [
+        id, d.label, Number(d.month), Number(d.year),
+        Number(d.totalBudget || 0), Number(d.residentCount || 1),
+        Number(d.budgetPerResidentPerDay || 0), d.startDate || null, d.endDate || null,
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM budget_periods WHERE id = $1', [id])
+    res.status(201).json(toBudgetPeriod(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// GET /api/reporting/budget-entries[?periodId=]
+reportingRouter.get('/budget-entries', async (req, res, next) => {
+  try {
+    const periodId = req.query.periodId as string
+    if (periodId) {
+      const { rows } = await pool.query('SELECT * FROM budget_entries WHERE period_id = $1 ORDER BY date DESC', [periodId])
+      return res.json(rows.map(toBudgetEntry))
+    }
+    const { rows } = await pool.query('SELECT * FROM budget_entries ORDER BY date DESC LIMIT 500')
+    res.json(rows.map(toBudgetEntry))
+  } catch (err) { next(err) }
+})
+
+// POST /api/reporting/budget-entries
+reportingRouter.post('/budget-entries', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    const id = d.id || randomUUID()
+    await pool.query(
+      `INSERT INTO budget_entries (id, period_id, date, vendor, description, amount, category, invoice_ref, logged_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        id, d.periodId, d.date, d.vendor || null, d.description || '',
+        Number(d.amount || 0), d.category || null, d.invoiceRef || null,
+        d.loggedBy || req.userId || null,
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM budget_entries WHERE id = $1', [id])
+    res.status(201).json(toBudgetEntry(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// PUT /api/reporting/budget-entries/:id
+reportingRouter.put('/budget-entries/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    await pool.query(
+      `UPDATE budget_entries SET
+         date = COALESCE($1, date),
+         vendor = COALESCE($2, vendor),
+         description = COALESCE($3, description),
+         amount = COALESCE($4, amount),
+         category = COALESCE($5, category),
+         invoice_ref = COALESCE($6, invoice_ref)
+       WHERE id = $7`,
+      [
+        d.date, d.vendor, d.description,
+        d.amount !== undefined ? Number(d.amount) : null,
+        d.category, d.invoiceRef, req.params.id,
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM budget_entries WHERE id = $1', [req.params.id])
+    if (!rows[0]) return res.status(404).json({ error: 'Budget entry not found' })
+    res.json(toBudgetEntry(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/reporting/budget-entries/:id
+reportingRouter.delete('/budget-entries/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    await pool.query('DELETE FROM budget_entries WHERE id = $1', [req.params.id])
+    res.status(204).send()
+  } catch (err) { next(err) }
+})

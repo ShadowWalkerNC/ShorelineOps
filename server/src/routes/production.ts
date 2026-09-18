@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
@@ -17,13 +18,18 @@ const SheetUpdateSchema = z.object({
 // ── Mappers ────────────────────────────────────────────────────────────────────
 
 function toSheet(row: any) {
+  const parseJson = (v: any, fallback: any) => {
+    if (v == null) return fallback
+    if (typeof v === 'object') return v
+    try { return JSON.parse(v) } catch { return fallback }
+  }
   return {
     id: row.id,
     menuWeekId: row.menu_week_id,
     day: row.day,
     slot: row.slot,
-    rows: row.rows,
-    counts: row.counts,
+    rows: parseJson(row.rows, []),
+    counts: parseJson(row.counts, {}),
     signedOffBy: row.signed_off_by ?? undefined,
     signedOffAt: row.signed_off_at ?? undefined,
     createdAt: row.created_at,
@@ -139,6 +145,32 @@ productionRouter.get('/sheets', async (req: AuthRequest, res, next) => {
       )
     }
     res.json(queryResult.rows.map(toSheet))
+  } catch (err) { next(err) }
+})
+
+// POST /api/production/sheets
+productionRouter.post('/sheets', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const body = req.body
+    const id = body.id || randomUUID()
+    const menuWeekId = body.menuWeekId || body.menu_week_id || 'default'
+    const day = body.day || body.date || new Date().toISOString().slice(0, 10)
+    const slot = body.slot || body.meal || 'Dinner'
+    const rows = body.rows || body.items || []
+    const counts = body.counts || {}
+
+    await pool.query(
+      `INSERT INTO production_sheets (id, menu_week_id, day, slot, rows, counts)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (menu_week_id, day, slot) DO UPDATE
+         SET rows = EXCLUDED.rows, counts = EXCLUDED.counts, updated_at = NOW()`,
+      [id, menuWeekId, day, slot, JSON.stringify(rows), JSON.stringify(counts)]
+    )
+    const { rows: saved } = await pool.query(
+      'SELECT * FROM production_sheets WHERE id = $1 OR (menu_week_id = $2 AND day = $3 AND slot = $4)',
+      [id, menuWeekId, day, slot]
+    )
+    res.status(201).json(toSheet(saved[0]))
   } catch (err) { next(err) }
 })
 

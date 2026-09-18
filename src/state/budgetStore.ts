@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { api } from '@/api/client'
 import { supabase } from '@/lib/supabase'
 
 // ─ Types ───────────────────────────────────────────────────────────────────
@@ -52,34 +53,34 @@ function daysInMonth(month: number, year: number): number {
 function pad2(n: number) { return String(n).padStart(2, '0') }
 
 function toPeriod(row: Record<string, unknown>): BudgetPeriod {
-  const month = row.month as number
-  const year  = row.year  as number
+  const month = Number(row.month)
+  const year  = Number(row.year)
   const days  = daysInMonth(month, year)
   return {
-    id:                      row.id as string,
-    label:                   row.label as string,
+    id:                      (row.id as string) ?? '',
+    label:                   (row.label as string) ?? '',
     month,
     year,
-    totalBudget:             Number(row.total_budget ?? 0),
-    residentCount:           Number(row.resident_count ?? 1),
-    budgetPerResidentPerDay: Number(row.budget_per_resident_per_day ?? 0),
-    startDate:               `${year}-${pad2(month)}-01`,
-    endDate:                 `${year}-${pad2(month)}-${pad2(days)}`,
+    totalBudget:             Number(row.total_budget ?? row.totalBudget ?? 0),
+    residentCount:           Number(row.resident_count ?? row.residentCount ?? 1),
+    budgetPerResidentPerDay: Number(row.budget_per_resident_per_day ?? row.budgetPerResidentPerDay ?? 0),
+    startDate:               (row.start_date ?? row.startDate ?? `${year}-${pad2(month)}-01`) as string,
+    endDate:                 (row.end_date ?? row.endDate ?? `${year}-${pad2(month)}-${pad2(days)}`) as string,
     totalDays:               days,
   }
 }
 
 function toEntry(row: Record<string, unknown>): BudgetEntry {
   return {
-    id:          row.id as string,
-    periodId:    row.period_id as string,
-    date:        row.date as string,
-    vendor:      (row.vendor     as string | null) ?? null,
-    description: row.description as string,
+    id:          (row.id as string) ?? '',
+    periodId:    ((row.period_id ?? row.periodId) as string) ?? '',
+    date:        (row.date as string) ?? '',
+    vendor:      (row.vendor as string | null) ?? null,
+    description: (row.description as string) ?? '',
     amount:      Number(row.amount ?? 0),
-    category:    (row.category   as string | null) ?? null,
-    invoiceRef:  (row.invoice_ref as string | null) ?? null,
-    loggedBy:    (row.logged_by  as string | null) ?? null,
+    category:    (row.category as string | null) ?? null,
+    invoiceRef:  ((row.invoice_ref ?? row.invoiceRef) as string | null) ?? null,
+    loggedBy:    ((row.logged_by ?? row.loggedBy) as string | null) ?? null,
   }
 }
 
@@ -100,11 +101,13 @@ export interface BudgetState {
   addEntry:      (data: Omit<BudgetEntry, 'id'>) => Promise<void>
   updateEntry:   (id: string, data: Partial<BudgetEntry>) => Promise<void>
   removeEntry:   (id: string) => Promise<void>
-  getTotalBudget:  () => number
-  getTotalSpent:   () => number
-  getProjected:    () => number
-  getDailyPerRes:  () => number
+  getTotalBudget: () => number
+  getTotalSpent:  () => number
+  getProjected:   () => number
+  getDailyPerRes: () => number
 }
+
+const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
   period: DEFAULT_PERIOD,
@@ -114,6 +117,32 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
   fetch: async () => {
     set({ loading: true, error: null })
+    if (!isDemo) {
+      try {
+        const [periodsRes, entriesRes] = await Promise.all([
+          api.get('/reporting/budget-periods'),
+          api.get('/reporting/budget-entries'),
+        ])
+        if (Array.isArray(periodsRes.data)) {
+          const allPeriods = periodsRes.data.map(toPeriod)
+          const allEntries = Array.isArray(entriesRes.data) ? entriesRes.data.map(toEntry) : []
+          const now = new Date()
+          const thisMonth = now.getMonth() + 1
+          const thisYear = now.getFullYear()
+          const currentPeriod = allPeriods.find(p => p.month === thisMonth && p.year === thisYear) || allPeriods[0] || DEFAULT_PERIOD
+          const currentEntries = allEntries.filter(e => e.periodId === currentPeriod.id)
+          set({
+            periods: allPeriods,
+            period: currentPeriod,
+            entries: currentEntries,
+            loading: false,
+          })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[budgetStore] Live API fetch failed, falling back to local adapter:', err?.message)
+      }
+    }
     try {
       const now = new Date()
       const thisMonth = now.getMonth() + 1
@@ -150,6 +179,17 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   fetchPeriods: async () => {
+    if (!isDemo) {
+      try {
+        const res = await api.get('/reporting/budget-periods')
+        if (Array.isArray(res.data)) {
+          set({ periods: res.data.map(toPeriod) })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[budgetStore] Live API fetchPeriods failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { data, error } = await supabase
       .from('budget_periods').select('*').order('year', { ascending: false }).order('month', { ascending: false })
     if (error) { set({ error: error.message }); return }
@@ -157,6 +197,17 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   fetchEntries: async (periodId) => {
+    if (!isDemo) {
+      try {
+        const res = await api.get(`/reporting/budget-entries?periodId=${encodeURIComponent(periodId)}`)
+        if (Array.isArray(res.data)) {
+          set({ entries: res.data.map(toEntry) })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[budgetStore] Live API fetchEntries failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { data, error } = await supabase
       .from('budget_entries').select('*').eq('period_id', periodId).order('date')
     if (error) { set({ error: error.message }); return }
@@ -166,6 +217,31 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   setPeriod: (p) => set({ period: p }),
 
   upsertPeriod: async (data) => {
+    if (!isDemo) {
+      try {
+        const res = await api.post('/reporting/budget-periods', {
+          id: data.id,
+          label: data.label,
+          month: data.month,
+          year: data.year,
+          totalBudget: data.totalBudget,
+          residentCount: data.residentCount,
+          budgetPerResidentPerDay: data.budgetPerResidentPerDay,
+        })
+        if (res.data?.id) {
+          const period = toPeriod(res.data)
+          set(s => ({
+            period,
+            periods: data.id
+              ? s.periods.map(p => p.id === data.id ? period : p)
+              : [period, ...s.periods],
+          }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[budgetStore] Live API upsertPeriod failed, falling back to local adapter:', err?.message)
+      }
+    }
     const row = {
       label: data.label, month: data.month, year: data.year,
       total_budget: data.totalBudget,
@@ -188,6 +264,17 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   addEntry: async (data) => {
+    if (!isDemo) {
+      try {
+        const res = await api.post('/reporting/budget-entries', data)
+        if (res.data?.id) {
+          set(s => ({ entries: [...s.entries, toEntry(res.data)] }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[budgetStore] Live API addEntry failed, falling back to local adapter:', err?.message)
+      }
+    }
     const row: Record<string, unknown> = {
       period_id:   data.periodId,
       date:        data.date,
@@ -205,6 +292,17 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   updateEntry: async (id, data) => {
+    if (!isDemo) {
+      try {
+        const res = await api.put(`/reporting/budget-entries/${id}`, data)
+        if (res.data?.id) {
+          set(s => ({ entries: s.entries.map(e => e.id === id ? toEntry(res.data) : e) }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[budgetStore] Live API updateEntry failed, falling back to local adapter:', err?.message)
+      }
+    }
     const patch: Record<string, unknown> = {}
     if (data.date        !== undefined) patch.date        = data.date
     if (data.vendor      !== undefined) patch.vendor      = data.vendor
@@ -220,6 +318,15 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   removeEntry: async (id) => {
+    if (!isDemo) {
+      try {
+        await api.delete(`/reporting/budget-entries/${id}`)
+        set(s => ({ entries: s.entries.filter(e => e.id !== id) }))
+        return
+      } catch (err: any) {
+        console.warn('[budgetStore] Live API removeEntry failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { error } = await supabase.from('budget_entries').delete().eq('id', id)
     if (error) throw new Error(error.message)
     set(s => ({ entries: s.entries.filter(e => e.id !== id) }))

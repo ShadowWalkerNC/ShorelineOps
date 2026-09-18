@@ -908,6 +908,101 @@ const migrations: { name: string; sql: string }[] = [
       ON CONFLICT (facility_id, key) DO NOTHING;
     `,
   },
+  {
+    // Migration 025: Zero Split-Brain Persistence Layer.
+    // Migrates staff profiles, call-outs, budget periods/entries, and communications
+    // to central database persistence with full auditability across all tablets/kiosks.
+    name: '025_staff_budget_communications',
+    sql: `
+      CREATE TABLE IF NOT EXISTS staff_profiles (
+        id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        auth_user_id      TEXT,
+        employee_number   TEXT NOT NULL DEFAULT '',
+        first_name        TEXT NOT NULL,
+        last_name         TEXT NOT NULL,
+        preferred_name    TEXT,
+        role              TEXT NOT NULL DEFAULT 'staff',
+        department        TEXT NOT NULL DEFAULT 'Dietary',
+        position          TEXT NOT NULL DEFAULT '',
+        hire_date         TEXT NOT NULL DEFAULT '',
+        status            TEXT NOT NULL DEFAULT 'Active',
+        full_time         BOOLEAN NOT NULL DEFAULT false,
+        phone             TEXT,
+        email             TEXT,
+        emergency_contact JSONB,
+        certifications    TEXT[] NOT NULL DEFAULT '{}',
+        manager_notes     TEXT,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_staff_profiles_status ON staff_profiles(status);
+
+      CREATE TABLE IF NOT EXISTS call_outs (
+        id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        staff_id              TEXT NOT NULL,
+        filed_by_id           TEXT NOT NULL,
+        date                  TEXT NOT NULL,
+        shift                 TEXT NOT NULL DEFAULT 'Morning',
+        reason                TEXT NOT NULL DEFAULT 'Sick',
+        notes                 TEXT,
+        coverage_status       TEXT NOT NULL DEFAULT 'Uncovered',
+        replacement_staff_id  TEXT,
+        manager_acknowledged  BOOLEAN NOT NULL DEFAULT false,
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_call_outs_date ON call_outs(date);
+
+      CREATE TABLE IF NOT EXISTS budget_periods (
+        id                          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        label                       TEXT NOT NULL,
+        month                       INTEGER NOT NULL,
+        year                        INTEGER NOT NULL,
+        total_budget                NUMERIC(12,2) NOT NULL DEFAULT 0,
+        resident_count              INTEGER NOT NULL DEFAULT 1,
+        budget_per_resident_per_day NUMERIC(10,4) NOT NULL DEFAULT 0,
+        start_date                  TEXT,
+        end_date                    TEXT,
+        created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_budget_periods_year_month ON budget_periods(year, month);
+
+      CREATE TABLE IF NOT EXISTS budget_entries (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        period_id   TEXT NOT NULL,
+        date        TEXT NOT NULL,
+        vendor      TEXT,
+        description TEXT NOT NULL DEFAULT '',
+        amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
+        category    TEXT,
+        invoice_ref TEXT,
+        logged_by   TEXT,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_budget_entries_period ON budget_entries(period_id);
+
+      CREATE TABLE IF NOT EXISTS communications (
+        id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        type           TEXT NOT NULL DEFAULT 'general',
+        subject        TEXT NOT NULL DEFAULT '',
+        status         TEXT NOT NULL DEFAULT 'Draft',
+        created_by_id  TEXT NOT NULL DEFAULT '',
+        entries        JSONB NOT NULL DEFAULT '[]',
+        distributed_to TEXT[] NOT NULL DEFAULT '{}',
+        distributed_at TIMESTAMPTZ,
+        was_printed    BOOLEAN NOT NULL DEFAULT false,
+        printed_at     TIMESTAMPTZ,
+        printed_by_id  TEXT,
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_communications_created ON communications(created_at DESC);
+    `,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.
@@ -955,6 +1050,12 @@ export const EXPECTED_TABLES: string[] = [
   'haccp_equipment',
   // C04: server-synced facility settings (migration 024).
   'facility_settings',
+  // Zero Split-Brain: Staff profiles, call-outs, budget, communications (migration 025).
+  'staff_profiles',
+  'call_outs',
+  'budget_periods',
+  'budget_entries',
+  'communications',
 ]
 
 /**

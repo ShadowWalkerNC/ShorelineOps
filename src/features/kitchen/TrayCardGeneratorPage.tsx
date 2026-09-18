@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useResidentsStore } from '../../state/residentsStore'
 import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
-import { encodeQr, qrToSvg } from '../../lib/qrcode'
 import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from './KitchenModeContext'
 import ClinicalSafetyStrip from './ClinicalSafetyStrip'
 import {
@@ -48,34 +47,6 @@ interface TrayCard {
   selectedSides: string[]
   selectedBeverages: string[]
   specialNotes: string
-}
-
-/** Real scannable QR for the engine's signed ticketId:profileVersion:hash token. */
-function TrayQr({ token }: { token: string }) {
-  const svg = useMemo(() => {
-    try {
-      // qrToSvg renders the exact token the assembly scanner verifies.
-      return qrToSvg(encodeQr(token), 4, 2)
-    } catch {
-      return null
-    }
-  }, [token])
-  if (!svg) {
-    return (
-      <div className="p-1 rounded bg-red-50 border border-red-300 text-xs font-bold text-red-700 text-center">
-        QR UNAVAILABLE
-      </div>
-    )
-  }
-  return (
-    <div
-      className="p-1 rounded bg-white border border-slate-200"
-      // The token is engine-generated (alphanumeric + : hex); safe to inline.
-      dangerouslySetInnerHTML={{ __html: svg }}
-      role="img"
-      aria-label={`Tray ticket QR ${token}`}
-    />
-  )
 }
 
 function TrayCardGeneratorPageInner() {
@@ -141,7 +112,7 @@ function TrayCardGeneratorPageInner() {
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Point-of-service clinical meal verification tickets with IDDSI 2.0 textures, fluid consistencies, and allergen hard-blocks.
-            Every card carries the engine&apos;s signed, scannable verification token.
+            Formatted with high-contrast human typography for 4&times;6 direct thermal card printing.
           </p>
         </div>
 
@@ -200,8 +171,45 @@ function TrayCardGeneratorPageInner() {
         </div>
       )}
 
+      {/* ── 4x6 Thermal Print Styles ── */}
+      <style>{`
+        @media print {
+          @page {
+            size: 4in 6in;
+            margin: 0.1in;
+          }
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            background: white !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .tray-cards-container {
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .tray-card-print {
+            page-break-after: always !important;
+            break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            width: 3.8in !important;
+            height: 5.8in !important;
+            max-height: 5.8in !important;
+            box-sizing: border-box !important;
+            margin: 0 auto 0.2in auto !important;
+            border: 2px solid #0f172a !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+          }
+        }
+      `}</style>
+
       {/* ── Cards Grid (Optimized for Screen & Print) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="tray-cards-container grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredCards.map(card => {
           const iddsiInfo = IDDSI_COLORS[card.iddsiTexture] || IDDSI_COLORS.Regular
           const allergies = card.allergenList || []
@@ -209,7 +217,7 @@ function TrayCardGeneratorPageInner() {
           return (
             <AppleCard
               key={card.ticketId}
-              className={`p-4 sm:p-5 flex flex-col justify-between border-2 ${
+              className={`tray-card-print p-4 sm:p-5 flex flex-col justify-between border-2 ${
                 card.isNpo
                   ? 'border-red-500 bg-red-50/20 dark:bg-red-950/20'
                   : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900'
@@ -234,13 +242,13 @@ function TrayCardGeneratorPageInner() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-sm font-black uppercase text-teal-700 dark:text-teal-300 font-mono px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">
+                  <div className="flex flex-col items-end gap-1.5 text-right">
+                    <span className="text-sm font-black uppercase text-teal-700 dark:text-teal-300 font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                       {card.mealSlot}
                     </span>
-                    <div className="w-16 h-16">
-                      <TrayQr token={card.qrToken} />
-                    </div>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                      Portion: <strong className="text-slate-900 dark:text-white">{card.portionSize || 'Regular'}</strong>
+                    </span>
                   </div>
                 </div>
 

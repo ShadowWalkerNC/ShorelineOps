@@ -70,7 +70,8 @@ export class WebBluetoothProbeDriver {
           this.handleCharacteristicChange(event, deviceName)
         })
       } catch (serviceErr) {
-        console.warn('[WebBluetoothProbe] Standard GATT service not found, running simulated live stream:', serviceErr)
+        console.error('[WebBluetoothProbe] Standard GATT temperature service not found on paired device:', serviceErr)
+        throw new Error('Connected Bluetooth device does not expose standard HACCP temperature GATT services.')
       }
 
       return { success: true, deviceName }
@@ -121,14 +122,7 @@ export class WebBluetoothProbeDriver {
       }
     }
 
-    // Deterministic fallback reading if hardware simulated
-    const simulatedTempF = 165.4
-    return {
-      temperatureF: simulatedTempF,
-      temperatureC: Math.round(((simulatedTempF - 32) * 5) / 9 * 10) / 10,
-      deviceName: this.device?.name || 'ThermoWorks Probe (Simulated)',
-      readAt: new Date().toISOString(),
-    }
+    throw new Error('No Bluetooth temperature probe connected. Please pair a probe or enter temperature manually.')
   }
 
   /**

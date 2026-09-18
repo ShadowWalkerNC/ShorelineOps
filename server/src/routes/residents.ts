@@ -296,6 +296,227 @@ residentsRouter.get('/:id/history', async (req: AuthRequest, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** Helper function to parse CSV lines taking into account quoted cells and commas */
+export function parseCsvRows(text: string): Record<string, string>[] {
+  const lines: string[] = []
+  let currentLine = ''
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    if (char === '"') {
+      inQuotes = !inQuotes
+      currentLine += char
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && text[i + 1] === '\n') {
+        i++
+      }
+      if (currentLine.trim()) {
+        lines.push(currentLine)
+      }
+      currentLine = ''
+    } else {
+      currentLine += char
+    }
+  }
+  if (currentLine.trim()) {
+    lines.push(currentLine)
+  }
+
+  if (lines.length < 2) return []
+
+  const parseLine = (line: string): string[] => {
+    const values: string[] = []
+    let cur = ''
+    let inside = false
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i]
+      if (c === '"') {
+        if (inside && line[i + 1] === '"') {
+          cur += '"'
+          i++
+        } else {
+          inside = !inside
+        }
+      } else if (c === ',' && !inside) {
+        values.push(cur.trim())
+        cur = ''
+      } else {
+        cur += c
+      }
+    }
+    values.push(cur.trim())
+    return values
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''))
+  const results: Record<string, string>[] = []
+
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i])
+    const row: Record<string, string> = {}
+    headers.forEach((h, idx) => {
+      row[h] = vals[idx] !== undefined ? vals[idx] : ''
+    })
+    results.push(row)
+  }
+  return results
+}
+
+// ─────────────────────────────────────────────
+// POST /api/residents/import-csv
+// Decision 9: Bulk Census & Diet Order CSV Importer
+// Dietitian / Manager / Admin only
+// ─────────────────────────────────────────────
+residentsRouter.post('/import-csv', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    if (!canWriteDietOrder(req.userRole) && req.userRole !== 'admin') {
+      return res.status(403).json({
+        error: 'Importing census and clinical diet orders requires the dietitian, manager, or admin role.',
+      })
+    }
+
+    const { csv } = z.object({ csv: z.string().min(1, 'CSV content cannot be empty') }).parse(req.body)
+
+    const parsedRows = parseCsvRows(csv)
+    if (parsedRows.length === 0) {
+      return res.status(400).json({ error: 'No data rows found in CSV.' })
+    }
+
+    let createdCount = 0
+    let updatedCount = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < parsedRows.length; i++) {
+      const r = parsedRows[i]
+      const rowNum = i + 2 // 1-based index accounting for header
+      const name = (r.name || r.residentname || r.patientname || '').trim()
+      const room = (r.room || r.roomnumber || r.bed || '').trim()
+
+      if (!name || !room) {
+        errors.push(`Row ${rowNum}: Missing required 'name' or 'room'`)
+        continue
+      }
+
+      const statusRaw = (r.status || 'Active').trim()
+      const validStatuses = ['Active', 'Hospital', 'LOA', 'Passed Away']
+      const status = validStatuses.includes(statusRaw) ? statusRaw : 'Active'
+
+      const dietType = (r.diettype || r.diet || 'Regular').trim()
+      const texture = (r.texture || r.iddsi || 'Regular').trim()
+      const portionSize = (r.portionsize || r.portion || 'Regular').trim()
+      const ensurePerDay = parseInt(r.ensureperday || '0', 10) || 0
+
+      // Split allergies and beverages by comma, semicolon, or pipe
+      const parseList = (val?: string): string[] => {
+        if (!val) return []
+        return val.split(/[,;|]/).map(s => s.trim()).filter(Boolean)
+      }
+      const allergies = parseList(r.allergies || r.allergen)
+      const beverages = parseList(r.beverages || r.drinks)
+
+      const birthdayMonth = (r.birthdaymonth || r.birthmonth || '').trim() || null
+      const birthdayDay = parseInt(r.birthdayday || r.birthday || '', 10) || null
+      const servingLocation = (r.servinglocation || r.location || 'Dining Room').trim()
+      const tableAssignment = (r.tableassignment || r.table || '').trim()
+      const likes = (r.likes || '').trim()
+      const dislikes = (r.dislikes || '').trim()
+      const specialInstructions = (r.specialinstructions || r.instructions || r.notes || '').trim()
+
+      const npoRaw = (r.isnpo || r.npo || '').trim().toLowerCase()
+      const isNpo = ['true', 'yes', '1', 'y'].includes(npoRaw) || dietType.toUpperCase() === 'NPO'
+      const npoReason = (r.nporeason || '').trim()
+      const fluidRestrictionMl = parseInt(r.fluidrestrictionml || r.fluidlimit || r.fluidrestriction || '', 10) || null
+
+      // Check if resident exists
+      const { rows: existingRows } = await pool.query(
+        'SELECT * FROM residents WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND LOWER(TRIM(room)) = LOWER(TRIM($2))',
+        [name, room]
+      )
+
+      if (existingRows.length > 0) {
+        const existing = existingRows[0]
+        const before = clinicalSnapshot(existing)
+        const after: ClinicalSnapshot = {
+          dietType,
+          texture,
+          isNpo,
+          npoReason,
+          allergies: normAllergies(allergies),
+        }
+
+        await pool.query(
+          `UPDATE residents SET
+             status = $1, diet_type = $2, texture = $3, portion_size = $4,
+             ensure_per_day = $5, allergies = $6, beverages = $7,
+             birthday_month = COALESCE($8, birthday_month),
+             birthday_day = COALESCE($9, birthday_day),
+             serving_location = $10, table_assignment = $11,
+             likes = $12, dislikes = $13, special_instructions = $14,
+             is_npo = $15, npo_reason = $16,
+             fluid_restriction_ml = COALESCE($17, fluid_restriction_ml),
+             updated_at = NOW()
+           WHERE id = $18`,
+          [
+            status, dietType, texture, portionSize,
+            ensurePerDay, allergies, beverages,
+            birthdayMonth, birthdayDay,
+            servingLocation, tableAssignment,
+            likes, dislikes, specialInstructions,
+            isNpo, npoReason,
+            fluidRestrictionMl,
+            existing.id,
+          ]
+        )
+
+        await bumpProfileVersion(existing.id, before, after, req.userId)
+        updatedCount++
+      } else {
+        const newId = randomUUID()
+        await pool.query(
+          `INSERT INTO residents
+             (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
+              allergies, beverages, birthday_month, birthday_day, serving_location,
+              table_assignment, likes, dislikes, special_instructions,
+              is_npo, npo_reason, fluid_restriction_ml, profile_version,
+              diet_ordered_by, diet_order_date, diet_effective_date)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,1,$21,NOW(),NOW())`,
+          [
+            newId, name, room, status, dietType, texture, portionSize, ensurePerDay,
+            allergies, beverages, birthdayMonth, birthdayDay, servingLocation,
+            tableAssignment, likes, dislikes, specialInstructions,
+            isNpo, npoReason, fluidRestrictionMl,
+            req.userId ?? null,
+          ]
+        )
+
+        await pool.query(
+          `INSERT INTO resident_profile_history
+             (resident_id, profile_version, diet_type, texture, is_npo, allergies)
+           VALUES ($1, 1, $2, $3, $4, $5)`,
+          [newId, dietType, texture, isNpo, allergies]
+        )
+
+        createdCount++
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
+       VALUES ('IMPORT_RESIDENTS_CSV', $1, 'resident', 'success', $2)`,
+      [req.userId, JSON.stringify({ created: createdCount, updated: updatedCount, errors })]
+    )
+
+    res.status(200).json({
+      success: true,
+      created: createdCount,
+      updated: updatedCount,
+      totalProcessed: parsedRows.length,
+      errors,
+    })
+  } catch (err) { next(err) }
+})
+
 // ─────────────────────────────────────────────
 // POST /api/residents
 // ─────────────────────────────────────────────

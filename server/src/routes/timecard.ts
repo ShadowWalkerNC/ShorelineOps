@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
 import { requireAuth } from '../middleware/requireAuth'
@@ -97,11 +98,52 @@ timecardRouter.post('/webhook', async (req, res, next) => {
   }
 })
 
-// GET /api/timecard — authenticated
-timecardRouter.get('/', requireAuth, async (_req, res, next) => {
+// POST /api/timecard/punch — direct punch from UI or kiosk
+timecardRouter.post('/punch', async (req, res, next) => {
+  try {
+    const payload = PunchSchema.parse(req.body)
+    const operation = payload.operation === 'In' || payload.operation === 'Out' ? payload.operation : 'In'
+    const punchedAt = payload.punched_at ? new Date(payload.punched_at) : new Date()
+
+    const id = randomUUID()
+    await pool.query(
+      `INSERT INTO timecard_punches (id, badge_id, operation, kiosk_id, punched_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, payload.badge_id, operation, payload.kiosk_id, punchedAt]
+    )
+    const { rows } = await pool.query(
+      'SELECT * FROM timecard_punches WHERE id = $1', [id]
+    )
+    res.status(201).json(rows[0] ?? { id, badge_id: payload.badge_id, operation, kiosk_id: payload.kiosk_id, punched_at: punchedAt })
+  } catch (err) { next(err) }
+})
+
+// GET /api/timecard/last-punch/:badgeId
+timecardRouter.get('/last-punch/:badgeId', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM timecard_punches ORDER BY punched_at DESC LIMIT 500'
+      'SELECT * FROM timecard_punches WHERE badge_id = $1 ORDER BY punched_at DESC LIMIT 1',
+      [req.params.badgeId]
+    )
+    res.json(rows[0] || null)
+  } catch (err) { next(err) }
+})
+
+// GET /api/timecard — queryable punches
+timecardRouter.get('/', async (req, res, next) => {
+  try {
+    const badgeId = typeof req.query.badge_id === 'string' ? req.query.badge_id : null
+    const limit = parseInt(req.query.limit as string || '200', 10) || 200
+    if (badgeId) {
+      const { rows } = await pool.query(
+        'SELECT * FROM timecard_punches WHERE badge_id = $1 ORDER BY punched_at DESC LIMIT $2',
+        [badgeId, limit]
+      )
+      return res.json(rows)
+    }
+    const { rows } = await pool.query(
+      'SELECT * FROM timecard_punches ORDER BY punched_at DESC LIMIT $1',
+      [limit]
     )
     res.json(rows)
   } catch (err) {

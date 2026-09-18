@@ -482,3 +482,249 @@ adminRouter.put('/facility-settings', requireRole('manager'), async (req: AuthRe
     res.json({ facilityId, settings, meta })
   } catch (err) { next(err) }
 })
+
+// ════════════════════════════════════════════════════════════════════════════
+// STAFF PROFILES & CALL-OUTS (Zero Split-Brain Persistence)
+// ════════════════════════════════════════════════════════════════════════════
+
+function toStaffProfile(row: any) {
+  return {
+    id: row.id,
+    authUserId: row.auth_user_id || '',
+    employeeNumber: row.employee_number || '',
+    firstName: row.first_name || '',
+    lastName: row.last_name || '',
+    preferredName: row.preferred_name || undefined,
+    role: row.role || 'staff',
+    department: row.department || 'Dietary',
+    position: row.position || '',
+    hireDate: row.hire_date || '',
+    status: row.status || 'Active',
+    fullTime: Boolean(row.full_time),
+    phone: row.phone || undefined,
+    email: row.email || undefined,
+    emergencyContact: typeof row.emergency_contact === 'string' ? JSON.parse(row.emergency_contact) : (row.emergency_contact || undefined),
+    certifications: typeof row.certifications === 'string' ? JSON.parse(row.certifications) : (Array.isArray(row.certifications) ? row.certifications : []),
+    managerNotes: row.manager_notes || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function toCallOut(row: any) {
+  return {
+    id: row.id,
+    staffId: row.staff_id,
+    filedById: row.filed_by_id,
+    date: row.date,
+    shift: row.shift || 'Morning',
+    reason: row.reason || 'Sick',
+    notes: row.notes || undefined,
+    coverageStatus: row.coverage_status || 'Uncovered',
+    replacementStaffId: row.replacement_staff_id || undefined,
+    managerAcknowledged: Boolean(row.manager_acknowledged),
+    createdAt: row.created_at,
+  }
+}
+
+function toCommThread(row: any) {
+  const parseJson = (v: any, def: any) => {
+    if (v == null) return def
+    if (typeof v === 'object') return v
+    try { return JSON.parse(v) } catch { return def }
+  }
+  return {
+    id: row.id,
+    type: row.type || 'general',
+    subject: row.subject || '',
+    status: row.status || 'Draft',
+    createdById: row.created_by_id || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    entries: parseJson(row.entries, []),
+    distributedTo: parseJson(row.distributed_to, []),
+    distributedAt: row.distributed_at || undefined,
+    wasPrinted: Boolean(row.was_printed),
+    printedAt: row.printed_at || undefined,
+    printedById: row.printed_by_id || undefined,
+  }
+}
+
+// GET /api/admin/staff
+adminRouter.get('/staff', requireRole('staff'), async (_req: AuthRequest, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM staff_profiles ORDER BY last_name ASC, first_name ASC')
+    res.json(rows.map(toStaffProfile))
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/staff
+adminRouter.post('/staff', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    const id = d.id || crypto.randomUUID()
+    await pool.query(
+      `INSERT INTO staff_profiles (
+        id, auth_user_id, employee_number, first_name, last_name, preferred_name,
+        role, department, position, hire_date, status, full_time, phone, email,
+        emergency_contact, certifications, manager_notes
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+      [
+        id, d.authUserId || null, d.employeeNumber || '', d.firstName, d.lastName, d.preferredName || null,
+        d.role || 'staff', d.department || 'Dietary', d.position || '', d.hireDate || '', d.status || 'Active',
+        Boolean(d.fullTime), d.phone || null, d.email || null,
+        d.emergencyContact ? JSON.stringify(d.emergencyContact) : null,
+        Array.isArray(d.certifications) ? d.certifications : [],
+        d.managerNotes || null,
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM staff_profiles WHERE id = $1', [id])
+    res.status(201).json(toStaffProfile(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// PUT /api/admin/staff/:id
+adminRouter.put('/staff/:id', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    await pool.query(
+      `UPDATE staff_profiles SET
+        employee_number = COALESCE($1, employee_number),
+        first_name = COALESCE($2, first_name),
+        last_name = COALESCE($3, last_name),
+        preferred_name = COALESCE($4, preferred_name),
+        role = COALESCE($5, role),
+        department = COALESCE($6, department),
+        position = COALESCE($7, position),
+        hire_date = COALESCE($8, hire_date),
+        status = COALESCE($9, status),
+        full_time = COALESCE($10, full_time),
+        phone = COALESCE($11, phone),
+        email = COALESCE($12, email),
+        manager_notes = COALESCE($13, manager_notes),
+        updated_at = NOW()
+       WHERE id = $14`,
+      [
+        d.employeeNumber, d.firstName, d.lastName, d.preferredName,
+        d.role, d.department, d.position, d.hireDate, d.status,
+        d.fullTime !== undefined ? Boolean(d.fullTime) : null,
+        d.phone, d.email, d.managerNotes,
+        req.params.id,
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM staff_profiles WHERE id = $1', [req.params.id])
+    if (!rows[0]) return res.status(404).json({ error: 'Staff profile not found' })
+    res.json(toStaffProfile(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/admin/staff/:id
+adminRouter.delete('/staff/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
+  try {
+    await pool.query('DELETE FROM staff_profiles WHERE id = $1', [req.params.id])
+    res.status(204).send()
+  } catch (err) { next(err) }
+})
+
+// GET /api/admin/call-outs
+adminRouter.get('/call-outs', requireRole('staff'), async (_req: AuthRequest, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM call_outs ORDER BY date DESC, created_at DESC')
+    res.json(rows.map(toCallOut))
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/call-outs
+adminRouter.post('/call-outs', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    const id = d.id || crypto.randomUUID()
+    await pool.query(
+      `INSERT INTO call_outs (id, staff_id, filed_by_id, date, shift, reason, notes, coverage_status, replacement_staff_id, manager_acknowledged)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        id, d.staffId, d.filedById || req.userId || 'system', d.date, d.shift || 'Morning',
+        d.reason || 'Sick', d.notes || null, d.coverageStatus || 'Uncovered',
+        d.replacementStaffId || null, Boolean(d.managerAcknowledged),
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM call_outs WHERE id = $1', [id])
+    res.status(201).json(toCallOut(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/admin/call-outs/:id
+adminRouter.delete('/call-outs/:id', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    await pool.query('DELETE FROM call_outs WHERE id = $1', [req.params.id])
+    res.status(204).send()
+  } catch (err) { next(err) }
+})
+
+// GET /api/admin/communications
+adminRouter.get('/communications', requireRole('staff'), async (_req: AuthRequest, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM communications ORDER BY created_at DESC')
+    res.json(rows.map(toCommThread))
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/communications
+adminRouter.post('/communications', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    const id = d.id || crypto.randomUUID()
+    await pool.query(
+      `INSERT INTO communications (id, type, subject, status, created_by_id, entries, distributed_to, was_printed)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        id, d.type || 'general', d.subject || '', d.status || 'Draft',
+        d.createdById || req.userId || '', JSON.stringify(d.entries || []),
+        JSON.stringify(d.distributedTo || []), Boolean(d.wasPrinted),
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM communications WHERE id = $1', [id])
+    res.status(201).json(toCommThread(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// PUT /api/admin/communications/:id
+adminRouter.put('/communications/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body
+    const { rows: existing } = await pool.query('SELECT * FROM communications WHERE id = $1', [req.params.id])
+    if (!existing[0]) return res.status(404).json({ error: 'Communication thread not found' })
+
+    const entries = d.entries !== undefined ? JSON.stringify(d.entries) : existing[0].entries
+    const distributedTo = d.distributedTo !== undefined ? JSON.stringify(d.distributedTo) : existing[0].distributed_to
+
+    await pool.query(
+      `UPDATE communications SET
+         subject = COALESCE($1, subject),
+         status = COALESCE($2, status),
+         entries = $3,
+         distributed_to = $4,
+         distributed_at = COALESCE($5, distributed_at),
+         was_printed = COALESCE($6, was_printed),
+         printed_at = COALESCE($7, printed_at),
+         printed_by_id = COALESCE($8, printed_by_id),
+         updated_at = NOW()
+       WHERE id = $9`,
+      [
+        d.subject, d.status, entries, distributedTo,
+        d.distributedAt, d.wasPrinted !== undefined ? Boolean(d.wasPrinted) : null,
+        d.printedAt, d.printedById, req.params.id,
+      ]
+    )
+    const { rows } = await pool.query('SELECT * FROM communications WHERE id = $1', [req.params.id])
+    res.json(toCommThread(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/admin/communications/:id
+adminRouter.delete('/communications/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
+  try {
+    await pool.query('DELETE FROM communications WHERE id = $1', [req.params.id])
+    res.status(204).send()
+  } catch (err) { next(err) }
+})

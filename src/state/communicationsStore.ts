@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { api } from '@/api/client'
 import { supabase } from '@/lib/supabase'
 import type {
   CommunicationThread, ThreadType, ThreadStatus,
@@ -13,21 +14,27 @@ export type CommThread = CommunicationThread
 
 function uid() { return Math.random().toString(36).slice(2, 10) }
 
+function parseJsonField<T>(v: unknown, def: T): T {
+  if (v == null) return def
+  if (typeof v === 'object') return v as T
+  try { return JSON.parse(v as string) as T } catch { return def }
+}
+
 function toThread(row: Record<string, unknown>): CommunicationThread {
   return {
-    id:            row.id          as string,
-    type:          (row.type       as ThreadType) ?? 'general',
-    subject:       row.subject     as string,
-    status:        (row.status     as ThreadStatus) ?? 'Draft',
-    createdById:   (row.created_by_id as string) ?? '',
-    createdAt:     (row.created_at as string) ?? new Date().toISOString(),
-    updatedAt:     (row.updated_at as string) ?? new Date().toISOString(),
-    entries:       (row.entries    as ThreadEntry[]) ?? [],
-    distributedTo: (row.distributed_to as string[]) ?? [],
-    distributedAt: row.distributed_at as string | undefined,
-    wasPrinted:    Boolean(row.was_printed ?? false),
-    printedAt:     row.printed_at  as string | undefined,
-    printedById:   row.printed_by_id as string | undefined,
+    id:            row.id as string,
+    type:          (row.type as ThreadType) ?? 'general',
+    subject:       (row.subject as string) ?? '',
+    status:        (row.status as ThreadStatus) ?? 'Draft',
+    createdById:   ((row.created_by_id ?? row.createdById) as string) ?? '',
+    createdAt:     ((row.created_at ?? row.createdAt) as string) ?? new Date().toISOString(),
+    updatedAt:     ((row.updated_at ?? row.updatedAt) as string) ?? new Date().toISOString(),
+    entries:       parseJsonField<ThreadEntry[]>(row.entries, []),
+    distributedTo: parseJsonField<string[]>(row.distributed_to ?? row.distributedTo, []),
+    distributedAt: (row.distributed_at ?? row.distributedAt) as string | undefined,
+    wasPrinted:    Boolean(row.was_printed ?? row.wasPrinted ?? false),
+    printedAt:     (row.printed_at ?? row.printedAt) as string | undefined,
+    printedById:   (row.printed_by_id ?? row.printedById) as string | undefined,
   }
 }
 
@@ -58,11 +65,28 @@ export interface CommState {
   withdrawApproval: (id: string) => void
 }
 
+const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+
 export const useCommunicationsStore = create<CommState>((set, get) => ({
   threads: [], approvals: [], loading: false, isLoading: false, error: null,
 
   fetch: async () => {
     set({ loading: true, isLoading: true, error: null })
+    if (!isDemo) {
+      try {
+        const res = await api.get('/admin/communications')
+        if (Array.isArray(res.data)) {
+          set({
+            threads: res.data.map((r: any) => toThread(r as Record<string, unknown>)),
+            loading: false,
+            isLoading: false,
+          })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[communicationsStore] Live API fetch failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { data, error } = await supabase
       .from('communications').select('*').order('created_at', { ascending: false })
     if (error) { set({ error: error.message, loading: false, isLoading: false }); return }
@@ -82,14 +106,26 @@ export const useCommunicationsStore = create<CommState>((set, get) => ({
       updatedAt:     now,
     }
     set(s => ({ threads: [thread, ...s.threads] }))
-    // fire-and-forget persist
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    void (supabase.from('communications') as any).insert({
-      id, subject: data.subject, type: data.type,
-      status: data.status, created_by_id: data.createdById,
-      created_at: now, updated_at: now,
-      entries: [], distributed_to: [],
-    })
+
+    // Live API persist with fallback
+    if (!isDemo) {
+      api.post('/admin/communications', thread).catch((err: any) => {
+        console.warn('[communicationsStore] Live API addThread failed, falling back to local adapter:', err?.message)
+        void (supabase.from('communications') as any).insert({
+          id, subject: data.subject, type: data.type,
+          status: data.status, created_by_id: data.createdById,
+          created_at: now, updated_at: now,
+          entries: [], distributed_to: [],
+        })
+      })
+    } else {
+      void (supabase.from('communications') as any).insert({
+        id, subject: data.subject, type: data.type,
+        status: data.status, created_by_id: data.createdById,
+        created_at: now, updated_at: now,
+        entries: [], distributed_to: [],
+      })
+    }
     return id
   },
 
@@ -99,18 +135,40 @@ export const useCommunicationsStore = create<CommState>((set, get) => ({
       id: uid(),
       createdAt: new Date().toISOString(),
     }
+    let updatedEntries: ThreadEntry[] = []
     set(s => ({
-      threads: s.threads.map(t =>
-        t.id !== threadId ? t : {
+      threads: s.threads.map(t => {
+        if (t.id !== threadId) return t
+        updatedEntries = [...t.entries, newEntry]
+        return {
           ...t,
-          entries:   [...t.entries, newEntry],
+          entries:   updatedEntries,
           updatedAt: newEntry.createdAt,
         }
-      ),
+      }),
     }))
+
+    if (!isDemo && updatedEntries.length > 0) {
+      api.put(`/admin/communications/${threadId}`, { entries: updatedEntries }).catch((err: any) => {
+        console.warn('[communicationsStore] Live API addEntry failed:', err?.message)
+      })
+    }
   },
 
   update: async (id, data) => {
+    if (!isDemo) {
+      try {
+        const res = await api.put(`/admin/communications/${id}`, data)
+        if (res.data?.id) {
+          set(s => ({
+            threads: s.threads.map(t => t.id === id ? toThread(res.data as Record<string, unknown>) : t),
+          }))
+          return
+        }
+      } catch (err: any) {
+        console.warn('[communicationsStore] Live API update failed, falling back to local adapter:', err?.message)
+      }
+    }
     const patch: Record<string, unknown> = {}
     if (data.subject       !== undefined) patch.subject        = data.subject
     if (data.status        !== undefined) patch.status         = data.status
@@ -139,10 +197,19 @@ export const useCommunicationsStore = create<CommState>((set, get) => ({
         }
       ),
     }))
-    await get().update(id, { status: 'Distributed', distributedTo: recipientIds })
+    await get().update(id, { status: 'Distributed', distributedTo: recipientIds, distributedAt: now } as any)
   },
 
   remove: async (id) => {
+    if (!isDemo) {
+      try {
+        await api.delete(`/admin/communications/${id}`)
+        set(s => ({ threads: s.threads.filter(t => t.id !== id) }))
+        return
+      } catch (err: any) {
+        console.warn('[communicationsStore] Live API remove failed, falling back to local adapter:', err?.message)
+      }
+    }
     const { error } = await supabase.from('communications').delete().eq('id', id)
     if (error) throw new Error(error.message)
     set(s => ({ threads: s.threads.filter(t => t.id !== id) }))
