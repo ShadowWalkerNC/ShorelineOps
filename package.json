@@ -31,7 +31,10 @@
     "preview:marketing": "npm --prefix marketing run preview",
     "typecheck": "tsc --noEmit",
     "electron": "electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"electron .\""
+    "electron:dev": "concurrently \"npm run dev\" \"electron .\"",
+    "docker:build": "docker build -t shorelineops:latest .",
+    "docker:run": "docker run -it --rm -p 3001:3001 --env-file .env shorelineops:latest",
+    "docker:shell": "docker run -it --rm --entrypoint bash node:22-slim"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.6",

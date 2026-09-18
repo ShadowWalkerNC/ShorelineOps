@@ -39,38 +39,43 @@ The most popular option for individual senior living communities, dietary kitche
 
 ---
 
-## 2. Quick Start: Production Docker Compose
+## 2. Production Docker & Container Deployment
 
-The simplest and most resilient way to run ShorelineOps on any VPS, dedicated server, or local facility server.
+ShorelineOps uses an enterprise-grade multi-stage container build based on Debian Bookworm (**`node:22-slim`**), providing full `glibc` compatibility for native addons (`sqlite3`) and HIPAA security isolation (`USER node`).
 
-### Prerequisites
-- Docker Engine $\ge 24.0$ & Docker Compose $\ge 2.20$
-- A domain name or local IP address pointing to your host
+### Convenience NPM Scripts
 
-### Deployment Steps
+- **Build Production Image**:
+  ```bash
+  npm run docker:build
+  ```
+- **Run Container with Environment File**:
+  ```bash
+  npm run docker:run
+  ```
+- **Interactive Container Shell (Debugging)**:
+  ```bash
+  npm run docker:shell
+  ```
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/ShadowWalkerNC/ShorelineOps.git
-   cd ShorelineOps
-   ```
+### Production Docker Compose Stack
 
-2. **Configure production environment**:
+The stack includes PostgreSQL 16, backend API, and an optional NGINX reverse proxy.
+
+#### Deployment Steps
+
+1. **Configure production environment**:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` and set a secure `JWT_SECRET` and `SEED_ADMIN_PASSWORD`:
-   ```bash
-   # Generate a 32-byte cryptographically secure random secret
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-   ```
+   Edit `.env` and set a secure `JWT_SECRET` (minimum 32 hex bytes) and `SEED_ADMIN_PASSWORD`.
 
-3. **Start the containers in background**:
+2. **Start the containers in background**:
    ```bash
    docker compose up -d --build
    ```
 
-4. **Verify container health**:
+3. **Verify container health & readiness**:
    ```bash
    docker compose ps
    curl -i http://localhost:3001/health
@@ -79,7 +84,7 @@ The simplest and most resilient way to run ShorelineOps on any VPS, dedicated se
 
 ---
 
-## 2. Cloud Platform Deployment (Railway / Render / Fly.io)
+## 3. Cloud Platform Deployment (Railway / Render / Fly.io)
 
 ### Railway
 1. Create a new project on [Railway.app](https://railway.app).
@@ -103,7 +108,7 @@ The simplest and most resilient way to run ShorelineOps on any VPS, dedicated se
 
 ---
 
-## 3. Bare-Metal / Ubuntu Linux VM (Systemd + Nginx + PostgreSQL)
+## 4. Bare-Metal / Ubuntu Linux VM (Systemd + Nginx + PostgreSQL)
 
 ### Step 1: Install PostgreSQL 16
 ```bash
@@ -176,7 +181,7 @@ sudo certbot --nginx -d dietary.yourcommunity.org
 
 ---
 
-## 4. Operational Health Probes & Monitoring
+## 5. Operational Health Probes & Monitoring
 
 ShorelineOps exposes two dedicated health endpoints:
 
@@ -206,7 +211,7 @@ ShorelineOps exposes two dedicated health endpoints:
 
 ---
 
-## 5. Automated Database Backups
+## 6. Automated Database Backups
 
 ### Linux Cron Backup Script (`scripts/backup.sh`)
 ```bash
@@ -227,7 +232,7 @@ echo "[Backup] Complete: $BACKUP_DIR/shorelineops_$TIMESTAMP.sql.gz"
 
 ---
 
-## 6. Security Checklist for Senior Living & HIPAA Alignment
+## 7. Security Checklist for Senior Living & HIPAA Alignment
 
 - [x] **Enforce HTTPS / TLS 1.3**: All traffic encrypted in transit.
 - [x] **Set Cryptographic JWT Secret**: Minimum 32 bytes random string.

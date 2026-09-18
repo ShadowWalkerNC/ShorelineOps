@@ -1,5 +1,5 @@
 # Stage 1: Build Frontend Single-Page App (PWA)
-FROM node:20-alpine AS client-builder
+FROM node:22-slim AS client-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Build Backend API (TypeScript compilation)
-FROM node:20-alpine AS server-builder
+FROM node:22-slim AS server-builder
 WORKDIR /app/server
 COPY server/package*.json ./
 RUN npm ci
@@ -15,14 +15,16 @@ COPY server/ ./
 RUN npm run build
 
 # Stage 3: Production Runtime (Unified Single-Port Container)
-FROM node:20-alpine AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Install curl for container healthcheck
-RUN apk add --no-cache curl
+# Install curl for container healthcheck and cleanup apt cache
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy built frontend assets
 COPY --from=client-builder --chown=node:node /app/dist /app/dist
