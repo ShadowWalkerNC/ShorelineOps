@@ -35,6 +35,7 @@ import {
   Lock,
   Sparkles,
   Download,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -372,7 +373,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {user && (user.role === 'admin' || user.role === 'manager') && (
             <div className="hidden data-[dunning=true]:flex items-center justify-between px-4 py-2.5 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs">
               <div className="flex items-center gap-2 font-medium">
-                <span className="text-base">💳</span>
+                <CreditCard className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
                   <strong>Billing Notice:</strong> Automatic SaaS payment processing requires attention. Resident meal services & EHR sync remain <strong>100% active</strong> under clinical grace period.
                 </span>
@@ -425,6 +426,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Calendar className="w-5 h-5 mb-0.5" />
             <span className="text-[10px] leading-tight">Menu</span>
+          </NavLink>
+
+          <NavLink
+            to="/kitchen/sheet"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center min-w-[56px] py-1 transition-colors ${
+                isActive ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+              }`
+            }
+          >
+            <ChefHat className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] leading-tight">Kitchen</span>
           </NavLink>
 
           <button
