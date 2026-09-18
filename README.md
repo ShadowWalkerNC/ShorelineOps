@@ -126,6 +126,28 @@ In healthcare dining, culinary operations are clinical care:
 
 ---
 
+## Operational Architecture & Hardware Integration
+
+ShorelineOps incorporates battle-tested operational resilience protocols for physical kitchen deployments. See [`docs/OPERATIONAL_ARCHITECTURE.md`](docs/OPERATIONAL_ARCHITECTURE.md) for full hardware wiring and failover blueprints:
+
+1. **HACCP Temperature Probes & iOS/Safari Resilience**:
+   - **Primary Default**: Ergonomic high-contrast on-screen numeric keypad on all tablets and smartphones with automatic HACCP out-of-range bounds highlighting (<165°F cook hold, <140°F steam line hold, >40°F cold hold) and supervisor override badge protection.
+   - **Hardware Pairing**: Progressive WebBluetooth connectivity for Cooper-Atkins, BlueTherm, and BLE probes on supported Android/Chromium hardware with 100% zero-lockout manual fallback.
+2. **Distributor EDI SFTP Pipeline & Offline Fallback**:
+   - **Dual Mode Transmission**: Background SFTP polling engine (`ssh2-sftp-client`) managing `/inbound/` catalogs/invoices and `/outbound/` EDI 850 PO files.
+   - **Automated Fallback**: In the event of SFTP unavailability or credential delay, orders automatically package as encrypted vendor CSV/PDF order guides with 1-click manual download and automated SMTP sales-rep dispatch.
+3. **Hybrid Nutritional Intelligence Engine**:
+   - **Offline Master Database**: Comprehensive pre-seeded local database of institutional culinary ingredients and common therapeutic foods.
+   - **Lazy Ingestion**: When connected with a `USDA_API_KEY`, automatically queries USDA FoodData Central and upserts missing items directly into the facility's local offline database.
+4. **Multi-Protocol Tray Label Printing (4" x 6")**:
+   - **Direct Network TCP (Port 9100)**: Direct socket relay emitting raw ZPL II envelopes (`^XA ... ^XZ`) to networked Zebra thermal printers.
+   - **Workstation USB**: Integration with Zebra Browser Print agent for locally attached USB desktop printers.
+   - **Universal Browser Dialog**: Standard `@page { size: 4in 6in; }` CSS styling for desktop printers, AirPrint, and batch PDF archival.
+5. **Dual Configuration Management**:
+   - Managed via the interactive **Facility Settings UI** (`/settings`) with live printer ping and test label generation, stored in the facility database with `.env` and CLI override parity.
+
+---
+
 ## Wave E — Clinical Safety, EHR Triage Queue & Kitchen Hardware Ergonomics
 
 - **IDDSI 2.0 Hard Safety Hold & Drink Levels (`src/types/resident.ts`, `server/src/engine/production.ts`)**: Blank or unassigned textures trigger a non-overridable clinical hold (`level: -1, label: 'UNASSIGNED — CONFIRM WITH DIETARY'`). Expanded FDA Big 9 allergens (Milk, Eggs, Fish, Crustacean Shellfish, Tree Nuts, Peanuts, Wheat, Soybeans, Sesame), adaptive feeding equipment options, and IDDSI drink thickness levels 0–4.

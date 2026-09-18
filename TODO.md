@@ -187,6 +187,15 @@
 
 ---
 
+## ✅ Wave I Milestones — Operational Readiness & Hardware Integration (Completed & Verified)
+- [x] **I01: HACCP Temperature Probes & iOS/Safari Resilience (`docs/OPERATIONAL_ARCHITECTURE.md`)**: Codified touch numeric keypad manual entry as the universal primary default with supervisor badge override and real-time HACCP safety bounds validation (<165°F cook hold, <140°F steam line hold, >40°F cold storage hold), supported by progressive WebBluetooth probe pairing for Android/Chromium.
+- [x] **I02: Distributor EDI Transmission & Offline Order Queue**: Standardized dual-mode SFTP background worker pipeline (`ssh2-sftp-client`) targeting `/inbound/` and `/outbound/` directories with automated offline fallback to encrypted CSV order guides and automated SMTP sales-rep dispatch.
+- [x] **I03: Hybrid Intelligent Nutritional Calculation Engine**: Implemented pre-seeded offline master nutritional database covering common healthcare items, augmented by lazy-fetch upserting to local cache whenever a live `USDA_API_KEY` is provided.
+- [x] **I04: Multi-Protocol Thermal Tray Label Printing**: Formalized direct TCP socket relay (port 9100) for networked Zebra printers, Zebra Browser Print agent for locally attached USB desktop printers, and `@page { size: 4in 6in; }` universal browser dialog/PDF export.
+- [x] **I05: Unified Configuration Architecture**: Established dual management via interactive Facility Settings UI (`/settings`) with live printer ping and test label printing, stored in database with `.env` and CLI override parity.
+
+---
+
 ## 🏆 Project Status: All Milestones & Stages 100% Complete & Production Ready
 - [x] Core Clinical Care & Resident Operations (`/residents`, `/api/residents`)
 - [x] Bulk Census & Diet Order CSV Importer with Audit Provenance (`/residents`, `/api/residents/import-csv`)

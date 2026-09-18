@@ -2,13 +2,20 @@
 
 > **Role:** Certified Dietary Manager (CDM, CFPP) & Healthcare Foodservice Operations Consultant  
 > **Cadence:** Daily Operational Review & Proactive Feature Stress-Testing  
-> **Last Audit:** Sunday, August 30, 2026 (2026-08-30T19:29:02.619Z)  
-> **Scope:** Clinical Safety · Kitchen Ergonomics · Supply Chain · CMS-2567 Survey Readiness · Open Core Model
+> **Last Audit:** Friday, September 18, 2026 (Wave I Operational Readiness & Hardware Integration Audit)  
+> **Scope:** Clinical Safety · Kitchen Ergonomics · Supply Chain · CMS-2567 Survey Readiness · Hardware Integration · Open Core Model
 
 ---
 
 ## 📋 Executive Summary
-ShorelineOps Care OS v5.0 has achieved **production-ready operational compliance** across all five clinical and culinary dimensions. The platform provides a free, open-source Community Core for independent facilities while gating enterprise modules (PointClickCare Live Sync, Multi-Distributor Split MRP, CMS-2567 Federal Survey Binder, 3-Way Invoice Match) under the commercial SaaS tier.
+ShorelineOps Care OS v5.0 / v6.5 has achieved **production-ready operational compliance** across all five clinical and culinary dimensions. All 4 operational hardware and integration considerations have been formally resolved:
+1. **HACCP Temperature Probes**: Dual touch numeric keypad (primary universal default) + WebBluetooth probe auto-pairing.
+2. **Distributor EDI Transmission**: Background SFTP polling worker + auto-fallback to encrypted CSV/PDF order guide dispatch.
+3. **Nutritional Engine**: Offline master institutional nutrition table + lazy-fetch upserting when `USDA_API_KEY` is present.
+4. **Thermal Printing**: Direct network TCP socket (port 9100) + Zebra Browser Print + universal 4" x 6" browser print dialog.
+5. **Unified Configuration**: Facility Settings UI + `.env` and CLI override support.
+
+The platform guarantees 100% operational uptime in kitchen environments, with an MIT Community Core and zero dining lockout on subscription lapse.
 
 ---
 

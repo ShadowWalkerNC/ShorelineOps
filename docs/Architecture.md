@@ -213,3 +213,26 @@ While Next.js App Router is a strong choice for content websites and standard B2
 - **Open Core Purity & Zero Clinical Lockout**:
   - Community Core remains 100% free, open-source, and offline-capable forever under the MIT license.
   - Billing or subscription lapses strictly disable advanced SaaS automation (2-way EHR sync, split MRP comparator, survey binder export) without ever locking out resident meal delivery, allergen safety checks, or temperature logging.
+
+---
+
+## 6. Operational Hardware & Distributor Integration Architecture
+
+Detailed specifications and hardware schematics are documented in [`docs/OPERATIONAL_ARCHITECTURE.md`](OPERATIONAL_ARCHITECTURE.md). Key subsystem guarantees:
+
+1. **HACCP Temperature Probes (iOS/Android/Desktop)**:
+   - Primary default is a high-contrast touch keypad with automated HACCP out-of-range bounds highlighting (<165°F cook hold, <140°F steam line hold, >40°F cold hold) and supervisor override badge protection.
+   - Progressive WebBluetooth probe driver auto-connects to digital thermocouple probes (Cooper-Atkins, ThermoWorks BlueTherm) on Chromium/Android tablets with 100% zero-lockout manual fallback.
+2. **Distributor EDI Transmission & Offline Order Queue**:
+   - Dual-mode SFTP worker (`ssh2-sftp-client`) manages electronic 850 PO transmission and 810/832 ingestion.
+   - If SFTP connectivity fails, orders automatically fall back to encrypted CSV/PDF order guides with 1-click manual export and automated SMTP dispatch to vendor account representatives.
+3. **Hybrid Intelligent Nutrient Engine**:
+   - Local SQLite master nutritional table pre-seeded with institutional culinary ingredients for full offline cycle planning.
+   - Lazy-fetch upserting queries USDA FoodData Central when an optional `USDA_API_KEY` is provisioned, continuously expanding local facility intelligence.
+4. **Multi-Protocol Thermal Tray Label Printing**:
+   - Direct TCP socket client (port 9100) routes standard ZPL II envelopes (`^XA ... ^XZ`) to networked Zebra thermal printers.
+   - Local workstation USB desktop printing supported via Zebra Browser Print agent.
+   - Universal browser fallback renders standard 4" x 6" `@page` styles for desktop printers and PDF batch records.
+5. **Unified Facility Configuration Management**:
+   - Integrated Facility Settings UI (`/settings`) with live printer ping and test label printing, stored in database with `.env` and CLI override support.
+
