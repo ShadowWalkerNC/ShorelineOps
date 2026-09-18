@@ -5,9 +5,9 @@
 ### Open-Source Healthcare Dietary Operations, Clinical Nutrition & Care Coordination Platform
 
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
-[![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-design-system--uiux)
+[![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#-platform-interface-tour)
 [![Security: HIPAA Technical Safeguards](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
-[![Tests: 132/132 Passing](https://img.shields.io/badge/Tests-132%2F132%20Passing%20(100%25)-brightgreen.svg)](#-automated-testing)
+[![Tests: 155/155 Passing](https://img.shields.io/badge/Tests-155%2F155%20Passing%20(100%25)-brightgreen.svg)](#-4-run-automated-test-suite)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
 **Engineered by a healthcare executive chef, not a venture fund.**  
@@ -181,7 +181,7 @@ npm run dev:all
 ```bash
 npm test
 ```
-All **132 system integration, clinical dietary, and safety tests** pass with 100% success rate across 26 operational domains.
+All **155 system integration, clinical dietary, and safety tests** pass with 100% success rate across all operational domains.
 
 ---
 
