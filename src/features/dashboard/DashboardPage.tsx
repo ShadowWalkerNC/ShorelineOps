@@ -7,9 +7,12 @@ import { useProductionStore } from '@/state/productionStore'
 import { useInventoryStore } from '@/state/inventoryStore'
 import { useBudgetStore } from '@/state/budgetStore'
 import { useAuth } from '@/security/AuthContext'
+import { useDevice } from '@/hooks/useDevice'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import { Zap, ClipboardList, AlertOctagon, AlertTriangle, Utensils, Calendar, CheckCircle2, Store, ArrowUpDown } from 'lucide-react'
 import type { DayOfWeek } from '@/types'
+import MobileDashboardView from './components/MobileDashboardView'
+import TabletDashboardView from './components/TabletDashboardView'
 
 function getGreeting() {
   const h = new Date().getHours()
@@ -361,6 +364,52 @@ export default function DashboardPage() {
   const hasAnyPrep = cutUp > 0 || minced > 0 || pureed > 0 || Object.keys(keyAllergyCount).length > 0
   const todayStr   = new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
   const isManager  = atLeast('manager')
+  const { isMobile, isTablet } = useDevice()
+
+  const dashboardProps = {
+    active,
+    residents,
+    loading,
+    hospital,
+    loa,
+    totalEnsure,
+    roomTrays,
+    diningRoom,
+    cutUp,
+    minced,
+    pureed,
+    keyAllergyCount,
+    upcomingBirthdays,
+    todayDay,
+    lunchOpt1,
+    lunchOpt2,
+    dinnerOpt1,
+    dinnerOpt2,
+    lunchDessert,
+    dinnerDessert,
+    pendingApprovals,
+    unreadThreads,
+    completedSheets,
+    totalSheets,
+    prodPct,
+    lowParItems,
+    zeroItems,
+    totalBudget,
+    totalSpent,
+    dailyPerRes,
+    budgetPct,
+    period,
+    isManager,
+    user,
+  }
+
+  if (isMobile) {
+    return <MobileDashboardView {...dashboardProps} />
+  }
+
+  if (isTablet) {
+    return <TabletDashboardView {...dashboardProps} />
+  }
 
   return (
     <div className="sl-page fade-in">

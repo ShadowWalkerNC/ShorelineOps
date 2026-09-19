@@ -7,14 +7,15 @@ import SystemSettingsPanel from './components/SystemSettings'
 import AuditLogViewer      from './components/AuditLogViewer'
 import LicenseManagerPanel from './components/LicenseManagerPanel'
 
-// B13 scope cuts: removed panels — HealerBot, BottleDrive, CouncilNotes,
-// TaskAssigner, MaintenanceWorkOrders, DocumentsTemplates, BudgetPettyCash.
-// Kept: User Accounts, Audit Log, Data Management, Licensing, Call-Outs.
-// Staff Scheduling is parked for Phase 5.
+import SystemHealthDiagnostics from './components/SystemHealthDiagnostics'
+import BackupRecoveryPanel   from './components/BackupRecoveryPanel'
+
 type AdminTab =
-  | 'license' | 'scheduling' | 'users' | 'callouts' | 'data' | 'audit'
+  | 'diagnostics' | 'backup' | 'license' | 'scheduling' | 'users' | 'callouts' | 'data' | 'audit'
 
 const TABS: { id: AdminTab; label: string }[] = [
+  { id: 'diagnostics', label: 'System Health & Self-Repair' },
+  { id: 'backup',      label: 'Backup & Recovery' },
   { id: 'license',     label: 'SaaS Licensing & Entitlements' },
   { id: 'scheduling',  label: 'Staff Scheduling (Parked)' },
   { id: 'users',       label: 'User Accounts' },
@@ -24,7 +25,7 @@ const TABS: { id: AdminTab; label: string }[] = [
 ]
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<AdminTab>('scheduling')
+  const [tab, setTab] = useState<AdminTab>('diagnostics')
 
   return (
     <RequireRole role="admin">
@@ -36,7 +37,7 @@ export default function AdminPage() {
             Administration &amp; Kitchen Console
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-            Manage user accounts, review audit logs, import/export databases, and manage licensing.
+            Monitor automated system health, run 1-click self-repairs, manage backups, inspect audit logs, and configure licensing.
           </p>
         </div>
 
@@ -72,6 +73,8 @@ export default function AdminPage() {
           padding: 24,
           boxShadow: 'var(--shadow-sm)',
         }}>
+          {tab === 'diagnostics' && <SystemHealthDiagnostics />}
+          {tab === 'backup'      && <BackupRecoveryPanel />}
           {tab === 'license'     && <LicenseManagerPanel />}
           {tab === 'scheduling'  && <StaffScheduling />}
           {tab === 'users'       && <UserManager />}

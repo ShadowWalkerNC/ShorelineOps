@@ -7,6 +7,7 @@ import EhrReconciliationQueue from './EhrReconciliationQueue'
 import DietReviewFlags from './DietReviewFlags'
 import FeatureGate from '@/components/FeatureGate'
 import { AppleBadge, AppleButton, AppleCard, AppleSegmentedControl } from '@/apple-ui'
+import { useDevice } from '@/hooks/useDevice'
 import type { Resident } from '@/types/resident'
 import {
   Users,
@@ -99,34 +100,38 @@ export default function ResidentsPage() {
     return list
   }, [residents, activeFilter])
 
+  const { isMobile, isTablet, isDesktop } = useDevice()
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
 
       {/* ── Apple Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
-              Residents & Diet Orders
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+              Residents &amp; Diet Orders
             </h1>
             <AppleBadge color="blue">
               Census: {residents.length}
             </AppleBadge>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
             Real-time clinical nutrition roster, IDDSI dysphagia orders, food allergies, and tray delivery locations.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          <AppleButton
-            variant="secondary"
-            size="md"
-            icon={<FileSpreadsheet className="w-4 h-4" />}
-            onClick={() => setShowImportModal(true)}
-          >
-            Import Census CSV
-          </AppleButton>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {!isMobile && (
+            <AppleButton
+              variant="secondary"
+              size="md"
+              icon={<FileSpreadsheet className="w-4 h-4" />}
+              onClick={() => setShowImportModal(true)}
+            >
+              Import Census CSV
+            </AppleButton>
+          )}
           <AppleButton
             variant="primary"
             size="md"
@@ -139,7 +144,8 @@ export default function ResidentsPage() {
       </div>
 
       {/* ── Apple Clinical Stats Dashboard ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+
         <AppleCard
           className="p-3.5 cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 transition-all"
           onClick={() => setActiveFilter('active')}
@@ -228,11 +234,11 @@ export default function ResidentsPage() {
           )}
         </div>
 
-        {/* Segmented Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+        {/* Segmented Filter Pills (Touch targets >= 44px on mobile) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
           <button
             onClick={() => setActiveFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
               activeFilter === 'all'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -242,7 +248,7 @@ export default function ResidentsPage() {
           </button>
           <button
             onClick={() => setActiveFilter('active')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
               activeFilter === 'active'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -252,7 +258,7 @@ export default function ResidentsPage() {
           </button>
           <button
             onClick={() => setActiveFilter('texture')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
               activeFilter === 'texture'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -262,7 +268,7 @@ export default function ResidentsPage() {
           </button>
           <button
             onClick={() => setActiveFilter('cardiac')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
               activeFilter === 'cardiac'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -272,16 +278,17 @@ export default function ResidentsPage() {
           </button>
           <button
             onClick={() => setActiveFilter('room')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
               activeFilter === 'room'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            Room Trays ({roomTrayCount})
+            In-Room ({roomTrayCount})
           </button>
         </div>
       </div>
+
 
       {/* ── Error Banner ── */}
       {error && (

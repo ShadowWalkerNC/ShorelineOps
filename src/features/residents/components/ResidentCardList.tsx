@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { useDevice } from '@/hooks/useDevice'
 import type { Resident } from '@/types/resident'
 import {
   User,
@@ -246,42 +247,46 @@ function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: R
 }
 
 export default function ResidentCardList({ residents, onEdit, onDelete }: Props) {
+  const { isMobile } = useDevice()
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
 
   return (
     <div className="space-y-4">
       {/* View Switcher */}
       <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-1">
-        <span>Showing <strong className="text-slate-900 dark:text-white font-mono">{residents.length}</strong> Clinical Patient Profiles</span>
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`py-1 px-2.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              viewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-xs' : 'text-slate-400'
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Chart Cards</span>
-          </button>
-          <button
-            onClick={() => setViewMode('table')}
-            className={`py-1 px-2.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              viewMode === 'table' ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-xs' : 'text-slate-400'
-            }`}
-          >
-            <ListIcon className="w-3.5 h-3.5" />
-            <span>EMR Census Table</span>
-          </button>
-        </div>
+        <span>Showing <strong className="text-slate-900 dark:text-white font-mono">{residents.length}</strong> Clinical Profiles</span>
+        {!isMobile && (
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`py-1 px-2.5 rounded-lg flex items-center gap-1.5 transition-all ${
+                viewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-xs' : 'text-slate-400'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Chart Cards</span>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`py-1 px-2.5 rounded-lg flex items-center gap-1.5 transition-all ${
+                viewMode === 'table' ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-xs' : 'text-slate-400'
+              }`}
+            >
+              <ListIcon className="w-3.5 h-3.5" />
+              <span>EMR Census Table</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {viewMode === 'grid' || isMobile ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
           {residents.map(r => (
             <ResidentAppleCard key={r.id} r={r} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </div>
       ) : (
+
         <AppleCard className="p-0 overflow-hidden border border-slate-200 dark:border-slate-800">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs divide-y divide-slate-200 dark:divide-slate-800">

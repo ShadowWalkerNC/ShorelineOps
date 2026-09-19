@@ -4,6 +4,22 @@ All notable changes to the ShorelineOps platform are documented in this file.
 
 ---
 
+## [v7.0.0] — 2026-09-19
+### Added & Enhanced
+- **Responsive Multi-Device Architecture (Desktop, Tablet & Mobile)**:
+  - **Breakpoint & Device Engine** (`src/hooks/useDevice.tsx`, `src/main.tsx`): Reactive multi-device context engine with real-world breakpoints ($< 768\text{px}$ Mobile, $768\text{px} \le w < 1024\text{px}$ Tablet, $\ge 1024\text{px}$ Desktop) and manual interactive preview switcher (`Auto`, `Desk`, `Tab`, `Mobile`).
+  - **Desktop Administrative Hub** (`src/features/dashboard/DashboardPage.tsx`, `src/components/Layout.tsx`): 260px grouped sidebar, executive KPI meters, Dennis vs. Sysco MRP optimizer, and comprehensive CMS-2567 binder exports.
+  - **Tablet Supervisory Console** (`src/features/dashboard/components/TabletDashboardView.tsx`): 72px compact touch rail freeing horizontal viewport, $\ge 48\text{px}$ tactile touch targets, dual-column meal choices and IDDSI texture distribution.
+  - **Mobile Shift Operations Hub** (`src/features/dashboard/components/MobileDashboardView.tsx`, `src/features/tasks/MobileTasksPage.tsx`): Jakob's Law thumb-zone sticky bottom navigation (`Dashboard`, `Residents`, `Kitchen`, `Tasks`, `More`), slide-up sheet (`src/components/MobileMoreSheet.tsx`), live shift countdown, and prominent NPO safety alert banners.
+  - **Adaptive Resident Roster** (`src/features/residents/ResidentsPage.tsx`, `src/features/residents/components/ResidentCardList.tsx`): 3-column desktop cards / 7-column table, 2-column tablet layout, and single-column mobile stream with instant 1-tap chart drawer expansion.
+- **Turnkey Production-Ready Commercial Software Experience**:
+  - **Guided Onboarding Flow** (`src/features/setup/SetupWizardPage.tsx`, `server/src/routes/setup.ts`): Sensible realistic defaults (Shoreline Healthcare & Rehabilitation, Portland ME, NPI, wings, dining halls), 1-click starter configuration (`Sample Demo Data` vs. `Clean Production Slate`), default bootstrap secret helper, and plain-language validation alerts.
+  - **Automated System Health & Self-Healing Repair** (`src/features/admin/components/SystemHealthDiagnostics.tsx`, `server/src/routes/admin.ts`): Subsystem diagnostics for database latency, census integrity, HACCP 140°F/41°F compliance, and LRU cache health with 1-click self-repair powered by `OperationsHealerBot`.
+  - **Community Data Backup & Recovery** (`src/features/admin/components/BackupRecoveryPanel.tsx`, `server/src/routes/admin.ts`): 1-click portable JSON snapshots, pre-flight dry-run inspection previews with record counts, and safe confirmation-guarded record upserts.
+  - **Human-First Product Language**: Clear contextual titles, purpose explanations, and action-oriented labels throughout `AdminPage.tsx`, `SettingsPage.tsx`, and `SetupWizardPage.tsx`.
+
+---
+
 ## [v6.5.0] — 2026-09-18
 ### Added & Standardized
 - **Turnkey Multi-Platform Deployment Engine** (`install.sh`, `Setup.ps1`, `docker-compose.yml`):

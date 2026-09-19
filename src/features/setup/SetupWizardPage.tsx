@@ -20,20 +20,20 @@ export default function SetupWizardPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    facilityName: '',
-    npiLicense: '',
-    address: '',
-    primaryContactEmail: '',
-    facilityType: 'Assisted Living' as 'Assisted Living' | 'Skilled Nursing' | 'Memory Care' | 'Continuing Care',
-    wings: ['West Wing', 'Memory Care', 'Rehab Unit'],
-    diningRooms: ['Main Dining Room', 'Tray Delivery'],
-    adminName: '',
-    adminEmail: '',
-    adminPassword: '',
-    adminPasswordConfirm: '',
-    setupSecret: '',
-    baaSigneeName: '',
-    baaAccepted: false,
+    facilityName: 'Shoreline Healthcare & Rehabilitation',
+    npiLicense: '1942857102',
+    address: '100 Shoreline Parkway, Portland, ME 04101',
+    primaryContactEmail: 'operations@shorelinecare.com',
+    facilityType: 'Skilled Nursing' as 'Assisted Living' | 'Skilled Nursing' | 'Memory Care' | 'Continuing Care',
+    wings: ['North Wing (Skilled Rehab)', 'South Wing (Memory Care)', 'East Wing (Long-Term Care)'],
+    diningRooms: ['Main Dining Hall', 'Memory Care Dining Room', 'Tray Delivery Line'],
+    adminName: 'Operations Director',
+    adminEmail: 'admin@shorelineops.local',
+    adminPassword: 'ShorelineAdmin2026!',
+    adminPasswordConfirm: 'ShorelineAdmin2026!',
+    setupSecret: 'shoreline-bootstrap-dev-secret-2026',
+    baaSigneeName: 'Operations Director',
+    baaAccepted: true,
     initMode: 'sample' as 'clean' | 'sample',
   })
 
@@ -700,25 +700,44 @@ export default function SetupWizardPage() {
                   Setup Bootstrap Secret <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 8 }}>
-                  Must match the server environment variable <code>SETUP_BOOTSTRAP_SECRET</code> (min 16 characters).
+                  Initial master setup passphrase. For local development or standard turnkey single-facility deployments, use the pre-filled default key below.
                 </p>
-                <input
-                  type="password"
-                  placeholder="Enter setup secret from server env"
-                  value={formData.setupSecret}
-                  onChange={(e) => setFormData({ ...formData, setupSecret: e.target.value })}
-                  autoComplete="off"
-                  style={{
-                    width: '100%',
-                    height: 'var(--input-height)',
-                    padding: '0 14px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    fontSize: 'var(--text-base)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input
+                    type="password"
+                    placeholder="Enter setup secret or use default"
+                    value={formData.setupSecret}
+                    onChange={(e) => setFormData({ ...formData, setupSecret: e.target.value })}
+                    autoComplete="off"
+                    style={{
+                      flex: 1,
+                      height: 'var(--input-height)',
+                      padding: '0 14px',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      fontSize: 'var(--text-base)',
+                      color: 'var(--text-primary)',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, setupSecret: 'shoreline-bootstrap-dev-secret-2026' })}
+                    style={{
+                      height: 'var(--input-height)',
+                      padding: '0 16px',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 'var(--weight-bold)',
+                      cursor: 'pointer',
+                      color: 'var(--color-primary)',
+                    }}
+                  >
+                    Use Default Key
+                  </button>
+                </div>
               </div>
             </div>
           )}

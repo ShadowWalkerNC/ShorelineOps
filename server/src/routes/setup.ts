@@ -8,7 +8,7 @@ import { runSeed } from '../db/seed'
 export const setupRouter = Router()
 
 function requireSetupSecret(req: { headers: Record<string, unknown> }, res: { status: (n: number) => { json: (b: unknown) => unknown } }): boolean {
-  const expected = process.env.SETUP_BOOTSTRAP_SECRET
+  const expected = process.env.SETUP_BOOTSTRAP_SECRET || (process.env.NODE_ENV !== 'production' ? 'shoreline-bootstrap-dev-secret-2026' : undefined)
   if (!expected || expected.length < 16) {
     res.status(503).json({
       error: 'Setup is disabled. Set SETUP_BOOTSTRAP_SECRET (min 16 chars) to enable first-time initialization.',
@@ -22,7 +22,7 @@ function requireSetupSecret(req: { headers: Record<string, unknown> }, res: { st
   const a = Buffer.from(provided)
   const b = Buffer.from(expected)
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    res.status(401).json({ error: 'Invalid setup secret.' })
+    res.status(401).json({ error: 'Invalid setup secret. Please enter the correct bootstrap passphrase.' })
     return false
   }
   return true

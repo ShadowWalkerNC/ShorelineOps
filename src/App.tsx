@@ -26,6 +26,7 @@ import PurchasingPage from './features/purchasing/PurchasingPage'
 import DistributorPortalPage from './features/distributor/DistributorPortalPage'
 import ReportingPage from './features/reporting/ReportingPage'
 import SettingsPage from './features/settings/SettingsPage'
+import MobileTasksPage from './features/tasks/MobileTasksPage'
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="/distributor"       element={<AuthedLayout><DistributorPortalPage /></AuthedLayout>} />
         <Route path="/reporting"         element={<AuthedLayout><ReportingPage /></AuthedLayout>} />
         <Route path="/settings"          element={<AuthedLayout><SettingsPage /></AuthedLayout>} />
+        <Route path="/tasks"             element={<AuthedLayout><MobileTasksPage /></AuthedLayout>} />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
         {/* /budget merged into /reporting (B13 scope cut) — legacy redirect */}

@@ -27,7 +27,10 @@ import {
   RefreshCw,
 } from 'lucide-react'
 
-type SettingsTab = 'facility' | 'wings' | 'clinical' | 'integrations' | 'security'
+import SystemHealthDiagnostics from '@/features/admin/components/SystemHealthDiagnostics'
+import BackupRecoveryPanel from '@/features/admin/components/BackupRecoveryPanel'
+
+type SettingsTab = 'facility' | 'wings' | 'clinical' | 'integrations' | 'security' | 'health-backup'
 
 /**
  * Honest sync indicator: green when the server round-trip succeeded, amber
@@ -287,6 +290,7 @@ export default function SettingsPage() {
           { label: 'Dietary & Clinical', value: 'clinical' },
           { label: 'Distributor & Integrations', value: 'integrations' },
           { label: 'Security & SaaS License', value: 'security' },
+          { label: 'Health & Recovery', value: 'health-backup' },
         ]}
       />
 
@@ -705,6 +709,16 @@ export default function SettingsPage() {
             </div>
           </div>
         </AppleCard>
+      )}
+
+      {/* ── TAB 6: SYSTEM HEALTH & RECOVERY ── */}
+      {activeTab === 'health-backup' && (
+        <div className="space-y-8">
+          <SystemHealthDiagnostics />
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+            <BackupRecoveryPanel />
+          </div>
+        </div>
       )}
 
       {/* Save Button Bar */}

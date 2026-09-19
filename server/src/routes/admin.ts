@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { globalHealerBot } from '../agent/healer'
 
 const RoleEnum = z.enum([
   'admin',
@@ -727,4 +728,151 @@ adminRouter.delete('/communications/:id', requireRole('admin'), async (req: Auth
     await pool.query('DELETE FROM communications WHERE id = $1', [req.params.id])
     res.status(204).send()
   } catch (err) { next(err) }
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// SYSTEM DIAGNOSTICS & AUTONOMOUS REPAIR
+// ════════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/diagnostics — runs full system health audit
+adminRouter.get('/diagnostics', requireRole('manager'), async (_req: AuthRequest, res, next) => {
+  try {
+    const report = await globalHealerBot.runAudit(false)
+    res.json(report)
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/repair — executes 1-click safe self-healing repair
+adminRouter.post('/repair', requireRole('admin'), async (req: AuthRequest, res, next) => {
+  try {
+    const report = await globalHealerBot.runAudit(true)
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
+       VALUES ('SYSTEM_REPAIR', $1, 'diagnostics', 'success', $2)`,
+      [req.userId, JSON.stringify({ autoRemediationsApplied: report.autoRemediationsApplied, healthScorePct: report.healthScorePct })]
+    )
+    res.json(report)
+  } catch (err) { next(err) }
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMMUNITY DATA BACKUP & DISASTER RECOVERY
+// ════════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/backup/export — export facility data snapshot
+adminRouter.get('/backup/export', requireRole('admin'), async (req: AuthRequest, res, next) => {
+  try {
+    const { rows: facilityRows } = await pool.query('SELECT * FROM facility_config WHERE id = $1', ['default'])
+    const { rows: settingsRows } = await pool.query('SELECT * FROM system_settings WHERE id = 1')
+    const { rows: residentRows } = await pool.query('SELECT * FROM residents ORDER BY name ASC')
+    const { rows: recipeRows }   = await pool.query('SELECT * FROM recipes ORDER BY name ASC')
+    const { rows: inventoryRows }= await pool.query('SELECT * FROM inventory_items ORDER BY item_name ASC')
+    const { rows: staffRows }    = await pool.query('SELECT * FROM staff_profiles ORDER BY last_name ASC')
+
+    const backupPayload = {
+      meta: {
+        application: 'Shoreline Care OS',
+        version: '5.0.0',
+        exportedAt: new Date().toISOString(),
+        exportedBy: req.userId || 'admin',
+        facilityName: facilityRows[0]?.facility_name || 'Shoreline Care Center',
+        records: {
+          residents: residentRows.length,
+          recipes: recipeRows.length,
+          inventory: inventoryRows.length,
+          staff: staffRows.length,
+        },
+      },
+      data: {
+        facilityConfig: facilityRows[0] || null,
+        systemSettings: settingsRows[0] || null,
+        residents: residentRows,
+        recipes: recipeRows,
+        inventory: inventoryRows,
+        staff: staffRows,
+      },
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
+       VALUES ('BACKUP_EXPORT', $1, 'database', 'success', $2)`,
+      [req.userId, JSON.stringify({ records: backupPayload.meta.records })]
+    )
+
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Content-Disposition', `attachment; filename="shoreline_backup_${new Date().toISOString().slice(0, 10)}.json"`)
+    res.json(backupPayload)
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/backup/restore — safe pre-flight validated restore
+adminRouter.post('/backup/restore', requireRole('admin'), async (req: AuthRequest, res, next) => {
+  try {
+    const backup = req.body
+    if (!backup?.meta?.application || !backup?.data) {
+      return res.status(400).json({
+        error: 'Invalid backup file format. Expected a valid Shoreline Care OS backup payload.',
+      })
+    }
+
+    const { residents = [], recipes = [], inventory = [] } = backup.data
+
+    // If dryRun query parameter is passed, just inspect and validate
+    if (req.query.dryRun === 'true') {
+      return res.json({
+        valid: true,
+        summary: {
+          facilityName: backup.meta.facilityName,
+          exportedAt: backup.meta.exportedAt,
+          residentsToRestore: residents.length,
+          recipesToRestore: recipes.length,
+          inventoryToRestore: inventory.length,
+        },
+      })
+    }
+
+    // Safely upsert records without wiping database blindly
+    let restoredResidents = 0
+    for (const r of residents) {
+      if (!r.name) continue
+      await pool.query(
+        `INSERT INTO residents (id, name, room, diet_type, texture, serving_location, is_npo, allergies, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           room = EXCLUDED.room,
+           diet_type = EXCLUDED.diet_type,
+           texture = EXCLUDED.texture,
+           serving_location = EXCLUDED.serving_location,
+           is_npo = EXCLUDED.is_npo,
+           allergies = EXCLUDED.allergies,
+           updated_at = NOW()`,
+        [
+          r.id || crypto.randomUUID(),
+          r.name,
+          r.room || '101',
+          r.diet_type || 'Regular',
+          r.texture || 'Regular',
+          r.serving_location || 'Dining Room',
+          Boolean(r.is_npo),
+          typeof r.allergies === 'string' ? r.allergies : JSON.stringify(r.allergies || []),
+        ]
+      )
+      restoredResidents++
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
+       VALUES ('BACKUP_RESTORE', $1, 'database', 'success', $2)`,
+      [req.userId, JSON.stringify({ restoredResidents, sourceTimestamp: backup.meta.exportedAt })]
+    )
+
+    res.json({
+      success: true,
+      message: `Successfully restored and synchronized ${restoredResidents} resident clinical records from backup snapshot.`,
+      restoredCount: restoredResidents,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: `Restore process encountered an error: ${err.message}` })
+  }
 })
