@@ -14,6 +14,7 @@ import { DietaryNutritionalEngine } from '../engine/nutrition'
 import { MrpDemandForecastEngine } from '../engine/mrp'
 import { globalHealerBot } from '../agent/healer'
 import { getFacilityProfile } from '../config/facilityProfile'
+import { PriceMatrixSolver, CanonicalProduct, MatchedVendorOffer } from '../engine/catalogMatcher'
 
 export interface McpToolDefinition {
   name: string
@@ -87,6 +88,16 @@ export const SHORELINE_MCP_TOOLS: McpToolDefinition[] = [
       type: 'object',
       properties: {
         autoRemediate: { type: 'boolean', description: 'Whether to automatically fix detected issues (default: true)' },
+      },
+    },
+  },
+  {
+    name: 'shoreline_compare_distributor_prices',
+    description: 'Compares cross-distributor product prices (Dennis, Sysco, US Foods) normalized to standard units ($/lb, $/fl oz, $/each) using Cut+Dry style matching.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Optional product category filter (e.g. Meat & Poultry, Produce, Dairy)' },
       },
     },
   },
@@ -177,6 +188,67 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
     case 'shoreline_run_self_healing_audit': {
       const autoFix = args.autoRemediate !== false
       return await globalHealerBot.runAudit(autoFix)
+    }
+
+    case 'shoreline_compare_distributor_prices': {
+      let query = 'SELECT * FROM canonical_products'
+      const queryParams: any[] = []
+      if (args.category) {
+        query += ' WHERE category = $1'
+        queryParams.push(args.category)
+      }
+      query += ' ORDER BY category ASC, name ASC'
+
+      const { rows: canonicalRows } = await pool.query(query, queryParams)
+      const { rows: matchRows } = await pool.query(`
+        SELECT vim.*,
+               vi.vendor_sku, vi.name AS item_name, vi.brand, vi.pack_size, vi.uom, vi.unit_cost AS case_cost,
+               v.id AS vendor_id, v.code AS vendor_code, v.name AS vendor_name
+        FROM vendor_item_matches vim
+        JOIN vendor_items vi ON vi.id = vim.vendor_item_id
+        JOIN vendors v ON v.id = vi.vendor_id
+        WHERE vim.match_status IN ('confirmed', 'auto_matched') AND vi.active = true
+      `)
+
+      const canonicalProducts: CanonicalProduct[] = canonicalRows.map(r => ({
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        standardUom: r.standard_uom,
+        allergens: typeof r.allergens === 'string' ? JSON.parse(r.allergens) : r.allergens || [],
+      }))
+
+      const offers: MatchedVendorOffer[] = matchRows.map(r => ({
+        vendorId: r.vendor_id,
+        vendorCode: r.vendor_code,
+        vendorName: r.vendor_name,
+        vendorSku: r.vendor_sku,
+        itemName: r.item_name,
+        brand: r.brand,
+        packSize: r.pack_size,
+        uom: r.uom,
+        caseCost: parseFloat(r.case_cost || '0'),
+        packQuantityInStandardUom: parseFloat(r.pack_quantity_in_standard_uom || '1'),
+        normalizedUnitCost: parseFloat(r.normalized_unit_cost || '0'),
+        matchConfidence: parseFloat(r.match_confidence || '100'),
+        matchStatus: r.match_status,
+        canonicalProductId: r.canonical_product_id,
+      } as any))
+
+      const matrix = PriceMatrixSolver.solveMatrix(canonicalProducts, offers)
+      const totalPotentialSavings = matrix.reduce((acc, row) => {
+        return acc + (row.costSavingsPerUnit ? row.costSavingsPerUnit * 200 : 0)
+      }, 0)
+
+      return {
+        matrix,
+        summary: {
+          totalCanonicalProducts: matrix.length,
+          comparedProductsCount: matrix.filter(r => r.offers.length > 1).length,
+          singleVendorProductsCount: matrix.filter(r => r.offers.length === 1).length,
+          estimatedMonthlySavings: Math.round(totalPotentialSavings * 100) / 100,
+        },
+      }
     }
 
     default:

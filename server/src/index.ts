@@ -14,6 +14,7 @@ import { adminRouter } from './routes/admin'
 import { timecardRouter } from './routes/timecard'
 import { kitchenRouter } from './routes/kitchen'
 import { purchasingRouter } from './routes/purchasing'
+import { distributorRouter } from './routes/distributor'
 import { reportingRouter } from './routes/reporting'
 import { setupRouter } from './routes/setup'
 import { ehrRouter } from './routes/ehr'
@@ -120,6 +121,7 @@ app.use('/api/production', requireAuth, productionRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
 app.use('/api/kitchen',    requireAuth, kitchenRouter)
 app.use('/api/purchasing', requireAuth, purchasingRouter)
+app.use('/api/distributor', requireAuth, distributorRouter)
 app.use('/api/inventory',  requireAuth, inventoryRouter)
 app.use('/api/trayruns',  requireAuth, trayrunsRouter)
 app.use('/api/reporting',  requireAuth, reportingRouter)

@@ -1003,6 +1003,42 @@ const migrations: { name: string; sql: string }[] = [
       CREATE INDEX IF NOT EXISTS idx_communications_created ON communications(created_at DESC);
     `,
   },
+  {
+    name: '026_canonical_products_and_distributor_matching',
+    sql: `
+      -- Canonical products (universal ingredients/products independent of any single vendor)
+      CREATE TABLE IF NOT EXISTS canonical_products (
+        id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name           TEXT NOT NULL,
+        category       TEXT NOT NULL,
+        standard_uom   TEXT NOT NULL,
+        description    TEXT DEFAULT '',
+        allergens      TEXT[] DEFAULT '{}',
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_canonical_products_name ON canonical_products(name);
+
+      -- Cross-vendor SKU mappings with normalized pricing and match confidence
+      CREATE TABLE IF NOT EXISTS vendor_item_matches (
+        id                            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        canonical_product_id          UUID NOT NULL REFERENCES canonical_products(id) ON DELETE CASCADE,
+        vendor_item_id                UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
+        pack_quantity_in_standard_uom NUMERIC(10,4) NOT NULL DEFAULT 1.0,
+        normalized_unit_cost          NUMERIC(10,4) NOT NULL DEFAULT 0.0,
+        match_confidence              NUMERIC(5,2) DEFAULT 100.0,
+        match_status                  TEXT NOT NULL DEFAULT 'confirmed',
+        matched_by                    TEXT DEFAULT 'system',
+        created_at                    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at                    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(canonical_product_id, vendor_item_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_vendor_item_matches_canon ON vendor_item_matches(canonical_product_id);
+      CREATE INDEX IF NOT EXISTS idx_vendor_item_matches_item ON vendor_item_matches(vendor_item_id);
+    `,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.
@@ -1056,6 +1092,9 @@ export const EXPECTED_TABLES: string[] = [
   'budget_periods',
   'budget_entries',
   'communications',
+  // Wave J: Canonical products & cross-distributor matching (migration 026).
+  'canonical_products',
+  'vendor_item_matches',
 ]
 
 /**

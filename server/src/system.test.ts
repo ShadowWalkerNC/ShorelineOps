@@ -20,6 +20,7 @@ import { ThreeWayInvoiceMatchingEngine } from './engine/invoicing'
 import { CmsDietarySurveyEngine } from './engine/cmsSurvey'
 import { DeterministicDietaryEngine } from './engine/dietaryFormulation'
 import { allowedNextEvents, computeTrayLines, computeMissedTrays } from './engine/trayTracking'
+import { PackSizeNormalizer, FuzzyProductMatcher, PriceMatrixSolver } from './engine/catalogMatcher'
 import { KITCHEN_DEFAULT_ENTREE } from './routes/kitchen'
 import { parseCsvRows } from './routes/residents'
 import { httpCacheMiddleware } from './middleware/cache'
@@ -1242,6 +1243,86 @@ async function runAllTests() {
   } finally {
     globalThis.fetch = originalFetch
   }
+
+  // --- 32. Cut+Dry Distributor SKU Normalization & Price Matrix Matching ---
+  console.log('--- 32. Cut+Dry Distributor SKU Normalization & Price Matrix Matching ---')
+  
+  // Test PackSizeNormalizer
+  const norm1 = PackSizeNormalizer.normalize('40/4oz', 60.00)
+  assert(norm1.standardUom === 'lb', 'PackSizeNormalizer: converts 40/4oz to standard unit lb')
+  assert(norm1.totalStandardUnits === 10, 'PackSizeNormalizer: computes 40 * 4oz = 10 lbs')
+  assert(norm1.normalizedUnitCost === 6.00, 'PackSizeNormalizer: computes $60/case / 10 lbs = $6.00/lb')
+
+  const norm2 = PackSizeNormalizer.normalize('2/10 lb', 70.00)
+  assert(norm2.standardUom === 'lb', 'PackSizeNormalizer: parses 2/10 lb correctly')
+  assert(norm2.totalStandardUnits === 20, 'PackSizeNormalizer: computes 2 * 10 lbs = 20 lbs')
+  assert(norm2.normalizedUnitCost === 3.50, 'PackSizeNormalizer: computes $70/case / 20 lbs = $3.50/lb')
+
+  const norm3 = PackSizeNormalizer.normalize('6/#10 cans', 48.00)
+  assert(norm3.standardUom === '#10 can', 'PackSizeNormalizer: parses #10 can unit')
+  assert(norm3.totalStandardUnits === 6, 'PackSizeNormalizer: parses 6 cans')
+  assert(norm3.normalizedUnitCost === 8.00, 'PackSizeNormalizer: computes $48 / 6 cans = $8.00/can')
+
+  const norm4 = PackSizeNormalizer.normalize('50 lb', 25.00)
+  assert(norm4.standardUom === 'lb', 'PackSizeNormalizer: parses straight 50 lb bag')
+  assert(norm4.totalStandardUnits === 50, 'PackSizeNormalizer: computes 50 lbs')
+  assert(norm4.normalizedUnitCost === 0.50, 'PackSizeNormalizer: computes $25 / 50 lbs = $0.50/lb')
+
+  // Test FuzzyProductMatcher
+  const cleaned = FuzzyProductMatcher.cleanTitle('CHK BRST B/S FRSH 4/10#')
+  assert(cleaned.includes('chicken') && cleaned.includes('boneless skinless'), 'FuzzyProductMatcher: expands culinary abbreviations (chk, b/s)')
+
+  const canonicalItem = {
+    id: 'canon-chk',
+    name: 'Boneless Skinless Chicken Breast',
+    category: 'Meat & Poultry',
+    standardUom: 'lb',
+  }
+  const matchResult = FuzzyProductMatcher.findBestMatch('CHK BRST B/S 4/10 LB', [canonicalItem])
+  assert(matchResult.canonicalProduct !== null, 'FuzzyProductMatcher: finds match for abbreviated vendor SKU')
+  assert(matchResult.canonicalProduct?.id === 'canon-chk', 'FuzzyProductMatcher: links to correct canonical product')
+  assert(matchResult.confidence >= 50, 'FuzzyProductMatcher: computes confidence score >= 50%')
+
+  // Test PriceMatrixSolver
+  const offers = [
+    {
+      vendorId: 'v-dennis',
+      vendorCode: 'dennis',
+      vendorName: 'Dennis Food Service',
+      vendorSku: 'DNS-CHK-01',
+      itemName: 'Boneless Chicken Breast',
+      packSize: '4/10 lb',
+      uom: 'case',
+      caseCost: 86.00,
+      packQuantityInStandardUom: 40,
+      normalizedUnitCost: 2.15,
+      matchConfidence: 95,
+      matchStatus: 'confirmed' as const,
+      canonicalProductId: 'canon-chk',
+    },
+    {
+      vendorId: 'v-sysco',
+      vendorCode: 'sysco',
+      vendorName: 'Sysco Broadline',
+      vendorSku: 'SY-109281',
+      itemName: 'B/S Chicken Breast 4/10#',
+      packSize: '4/10 lb',
+      uom: 'case',
+      caseCost: 102.00,
+      packQuantityInStandardUom: 40,
+      normalizedUnitCost: 2.55,
+      matchConfidence: 90,
+      matchStatus: 'confirmed' as const,
+      canonicalProductId: 'canon-chk',
+    },
+  ]
+
+  const matrix = PriceMatrixSolver.solveMatrix([canonicalItem], offers)
+  assert(matrix.length === 1, 'PriceMatrixSolver: generates matrix row for canonical product')
+  assert(matrix[0].winningVendor?.vendorCode === 'dennis', 'PriceMatrixSolver: accurately crowns lowest $/unit vendor')
+  assert(matrix[0].winningVendor?.normalizedUnitCost === 2.15, 'PriceMatrixSolver: captures lowest normalized unit cost')
+  assert(matrix[0].costSavingsPerUnit === 0.40, 'PriceMatrixSolver: calculates savings per unit ($2.55 - $2.15 = $0.40)')
+  assert(matrix[0].variancePercent === 18.6, 'PriceMatrixSolver: calculates correct price spread %')
 
   console.log('\n=======================================================')
   console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`)

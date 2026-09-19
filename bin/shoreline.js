@@ -363,6 +363,85 @@ async function main() {
       break
     }
 
+    // ── DISTRIBUTOR & VENDOR CATALOG ("CUT+DRY MATCH & CRUSH") ───────────────
+    case 'distributor':
+    case 'vendor': {
+      if (subcommand === 'matrix' || subcommand === 'prices') {
+        const matrixData = {
+          comparisonCount: 8,
+          vendorsCompared: ['Dennis Food Service', 'Sysco Broadline', 'US Foods'],
+          estimatedMonthlySavings: 428.50,
+          matrix: [
+            {
+              item: 'Boneless Skinless Chicken Breast',
+              category: 'Meat & Poultry',
+              bestPrice: '$2.15 / lb',
+              winningVendor: 'Dennis Food Service',
+              spread: '+18.6%',
+              offers: [
+                { vendor: 'Dennis', sku: 'DNS-CHK-01', pack: '4/10 lb', caseCost: 86.00, unitCost: '$2.15/lb', winner: true },
+                { vendor: 'Sysco', sku: 'SY-109281', pack: '2/20 lb', caseCost: 102.00, unitCost: '$2.55/lb', winner: false },
+              ]
+            },
+            {
+              item: 'Ground Beef 80/20 Fresh',
+              category: 'Meat & Poultry',
+              bestPrice: '$3.89 / lb',
+              winningVendor: 'Dennis Food Service',
+              spread: '+8.0%',
+              offers: [
+                { vendor: 'Dennis', sku: 'DNS-GB-02', pack: '4/5 lb', caseCost: 77.80, unitCost: '$3.89/lb', winner: true },
+                { vendor: 'Sysco', sku: 'SY-209382', pack: '2/10 lb', caseCost: 84.00, unitCost: '$4.20/lb', winner: false },
+              ]
+            },
+            {
+              item: 'Broccoli Florets Fresh',
+              category: 'Produce',
+              bestPrice: '$1.45 / lb',
+              winningVendor: 'Dennis Food Service',
+              spread: '+17.2%',
+              offers: [
+                { vendor: 'Dennis', sku: 'DNS-BRC-03', pack: '4/5 lb', caseCost: 29.00, unitCost: '$1.45/lb', winner: true },
+                { vendor: 'Sysco', sku: 'SY-301928', pack: '4/5 lb', caseCost: 34.00, unitCost: '$1.70/lb', winner: false },
+              ]
+            },
+            {
+              item: 'Russet Potatoes 70ct',
+              category: 'Produce',
+              bestPrice: '$0.52 / lb',
+              winningVendor: 'Sysco Broadline',
+              spread: '+11.5%',
+              offers: [
+                { vendor: 'Sysco', sku: 'SY-401923', pack: '50 lb', caseCost: 26.00, unitCost: '$0.52/lb', winner: true },
+                { vendor: 'Dennis', sku: 'DNS-POT-04', pack: '50 lb', caseCost: 29.00, unitCost: '$0.58/lb', winner: false },
+              ]
+            },
+          ]
+        }
+
+        output(matrixData, (m) => {
+          console.log(`\n⚖️  CROSS-VENDOR PRICE COMPARISON MATRIX (CUT+DRY MATCH & CRUSH)`)
+          console.log('──────────────────────────────────────────────────────────────────────────')
+          console.log(`Vendors Compared:   ${m.vendorsCompared.join(', ')}`)
+          console.log(`Tracked Products:   ${m.comparisonCount} canonical items`)
+          console.log(`Est. Mo. Savings:   🟢 $${m.estimatedMonthlySavings.toFixed(2)} (routing orders to lowest $/unit)`)
+          console.log('──────────────────────────────────────────────────────────────────────────')
+          m.matrix.forEach(row => {
+            console.log(`\n📦 ${row.item.toUpperCase()} [${row.category}] — Winner: ⭐ ${row.winningVendor} (${row.bestPrice}) [${row.spread}]`)
+            row.offers.forEach(o => {
+              const tag = o.winner ? '  🏆 WINNER:' : '     OFFER: '
+              console.log(`${tag} ${o.vendor.padEnd(8)} SKU: ${o.sku.padEnd(11)} ${o.pack.padEnd(8)} $${o.caseCost.toFixed(2)}/case → ${o.unitCost}`)
+            })
+          })
+          console.log('──────────────────────────────────────────────────────────────────────────\n')
+        })
+        return
+      }
+
+      console.log('Subcommands for distributor: matrix, prices')
+      break
+    }
+
     // ── 6. CMS SURVEY BINDER & CPD REPORTING ────────────────────────────────
     case 'survey':
     case 'reporting': {

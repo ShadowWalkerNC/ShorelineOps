@@ -23,6 +23,7 @@ import KitchenSheetPage from './features/kitchen/KitchenSheetPage'
 import TrayCardGeneratorPage from './features/kitchen/TrayCardGeneratorPage'
 import TrayDispatchPage from './features/traydispatch/TrayDispatchPage'
 import PurchasingPage from './features/purchasing/PurchasingPage'
+import DistributorPortalPage from './features/distributor/DistributorPortalPage'
 import ReportingPage from './features/reporting/ReportingPage'
 import SettingsPage from './features/settings/SettingsPage'
 
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="/kitchen/traycards" element={<AuthedLayout><TrayCardGeneratorPage /></AuthedLayout>} />
         <Route path="/kitchen/dispatch"  element={<AuthedLayout><TrayDispatchPage /></AuthedLayout>} />
         <Route path="/purchasing"        element={<AuthedLayout><PurchasingPage /></AuthedLayout>} />
+        <Route path="/distributor"       element={<AuthedLayout><DistributorPortalPage /></AuthedLayout>} />
         <Route path="/reporting"         element={<AuthedLayout><ReportingPage /></AuthedLayout>} />
         <Route path="/settings"          element={<AuthedLayout><SettingsPage /></AuthedLayout>} />
 

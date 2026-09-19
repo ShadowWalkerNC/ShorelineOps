@@ -36,6 +36,7 @@ import {
   Sparkles,
   Download,
   CreditCard,
+  Store,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -87,6 +88,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Supply Chain & Split MRP',
     items: [
       { label: 'Purchasing & Split Orders', to: '/purchasing', color: '#0284c7', icon: ShoppingCart, minRole: 'dietary' },
+      { label: 'Distributor Portal & SKUs', to: '/distributor', color: '#8b5cf6', icon: Store, minRole: 'dietary' },
       { label: 'CMS-2567 & $/CPD Auditing', to: '/reporting', color: '#10b981', icon: TrendingUp, minRole: 'dietary' },
       { label: 'Inventory & Par Levels', to: '/inventory', color: '#f59e0b', icon: Boxes },
     ],

@@ -396,6 +396,63 @@ export async function runSeed() {
   }
   console.log(`[*] Seeded ${insertedCount} vendor items across Dennis Food Service and Sysco (500+ SKU Catalog)`)
 
+  // 4b. Canonical Products & Cross-Vendor Matches ("Match & Crush")
+  const CANONICAL_STAPLES = [
+    { name: 'Boneless Skinless Chicken Breast 4oz', category: 'Meat & Poultry', standardUom: 'lb', allergens: [], keyword: 'Chicken Breast' },
+    { name: 'Ground Beef 80/20 Fresh', category: 'Meat & Poultry', standardUom: 'lb', allergens: [], keyword: 'Ground Beef' },
+    { name: 'Broccoli Florets Fresh/IQF', category: 'Produce & Fruits', standardUom: 'lb', allergens: [], keyword: 'Broccoli' },
+    { name: 'Russet Potatoes #1 Burbank', category: 'Produce & Fruits', standardUom: 'lb', allergens: [], keyword: 'Potatoes' },
+    { name: 'Whole Milk Grade A Gallon', category: 'Dairy & Refrigerated', standardUom: 'gal', allergens: ['Dairy'], keyword: 'Milk' },
+    { name: 'Salted Sweet Cream Butter', category: 'Dairy & Refrigerated', standardUom: 'lb', allergens: ['Dairy'], keyword: 'Butter' },
+    { name: 'Orange Juice Thickened Nectar L3', category: 'Dietary & Thickened', standardUom: 'gal', allergens: [], keyword: 'Orange Juice' },
+    { name: 'Pureed Green Beans IDDSI L4', category: 'Dietary & Thickened', standardUom: 'lb', allergens: [], keyword: 'Green Beans' },
+  ]
+
+  let matchCount = 0
+  for (const staple of CANONICAL_STAPLES) {
+    const canonId = crypto.randomUUID()
+    await pool.query(
+      `INSERT INTO canonical_products (id, name, category, standard_uom, allergens)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT DO NOTHING`,
+      [canonId, staple.name, staple.category, staple.standardUom, staple.allergens]
+    )
+
+    const { rows: [canon] } = await pool.query('SELECT id FROM canonical_products WHERE name = $1', [staple.name])
+    if (!canon) continue
+
+    // Find candidate vendor items from Dennis and Sysco
+    const { rows: candidateItems } = await pool.query(
+      `SELECT vi.*, v.code as vendor_code
+       FROM vendor_items vi
+       JOIN vendors v ON v.id = vi.vendor_id
+       WHERE vi.name LIKE $1
+       LIMIT 4`,
+      [`%${staple.keyword}%`]
+    )
+
+    for (const vItem of candidateItems) {
+      // Approximate pack quantity based on standardUom
+      let packUnits = 10
+      if (staple.standardUom === 'gal') packUnits = 4
+      else if (staple.standardUom === 'lb') packUnits = vItem.pack_size.includes('20') ? 20 : 10
+      else packUnits = 6
+
+      const unitCost = parseFloat(vItem.unit_cost || '0')
+      const normalizedCost = packUnits > 0 ? Math.round((unitCost / packUnits) * 10000) / 10000 : unitCost
+
+      await pool.query(
+        `INSERT INTO vendor_item_matches
+           (id, canonical_product_id, vendor_item_id, pack_quantity_in_standard_uom, normalized_unit_cost, match_confidence, match_status, matched_by)
+         VALUES ($1, $2, $3, $4, $5, 95.0, 'confirmed', 'seed_bootstrap')
+         ON CONFLICT (canonical_product_id, vendor_item_id) DO NOTHING`,
+        [crypto.randomUUID(), canon.id, vItem.id, packUnits, normalizedCost]
+      )
+      matchCount++
+    }
+  }
+  console.log(`[*] Seeded ${CANONICAL_STAPLES.length} canonical products and ${matchCount} cross-vendor item matches`)
+
   // 5. Master Institutional Recipes
   const { rows: recipeCount } = await pool.query('SELECT COUNT(*) FROM recipes')
   if (parseInt(recipeCount[0]?.count || '0') === 0) {
