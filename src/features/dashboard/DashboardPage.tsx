@@ -8,7 +8,7 @@ import { useInventoryStore } from '@/state/inventoryStore'
 import { useBudgetStore } from '@/state/budgetStore'
 import { useAuth } from '@/security/AuthContext'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
-import { Zap, ClipboardList, AlertOctagon, AlertTriangle, Utensils, Calendar, CheckCircle2 } from 'lucide-react'
+import { Zap, ClipboardList, AlertOctagon, AlertTriangle, Utensils, Calendar, CheckCircle2, Store, ArrowUpDown } from 'lucide-react'
 import type { DayOfWeek } from '@/types'
 
 function getGreeting() {
@@ -429,6 +429,28 @@ export default function DashboardPage() {
           </div>
           <Link to="/reporting">
             <AppleButton size="sm" variant="tinted">Survey Pack</AppleButton>
+          </Link>
+        </div>
+
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)',
+          border: '1px solid rgba(139,92,246,0.25)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '14px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ArrowUpDown className="w-4 h-4 text-violet-600" />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#6d28d9' }}>Distributor SKU Match</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Cut+Dry matrix &amp; Dennis/Sysco split</div>
+          </div>
+          <Link to="/distributor">
+            <AppleButton size="sm" variant="tinted">Open Portal</AppleButton>
           </Link>
         </div>
       </div>

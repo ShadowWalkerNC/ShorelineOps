@@ -436,6 +436,7 @@ button, input, select, textarea {
   align-items:     center;
   justify-content: center;
   gap:             var(--space-2);
+  min-height:      44px;
   height:          var(--btn-height-md);
   padding:         0 var(--space-4);
   border-radius:   var(--radius-md);
@@ -446,9 +447,18 @@ button, input, select, textarea {
   border:          1px solid transparent;
   outline:         none;
   white-space:     nowrap;
-  transition:      all 0.18s ease;
+  transition:      transform 0.12s ease, background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   touch-action:    manipulation;
   user-select:     none;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:focus-visible {
+  outline: 2px solid #0284c7;
+  outline-offset: 2px;
 }
 
 .btn-sm {
