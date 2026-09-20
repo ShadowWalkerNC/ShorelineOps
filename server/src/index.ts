@@ -197,6 +197,11 @@ if (fs.existsSync(clientDistPath)) {
   })
 
   app.use(express.static(clientDistPath))
+  // /demo/* → React SPA (mirrors Vercel rewrite: /demo/(.*) → /demo/index.html)
+  app.get('/demo/*', (_req, res) => {
+    res.sendFile(path.join(clientDistPath, 'demo', 'index.html'))
+  })
+  // Everything else → Astro marketing site
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ready') {
       return next()
