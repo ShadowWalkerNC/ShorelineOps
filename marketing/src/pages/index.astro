@@ -34,10 +34,10 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
 
       <!-- Subtitle: Plain English, no unbacked statistics, no cryptic acronyms -->
       <p class="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto mb-8 font-normal leading-relaxed">
-        Built for senior living dining rooms and healthcare kitchens. Plan 4-week cycle menus, track resident diet textures and allergies, log food temperatures, and compare food distributor prices side-by-side. Free to run on your own computer, with optional cloud hosting.
+        Built for senior living dining rooms and healthcare kitchens. Plan 4-week cycle menus, track resident diet textures and allergies, log food temperatures, and compare food distributor prices side-by-side. Free to download and run on your own computer, or sign up for our fully managed cloud service.
       </p>
 
-      <!-- Primary Action Buttons: Clear distinction between Demo, Local, and SaaS -->
+      <!-- Primary Action Buttons -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-2xl mx-auto mb-5">
         <a
           href={DEMO_URL}
@@ -48,11 +48,11 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
           <Icon name="arrow-right" class="w-4 h-4" />
         </a>
         <a
-          href="#local-vs-saas"
+          href="/pricing"
           class="w-full sm:w-auto px-5 py-3.5 bg-white/90 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 font-semibold rounded-xl text-xs sm:text-sm transition-all inline-flex items-center justify-center gap-2 shadow-xs"
         >
           <Icon name="layers" class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span>Local vs. Cloud SaaS</span>
+          <span>View Plans & Pricing</span>
         </a>
         <a
           href="https://github.com/ShadowWalkerNC/ShorelineOps"
@@ -179,11 +179,11 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
           <ul class="space-y-3 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
             <li class="flex items-start gap-2.5">
               <Icon name="check-circle" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>100% Free Open-Source Core:</strong> Full operational suite free forever, with optional $199/mo cloud backups</span>
+              <span><strong>100% Free Open-Source Core:</strong> Full operational suite free forever. Or sign up for our fully managed cloud service — no servers to maintain.</span>
             </li>
             <li class="flex items-start gap-2.5">
               <Icon name="check-circle" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>Algorithmic Split MRP Purchasing:</strong> Automatic line-by-line contract price comparison across Dennis &amp; Sysco</span>
+              <span><strong>Side-by-Side Distributor Price Comparison:</strong> Automatically shows which distributor — Dennis, Sysco, or US Foods — has the lower price on each item.</span>
             </li>
             <li class="flex items-start gap-2.5">
               <Icon name="check-circle" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
@@ -503,8 +503,153 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
       </div>
     </div>
 
-    <!-- COMPARISON: LOCAL DEPLOYMENT VS CLOUD SAAS PLATFORM -->
+    <!-- FREE LOCAL vs MANAGED SAAS BY CULINARYOS LLC -->
     <section id="local-vs-saas" class="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-200/80 dark:border-slate-800/80">
+      <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+        <div class="inline-block px-3.5 py-1 bg-blue-50 dark:bg-blue-950/70 border border-blue-200/70 dark:border-blue-800/60 rounded-full text-blue-600 dark:text-blue-400 text-xs font-semibold uppercase tracking-wider mb-3 font-mono">
+          Two Ways to Use Shoreline
+        </div>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4 font-sans">
+          Free Local Software or Fully Managed SaaS
+        </h2>
+        <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+          Download the free open-source version and run it on your own computer — or subscribe to our fully managed cloud service operated by CulinaryOS LLC, where we handle everything for you.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        <!-- Free Local Card -->
+        <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-apple-card flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold font-mono uppercase">
+                Free &amp; Open Source
+              </span>
+              <span class="text-xs font-mono text-slate-400">Offline-First</span>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Free Local Software</h3>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+              Download from GitHub and install directly on your kitchen desktop, laptop, or tablet. Your data stays on your own device — no internet required.
+            </p>
+            <ul class="space-y-3 text-xs sm:text-sm text-slate-700 dark:text-slate-200 border-t border-slate-100 dark:border-slate-800 pt-5 mb-6">
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span><strong>100% Free Forever:</strong> No subscription, no license key, no credit card ever needed.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span><strong>Works 100% Offline:</strong> Kitchen orders and temperature logs keep running even if Wi-Fi goes down.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span><strong>Your Data, Your Device:</strong> All resident records and menus stay strictly on your computer.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span><strong>Ideal For:</strong> Independent care homes, small senior living facilities, and single-location operations.</span>
+              </li>
+            </ul>
+          </div>
+          <a
+            href="https://github.com/ShadowWalkerNC/ShorelineOps"
+            target="_blank"
+            rel="noreferrer"
+            class="w-full py-3 text-center bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold rounded-xl text-xs sm:text-sm transition-all inline-flex items-center justify-center gap-2"
+          >
+            <Icon name="github" class="w-4 h-4" />
+            <span>Download Free Software (GitHub)</span>
+          </a>
+        </div>
+
+        <!-- Managed SaaS by CulinaryOS LLC -->
+        <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-blue-500 shadow-apple-elevated flex flex-col justify-between relative">
+          <div class="absolute -top-3 right-6 px-3 py-0.5 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-full shadow-xs font-mono">
+            Managed by CulinaryOS LLC
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-xs font-bold font-mono uppercase">
+                Cloud SaaS
+              </span>
+              <span class="text-xs font-mono text-slate-400">Any Browser · Any Device</span>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Managed Cloud SaaS</h3>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+              We operate and maintain everything for you. Your team logs in from any browser — phone, tablet, or desktop — and CulinaryOS LLC handles all servers, backups, updates, and security.
+            </p>
+            <ul class="space-y-3 text-xs sm:text-sm text-slate-700 dark:text-slate-200 border-t border-slate-100 dark:border-slate-800 pt-5 mb-6">
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <span><strong>Access from Anywhere:</strong> Cooks on the line, managers in the office, and dietitians all work in sync from their own devices.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <span><strong>Zero IT Required:</strong> No servers to buy, no software to install, no updates to manage. We handle it all.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <span><strong>Daily Encrypted Cloud Backups:</strong> Your resident data is securely backed up and recoverable at any time.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <Icon name="check" class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <span><strong>Ideal For:</strong> Multi-building operators, facilities that need remote access, and teams where staff share multiple devices.</span>
+              </li>
+            </ul>
+          </div>
+          <a
+            href="/pricing"
+            class="w-full py-3 text-center bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-blue-600/25 inline-flex items-center justify-center gap-2"
+          >
+            <span>View Plans &amp; Contact Us</span>
+            <Icon name="arrow-right" class="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+
+      <!-- "How the Managed SaaS Works" 3-step explainer -->
+      <div id="how-it-works" class="p-6 sm:p-12 rounded-3xl bg-slate-50/60 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/80 mb-8">
+        <div class="text-center mb-10">
+          <div class="inline-block px-3.5 py-1 bg-blue-50 dark:bg-blue-950/70 border border-blue-200/70 dark:border-blue-800/60 rounded-full text-blue-600 dark:text-blue-400 text-xs font-semibold uppercase tracking-wider mb-3 font-mono">
+            How the Managed Service Works
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3 font-sans">
+            We Handle Everything. You Just Log In.
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            CulinaryOS LLC operates the cloud platform so your team can focus on caring for residents — not managing software.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Step 1 -->
+          <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-apple-subtle flex flex-col">
+            <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center mb-4 font-mono shrink-0">1</div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Contact Us to Get Started</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Reach out via the contact form on our pricing page. We'll set up your facility's dedicated account, configure your dining rooms and resident settings, and get you onboarded.
+            </p>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-apple-subtle flex flex-col">
+            <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center mb-4 font-mono shrink-0">2</div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">We Set Up and Manage Everything</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              CulinaryOS LLC handles your cloud hosting, daily backups, security updates, and HIPAA compliance. No servers to maintain, no IT staff required — ever.
+            </p>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-apple-subtle flex flex-col">
+            <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center mb-4 font-mono shrink-0">3</div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Your Team Logs In from Anywhere</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Dietary managers, dietitians, and cooks log into your facility's secure portal from any phone, tablet, or computer. Diet orders, menus, and kitchen logs stay in sync in real time.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
       <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
         <div class="inline-block px-3.5 py-1 bg-blue-50 dark:bg-blue-950/70 border border-blue-200/70 dark:border-blue-800/60 rounded-full text-blue-600 dark:text-blue-400 text-xs font-semibold uppercase tracking-wider mb-3 font-mono">
           Deployment Choices
@@ -726,10 +871,10 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
             <span>Download Free Version (GitHub)</span>
           </a>
           <a
-            href="#deploy-guide"
+            href="/pricing"
             class="w-full sm:w-auto px-5 py-3.5 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white font-semibold text-xs sm:text-sm transition-colors inline-flex items-center justify-center gap-1"
           >
-            <span>Deploy SaaS Guide</span>
+            <span>View Managed SaaS Plans</span>
             <Icon name="chevron-right" class="w-4 h-4" />
           </a>
         </div>
@@ -737,7 +882,7 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
         <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
           <span class="flex items-center gap-1.5"><Icon name="check" class="w-3.5 h-3.5 text-emerald-500" /> Free Open-Source Core</span>
           <span class="flex items-center gap-1.5"><Icon name="check" class="w-3.5 h-3.5 text-emerald-500" /> Offline Capable</span>
-          <span class="flex items-center gap-1.5"><Icon name="check" class="w-3.5 h-3.5 text-emerald-500" /> No Vendor Lock-In</span>
+          <span class="flex items-center gap-1.5"><Icon name="check" class="w-3.5 h-3.5 text-emerald-500" /> Managed SaaS by CulinaryOS LLC</span>
         </div>
       </div>
     </div>
