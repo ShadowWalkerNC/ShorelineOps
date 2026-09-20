@@ -512,9 +512,32 @@ class QueryBuilder {
   }
 }
 
-// ── Exported Supabase Emulator Instance ─────────────────────────────────────────
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-export const supabase = {
+// ── Supabase Environment Configuration ──────────────────────────────────────────
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const isSupabaseConfigured: boolean = Boolean(
+  supabaseUrl &&
+  supabaseAnonKey &&
+  typeof supabaseUrl === 'string' &&
+  supabaseUrl.startsWith('https://') &&
+  !supabaseUrl.includes('your-project')
+)
+
+// Real client when credentials provided; falls back to universal local adapter
+export const realSupabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(supabaseUrl as string, supabaseAnonKey as string, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
+  : null
+
+// ── Exported Supabase Instance (Live or Offline Emulator) ───────────────────────
+const emulatorSupabase = {
   from(tableName: string) {
     return new QueryBuilder(tableName)
   },
@@ -530,4 +553,6 @@ export const supabase = {
     }),
   },
 } as any
+
+export const supabase: SupabaseClient = (realSupabase || emulatorSupabase) as any
 
