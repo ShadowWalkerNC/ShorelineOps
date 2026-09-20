@@ -16,7 +16,7 @@
     "dev": "vite",
     "dev:all": "concurrently \"npm run dev\" \"npm --prefix server run dev\"",
     "build": "tsc && vite build",
-    "build:demo": "tsc && vite build",
+    "build:demo": "node scripts/build_unified_site.mjs",
     "build:marketing": "npm --prefix marketing run build",
     "build:all": "npm run build && npm --prefix server run build && npm --prefix marketing run build",
     "build:installer": "node installer/build_installer.js",

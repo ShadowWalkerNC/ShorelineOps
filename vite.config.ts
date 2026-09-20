@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     react(),
     VitePWA({
@@ -20,6 +21,7 @@ export default defineConfig({
       injectManifest: {
         swSrc: 'src/sw.ts',
         swDest: 'dist/sw.js',
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Ensure the offline page HTML is included in the precache manifest
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp}'],
       },

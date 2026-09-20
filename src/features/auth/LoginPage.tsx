@@ -267,6 +267,23 @@ export default function LoginPage() {
             </div>
           </div>
         )}
+
+        <div style={{ textAlign: 'center', marginTop: 18 }}>
+          <a
+            href="/"
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'rgba(255,255,255,0.45)',
+              textDecoration: 'none',
+              fontWeight: 'var(--weight-semi)',
+              transition: 'color 0.2s',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.color = '#ffffff')}
+            onMouseOut={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+          >
+            ← Back to ShorelineOps.com
+          </a>
+        </div>
       </div>
 
       <style>{`

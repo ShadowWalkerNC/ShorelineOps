@@ -1,11 +1,11 @@
 {
-  "framework": "vite",
-  "buildCommand": "npm run build:demo",
+  "cleanUrls": true,
+  "buildCommand": "node scripts/build_unified_site.mjs",
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/demo/:path*",
+      "destination": "/demo/index.html"
     }
   ]
 }

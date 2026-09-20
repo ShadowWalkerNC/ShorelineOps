@@ -17,7 +17,7 @@ const {
   keywords = 'healthcare dietary operations, senior living clinical nutrition, IDDSI 2.0 dysphagia, skilled nursing facility food service, PointClickCare dietary sync, split MRP purchasing, Dennis Food Service EDI, Sysco EDI, CMS-2567 survey binder, HACCP temperature logging, institutional cycle menu planner, tray card scanner'
 } = Astro.props
 
-const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || 'https://shoreline-demo.onrender.com/menu'
+const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
 const SITE_URL = 'https://shorelineops.com'
 const canonicalURL = canonicalPath ? new URL(canonicalPath, SITE_URL).toString() : Astro.url.href
 const fullOgImageUrl = new URL(ogImage, SITE_URL).toString()
