@@ -216,30 +216,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Device Switcher for Testing / Preview */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px] font-bold">
-              <button
-                onClick={() => setDeviceMode('auto')}
-                className={`px-1.5 py-0.5 rounded ${deviceMode === 'auto' ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-2xs' : 'text-slate-500'}`}
-                title="Auto device breakpoint"
-              >
-                Auto
-              </button>
-              <button
-                onClick={() => setDeviceMode('tablet')}
-                className={`px-1.5 py-0.5 rounded ${deviceMode === 'tablet' ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-2xs' : 'text-slate-500'}`}
-                title="Switch to Tablet view"
-              >
-                Tab
-              </button>
-              <button
-                onClick={() => setDeviceMode('desktop')}
-                className={`px-1.5 py-0.5 rounded ${deviceMode === 'desktop' ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-2xs' : 'text-slate-500'}`}
-                title="Switch to Desktop view"
-              >
-                Desk
-              </button>
-            </div>
+            {/* Device Switcher for Testing / Preview (DEV mode only) */}
+            {import.meta.env.DEV && (
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px] font-bold">
+                <button
+                  onClick={() => setDeviceMode('auto')}
+                  className={`px-1.5 py-0.5 rounded ${deviceMode === 'auto' ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-2xs' : 'text-slate-500'}`}
+                  title="Auto device breakpoint"
+                >
+                  Auto
+                </button>
+                <button
+                  onClick={() => setDeviceMode('tablet')}
+                  className={`px-1.5 py-0.5 rounded ${deviceMode === 'tablet' ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-2xs' : 'text-slate-500'}`}
+                  title="Switch to Tablet view"
+                >
+                  Tab
+                </button>
+                <button
+                  onClick={() => setDeviceMode('desktop')}
+                  className={`px-1.5 py-0.5 rounded ${deviceMode === 'desktop' ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-2xs' : 'text-slate-500'}`}
+                  title="Switch to Desktop view"
+                >
+                  Desk
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -433,56 +435,58 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {/* Right: Telemetry & Device View Controls */}
             <div className="flex items-center gap-2.5">
               
-              {/* Responsive Device Experience Switcher */}
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/70 dark:border-slate-700/70 text-[11px] font-semibold">
-                <button
-                  onClick={() => setDeviceMode('auto')}
-                  className={`px-2 py-1 rounded-lg transition-all ${
-                    deviceMode === 'auto'
-                      ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                  title="Automatic responsive mode"
-                >
-                  Auto
-                </button>
-                <button
-                  onClick={() => setDeviceMode('desktop')}
-                  className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
-                    deviceMode === 'desktop'
-                      ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                  title="Force Desktop Administrative Workspace"
-                >
-                  <Monitor size={12} />
-                  <span className="hidden xl:inline">Desk</span>
-                </button>
-                <button
-                  onClick={() => setDeviceMode('tablet')}
-                  className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
-                    deviceMode === 'tablet'
-                      ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                  title="Force Tablet Supervisory Touch Rail"
-                >
-                  <Tablet size={12} />
-                  <span className="hidden xl:inline">Tab</span>
-                </button>
-                <button
-                  onClick={() => setDeviceMode('mobile')}
-                  className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
-                    deviceMode === 'mobile'
-                      ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                  title="Force Mobile Floor Operational Hub"
-                >
-                  <Smartphone size={12} />
-                  <span className="hidden xl:inline">Phone</span>
-                </button>
-              </div>
+              {/* Responsive Device Experience Switcher (DEV mode only) */}
+              {import.meta.env.DEV && (
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/70 dark:border-slate-700/70 text-[11px] font-semibold">
+                  <button
+                    onClick={() => setDeviceMode('auto')}
+                    className={`px-2 py-1 rounded-lg transition-all ${
+                      deviceMode === 'auto'
+                        ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                    title="Automatic responsive mode"
+                  >
+                    Auto
+                  </button>
+                  <button
+                    onClick={() => setDeviceMode('desktop')}
+                    className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                      deviceMode === 'desktop'
+                        ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                    title="Force Desktop Administrative Workspace"
+                  >
+                    <Monitor size={12} />
+                    <span className="hidden xl:inline">Desk</span>
+                  </button>
+                  <button
+                    onClick={() => setDeviceMode('tablet')}
+                    className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                      deviceMode === 'tablet'
+                        ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                    title="Force Tablet Supervisory Touch Rail"
+                  >
+                    <Tablet size={12} />
+                    <span className="hidden xl:inline">Tab</span>
+                  </button>
+                  <button
+                    onClick={() => setDeviceMode('mobile')}
+                    className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                      deviceMode === 'mobile'
+                        ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                    title="Force Mobile Floor Operational Hub"
+                  >
+                    <Smartphone size={12} />
+                    <span className="hidden xl:inline">Phone</span>
+                  </button>
+                </div>
+              )}
 
               {/* Live EHR Sync Status */}
               <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/50 border border-teal-200/60 dark:border-teal-800/50 text-[11px] font-medium text-teal-700 dark:text-teal-300">

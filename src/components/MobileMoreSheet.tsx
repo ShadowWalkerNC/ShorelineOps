@@ -135,58 +135,60 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
             </div>
           </div>
 
-          {/* Device Experience Simulator */}
-          <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono mb-2 flex items-center justify-between">
-              <span>Device View Preview</span>
-              <span className="text-teal-600 dark:text-teal-400 font-bold">{deviceMode.toUpperCase()}</span>
+          {/* Device Experience Simulator (DEV mode only) */}
+          {import.meta.env.DEV && (
+            <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono mb-2 flex items-center justify-between">
+                <span>Device View Preview</span>
+                <span className="text-teal-600 dark:text-teal-400 font-bold">{deviceMode.toUpperCase()}</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 text-[11px] font-semibold">
+                <button
+                  onClick={() => setDeviceMode('auto')}
+                  className={`py-2 px-1.5 rounded-xl border text-center transition-all ${
+                    deviceMode === 'auto'
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  Auto
+                </button>
+                <button
+                  onClick={() => setDeviceMode('mobile')}
+                  className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
+                    deviceMode === 'mobile'
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <Smartphone size={13} />
+                  <span>Mobile</span>
+                </button>
+                <button
+                  onClick={() => setDeviceMode('tablet')}
+                  className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
+                    deviceMode === 'tablet'
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <Tablet size={13} />
+                  <span>Tablet</span>
+                </button>
+                <button
+                  onClick={() => setDeviceMode('desktop')}
+                  className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
+                    deviceMode === 'desktop'
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <Monitor size={13} />
+                  <span>Desk</span>
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-4 gap-1.5 text-[11px] font-semibold">
-              <button
-                onClick={() => setDeviceMode('auto')}
-                className={`py-2 px-1.5 rounded-xl border text-center transition-all ${
-                  deviceMode === 'auto'
-                    ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                Auto
-              </button>
-              <button
-                onClick={() => setDeviceMode('mobile')}
-                className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
-                  deviceMode === 'mobile'
-                    ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <Smartphone size={13} />
-                <span>Mobile</span>
-              </button>
-              <button
-                onClick={() => setDeviceMode('tablet')}
-                className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
-                  deviceMode === 'tablet'
-                    ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <Tablet size={13} />
-                <span>Tablet</span>
-              </button>
-              <button
-                onClick={() => setDeviceMode('desktop')}
-                className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
-                  deviceMode === 'desktop'
-                    ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <Monitor size={13} />
-                <span>Desk</span>
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Sheet Footer: End Clinician Session */}

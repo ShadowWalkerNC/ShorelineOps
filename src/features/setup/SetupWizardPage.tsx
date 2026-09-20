@@ -12,9 +12,11 @@ import {
   ArrowRight,
   ArrowLeft
 } from 'lucide-react'
+import { useDevice } from '@/hooks/useDevice'
 
 export default function SetupWizardPage() {
   const navigate = useNavigate()
+  const { isMobile } = useDevice()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +36,7 @@ export default function SetupWizardPage() {
     setupSecret: 'shoreline-bootstrap-dev-secret-2026',
     baaSigneeName: 'Operations Director',
     baaAccepted: true,
-    initMode: 'sample' as 'clean' | 'sample',
+    initMode: 'clean' as 'clean' | 'sample',
   })
 
   const [wingInput, setWingInput] = useState('')
@@ -149,12 +151,12 @@ export default function SetupWizardPage() {
           maxWidth: 780,
           backgroundColor: 'var(--bg-card)',
           borderRadius: 'var(--radius-xl)',
-          padding: '40px 48px',
+          padding: isMobile ? '24px 16px' : '40px 48px',
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 28
+          gap: isMobile ? 20 : 28
         }}
       >
         {/* Header Header */}
@@ -242,7 +244,10 @@ export default function SetupWizardPage() {
                     style={{
                       fontSize: 'var(--text-xs)',
                       color: isCurrent ? 'var(--color-primary)' : 'var(--text-muted)',
-                      fontWeight: isCurrent ? 'var(--weight-bold)' : 'var(--weight-medium)'
+                      fontWeight: isCurrent ? 'var(--weight-bold)' : 'var(--weight-medium)',
+                      display: isMobile && !isCurrent ? 'none' : 'block',
+                      textAlign: 'center',
+                      whiteSpace: isMobile ? 'nowrap' : 'normal',
                     }}
                   >
                     {s.name}
@@ -298,7 +303,7 @@ export default function SetupWizardPage() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semi)', marginBottom: 6, color: 'var(--text-primary)' }}>
                     Facility Type <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -449,7 +454,7 @@ export default function SetupWizardPage() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semi)', marginBottom: 6, color: 'var(--text-primary)' }}>
                     Password (min 12 chars, mixed case, number, special) <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -822,7 +827,7 @@ export default function SetupWizardPage() {
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div
                   onClick={() => setFormData({ ...formData, initMode: 'sample' })}
                   style={{

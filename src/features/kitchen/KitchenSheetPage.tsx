@@ -136,12 +136,31 @@ function KitchenSheetPageInner() {
   const [sheetResidents, setSheetResidents] = useState<any[]>([])
   const [sheetOrderMap, setSheetOrderMap] = useState<any>({})
 
-  // Edit menus
   const [editMenuMode, setEditMenuMode] = useState(false)
   const [dish1, setDish1] = useState('')
   const [dish2, setDish2] = useState('')
+  const [generatingOrders, setGeneratingOrders] = useState(false)
 
   const token = tokenManager.getAccessToken()
+
+  const handleGenerateTraySheet = async () => {
+    setGeneratingOrders(true)
+    try {
+      await fetch('/api/kitchen/orders/initialize-week', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ week_start_date: week }),
+      })
+      await loadData()
+    } catch (err) {
+      console.error('Failed to generate tray sheet from cycle menu:', err)
+    } finally {
+      setGeneratingOrders(false)
+    }
+  }
 
   const loadData = async () => {
     setLoading(true)
@@ -384,9 +403,25 @@ function KitchenSheetPageInner() {
             </p>
           </>
         ) : (
-          <AppleCard className="p-4 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>No order data for this service yet — initialize the week on the order-entry page to populate batch allergens and textures.</span>
+          <AppleCard className="p-6 text-sm text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-4 border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
+              <div>
+                <p className="font-bold text-slate-900 dark:text-white text-base">No tray orders recorded for this service yet</p>
+                <p className="text-xs text-slate-600 dark:text-slate-450 mt-0.5">
+                  Populate today's meal tallies, batch allergens, and IDDSI textures directly from the active cycle menu with one click.
+                </p>
+              </div>
+            </div>
+            <AppleButton
+              color="teal"
+              size="md"
+              disabled={generatingOrders}
+              onClick={handleGenerateTraySheet}
+              className="shrink-0 font-bold whitespace-nowrap shadow-sm"
+            >
+              {generatingOrders ? 'Generating...' : "Generate Today's Tray Sheet from Active Cycle Menu"}
+            </AppleButton>
           </AppleCard>
         )}
       </div>
