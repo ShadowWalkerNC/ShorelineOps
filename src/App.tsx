@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Link } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
 import { RequireRole } from './security/AuthContext'
 import LoginPage from './features/auth/LoginPage'
@@ -54,7 +54,7 @@ function NotFoundPage() {
       <p className="text-slate-600 max-w-md">
         This page doesn't exist or was removed. Use the navigation to get back to work.
       </p>
-      <a href="/" className="text-blue-600 underline">Go to Dashboard</a>
+      <Link to="/" className="text-blue-600 underline">Go to Dashboard</Link>
     </div>
   )
 }

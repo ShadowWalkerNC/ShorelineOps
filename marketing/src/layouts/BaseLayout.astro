@@ -11,10 +11,10 @@ import Icon from '../components/Icon.astro'
 
 const { 
   title, 
-  description = 'The open-source clinical nutrition, dietary operations, and care coordination platform for senior living and healthcare dining. Free community core software with managed enterprise SaaS.',
+  description = 'Open-source kitchen operations and resident diet safety software for senior living, assisted living, and care dining.',
   canonicalPath = '',
   ogImage = '/logo.png',
-  keywords = 'healthcare dietary operations, senior living clinical nutrition, IDDSI 2.0 dysphagia, skilled nursing facility food service, PointClickCare dietary sync, split MRP purchasing, Dennis Food Service EDI, Sysco EDI, CMS-2567 survey binder, HACCP temperature logging, institutional cycle menu planner, tray card scanner'
+  keywords = 'healthcare dietary operations, senior living clinical nutrition, resident diet safety, dysphagia textures, food service, cycle menu planner, kitchen temperature log'
 } = Astro.props
 
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
@@ -26,7 +26,7 @@ const schemaJson = JSON.stringify([
   {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    'name': 'ShorelineOps Care OS',
+    'name': 'Shoreline Care OS',
     'operatingSystem': 'Web, iOS, Android, macOS, Windows, Linux',
     'applicationCategory': 'HealthApplication, BusinessApplication',
     'description': description,
@@ -34,17 +34,16 @@ const schemaJson = JSON.stringify([
       '@type': 'AggregateOffer',
       'priceCurrency': 'USD',
       'lowPrice': '0',
-      'highPrice': '499',
+      'highPrice': '399',
       'offerCount': '3'
     },
     'featureList': [
-      'IDDSI 2.0 Dysphagia Hard Safety Holds',
-      'Deterministic Big 9 Allergen Intersections',
-      'Multi-Distributor Dennis vs. Sysco Lowest-Cost Split MRP',
-      'PointClickCare 2-Way Clinical EHR Triage Queue',
-      'CMS-2567 F800-F814 Federal Survey Compliance Binder',
-      'Offline-First Kitchen Tablet Kiosks & BLE HACCP Probes',
-      '3-Way Invoice Matching & Vendor Credit Memos'
+      'Resident Diet & Allergy Safety Alerts',
+      '4-Week Seasonal Cycle Menu Planning',
+      'Scaled Recipe Yields & Cook Sheets',
+      'Food Distributor Price Comparison',
+      'Kitchen Touch Tablet for Cooks',
+      'Food Safety & Temperature Logs'
     ],
     'creator': {
       '@type': 'Organization',
@@ -126,15 +125,15 @@ const schemaJson = JSON.stringify([
             alt="Shoreline Care OS"
             class="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform"
           />
-          <span class="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/60 font-mono">CARE OS v6.3</span>
+          <span class="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/60 font-mono">OPEN SOURCE</span>
         </a>
 
-        <nav class="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-600 dark:text-slate-300">
+        <nav class="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
           <a href="/#features" class="hover:text-blue-600 dark:hover:text-white transition-colors">Features</a>
-          <a href="/pricing" class="hover:text-blue-600 dark:hover:text-white transition-colors">Pricing & Free Core</a>
+          <a href="/#local-vs-saas" class="hover:text-blue-600 dark:hover:text-white transition-colors">Local vs. SaaS</a>
+          <a href="/#deploy-guide" class="hover:text-blue-600 dark:hover:text-white transition-colors">Deploy SaaS</a>
+          <a href="/pricing" class="hover:text-blue-600 dark:hover:text-white transition-colors">Pricing & Plans</a>
           <a href="/distributors" class="hover:text-blue-600 dark:hover:text-white transition-colors">Distributors</a>
-          <a href="/story" class="hover:text-blue-600 dark:hover:text-white transition-colors">Chef's Story</a>
-          <a href="/security" class="hover:text-blue-600 dark:hover:text-white transition-colors">Security & SLA</a>
         </nav>
 
         <div class="flex items-center gap-2.5">
@@ -149,11 +148,9 @@ const schemaJson = JSON.stringify([
           </a>
           <a
             href={DEMO_URL}
-            target="_blank"
-            rel="noreferrer"
             class="inline-flex items-center justify-center px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-all shadow-sm shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98] gap-1.5"
           >
-            <span>Launch Live App</span>
+            <span>Try Demo</span>
             <Icon name="arrow-right" class="w-3.5 h-3.5" />
           </a>
         </div>

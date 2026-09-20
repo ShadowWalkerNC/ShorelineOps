@@ -7,9 +7,13 @@ import './pwa'
 import './index.css'
 import App from './App'
 
+// React Router v7 requires basenames without trailing slashes to match routes cleanly
+const rawBase = import.meta.env.BASE_URL || '/'
+const basename = rawBase.length > 1 && rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter basename={basename}>
       <AuthProvider>
         <DeviceProvider>
           <App />

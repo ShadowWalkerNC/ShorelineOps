@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { api } from '@/api/client'
+import { supabase } from '@/lib/supabase'
 
 // ============================================================
 // INVENTORY STORE — server-backed (B09)
@@ -198,6 +199,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   fetch: async (search?: string) => {
     set({ loading: true, error: null })
+    if (import.meta.env.VITE_DEMO_MODE === 'true') {
+      try {
+        const { data } = await supabase.from('inventory').select('*')
+        const stock = (data ?? []).map(toStock)
+        set({
+          stockItems: stock,
+          items: stock,
+          transactions: [],
+          wasteEntries: [],
+          counts: [],
+          trends: null,
+          loading: false,
+        })
+        return
+      } catch {
+        // Fallback to API if supabase adapter fails
+      }
+    }
     try {
       const [itemsRes, txRes, countsRes, trendsRes] = await Promise.all([
         api.get<any[]>('/inventory/items', { params: search ? { search } : {} }),
@@ -220,7 +239,22 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         loading: false,
       })
     } catch (err) {
-      setError(set, 'Failed to load inventory', err)
+      try {
+        // Fallback to local supabase adapter if server is unreachable
+        const { data } = await supabase.from('inventory').select('*')
+        const stock = (data ?? []).map(toStock)
+        set({
+          stockItems: stock,
+          items: stock,
+          transactions: [],
+          wasteEntries: [],
+          counts: [],
+          trends: null,
+          loading: false,
+        })
+      } catch {
+        setError(set, 'Failed to load inventory', err)
+      }
     }
   },
 
