@@ -1,10 +1,9 @@
 {
-  "cleanUrls": true,
   "buildCommand": "node scripts/build_unified_site.mjs",
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/demo/:path*",
+      "source": "/demo/(.*)",
       "destination": "/demo/index.html"
     }
   ]
