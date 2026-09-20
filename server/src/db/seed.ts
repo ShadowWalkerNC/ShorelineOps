@@ -252,7 +252,24 @@ function generateCatalog(vendorId: string, vendorPrefix: string, count: number =
 }
 
 // ── 3. MAIN SEED RUNNER ───────────────────────────────────────────────────
+/** Demo fixtures are never appropriate for a real facility or production server. */
+export function isDemoSeedEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production' && process.env.SHORELINE_DEMO_SEED === 'true'
+}
+
+export function assertDemoSeedAllowed(): void {
+  if (!isDemoSeedEnabled()) {
+    throw Object.assign(new Error(
+      process.env.NODE_ENV === 'production'
+        ? 'Demo seeding is forbidden in production.'
+        : 'Demo seeding requires explicit SHORELINE_DEMO_SEED=true in a non-production environment.'
+    ), { status: 403 })
+  }
+}
+
 export async function runSeed() {
+  // Guard the exported function so setup, startup and direct CLI calls agree.
+  assertDemoSeedAllowed()
   console.log('======================================================================')
   console.log('  SHORELINE CARE OS — SEEDING REALISTIC MULTI-FACILITY ENTERPRISE')
   console.log('======================================================================\n')
@@ -277,7 +294,7 @@ export async function runSeed() {
       [crypto.randomUUID(), u.name, u.email, hash, u.role]
     )
   }
-  console.log(`[*] Seeded ${USERS_TO_SEED.length} core role users (default password: ${defaultPass})`)
+  console.log(`[*] Seeded ${USERS_TO_SEED.length} demo role users`)
 
   // 2. Facilities Setup (3 facilities in facility_config & settings)
   const FACILITIES = [

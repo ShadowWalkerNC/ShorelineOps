@@ -26,7 +26,7 @@ import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 import { pool } from './db/pool'
 import { runMigrations } from './db/migrate'
-import { runSeed } from './db/seed'
+import { isDemoSeedEnabled, runSeed } from './db/seed'
 
 import crypto from 'crypto'
 
@@ -246,9 +246,14 @@ const server = app.listen(PORT, () => {
   
   // Non-fatal migration & seed background runner
   runMigrations()
-    .then(() => runSeed())
+    .then(async () => {
+      if (isDemoSeedEnabled()) await runSeed()
+      else if (process.env.SHORELINE_DEMO_SEED === 'true') {
+        console.warn('[Shoreline API] Demo seeding refused in production.')
+      }
+    })
     .then(() => {
-      console.log('[Shoreline API] Database migrations & seed verified.')
+      console.log('[Shoreline API] Database migrations verified.')
       globalHealerBot.startDaemon(300000) // Run self-healing background checks every 5 minutes
       startNightlyForecastRollup() // C05: nightly avg_usage rollup from inventory transactions
     })

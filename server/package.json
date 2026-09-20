@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "test": "node dist/system.test.js",
+    "build:demo": "tsc",
+    "test": "node dist/system.test.js && node --test dist/auth-security.test.js dist/seed-security.test.js",
     "start": "node dist/index.js",
     "db:migrate": "node dist/db/migrate.js",
     "db:seed": "node dist/db/seed.js",

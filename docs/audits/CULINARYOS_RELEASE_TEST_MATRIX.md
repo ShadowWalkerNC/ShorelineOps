@@ -82,3 +82,7 @@ Evidence appendices: [security/data](SECURITY_DATA_EVIDENCE.md), [product/UX](PR
 5. Only after a release candidate and environment are designated, summarize current case outcomes in a separate release gate report. A build or 228 passing existing tests cannot close NOT RUN rows automatically.
 
 For each execution, append a dated evidence entry identifying case ID, commit, sanitized fixture/version, environment/runtime/database/browser, exact steps, actual result, artifact link and reviewer. Retain failed runs and reruns; do not overwrite failures with unqualified PASS. Mark a case N/A only with the founder-approved scope exclusion, rationale and corresponding product/marketing restriction.
+
+## Batch 1 follow-up
+
+Seed and pending-MFA boundary implementation is recorded in [SECURITY_BATCH1_IMPLEMENTATION.md](SECURITY_BATCH1_IMPLEMENTATION.md). Initial SOURCE FAILURE and runtime-probe FAIL entries above remain the audit baseline. New regression results qualify only their exercised boundaries; they do not close unrelated NOT RUN rows, PostgreSQL deployment tests or clinical gates. Authenticated EHR privileged endpoints preserve their existing403 denial contract; ordinary access-token endpoints return401 for pending credentials.

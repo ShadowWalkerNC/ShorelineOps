@@ -5,6 +5,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".astro/**"]
     },
+    "build:demo": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".astro/**"]
+    },
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },

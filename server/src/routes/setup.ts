@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
-import { runSeed } from '../db/seed'
+import { assertDemoSeedAllowed, runSeed } from '../db/seed'
 
 export const setupRouter = Router()
 
@@ -50,6 +50,11 @@ setupRouter.get('/status', async (_req, res) => {
 setupRouter.post('/initialize', async (req, res, next) => {
   try {
     if (!requireSetupSecret(req as any, res as any)) return
+
+    // Check before any setup write; request flags cannot enable server demo mode.
+    if (req.body?.initMode === 'sample' || req.body?.loadDemoData === true) {
+      assertDemoSeedAllowed()
+    }
 
     const { rows: existing } = await pool.query('SELECT is_initialized FROM facility_config WHERE id = $1', ['default'])
     if (existing[0]?.is_initialized) {
@@ -110,14 +115,14 @@ setupRouter.post('/initialize', async (req, res, next) => {
     )
 
     await pool.query(
-      `INSERT INTO users (name, email, password, role, mfa_enabled, active)
-       VALUES ($1, $2, $3, 'admin', true, true)
+      `INSERT INTO users (id, name, email, password, role, mfa_enabled, active)
+       VALUES ($1, $2, $3, $4, 'admin', true, true)
        ON CONFLICT (email) DO UPDATE SET
          name = EXCLUDED.name,
          password = EXCLUDED.password,
          role = 'admin',
          active = true`,
-      [body.adminName, body.adminEmail.toLowerCase(), hashedPassword]
+      [crypto.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]
     )
 
     await pool.query(

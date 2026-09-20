@@ -6,7 +6,7 @@ Audit date: 2026-09-20. Mode: audit only. This is a proposed sequence, not autho
 
 **Verified:** demo, marketing and server builds and lint passed in this audit; the isolated SQLite system run reports 228 passed, zero failed. See `build-demo.log`, `build-marketing.log`, `build-server.log`, `lint.log` and `system-test.log` in this folder. `runtime-probe.log` records health 200, setup status 200 and unauthenticated residents 401, but also acceptance of an MFA-pending-purpose token: this is a security failure, not a passed authentication gate. These checks do not establish browser journeys, PostgreSQL parity, production operation or clinical safety.
 
-**Verified:** `dependency-audit.json` flags 11 advisories (one critical, five high, five moderate). **Unknown:** deployed reachability and exploitability; triage before selecting fixes. The CI server step is missing `run`/`uses` in `.github/workflows/ci.yml`; passing local builds do not establish a working hosted pipeline.
+**Verified:** `dependency-audit.json` flags 11 package findings (one critical, five high, five moderate). **Unknown:** deployed reachability and exploitability; triage before selecting fixes. The CI server step is missing `run`/`uses` in `.github/workflows/ci.yml`; passing local builds do not establish a working hosted pipeline.
 
 Finding IDs below refer to [Security/data evidence](SECURITY_DATA_EVIDENCE.md) and [Product/UX evidence](PRODUCT_UX_EVIDENCE.md), which contain source paths and line references. Additional P0: `server/src/agent/healer.ts:78-90` automatically assigns missing clinical diet/texture to Regular/Regular; `server/src/index.ts:252` schedules the agent every five minutes. Unknown clinical orders must require authorized review, never become presumed unrestricted diets.
 
@@ -26,7 +26,7 @@ Exit: repeatable evidence, bounded environment and explicit issue register; no r
 | M0.2 Reproduce supported local runtime and environment contract | P0 | Backend / DevOps | Setup works without undocumented secrets | M0.1 | M | Required versus optional variables, demo restrictions and SQLite/PostgreSQL startup paths documented; no secrets in examples; setup actually completes in disposable DB | Clean-install startup/setup/login smoke, readiness and restart; current health/setup-status probes are only partial evidence |
 | M0.3 Create actionable blocker inventory and journey baseline | P0 | Product / QA | Highest harm is fixed before cosmetic work | Evidence appendices | S | Every P0/P1 finding has owner, linked task, acceptance test and scope; screenshot evidence marked unavailable until captured | Trace SEC/CLIN/DATA/UX IDs to issues; capture synthetic desktop/mobile flows when browser available |
 | M0.4 Repair and validate CI workflow | P0 | DevOps | Broken changes cannot silently bypass checks | Founder approval for delivery configuration; M0.1 | S | Invalid server step has an executable action; required builds/lint/tests run on clean checkout; failures block merge | Workflow validation plus actual CI run and retained logs; no reliance solely on local checks |
-| M0.5 Triage dependency advisories and license inventory | P0 | Security / Dependency reviewer | Known package risk is understood before exposure | Audit JSON, manifests/locks | M | All 11 advisories classified by dependency path, runtime/build exposure, fix and residual risk; license obligations inventoried | Advisory-specific reproduction or applicability analysis; targeted upgrades and full applicable checks after approval |
+| M0.5 Triage dependency advisories and license inventory | P0 | Security / Dependency reviewer | Known package risk is understood before exposure | Audit JSON, manifests/locks | M | All 11 flagged packages classified by dependency path, runtime/build exposure, fix and residual risk; license obligations inventoried | Advisory-specific reproduction or applicability analysis; targeted upgrades and full applicable checks after approval |
 
 ## Milestone 1 — Define and Complete the Core Value Loop
 
@@ -180,6 +180,12 @@ Approve isolated single-facility pilots, or require shared tenancy before any pi
 - **Founder decisions needed:** First batch approval, target/data/deployment boundary, legal seller and payment model.
 - **Checks run:** Parent audit ran builds, lint, disposable SQLite tests, dependency audit and runtime probe; this document introduces no executable changes.
 - **Checks passed:** Demo/marketing/server builds, lint, 228 system tests; limited health and unauthenticated probes.
-- **Checks failed or not run:** MFA-pending access was accepted; dependency audit flagged 11 advisories; deployed/browser/restore/payment/clinical acceptance not established.
+- **Checks failed or not run:** MFA-pending access was accepted; dependency audit flagged 11 packages; deployed/browser/restore/payment/clinical acceptance not established.
 - **Recommended next action:** Founder approval of the concrete seed-isolation/MFA batch, followed by clinical fail-closed repairs.
 - **Confidence level:** High on cited source defects and local results; moderate on sequencing; low on deployment and commercial outcomes until verified.
+
+## Implementation update — approved security batch 1
+
+The founder approved the proposed first batch. M1.2 (seed isolation) and M2.1 (pending-MFA separation) have implementation and dedicated regression suites; final results are in [SECURITY_BATCH1_IMPLEMENTATION.md](SECURITY_BATCH1_IMPLEMENTATION.md). The first-batch proposal above is retained as historical scope, no longer an unanswered approval request. Clean-owner/refresh UUID and timestamp fixes support SQLite bootstrap/auth acceptance without a schema change. Existing sample accounts/data are not removed.
+
+Next bounded batch remains M1.3/M1.4/M1.5: clinical admission/NPO preservation, removal of automatic unrestricted clinical defaults and fail-closed scanner/save behavior. These remain release blockers. No production deployment is authorized by batch 1 approval.

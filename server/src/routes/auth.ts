@@ -5,7 +5,7 @@ import crypto from 'crypto'
 import { z } from 'zod'
 import * as OTPAuth from 'otpauth'
 import { pool } from '../db/pool'
-import { requireAuth, API_ROLES } from '../middleware/requireAuth'
+import { requireAuth, API_ROLES, getJwtSecret, verifyAccessToken, ACCESS_TOKEN_AUDIENCE, MFA_TOKEN_AUDIENCE } from '../middleware/requireAuth'
 import type { AuthRequest, ApiRole } from '../middleware/requireAuth'
 
 export const authRouter = Router()
@@ -15,19 +15,11 @@ const REFRESH_EXPIRES_DAYS = Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7
 const MFA_PENDING_EXPIRES = '5m' as jwt.SignOptions['expiresIn']
 const ISSUER = process.env.MFA_ISSUER || 'ShorelineOps'
 
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET
-  if (!secret || secret.length < 32) {
-    throw new Error('JWT_SECRET must be set to a value at least 32 characters long')
-  }
-  return secret
-}
-
 function makeTokens(userId: string, role: ApiRole, mfaVerified: boolean) {
   const accessToken = jwt.sign(
-    { sub: userId, role, mfa: mfaVerified },
+    { sub: userId, role, mfa: mfaVerified, purpose: 'access' },
     getJwtSecret(),
-    { expiresIn: JWT_EXPIRES }
+    { expiresIn: JWT_EXPIRES, audience: ACCESS_TOKEN_AUDIENCE, algorithm: 'HS256' }
   )
   const refreshToken = crypto.randomBytes(48).toString('hex')
   return { accessToken, refreshToken }
@@ -37,16 +29,23 @@ function makeMfaPendingToken(userId: string, purpose: 'mfa_verify' | 'mfa_enroll
   return jwt.sign(
     { sub: userId, purpose },
     getJwtSecret(),
-    { expiresIn: MFA_PENDING_EXPIRES }
+    { expiresIn: MFA_PENDING_EXPIRES, audience: MFA_TOKEN_AUDIENCE, algorithm: 'HS256' }
   )
 }
 
 function verifyMfaPendingToken(token: string, purpose: 'mfa_verify' | 'mfa_enroll'): string {
-  const payload = jwt.verify(token, getJwtSecret()) as { sub?: string; purpose?: string }
-  if (!payload.sub || payload.purpose !== purpose) {
+  try {
+    const payload = jwt.verify(token, getJwtSecret(), {
+      algorithms: ['HS256'], audience: MFA_TOKEN_AUDIENCE,
+    })
+    if (typeof payload === 'string' || typeof payload.sub !== 'string' ||
+        !payload.sub.trim() || payload.purpose !== purpose || typeof payload.exp !== 'number') {
+      throw new Error('Invalid MFA claims')
+    }
+    return payload.sub
+  } catch {
     throw Object.assign(new Error('Invalid MFA session'), { status: 401 })
   }
-  return payload.sub
 }
 
 function asApiRole(role: string): ApiRole {
@@ -84,9 +83,9 @@ async function issueSession(user: { id: string; name: string; email: string; rol
   const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
 
   await pool.query(
-    `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-     VALUES ($1, $2, $3)`,
-    [user.id, tokenHash, expiresAt]
+    `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3, $4)`,
+    [crypto.randomUUID(), user.id, tokenHash, expiresAt.toISOString()]
   )
   await pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id])
   await pool.query(
@@ -211,7 +210,7 @@ authRouter.post('/mfa/setup/begin', async (req, res, next) => {
       if (!header?.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Unauthorized' })
       }
-      const payload = jwt.verify(header.slice(7), getJwtSecret()) as { sub?: string }
+      const payload = verifyAccessToken(header.slice(7))
       userId = payload.sub
     }
 
@@ -273,7 +272,7 @@ authRouter.post('/mfa/setup/confirm', async (req, res, next) => {
       if (!header?.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Unauthorized' })
       }
-      const payload = jwt.verify(header.slice(7), getJwtSecret()) as { sub?: string }
+      const payload = verifyAccessToken(header.slice(7))
       userId = payload.sub
     }
 
@@ -351,8 +350,8 @@ authRouter.post('/refresh', async (req, res, next) => {
       `SELECT rt.*, u.id AS uid, u.name, u.email, u.role, u.active, u.mfa_enabled
        FROM refresh_tokens rt
        JOIN users u ON u.id = rt.user_id
-       WHERE rt.token_hash = $1 AND rt.expires_at > NOW() AND u.active = true`,
-      [tokenHash]
+       WHERE rt.token_hash = $1 AND rt.expires_at > $2 AND u.active = true`,
+      [tokenHash, new Date().toISOString()]
     )
     if (!rows[0]) return res.status(401).json({ error: 'Invalid or expired refresh token.' })
 
@@ -365,9 +364,9 @@ authRouter.post('/refresh', async (req, res, next) => {
     const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
 
     await pool.query(
-      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-       VALUES ($1, $2, $3)`,
-      [rows[0].uid, newHash, expiresAt]
+      `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [crypto.randomUUID(), rows[0].uid, newHash, expiresAt.toISOString()]
     )
 
     res.json({ accessToken, refreshToken: newRefreshToken })
@@ -386,7 +385,7 @@ authRouter.get('/me', requireAuth, async (req: AuthRequest, res, next) => {
     if (!rows[0]) return res.status(401).json({ error: 'User not found.' })
 
     const header = req.headers.authorization!
-    const payload = jwt.verify(header.slice(7), getJwtSecret()) as { mfa?: boolean }
+    const payload = verifyAccessToken(header.slice(7))
 
     res.json({
       id: rows[0].id,

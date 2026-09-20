@@ -7,10 +7,10 @@
 
 import { Router, Request, Response, NextFunction } from 'express'
 import crypto from 'crypto'
-import jwt from 'jsonwebtoken'
+
 import { PointClickCareConnector } from '../integrations/pointclickcare'
 import { USDAFoodDataConnector } from '../integrations/usda'
-import { requireAuth, getJwtSecret, API_ROLES } from '../middleware/requireAuth'
+import { requireAuth, verifyAccessToken, API_ROLES } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
 import { pool } from '../db/pool'
@@ -178,7 +178,7 @@ function requireDietitianOrAdmin(req: AuthRequest, res: Response, next: NextFunc
   }
 
   try {
-    const payload = jwt.verify(header.slice(7), getJwtSecret()) as { sub: string; role?: string }
+    const payload = verifyAccessToken(header.slice(7))
     if (!payload.sub) throw new Error('missing sub')
     const role = payload.role && (API_ROLES as readonly string[]).includes(payload.role)
       ? payload.role

@@ -249,3 +249,7 @@ Once the above is in place:
 
 *Shoreline is designed to be production-ready with a Supabase backend.
 This demo deployment exists solely for review and demonstration purposes.*
+
+## Explicit server demo data (security update 2026-09-20)
+
+Server startup no longer seeds sample accounts or residents by default. For a disposable local demo only, set `SHORELINE_DEMO_SEED=true` with a non-production `NODE_ENV` and a separate empty SQLite/PostgreSQL database. Apply migrations before the seed CLI. `NODE_ENV=production` refuses fixture seeding regardless of this flag. `VITE_DEMO_MODE` alone never enables server seeding. Real facilities use protected clean setup and individually chosen owner credentials. See [security batch notes](docs/audits/SECURITY_BATCH1_IMPLEMENTATION.md) for compatibility and existing-installation handling.

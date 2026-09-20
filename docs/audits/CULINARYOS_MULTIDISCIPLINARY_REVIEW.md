@@ -16,7 +16,7 @@ Priority: P0 applicable launch blocker; P1 major risk before paid launch; P2 aft
 | 2. SaaS Product Manager — value loop | Verified core pages exist but save failures become local success. Customer cannot trust returning data; breadth hides incomplete outcomes. | Define one authoritative census-to-service story; P0, L; auth/clinical/data fixes. | Save/reload/second-device and failure cases pass; E2E synthetic census→menu→sheet→tray run. | `src/state/residentsStore.ts:108-201`; `src/App.tsx:67-126` |
 | 3. Product Strategist — segment | Verified resident/IDDSI/EHR focus. Likely senior-care dietary teams fit better than generic restaurants; expansion dilutes messaging and engineering. | Validate single-facility positioning; P1, M; founder target and customer access. | Five interviews identify shared pain, buyer and adoption barrier; retain counterevidence in synthesis. | `ARCHITECTURE.md:3-12`; `marketing/src/pages/index.astro:277-321` |
 | 4. Startup CTO — maintainability | Verified live API, local emulator and memory stores coexist; multi-database/tenant complexity risks inconsistency and solo-founder overload. | Choose one supported deployment/database; converge core contracts incrementally; P0, XL; founder/database choice. | Supported-mode matrix; one authoritative write path; contract tests and architecture review. | `src/lib/supabase.ts:303-339`; `server/src/db/pool.ts:60-91,126-163` |
-| 5. Hospitality Operations Expert — service safety | Verified NPO admission omission, simulated scan success and healer defaulting unknown diet/texture to Regular create unsafe certainty during rushed service. | Preserve unknowns as holds; validate clinical chain and downtime procedure; P0, L; clinical owner/backend. | NPO/allergen/unknown orders never approved; supervised synthetic service/outage rehearsal, no override. | `server/src/routes/residents.ts:523-545`; `src/features/kitchen/components/TrayAssemblyScanner.tsx:112-145`; `server/src/healer.ts:78-90` |
+| 5. Hospitality Operations Expert — service safety | Verified NPO admission omission, simulated scan success and healer defaulting unknown diet/texture to Regular create unsafe certainty during rushed service. | Preserve unknowns as holds; validate clinical chain and downtime procedure; P0, L; clinical owner/backend. | NPO/allergen/unknown orders never approved; supervised synthetic service/outage rehearsal, no override. | `server/src/routes/residents.ts:523-545`; `src/features/kitchen/components/TrayAssemblyScanner.tsx:112-145`; `server/src/agent/healer.ts:78-90` |
 | 6. Customer Discovery Researcher — demand proof | Unknown interviews, switching costs and paid demand; testimonials are not verified research. Risk: duplicate entry and assumed workflows deter adoption. | Observe dietary director, dietitian, line worker and buyer without PHI; P1, M-L; recruiting/consent. | Three facilities independently articulate same measurable problem; notes distinguish buyer, user, alternatives and objections. | `marketing/src/pages/index.astro:539-616`; product evidence appendix |
 | 7. Pricing Strategist — tiers and lifecycle | Verified prices/license UI exist but durable subscriptions do not. Unknown willingness to pay; unsupported inclusions increase refunds/support. | Research scoped founder-supported pilot after safety gates; defer checkout; P1, M research/XL billing; commercial choice. | Approved tier exclusions and support-cost model; lifecycle tests before charging through app. | `marketing/src/pages/pricing.astro:22-116`; `server/src/billing/stripeEngine.ts:66-126` |
 | 8. Growth Strategist — conversion | Verified CTA points to absent /enterprise; funnel tracking unknown. Visitors hit dead ends; founder cannot distinguish interest from activation. | Repair CTA and track non-PHI demo/inquiry/first-value outcomes; P1, S-M; scope/privacy. | Links resolve; synthetic event payloads contain no PHI; link crawl and event inspection. | `marketing/src/pages/distributors.astro:137`; `src/App.tsx:67-126` |
@@ -45,11 +45,11 @@ Priority: P0 applicable launch blocker; P1 major risk before paid launch; P2 aft
 | 21. Principal Architect — tenancy/authority | Tenant middleware precedes auth, trusts header and cannot scope resident schema. Shared hosting risks cross-facility disclosure; mixed local stores obscure truth. | One isolated facility/API/database first; P0 shared hosting, S boundary/XL tenancy; founder choice. | Unsupported shared mode excluded; future two-facility ID/search/cache/export/job tests before shared launch. | `server/src/index.ts:115-124`; `server/src/middleware/tenantContext.ts:24-40`; `server/src/db/migrate.ts:24-44` |
 | 22. Staff Full-Stack Engineer — vertical integration | Differing tokens/persistence make pages appear complete while backup/saves fail. Customer workflow breaks between plausible modules. | Repair single census-to-service slice using common authorized client; P0, L; auth/NPO/database. | Same fixture/identity works across reload, second client, scan/export; E2E 401/403/409/500/network tests. | `src/api/client.ts`; `src/state/residentsStore.ts:108-201`; `src/features/admin/components/BackupRecoveryPanel.tsx:45-118` |
 | 23. Frontend Lead — state/error contracts | Recipe failures mutate volatile memory; other core stores fall back locally; obsolete token lookups break authenticated tools. Work loss and reassuring false feedback result. | Common API/session/error contract; explicit supported offline state only; P0, L; backend contracts. | No production error fabricates success; single token source; reload/failure integration tests and targeted source search. | `src/state/recipesStore.ts:26-70`; `src/state/menuStore.ts:96-228`; `src/security/tokenManager.ts:11-26` |
-| 24. Backend Lead — bootstrap and clinical writes | Unconditional demo seed, NPO-create omission and healer clinical defaults violate safe boundary conditions. Automatic audit also reports HEALTHY after errors. | Guard seed, centralize clinical normalization and hold unknown orders; never repair clinical facts autonomously; P0, L; clinical/security contracts. | Clean DB has no samples; unknown/NPO admissions held; audit failure is unhealthy; table-driven ingestion and daemon tests. | `server/src/index.ts:248-263`; `server/src/routes/residents.ts:523-545`; `server/src/healer.ts:78-103,204-206` |
+| 24. Backend Lead — bootstrap and clinical writes | Unconditional demo seed, NPO-create omission and healer clinical defaults violate safe boundary conditions. Automatic audit also reports HEALTHY after errors. | Guard seed, centralize clinical normalization and hold unknown orders; never repair clinical facts autonomously; P0, L; clinical/security contracts. | Clean DB has no samples; unknown/NPO admissions held; audit failure is unhealthy; table-driven ingestion and daemon tests. | `server/src/index.ts:248-263`; `server/src/routes/residents.ts:523-545`; `server/src/agent/healer.ts:78-103,204-206` |
 | 25. Integration Engineer — PCC/vendor exchange | PCC returns synthetic census after credential check; Dennis includes hardcoded examples; enterprise endpoints parked. Customers may buy unavailable automation; retries/mapping unverified. | Label CSV/demo; disable live claims; one real sandbox provider after agreement; P1, S containment/XL integration; credentials/vendor. | Actual sandbox exchange plus duplicate/timeout/conflict/provenance cases; credentials alone never mean connected. | `server/src/integrations/pointclickcare.ts:47-66`; `server/src/integrations/dennis.ts:24-79`; `server/src/routes/enterprise.ts:34-114` |
 | 26. Database Architect — parity/atomicity | SQL translation removes constraints/defaults and RETURNING results; setup/clinical history nontransactional. Partial identity and stale tray versions risk loss/incorrect service. | Supported-engine choice, explicit IDs, transactions and concurrency control; P0 clinical writes, L-XL; deployment. | Atomic state/history/version under faults/races; setup retry and migration/type contracts on each claimed engine; disposable DB tests. | `server/src/db/pool.ts:60-91,126-163`; `server/src/routes/setup.ts:113-127`; `server/src/routes/residents.ts:601-677` |
 | 27. Mobile/PWA Engineer — offline/freshness | Queue primitives have no callers; service worker caches APIs for a day. Unknown logout isolation; stale clinical data can mislead staff during outage. | Read-only explicit offline boundary first; durable queue only with reconciliation/version checks; P0 if offline clinical claim, L; safety/data rules. | Stale orders marked/held; sensitive cache isolated/cleared; no duplicate replay; two-user outage/reload/reconnect test. | `src/lib/offlineQueue.ts:45-110`; `src/sw.ts:16-29,59-79`; `marketing/src/pages/terms.astro:147` |
-| 28. AI/LLM Systems Engineer — applicability/automation | No production LLM inference established by this review. HealerBot is deterministic automation, but invents Regular clinical facts; AI naming must not imply validated intelligence. | No model work in MVP; stop unauthorized clinical inference/defaulting; P0 existing automation, P3 model expansion; clinical owner. | Missing orders remain unknown/held; healer cannot modify clinical orders without authorized workflow; targeted daemon tests. | `server/src/healer.ts:78-103,204-206`; `server/src/engine/safetyEvaluator.ts:145-177` |
+| 28. AI/LLM Systems Engineer — applicability/automation | No production LLM inference established by this review. HealerBot is deterministic automation, but invents Regular clinical facts; AI naming must not imply validated intelligence. | No model work in MVP; stop unauthorized clinical inference/defaulting; P0 existing automation, P3 model expansion; clinical owner. | Missing orders remain unknown/held; healer cannot modify clinical orders without authorized workflow; targeted daemon tests. | `server/src/agent/healer.ts:78-103,204-206`; `server/src/engine/safetyEvaluator.ts:145-177` |
 | 29. Dependency/Licensing Reviewer — distribution rights | Root LICENSE is MIT, LICENSING/pricing AGPL/Apache, footer AGPL/MIT. Audit flags 11 packages; exploitability unknown. Procurement and redistribution/security risk unresolved. | Reconcile authoritative license and notices; triage production reachability/updates; P1, M; founder/legal and dependency ownership. | One distribution/tier matrix matches artifacts; each advisory disposition evidenced; inventory/license review and targeted upgrade tests. | `LICENSE`; `LICENSING.md`; `marketing/src/pages/pricing.astro:22`; `BaseLayout.astro:214`; npm audit baseline |
 | 30. Maintainability Reviewer — duplicate/dead paths | Multiple adapters, token lookups and error styles coexist with broad routes/parked enterprise store. Fixes miss parallel paths; founder upkeep grows. | Narrow surface, consolidate contracts incrementally, capability ledger; P1, L; MVP/tests. | Core calls share error/auth semantics; parked features disclosed; type checks and regressions pass; review lint scope since current lint is type-check only. | `src/App.tsx:67-126`; `src/state/adminStore.ts`; `src/state/enterpriseStore.ts:142-174` |
 
@@ -66,4 +66,85 @@ Priority: P0 applicable launch blocker; P1 major risk before paid launch; P2 aft
 | 37. Privacy Reviewer — PHI lifecycle/consent | Browser persistence, preaccepted BAA and entity drift verified; actual agreements/deletion/retention unknown. Compliance prose cannot establish safeguards. | Map PHI flows, entity/agreements, retention/export/deletion and vendor duties before PHI; P0 PHI launch, L; legal/architecture. | Approved inventory/policies and synthetic data lifecycle tests across DB/cache/backups; logs/analytics no PHI; qualified legal review. | `src/lib/supabase.ts:303-339`; `src/sw.ts:16-29`; `src/features/setup/SetupWizardPage.tsx:38`; `privacy.astro:66,153` |
 | 38. Secure SDLC Reviewer — reproducible assurance | Docs claim production-ready despite blockers; dependency findings and CI defect need disposition. Risk: stale checklists authorize unsafe releases. | Evidence ledger by commit/environment/date, threat model, dependency triage and security regressions; P1, M; CI/owner. | Each candidate links reproducible checks and unresolved risks; advisories reviewed for deployment reachability; workflow/sample-release audit. | `docs/DAILY_OPERATIONS_AUDIT.md:11`; `TODO.md:39`; `.github/workflows/ci.yml`; npm audit baseline |
 | 39. Release Manager — candidate gate | Local build/type/tests and isolated API smoke pass, but no UI/deployed/recovery/billing evidence. Passing build is not ready-for-care product. | No affirmative gate report without fixed candidate and completed scope gates; P0, M coordination; all gate owners. | Version/environment fixed, P0 zero, P1 explicit, rollback/support/recovery proven; evidence review. Non-overridable clinical controls remain mandatory. | Parent baseline; both evidence appendices; runtime probe |
-| 40. Incident Response Lead — compromise/data failure | No exercised response evidenced; default identities, ineffective admin controls and healer healthy-on-error complicate detection/containment. Founder may be sole responder. | Name primary/backup; revoke/isolate/recover and preserve evidence; P1, M; support/legal/backup. | Timed synthetic compromise/migration incident contained and recovered; no secret logging; legal notification duties assigned; tabletop/restore drill. | `server/src/db/seed.ts:255-280`; `src/state/adminStore.ts:45-59`; `server/src/healer.ts:103`; backup scripts |
+| 40. Incident Response Lead — compromise/data failure | No exercised response evidenced; default identities, ineffective admin controls and healer healthy-on-error complicate detection/containment. Founder may be sole responder. | Name primary/backup; revoke/isolate/recover and preserve evidence; P1, M; support/legal/backup. | Timed synthetic compromise/migration incident contained and recovered; no secret logging; legal notification duties assigned; tabletop/restore drill. | `server/src/db/seed.ts:255-280`; `src/state/adminStore.ts:45-59`; `server/src/agent/healer.ts:103`; backup scripts |
+
+## Council reconciliation
+
+Product and growth favor a narrow pilot to learn quickly; security and clinical review require that its data and operating boundaries be explicit. The resolution is synthetic internal testing now, followed by one isolated facility only after applicable safety, privacy, recovery and support gates pass. A private pilot is not an exemption from clinical controls.
+
+Architecture favors eliminating divergent storage paths; founder constraints favor avoiding a rewrite. Consolidate the existing core's authenticated writes and truthful error states incrementally. Do not switch frameworks to solve authorization or persistence defects. Maintain PostgreSQL/SQLite only to the extent their supported behaviors can be tested; choose the first deployment mode before extending compatibility.
+
+Commercial goals favor subscriptions; delivery evidence supports a manually administered scoped pilot after validation. Defer automated billing and shared tenancy until repeated customer demand justifies their operating burden. Core meal-service safety must never depend on a payment-state transition. Accessibility and reliability are part of core acceptance, while visual polish and broader integrations can follow.
+
+## Ten most important actions
+
+1. Separate explicit demo seeding from real initialization; remove credential logging and assess existing seeded-account exposure (SEC-01).
+2. Reject pending MFA tokens at every access-token boundary and verify completed sessions still work (SEC-02).
+3. Preserve NPO/fluid restrictions and consistent clinical authorization across admission, CSV and edit (CLIN-01).
+4. Prevent healer automation from inventing unrestricted diet/texture; unknown clinical data stays held (CLIN-03).
+5. Make failed writes/scans visibly failed or held, with no success signal or tracking side effect (UX-01/02).
+6. Bind real user administration to authorized durable APIs and prove deactivation/session effects (UX-03).
+7. Establish one isolated facility per supported deployment, or implement and test genuine tenancy before sharing (DATA-01).
+8. Repair CI, production API/proxy configuration, bootstrap readiness and dependency dispositions (CI-01/DEP-01/DEPEND-01).
+9. Prove recovery, browser/device/keyboard workflows, clinical data versions and observable failures before pilot cutover (OPS-01/CLIN-02).
+10. Align claims, seller/license, support and commercial scope with actual evidence; validate customer demand and pricing before paid launch (UX-04/09/BILL-01).
+
+## Five highest risks
+
+1. Incorrect clinical certainty: defaulted or dropped restrictions and simulated scan success.
+2. Unauthorized resident access: seeded credentials, pending-token acceptance and ineffective administrative controls.
+3. Divergent or lost records: local fallback, partial writes, unproved recovery and offline replay.
+4. Cross-facility exposure or commercial promises built on unfinished tenancy/integrations/billing.
+5. Launch decisions based on green assertion counts and unsupported compliance/uptime claims rather than workflow evidence.
+
+## Five highest-value quick wins
+
+These are proposed bounded follow-up changes, not completed work or substitutions for P0 repair.
+
+1. Preserve this baseline and repair the missing CI server-build command (S after configuration approval).
+2. Inventory and remove/qualify unsupported public claims and unverified testimonials (S–M after owner review).
+3. Fix confirmed localhost canonical metadata and the nonexistent enterprise CTA target (S after domain/scope confirmation).
+4. Publish a supported/manual/synthetic/unavailable capability list and authoritative environment variable names (S).
+5. Use the common authenticated client for scanner and backup calls, with focused rejection tests (M; scanner safety behavior must be repaired in the same complete batch).
+
+## Recommended MVP boundary
+
+One dietary team, one isolated facility and one daily census → reviewed menu → kitchen-sheet loop. Include authorized clinical data, truthful persistence, reviewed printable output, actual account administration, error/empty/loading states, tested recovery and explicit downtime procedures. Use synthetic records until all relevant gates pass. The [execution roadmap](CULINARYOS_EXECUTION_ROADMAP.md) defines the sequence; the [release matrix](CULINARYOS_RELEASE_TEST_MATRIX.md) defines acceptance.
+
+## Features to cut or postpone
+
+Shared multi-facility SaaS, corporate syndication, live PCC/EDI claims, automatic invoice OCR claims without provider proof, automated subscriptions, broad HR/payroll, plugin marketplace, clinical AI and platform-wide redesign. Keep manual CSV and paper outputs only where their real behavior is validated. Do not delete large code areas during this audit.
+
+## Highest-confidence customer value proposition
+
+An intended outcome, not a proven commercial result: **help a single dietary team turn reviewed resident needs and menus into clear daily kitchen work with printable outputs and visible exceptions.** Evidence for relevance is strong in the repository; measured time savings, trust, adoption and willingness to pay remain unverified. See the [product and GTM plan](CULINARYOS_PRODUCT_AND_GTM_PLAN.md) for research, alternatives and commercial hypotheses.
+
+## Critical founder decisions
+
+- Choose the first facility category and confirm synthetic-only validation until the real-data gates pass.
+- Choose isolated single-facility deployment versus funding real shared tenancy; select the first supported database/runtime.
+- Confirm CulinaryOS LLC's contracting/processing relationship to ShorelineOps and the authoritative license.
+- Decide founder-administered pilot billing/support capacity versus completing self-service SaaS before selling.
+- Approve the bounded seed/MFA repair batch; clinical blocks remain the next mandatory batch and prohibit launch meanwhile.
+
+## Honest launch recommendation
+
+**Internal testing only**, with synthetic records. No release candidate is designated, so no release gate report is issued. Local builds and 228 assertions pass; the pending-token probe fails its security expectation and multiple source-proven clinical and operational blockers remain.
+
+## Status
+
+- **Current phase:** Audit only, complete.
+- **Current objective:** Reconcile forty perspectives into a narrow, safe delivery sequence.
+- **Work completed:** Role reviews, priorities, effort/dependencies, acceptance and consolidated recommendation.
+- **Files inspected or changed:** Referenced source and evidence; this audit document only.
+- **Verified findings:** Source defects and bounded execution baseline above.
+- **Likely findings:** Trust/persistence gaps will prevent reliable adoption if unresolved.
+- **Assumptions:** Single-facility founder-supported pilot is the first product boundary.
+- **Open risks:** Production configuration, customer demand, clinical/device validation and operating capacity.
+- **P0 blockers:** Security, clinical, false-success/admin, release pipeline; conditional shared-tenancy/billing/promotion blockers.
+- **Founder decisions needed:** Scope, identity/license, deployment/data, commercial model and implementation approval.
+- **Checks run:** Parent audit builds, system tests, isolated API/token probe, dependency and source review.
+- **Checks passed:** Builds/compiler checks,228 assertions, limited HTTP smoke.
+- **Checks failed or not run:** Pending-token security contract, dependency gate, metadata/CI expectations; browser/recovery/live integration not run.
+- **Recommended next action:** Approve the first small repair batch in the roadmap.
+- **Confidence level:** High on observed defects; medium on priority; low on unvalidated commercial outcomes.
