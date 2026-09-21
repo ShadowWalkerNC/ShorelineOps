@@ -1,0 +1,1 @@
+const m=[{id:"demo-admin-1",name:"Shoreline Demo Admin",email:"admin@shoreline.demo",password:"Admin1234!",role:"admin",mfaVerified:!0}],o=m.map(e=>({role:e.role,email:e.email,password:e.password}));export{o as DEMO_ACCOUNTS,m as DEMO_USERS};

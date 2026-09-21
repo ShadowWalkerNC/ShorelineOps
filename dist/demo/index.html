@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!--
+      Mobile-first viewport.
+      maximum-scale=1 prevents iOS from zooming in on form inputs.
+      viewport-fit=cover lets content extend into notch safe areas.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+
+    <title>Shoreline — iMPAC Operations</title>
+
+    <!-- Favicon (your favicon.ico) -->
+    <link rel="icon" type="image/x-icon" href="/demo/favicon.ico" />
+    <!-- PNG fallback sizes (your icon-192 / icon-512) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/demo/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/demo/icon-512.png" />
+
+    <!-- iOS home-screen icon (your apple-touch-icon.png) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/demo/apple-touch-icon.png" />
+
+    <!-- PWA web app manifest -->
+    <link rel="manifest" href="/demo/manifest.json" />
+
+    <!-- PWA & Mobile Meta Tags -->
+    <meta name="application-name" content="Shoreline Care OS" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Shoreline" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0284c7" />
+    
+    <meta name="description" content="Shoreline — Healthcare dietary and clinical nutrition operations platform." />
+
+    <!--
+      Fonts: Outfit (headings 600-800) + Inter (body 400-700)
+      Both loaded together to avoid two round-trips.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Critical baseline: prevent FOUC, handle notch safe-areas -->
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+
+      html, body {
+        margin: 0; padding: 0;
+        height: 100%; width: 100%;
+        /* Prevent iOS text-size adjustment on rotate */
+        -webkit-text-size-adjust: 100%;
+        -moz-text-size-adjust: 100%;
+             text-size-adjust: 100%;
+      }
+
+      #root {
+        height: 100%;
+        width: 100%;
+        /* Inset content from notch / home indicator */
+        padding-top:    env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left:   env(safe-area-inset-left);
+        padding-right:  env(safe-area-inset-right);
+      }
+    </style>
+    <script type="module" crossorigin src="/demo/assets/index-XK3MW3-x.js"></script>
+    <link rel="stylesheet" crossorigin href="/demo/assets/index-02enE_PS.css">
+  <link rel="manifest" href="/demo/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
