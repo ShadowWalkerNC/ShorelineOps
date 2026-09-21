@@ -1,0 +1,17 @@
+FROM node:22-slim
+
+WORKDIR /app/marketing
+
+ARG PUBLIC_DEMO_URL=https://shoreline-demo-production.up.railway.app/
+ARG PUBLIC_APP_URL=https://shoreline-api-production.up.railway.app/app/
+ENV PUBLIC_DEMO_URL=${PUBLIC_DEMO_URL}
+ENV PUBLIC_APP_URL=${PUBLIC_APP_URL}
+
+COPY marketing/package*.json ./
+RUN npm ci
+
+COPY marketing/ ./
+RUN npm run build
+
+EXPOSE 4321
+CMD ["sh", "-c", "npm run preview -- --host 0.0.0.0 --port ${PORT:-4321}"]
