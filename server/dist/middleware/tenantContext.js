@@ -18,9 +18,12 @@ function tenantContextMiddleware(req, res, next) {
     req.corporateGroupId = user?.corporate_group_id || 'CORP-DEFAULT';
     // 2. Attach facility context to current database session if connected
     res.setHeader('X-Facility-Context', resolvedFacilityId);
-    // Asynchronously scope local transaction variable if pool supports it
-    pool_1.pool.query(`SET LOCAL app.current_facility_id = $1`, [resolvedFacilityId]).catch(() => {
-        // Non-fatal if sqlite / test harness without RLS extension
-    });
+    // PostgreSQL SET does not accept bind parameters. set_config is the safe,
+    // parameterized equivalent; true keeps the value local to this statement.
+    if (pool_1.databaseDialect === 'postgres') {
+        pool_1.pool.query(`SELECT set_config('app.current_facility_id', $1, true)`, [resolvedFacilityId]).catch(() => {
+            // Non-fatal when the connection is closing during shutdown.
+        });
+    }
     next();
 }

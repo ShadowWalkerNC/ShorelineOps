@@ -35,6 +35,10 @@ let databaseReady = false
 const PORT = process.env.PORT ?? 3001
 const isProd = process.env.NODE_ENV === 'production'
 
+// Railway terminates TLS at one trusted reverse-proxy hop. This lets
+// express-rate-limit use the real client address from X-Forwarded-For.
+if (isProd) app.set('trust proxy', 1)
+
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   const generated = crypto.randomBytes(32).toString('hex')
   console.warn('[Shoreline API] JWT_SECRET missing or <32 chars — generated fallback runtime secret')

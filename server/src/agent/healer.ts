@@ -129,45 +129,39 @@ export class OperationsHealerBot {
     }
 
     // 4. HACCP Food Safety Compliance Audit
-    // 4. HACCP Food Safety Compliance Audit
     try {
-      const today = new Date().toISOString().split('T')[0]
-      const { rows: tables } = await pool.query("SELECT name FROM sqlite_master WHERE type='table' AND name='food_temperatures'")
-      if (tables.length > 0) {
-        const { rows: tempLogs } = await pool.query(
-          "SELECT id, temperature, item_name FROM food_temperatures WHERE DATE(logged_at) = $1",
-          [today]
-        )
-        const outOfRange = tempLogs.filter(t => t.temperature < 140 && t.temperature > 41)
-        if (outOfRange.length > 0) {
-          checks.push({
-            dimension: 'HACCP Food Safety Temp Audit',
-            status: 'WARNING',
-            details: `Found ${outOfRange.length} item(s) logged in temperature danger zone (41°F - 140°F).`,
-            remedied: false,
-            remedyAction: 'Immediate chef re-heat to 165°F required before meal distribution.',
-          })
-        } else {
-          checks.push({
-            dimension: 'HACCP Food Safety Temp Audit',
-            status: 'HEALTHY',
-            details: `HACCP temperature logs compliant with USDA/FDA Food Safety standards.`,
-            remedied: false,
-          })
-        }
+      const dayStart = new Date()
+      dayStart.setUTCHours(0, 0, 0, 0)
+      const dayEnd = new Date(dayStart)
+      dayEnd.setUTCDate(dayEnd.getUTCDate() + 1)
+
+      const { rows: outOfRange } = await pool.query(
+        `SELECT id, temp_f, item_name FROM haccp_logs
+         WHERE recorded_at >= $1 AND recorded_at < $2 AND compliant = false`,
+        [dayStart.toISOString(), dayEnd.toISOString()]
+      )
+
+      if (outOfRange.length > 0) {
+        checks.push({
+          dimension: 'HACCP Food Safety Temp Audit',
+          status: 'WARNING',
+          details: `Found ${outOfRange.length} non-compliant temperature log(s) today.`,
+          remedied: false,
+          remedyAction: 'Review the recorded corrective action before meal distribution.',
+        })
       } else {
         checks.push({
           dimension: 'HACCP Food Safety Temp Audit',
           status: 'HEALTHY',
-          details: 'HACCP standard 165°F core temp guidelines active.',
+          details: 'Today’s persisted HACCP temperature logs are compliant.',
           remedied: false,
         })
       }
-    } catch {
+    } catch (err: any) {
       checks.push({
         dimension: 'HACCP Food Safety Temp Audit',
-        status: 'HEALTHY',
-        details: 'HACCP standard 165°F core temp guidelines active.',
+        status: 'WARNING',
+        details: `HACCP log audit unavailable: ${err.message}`,
         remedied: false,
       })
     }
