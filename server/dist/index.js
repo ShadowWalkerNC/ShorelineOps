@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.startServer = startServer;
 require("dotenv/config");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -33,6 +34,7 @@ const migrate_1 = require("./db/migrate");
 const seed_1 = require("./db/seed");
 const crypto_1 = __importDefault(require("crypto"));
 const app = (0, express_1.default)();
+let databaseReady = false;
 const PORT = process.env.PORT ?? 3001;
 const isProd = process.env.NODE_ENV === 'production';
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -112,6 +114,16 @@ const billing_1 = require("./routes/billing");
 const tenantContext_1 = require("./middleware/tenantContext");
 // Global Tenant Context
 app.use('/api', tenantContext_1.tenantContextMiddleware);
+// Do not let API routes pretend to work while migrations are incomplete. Static
+// marketing and demo assets remain available on services without a database.
+app.use('/api', (req, res, next) => {
+    if (req.path === '/health' || req.path === '/ready')
+        return next();
+    if (!databaseReady) {
+        return res.status(503).json({ error: 'Database is initializing or unavailable' });
+    }
+    next();
+});
 // Routes
 app.use('/api/setup', setup_1.setupRouter);
 app.use('/api/auth', auth_1.authRouter);
@@ -150,6 +162,9 @@ const handleHealth = (_req, res) => {
     });
 };
 const handleReady = async (_req, res) => {
+    if (!databaseReady) {
+        return res.status(503).json({ status: 'unready', database: 'initializing_or_unavailable' });
+    }
     try {
         const { rows } = await pool_1.pool.query('SELECT 1 as ready');
         if (rows && rows.length > 0) {
@@ -265,8 +280,35 @@ else {
 }
 // Global error handler
 app.use(errorHandler_1.errorHandler);
-const server = app.listen(PORT, () => {
-    console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`);
+async function initializeDatabase() {
+    try {
+        await (0, migrate_1.runMigrations)();
+        if ((0, seed_1.isDemoSeedEnabled)())
+            await (0, seed_1.runSeed)();
+        else if (process.env.SHORELINE_DEMO_SEED === 'true') {
+            console.warn('[Shoreline API] Demo seeding refused in production.');
+        }
+        databaseReady = true;
+        console.log('[Shoreline API] Database migrations verified.');
+        healer_1.globalHealerBot.startDaemon(300000);
+        (0, nightlyForecast_1.startNightlyForecastRollup)();
+    }
+    catch (err) {
+        databaseReady = false;
+        // A configured production database must be usable before the API accepts
+        // traffic. Static-only Railway services may omit DATABASE_URL and continue
+        // serving the public marketing/demo bundles with /ready returning 503.
+        if (isProd && process.env.DATABASE_URL) {
+            throw err;
+        }
+        console.warn('[Shoreline API] Database unavailable; starting in static-only mode:', err.message);
+    }
+}
+async function startServer() {
+    await initializeDatabase();
+    const server = app.listen(PORT, () => {
+        console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`);
+    });
     // High-Frequency Real-Time WebSocket stream handler for Kitchen Telemetry (/api/ws/kitchen)
     server.on('upgrade', (request, socket, _head) => {
         if (request.url === '/api/ws/kitchen') {
@@ -281,30 +323,12 @@ const server = app.listen(PORT, () => {
             socket.destroy();
         }
     });
-    // Non-fatal migration & seed background runner
-    (0, migrate_1.runMigrations)()
-        .then(async () => {
-        if ((0, seed_1.isDemoSeedEnabled)())
-            await (0, seed_1.runSeed)();
-        else if (process.env.SHORELINE_DEMO_SEED === 'true') {
-            console.warn('[Shoreline API] Demo seeding refused in production.');
-        }
-    })
-        .then(() => {
-        console.log('[Shoreline API] Database migrations verified.');
-        healer_1.globalHealerBot.startDaemon(300000); // Run self-healing background checks every 5 minutes
-        (0, nightlyForecast_1.startNightlyForecastRollup)(); // C05: nightly avg_usage rollup from inventory transactions
-    })
-        .catch((err) => {
-        // A02: schema drift is fail-closed — refuse to start rather than run
-        // against a database that is missing tables migrate.ts expects.
-        if (err && err.message && err.message.includes('[schema-drift]')) {
-            console.error('[Shoreline API] FATAL: refusing to start:', err.message);
-            process.exit(1);
-        }
-        console.warn('[Shoreline API] Database initialization warning (will retry in background):', err.message);
-        healer_1.globalHealerBot.startDaemon(300000);
-        (0, nightlyForecast_1.startNightlyForecastRollup)(); // C05: nightly avg_usage rollup (runs even if seed warned)
+    return server;
+}
+if (require.main === module) {
+    startServer().catch((err) => {
+        console.error('[Shoreline API] FATAL: database initialization failed:', err.message);
+        process.exit(1);
     });
-});
+}
 exports.default = app;

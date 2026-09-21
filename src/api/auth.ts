@@ -3,7 +3,7 @@ import type { AuthUser } from '../security/AuthContext'
 import axios from 'axios'
 import { tokenManager } from '../security/tokenManager'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api'
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 export interface LoginSuccess {
   accessToken: string

@@ -7,7 +7,8 @@ import axios from 'axios'
 import { tokenManager } from '../security/tokenManager'
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api',
+  // Production uses the unified origin. Vite proxies /api during local work.
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -31,7 +32,7 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         tokenManager.clear()
-        window.location.href = '/login'
+        window.location.href = `${import.meta.env.BASE_URL}login`
       }
     }
     return Promise.reject(error)

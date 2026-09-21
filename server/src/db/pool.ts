@@ -6,6 +6,8 @@ const dbUrl = process.env.DATABASE_URL
 
 const isPostgresUrl = Boolean(dbUrl && /^(postgres|postgresql):\/\//i.test(dbUrl))
 
+export const databaseDialect: 'postgres' | 'sqlite' = isPostgresUrl ? 'postgres' : 'sqlite'
+
 if (isProd && !isPostgresUrl) {
   console.warn('[DB] Operating with local offline SQLite database (PostgreSQL DATABASE_URL not set).')
 }

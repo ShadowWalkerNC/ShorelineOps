@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pool = void 0;
+exports.pool = exports.databaseDialect = void 0;
 const pg_1 = require("pg");
 const path_1 = __importDefault(require("path"));
 const isProd = process.env.NODE_ENV === 'production';
 const dbUrl = process.env.DATABASE_URL;
 const isPostgresUrl = Boolean(dbUrl && /^(postgres|postgresql):\/\//i.test(dbUrl));
+exports.databaseDialect = isPostgresUrl ? 'postgres' : 'sqlite';
 if (isProd && !isPostgresUrl) {
     console.warn('[DB] Operating with local offline SQLite database (PostgreSQL DATABASE_URL not set).');
 }

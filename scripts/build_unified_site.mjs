@@ -53,7 +53,7 @@ execSync('npm --prefix marketing run build', {
   env: {
     ...process.env,
     PUBLIC_DEMO_URL: '/demo',
-    PUBLIC_APP_URL: '/demo',
+    PUBLIC_APP_URL: '/app',
   },
 })
 

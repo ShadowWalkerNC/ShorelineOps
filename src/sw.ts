@@ -9,6 +9,16 @@ declare const self: ServiceWorkerGlobalScope
 
 clientsClaim()
 self.skipWaiting()
+const scopePath = new URL(self.registration.scope).pathname
+const scopeName = scopePath.replace(/^\/+|\/+$/g, '') || 'root'
+const cacheName = (kind: string) => `shoreline-${scopeName}-${kind}`
+
+// Auth requests must be registered before the general API route because the
+// first matching Workbox route wins.
+registerRoute(
+  ({ url }) => url.pathname.includes('/auth/') || url.pathname.includes('/token'),
+  new NetworkOnly()
+)
 
 // Precache all Vite build assets injected by vite-plugin-pwa
 precacheAndRoute(self.__WB_MANIFEST)
@@ -21,7 +31,7 @@ registerRoute(
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/rest/'),
   new NetworkFirst({
-    cacheName: 'shoreline-api',
+    cacheName: cacheName('api'),
     networkTimeoutSeconds: 5,
     plugins: [
       new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 24 * 60 * 60 }),
@@ -34,7 +44,7 @@ registerRoute(
   ({ request }) =>
     ['style', 'script', 'worker', 'font'].includes(request.destination),
   new CacheFirst({
-    cacheName: 'shoreline-assets',
+    cacheName: cacheName('assets'),
     plugins: [
       new ExpirationPlugin({ maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60 }),
     ],
@@ -45,7 +55,7 @@ registerRoute(
 registerRoute(
   ({ request }) => request.destination === 'image',
   new CacheFirst({
-    cacheName: 'shoreline-images',
+    cacheName: cacheName('images'),
     plugins: [
       new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 7 * 24 * 60 * 60 }),
     ],
@@ -59,19 +69,11 @@ registerRoute(
 registerRoute(
   new NavigationRoute(
     new NetworkFirst({
-      cacheName: 'shoreline-pages',
+      cacheName: cacheName('pages'),
       networkTimeoutSeconds: 4,
       plugins: [
         new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 24 * 60 * 60 }),
       ],
     })
   )
-)
-
-// ── Auth-related requests — always network only (never cache tokens) ────────
-registerRoute(
-  ({ url }) =>
-    url.pathname.includes('/auth/') ||
-    url.pathname.includes('/token'),
-  new NetworkOnly()
 )

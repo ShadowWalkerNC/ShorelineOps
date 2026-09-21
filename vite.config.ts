@@ -3,8 +3,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
+const configuredBase = process.env.VITE_BASE_PATH || '/'
+const appBase = configuredBase.endsWith('/') ? configuredBase : configuredBase + '/'
+
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH || '/',
+  base: appBase,
   plugins: [
     react(),
     VitePWA({
@@ -34,24 +37,24 @@ export default defineConfig({
         background_color: '#0d1b2a',
         display: 'standalone',
         orientation: 'portrait-primary',
-        start_url: '/',
-        scope: '/',
-        id: '/',
+        start_url: appBase,
+        scope: appBase,
+        id: appBase,
         icons: [
           {
-            src: '/icon-192.png',
+            src: `${appBase}icon-192.png`,
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable',
           },
           {
-            src: '/icon-512.png',
+            src: `${appBase}icon-512.png`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
           },
           {
-            src: '/apple-touch-icon.png',
+            src: `${appBase}apple-touch-icon.png`,
             sizes: '180x180',
             type: 'image/png',
           },
@@ -60,19 +63,19 @@ export default defineConfig({
           {
             name: "Today's Menu",
             short_name: 'Menu',
-            url: '/menu',
+            url: `${appBase}menu`,
             description: "View today's menu",
           },
           {
             name: 'Residents',
             short_name: 'Residents',
-            url: '/residents',
+            url: `${appBase}residents`,
             description: 'Resident diet profiles',
           },
           {
             name: 'Production',
             short_name: 'Production',
-            url: '/production',
+            url: `${appBase}production`,
             description: 'Meal production & service',
           },
         ],
@@ -83,7 +86,7 @@ export default defineConfig({
       devOptions: {
         enabled: false,   // Disable SW in dev — prevents workbox from caching stale bundles
         type: 'module',
-        navigateFallback: '/',
+        navigateFallback: appBase,
       },
     }),
   ],

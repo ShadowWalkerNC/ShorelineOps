@@ -31,6 +31,7 @@ import { isDemoSeedEnabled, runSeed } from './db/seed'
 import crypto from 'crypto'
 
 const app = express()
+let databaseReady = false
 const PORT = process.env.PORT ?? 3001
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -117,6 +118,16 @@ import { tenantContextMiddleware } from './middleware/tenantContext'
 // Global Tenant Context
 app.use('/api', tenantContextMiddleware)
 
+// Do not let API routes pretend to work while migrations are incomplete. Static
+// marketing and demo assets remain available on services without a database.
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health' || req.path === '/ready') return next()
+  if (!databaseReady) {
+    return res.status(503).json({ error: 'Database is initializing or unavailable' })
+  }
+  next()
+})
+
 // Routes
 app.use('/api/setup',      setupRouter)
 app.use('/api/auth',       authRouter)
@@ -159,6 +170,10 @@ const handleHealth = (_req: express.Request, res: express.Response) => {
 }
 
 const handleReady = async (_req: express.Request, res: express.Response) => {
+  if (!databaseReady) {
+    return res.status(503).json({ status: 'unready', database: 'initializing_or_unavailable' })
+  }
+
   try {
     const { rows } = await pool.query('SELECT 1 as ready')
     if (rows && rows.length > 0) {
@@ -277,8 +292,38 @@ if (fs.existsSync(clientDistPath)) {
 // Global error handler
 app.use(errorHandler)
 
-const server = app.listen(PORT, () => {
-  console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
+async function initializeDatabase(): Promise<void> {
+  try {
+    await runMigrations()
+    if (isDemoSeedEnabled()) await runSeed()
+    else if (process.env.SHORELINE_DEMO_SEED === 'true') {
+      console.warn('[Shoreline API] Demo seeding refused in production.')
+    }
+
+    databaseReady = true
+    console.log('[Shoreline API] Database migrations verified.')
+    globalHealerBot.startDaemon(300000)
+    startNightlyForecastRollup()
+  } catch (err: any) {
+    databaseReady = false
+
+    // A configured production database must be usable before the API accepts
+    // traffic. Static-only Railway services may omit DATABASE_URL and continue
+    // serving the public marketing/demo bundles with /ready returning 503.
+    if (isProd && process.env.DATABASE_URL) {
+      throw err
+    }
+
+    console.warn('[Shoreline API] Database unavailable; starting in static-only mode:', err.message)
+  }
+}
+
+export async function startServer() {
+  await initializeDatabase()
+
+  const server = app.listen(PORT, () => {
+    console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
+  })
 
   // High-Frequency Real-Time WebSocket stream handler for Kitchen Telemetry (/api/ws/kitchen)
   server.on('upgrade', (request, socket, _head) => {
@@ -293,31 +338,15 @@ const server = app.listen(PORT, () => {
       socket.destroy()
     }
   })
-  
-  // Non-fatal migration & seed background runner
-  runMigrations()
-    .then(async () => {
-      if (isDemoSeedEnabled()) await runSeed()
-      else if (process.env.SHORELINE_DEMO_SEED === 'true') {
-        console.warn('[Shoreline API] Demo seeding refused in production.')
-      }
-    })
-    .then(() => {
-      console.log('[Shoreline API] Database migrations verified.')
-      globalHealerBot.startDaemon(300000) // Run self-healing background checks every 5 minutes
-      startNightlyForecastRollup() // C05: nightly avg_usage rollup from inventory transactions
-    })
-    .catch((err) => {
-      // A02: schema drift is fail-closed — refuse to start rather than run
-      // against a database that is missing tables migrate.ts expects.
-      if (err && err.message && err.message.includes('[schema-drift]')) {
-        console.error('[Shoreline API] FATAL: refusing to start:', err.message)
-        process.exit(1)
-      }
-      console.warn('[Shoreline API] Database initialization warning (will retry in background):', err.message)
-      globalHealerBot.startDaemon(300000)
-      startNightlyForecastRollup() // C05: nightly avg_usage rollup (runs even if seed warned)
-    })
-})
+
+  return server
+}
+
+if (require.main === module) {
+  startServer().catch((err) => {
+    console.error('[Shoreline API] FATAL: database initialization failed:', err.message)
+    process.exit(1)
+  })
+}
 
 export default app

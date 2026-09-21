@@ -369,3 +369,7 @@ See [`sdk/README.md`](sdk/README.md) and [`docs/SDK_REFERENCE.md`](docs/SDK_REFE
 
 Core platform is licensed under **AGPLv3 / MIT Open Core**. Commercial SaaS features are proprietary to Shoreline Operations LLC.  
 Copyright © 2026 Shoreline Operations LLC. Built in Portland, Maine.
+
+## Deployment
+
+See [Railway deployment](docs/RAILWAY_DEPLOYMENT.md) for the production URL layout, required variables, database readiness behavior, and first-owner setup flow.

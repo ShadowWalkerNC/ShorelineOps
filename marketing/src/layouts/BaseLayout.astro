@@ -19,7 +19,7 @@ const {
 
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
 const SITE_URL = 'https://shorelineops.com'
-const canonicalURL = canonicalPath ? new URL(canonicalPath, SITE_URL).toString() : Astro.url.href
+const canonicalURL = new URL(canonicalPath || Astro.url.pathname, SITE_URL).toString()
 const fullOgImageUrl = new URL(ogImage, SITE_URL).toString()
 
 const schemaJson = JSON.stringify([

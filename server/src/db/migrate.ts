@@ -1,4 +1,4 @@
-import { pool } from './pool'
+import { databaseDialect, pool } from './pool'
 
 const migrations: { name: string; sql: string }[] = [
   {
@@ -288,7 +288,7 @@ const migrations: { name: string; sql: string }[] = [
       -- Maps facility ingredients to preferred vendor items (many-to-one preferred)
       CREATE TABLE IF NOT EXISTS facility_item_maps (
         id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id         UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id         TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         ingredient_name     TEXT NOT NULL,
         vendor_item_id      UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
         preferred           BOOLEAN NOT NULL DEFAULT true,
@@ -301,7 +301,7 @@ const migrations: { name: string; sql: string }[] = [
       -- Standing order guide entries: par levels and on-hand counts per vendor item
       CREATE TABLE IF NOT EXISTS order_guides (
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id     TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
         vendor_item_id  UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
         par_level       NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -315,7 +315,7 @@ const migrations: { name: string; sql: string }[] = [
       -- Purchase orders (header)
       CREATE TABLE IF NOT EXISTS purchase_orders (
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id     TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
         status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','approved','submitted','received','cancelled')),
         order_date      DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -355,7 +355,7 @@ const migrations: { name: string; sql: string }[] = [
       -- Substitution log: tracks when a menu item is swapped for a resident
       CREATE TABLE IF NOT EXISTS substitution_log (
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id     TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         resident_id     UUID REFERENCES residents(id) ON DELETE SET NULL,
         meal_date       DATE NOT NULL,
         meal_type       TEXT NOT NULL DEFAULT '',
@@ -369,7 +369,7 @@ const migrations: { name: string; sql: string }[] = [
       -- Daily cost snapshot (optional manual entry; reports can also be computed live)
       CREATE TABLE IF NOT EXISTS daily_cost_log (
         id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id           UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id           TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         log_date              DATE NOT NULL,
         resident_count        INT NOT NULL DEFAULT 0,
         food_cost             NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -534,7 +534,7 @@ const migrations: { name: string; sql: string }[] = [
       -- From 010: Maps facility ingredients to preferred vendor items (many-to-one preferred)
       CREATE TABLE IF NOT EXISTS facility_item_maps (
         id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id         UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id         TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         ingredient_name     TEXT NOT NULL,
         vendor_item_id      UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
         preferred           BOOLEAN NOT NULL DEFAULT true,
@@ -547,7 +547,7 @@ const migrations: { name: string; sql: string }[] = [
       -- From 010: Standing order guide entries: par levels and on-hand counts per vendor item
       CREATE TABLE IF NOT EXISTS order_guides (
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id     TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
         vendor_item_id  UUID NOT NULL REFERENCES vendor_items(id) ON DELETE CASCADE,
         par_level       NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -561,7 +561,7 @@ const migrations: { name: string; sql: string }[] = [
       -- From 010: Purchase orders (header)
       CREATE TABLE IF NOT EXISTS purchase_orders (
         id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id     UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id     TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         vendor_id       UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
         status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','approved','submitted','received','cancelled')),
         order_date      DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -587,7 +587,7 @@ const migrations: { name: string; sql: string }[] = [
       -- From 011: Daily cost snapshot (optional manual entry; reports can also be computed live)
       CREATE TABLE IF NOT EXISTS daily_cost_log (
         id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        facility_id           UUID REFERENCES facilities(id) ON DELETE CASCADE,
+        facility_id           TEXT REFERENCES facility_config(id) ON DELETE CASCADE,
         log_date              DATE NOT NULL,
         resident_count        INT NOT NULL DEFAULT 0,
         food_cost             NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -1110,19 +1110,12 @@ export const EXPECTED_TABLES: string[] = [
  * is detected by probing, so the pg→sqlite fallback in pool.ts is handled.
  */
 export async function assertSchemaIntegrity(): Promise<void> {
-  let rows: any[]
-  try {
-    ;({ rows } = await pool.query(`SELECT name FROM sqlite_master WHERE type = 'table'`))
-  } catch {
-    ;({ rows } = await pool.query(`SELECT tablename AS name FROM pg_tables WHERE schemaname = 'public'`))
-  }
+  const { rows } = databaseDialect === 'postgres'
+    ? await pool.query(`SELECT tablename AS name FROM pg_tables WHERE schemaname = 'public'`)
+    : await pool.query(`SELECT name FROM sqlite_master WHERE type = 'table'`)
 
-  // pool.ts returns { rows: [] } when no database backend is reachable at all
-  // (cloud-demo in-memory fallback). Migrations already failed in that case;
-  // there is nothing to assert against, so skip rather than false-positive.
   if (rows.length === 0) {
-    console.warn('[migrate] Schema integrity check skipped: no table inventory available (database unreachable)')
-    return
+    throw new Error('[schema-drift] FATAL: database returned no schema inventory. Refusing to boot the API.')
   }
 
   const present = new Set(rows.map((r: any) => r.name))

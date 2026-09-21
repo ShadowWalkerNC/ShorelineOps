@@ -42,6 +42,22 @@ export default function LoginPage() {
   }, [isAuthenticated, navigate, from])
 
   useEffect(() => {
+    if (DEMO_MODE || import.meta.env.DEV) return
+
+    let cancelled = false
+    fetch('/api/setup/status')
+      .then((response) => response.ok ? response.json() : null)
+      .then((status) => {
+        if (!cancelled && status && status.isInitialized === false) {
+          navigate('/setup', { replace: true })
+        }
+      })
+      .catch(() => undefined)
+
+    return () => { cancelled = true }
+  }, [navigate])
+
+  useEffect(() => {
     if (!DEMO_MODE && !import.meta.env.DEV) return
     void import('../../security/demoCredentials').then((m) => setDemoAccounts(m.DEMO_ACCOUNTS))
   }, [])
