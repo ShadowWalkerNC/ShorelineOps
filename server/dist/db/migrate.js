@@ -764,7 +764,7 @@ const migrations = [
 
       CREATE TABLE IF NOT EXISTS diet_review_flags (
         id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        resident_id TEXT NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+        resident_id UUID NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
         message     TEXT NOT NULL DEFAULT '',
         flagged_by  TEXT,
         status      TEXT NOT NULL DEFAULT 'OPEN'
@@ -791,7 +791,7 @@ const migrations = [
         sql: `
       CREATE TABLE IF NOT EXISTS hydration_records (
         id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        resident_id TEXT NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+        resident_id UUID NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
         pass        TEXT NOT NULL
                       CHECK (pass IN ('morning', 'afternoon', 'evening')),
         target_oz   NUMERIC(8,2) NOT NULL DEFAULT 0,
@@ -857,7 +857,7 @@ const migrations = [
         check_type       TEXT NOT NULL
                            CHECK (check_type IN ('food', 'equipment')),
         item_name        TEXT NOT NULL DEFAULT '',
-        equipment_id     TEXT REFERENCES haccp_equipment(id) ON DELETE SET NULL,
+        equipment_id     UUID REFERENCES haccp_equipment(id) ON DELETE SET NULL,
         temp_f           NUMERIC(6,2) NOT NULL,
         target_temp_f    NUMERIC(6,2) NOT NULL,
         compliant        BOOLEAN NOT NULL DEFAULT true,
