@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
+import crypto from 'crypto'
+import type { AuthRequest } from './requireAuth'
 
 export type LicenseTier = 'community' | 'pro' | 'enterprise' | 'demo'
 
@@ -7,15 +9,28 @@ export function getEffectiveTier(req: Request): { tier: LicenseTier; facility: s
     return { tier: 'demo', facility: 'Demo Evaluation Facility', valid: true }
   }
 
+  if ((req as AuthRequest).platformAdmin) {
+    return { tier: 'enterprise', facility: 'ShorelineOps Platform Administration', valid: true }
+  }
+
   const key = (req.headers['x-shoreline-license-key'] as string) || process.env.SHORELINE_LICENSE_KEY || ''
   if (!key) {
     return { tier: 'community', facility: 'Self-Hosted Community Instance', valid: true }
   }
 
   try {
-    if (key.startsWith('SH_ENT_') || key.startsWith('SH_PRO_')) {
+    const signingSecret = process.env.LICENSE_SIGNING_SECRET
+    if (signingSecret && signingSecret.length >= 32 && (key.startsWith('SH_ENT_') || key.startsWith('SH_PRO_'))) {
       const isEnt = key.startsWith('SH_ENT_')
-      const payloadStr = Buffer.from(key.replace(/^SH_(ENT|PRO)_/, ''), 'base64').toString('utf-8')
+      const token = key.replace(/^SH_(ENT|PRO)_/, '')
+      const [payloadPart, signaturePart] = token.split('.')
+      if (!payloadPart || !signaturePart) throw new Error('Malformed license')
+      const expected = crypto.createHmac('sha256', signingSecret).update(payloadPart).digest()
+      const supplied = Buffer.from(signaturePart, 'base64url')
+      if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
+        throw new Error('Invalid license signature')
+      }
+      const payloadStr = Buffer.from(payloadPart, 'base64url').toString('utf-8')
       const payload = JSON.parse(payloadStr)
       const isExpired = payload.exp && new Date(payload.exp * 1000) < new Date()
       if (isExpired) {
@@ -31,7 +46,7 @@ export function getEffectiveTier(req: Request): { tier: LicenseTier; facility: s
     // fallback
   }
 
-  return { tier: 'community', facility: 'Self-Hosted Community Instance', valid: true }
+  return { tier: 'community', facility: 'Self-Hosted Community Instance', valid: false }
 }
 
 export function requireTier(requiredTier: 'pro' | 'enterprise') {

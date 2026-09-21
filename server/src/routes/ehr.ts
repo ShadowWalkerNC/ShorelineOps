@@ -37,7 +37,7 @@ function getEhrWebhookSecret(): string | undefined {
 
 // Boot warning + fail closed: with no usable secret the webhook refuses all traffic.
 if (!getEhrWebhookSecret()) {
-  console.warn(
+  console.info(
     '[EHR webhook] EHR_WEBHOOK_SECRET missing or <16 chars — ' +
     'POST /api/ehr/webhook will refuse all traffic (fail closed)'
   )

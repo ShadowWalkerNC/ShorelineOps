@@ -1,13 +1,13 @@
 /**
- * Multi-Tenant Request Context & PostgreSQL Row-Level Security Middleware
+ * Facility request context middleware.
  * Shoreline Care OS v6.2
  *
- * Extracts facility context from JWT claims or headers and guarantees
- * strict tenant data isolation across multi-facility health systems.
+ * Extracts the authenticated facility context. This context scopes routes that
+ * explicitly query by facility; it is not a substitute for database RLS.
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { databaseDialect, pool } from '../db/pool'
+import { verifyAccessToken } from './requireAuth'
 
 declare global {
   namespace Express {
@@ -19,24 +19,30 @@ declare global {
 }
 
 export function tenantContextMiddleware(req: Request, res: Response, next: NextFunction) {
-  // 1. Resolve facilityId from authenticated user claims or facility header
-  const user = (req as any).user
-  const headerFacilityId = req.headers['x-facility-id'] as string
-  const resolvedFacilityId = user?.facility_id || headerFacilityId || 'FAC-DEFAULT'
+  // Resolve tenant context only from a verified access token. A platform owner
+  // may deliberately select a facility with X-Facility-Id; ordinary users may not.
+  let resolvedFacilityId = 'default'
+  let platformAdmin = false
+  const authorization = req.headers.authorization
+  if (authorization?.startsWith('Bearer ')) {
+    try {
+      const claims = verifyAccessToken(authorization.slice(7))
+      resolvedFacilityId = claims.facilityId || 'default'
+      platformAdmin = claims.platformAdmin
+    } catch {
+      // Authentication middleware returns the authoritative 401 later.
+    }
+  }
+  const requestedFacility = req.headers['x-facility-id']
+  if (platformAdmin && typeof requestedFacility === 'string' && requestedFacility.trim()) {
+    resolvedFacilityId = requestedFacility.trim()
+  }
 
   req.facilityId = resolvedFacilityId
-  req.corporateGroupId = user?.corporate_group_id || 'CORP-DEFAULT'
+  req.corporateGroupId = 'shorelineops'
 
-  // 2. Attach facility context to current database session if connected
+  // Attach facility context to the response for diagnostics.
   res.setHeader('X-Facility-Context', resolvedFacilityId)
-
-  // PostgreSQL SET does not accept bind parameters. set_config is the safe,
-  // parameterized equivalent; true keeps the value local to this statement.
-  if (databaseDialect === 'postgres') {
-    pool.query(`SELECT set_config('app.current_facility_id', $1, true)`, [resolvedFacilityId]).catch(() => {
-      // Non-fatal when the connection is closing during shutdown.
-    })
-  }
 
   next()
 }

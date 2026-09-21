@@ -50,8 +50,8 @@ const JWT_EXPIRES = (process.env.JWT_EXPIRES_IN ?? '15m');
 const REFRESH_EXPIRES_DAYS = Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7);
 const MFA_PENDING_EXPIRES = '5m';
 const ISSUER = process.env.MFA_ISSUER || 'ShorelineOps';
-function makeTokens(userId, role, mfaVerified) {
-    const accessToken = jsonwebtoken_1.default.sign({ sub: userId, role, mfa: mfaVerified, purpose: 'access' }, (0, requireAuth_1.getJwtSecret)(), { expiresIn: JWT_EXPIRES, audience: requireAuth_1.ACCESS_TOKEN_AUDIENCE, algorithm: 'HS256' });
+function makeTokens(userId, role, mfaVerified, facilityId, platformAdmin) {
+    const accessToken = jsonwebtoken_1.default.sign({ sub: userId, role, mfa: mfaVerified, purpose: 'access', facilityId, platformAdmin }, (0, requireAuth_1.getJwtSecret)(), { expiresIn: JWT_EXPIRES, audience: requireAuth_1.ACCESS_TOKEN_AUDIENCE, algorithm: 'HS256' });
     const refreshToken = crypto_1.default.randomBytes(48).toString('hex');
     return { accessToken, refreshToken };
 }
@@ -100,7 +100,9 @@ async function isMfaRequiredGlobally() {
 }
 async function issueSession(user, mfaVerified) {
     const role = asApiRole(user.role);
-    const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified);
+    const facilityId = user.facility_id || 'default';
+    const platformAdmin = !!user.platform_admin;
+    const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified, facilityId, platformAdmin);
     const tokenHash = crypto_1.default.createHash('sha256').update(refreshToken).digest('hex');
     const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000);
     await pool_1.pool.query(`INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
@@ -117,6 +119,8 @@ async function issueSession(user, mfaVerified) {
             email: user.email,
             role,
             mfaVerified,
+            facilityId,
+            platformAdmin,
         },
     };
 }
@@ -316,7 +320,7 @@ exports.authRouter.post('/refresh', async (req, res, next) => {
     try {
         const { refreshToken } = zod_1.z.object({ refreshToken: zod_1.z.string() }).parse(req.body);
         const tokenHash = crypto_1.default.createHash('sha256').update(refreshToken).digest('hex');
-        const { rows } = await pool_1.pool.query(`SELECT rt.*, u.id AS uid, u.name, u.email, u.role, u.active, u.mfa_enabled
+        const { rows } = await pool_1.pool.query(`SELECT rt.*, u.id AS uid, u.name, u.email, u.role, u.active, u.mfa_enabled, u.facility_id, u.platform_admin
        FROM refresh_tokens rt
        JOIN users u ON u.id = rt.user_id
        WHERE rt.token_hash = $1 AND rt.expires_at > $2 AND u.active = true`, [tokenHash, new Date().toISOString()]);
@@ -326,7 +330,7 @@ exports.authRouter.post('/refresh', async (req, res, next) => {
         const role = asApiRole(rows[0].role);
         // Refresh preserves prior MFA satisfaction for enrolled users (session continuity)
         const mfaVerified = !!rows[0].mfa_enabled;
-        const { accessToken, refreshToken: newRefreshToken } = makeTokens(rows[0].uid, role, mfaVerified);
+        const { accessToken, refreshToken: newRefreshToken } = makeTokens(rows[0].uid, role, mfaVerified, rows[0].facility_id || 'default', !!rows[0].platform_admin);
         const newHash = crypto_1.default.createHash('sha256').update(newRefreshToken).digest('hex');
         const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000);
         await pool_1.pool.query(`INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
@@ -342,7 +346,7 @@ exports.authRouter.post('/refresh', async (req, res, next) => {
 // ─────────────────────────────────────────────
 exports.authRouter.get('/me', requireAuth_1.requireAuth, async (req, res, next) => {
     try {
-        const { rows } = await pool_1.pool.query('SELECT id, name, email, role, mfa_enabled FROM users WHERE id = $1 AND active = true', [req.userId]);
+        const { rows } = await pool_1.pool.query('SELECT id, name, email, role, mfa_enabled, facility_id, platform_admin FROM users WHERE id = $1 AND active = true', [req.userId]);
         if (!rows[0])
             return res.status(401).json({ error: 'User not found.' });
         const header = req.headers.authorization;
@@ -354,6 +358,8 @@ exports.authRouter.get('/me', requireAuth_1.requireAuth, async (req, res, next) 
             role: asApiRole(rows[0].role),
             mfaEnabled: !!rows[0].mfa_enabled,
             mfaVerified: !!payload.mfa,
+            facilityId: rows[0].facility_id || 'default',
+            platformAdmin: !!rows[0].platform_admin,
         });
     }
     catch (err) {

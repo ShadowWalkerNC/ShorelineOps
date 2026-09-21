@@ -36,6 +36,7 @@ jobs:
 
       - name: Server Production Build (TypeScript)
         working-directory: server
+        run: npm run build
       - name: Install Marketing Dependencies
         working-directory: marketing
         run: npm ci
@@ -43,6 +44,5 @@ jobs:
       - name: Marketing Production Build (Astro)
         run: npm run build:marketing
 
-      - name: Run Full Automated System Test Suite (207/207 Tests)
-        working-directory: server
-        run: node dist/system.test.js
+      - name: Run Full Automated Test Suite
+        run: npm test

@@ -1,6 +1,8 @@
-import type { AdminUser, AuditLogEntry, SystemSettings } from '../types/admin'
+import type { AdminUser, AuditLogEntry, FacilityAccount, OnboardingStatus, SystemSettings } from '../types/admin'
 import type { UserRole } from '../security/AuthContext'
 import { tokenManager } from '../security/tokenManager'
+import { api } from './client'
+import axios from 'axios'
 import type {
   FacilityProfile,
   OperationsConfig,
@@ -16,19 +18,22 @@ function authHeaders() {
 }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    method,
-    headers: authHeaders(),
-    body: body ? JSON.stringify(body) : undefined,
-  })
-  if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`)
-  return res.json()
+  try {
+    const { data } = await api.request<T>({ method, url: path, data: body })
+    return data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.error
+      if (typeof message === 'string') throw new Error(message)
+    }
+    throw error
+  }
 }
 
 export const adminApi = {
   // Users
   listUsers: () => req<AdminUser[]>('GET', '/admin/users'),
-  createUser: (data: { name: string; email: string; role: UserRole }) =>
+  createUser: (data: { name: string; email: string; role: UserRole; facilityId?: string }) =>
     req<AdminUser>('POST', '/admin/users', data),
   updateUserRole: (id: string, role: UserRole) =>
     req<AdminUser>('PATCH', `/admin/users/${id}`, { role }),
@@ -36,6 +41,13 @@ export const adminApi = {
     req<AdminUser>('PATCH', `/admin/users/${id}`, { active: false }),
   reactivateUser: (id: string) =>
     req<AdminUser>('PATCH', `/admin/users/${id}`, { active: true }),
+
+  listFacilities: () => req<FacilityAccount[]>('GET', '/admin/facilities'),
+  registerFacility: (data: { name: string; primaryContactEmail: string; facilityType: string; address?: string; npiLicense?: string }) =>
+    req<FacilityAccount>('POST', '/admin/facilities', data),
+  updateFacility: (id: string, data: Partial<Pick<FacilityAccount, 'betaStatus' | 'planTier' | 'active'>>) =>
+    req<FacilityAccount>('PATCH', `/admin/facilities/${id}`, data),
+  getOnboardingStatus: () => req<OnboardingStatus>('GET', '/admin/onboarding/status'),
 
   // Audit log
   getAuditLog: (params?: { limit?: number; offset?: number; userId?: string }) => {

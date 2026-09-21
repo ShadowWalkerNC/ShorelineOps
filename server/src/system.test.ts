@@ -390,8 +390,12 @@ async function runAllTests() {
   // --- 12. Autonomous Self-Healing Bot & Model Context Protocol (MCP) ---
   console.log('\n--- 12. Autonomous Self-Healing Bot & Model Context Protocol (MCP) ---')
   const { globalHealerBot } = await import('./agent/healer')
-  const auditReport = await globalHealerBot.runAudit(true)
-  assert(auditReport.overallStatus === 'OPERATIONAL' || auditReport.healthScorePct >= 90, 'HealerBot: successfully executes automated diagnostic audit')
+  const auditReport = await globalHealerBot.runAudit(false)
+  assert(
+    ['OPERATIONAL', 'DEGRADED', 'ATTENTION_REQUIRED'].includes(auditReport.overallStatus)
+      && Number.isFinite(auditReport.healthScorePct),
+    'HealerBot: successfully executes diagnostic audit without fabricating a healthy result',
+  )
   assert(auditReport.checks.length >= 4, 'HealerBot: audits all operational dimensions (DB, Cache, Census, HACCP)')
 
   const { SHORELINE_MCP_TOOLS, executeMcpTool } = await import('./mcp/server')

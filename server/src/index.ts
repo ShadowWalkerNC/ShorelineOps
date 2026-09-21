@@ -40,10 +40,21 @@ const isProd = process.env.NODE_ENV === 'production'
 if (isProd) app.set('trust proxy', 1)
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  if (isProd) {
+    throw new Error('JWT_SECRET must be configured with at least 32 characters in production')
+  }
   const generated = crypto.randomBytes(32).toString('hex')
-  console.warn('[Shoreline API] JWT_SECRET missing or <32 chars — generated fallback runtime secret')
+  console.info('[Shoreline API] Development JWT secret generated for this process.')
   process.env.JWT_SECRET = process.env.JWT_SECRET || generated
 }
+
+app.use((req, res, next) => {
+  const incoming = req.headers['x-request-id']
+  const requestId = typeof incoming === 'string' && incoming.trim() ? incoming.trim().slice(0, 128) : crypto.randomUUID()
+  req.headers['x-request-id'] = requestId
+  res.setHeader('X-Request-ID', requestId)
+  next()
+})
 
 // Security middleware
 app.use(

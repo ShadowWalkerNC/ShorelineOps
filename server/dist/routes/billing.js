@@ -20,7 +20,7 @@ exports.billingRouter = (0, express_1.Router)();
  */
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 if (!stripeWebhookSecret || stripeWebhookSecret.length < 16) {
-    console.warn('[billing] STRIPE_WEBHOOK_SECRET missing or <16 chars — ' +
+    console.info('[billing] STRIPE_WEBHOOK_SECRET missing or <16 chars — ' +
         'POST /api/billing/webhook will refuse traffic (fail closed) until it is set');
 }
 /** Stripe-Signature timestamps must be within ±5 minutes of now (same as Stripe's default). */

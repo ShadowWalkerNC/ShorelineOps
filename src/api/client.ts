@@ -5,6 +5,7 @@
  */
 import axios from 'axios'
 import { tokenManager } from '../security/tokenManager'
+import { LicenseManager } from '../security/license'
 
 export const api = axios.create({
   // Production uses the unified origin. Vite proxies /api during local work.
@@ -16,6 +17,8 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = tokenManager.getAccessToken()
   if (token) config.headers.Authorization = `Bearer ${token}`
+  const licenseKey = LicenseManager.getLicenseKey()
+  if (licenseKey) config.headers['X-Shoreline-License-Key'] = licenseKey
   return config
 })
 

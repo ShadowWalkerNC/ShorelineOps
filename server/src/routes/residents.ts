@@ -523,6 +523,12 @@ residentsRouter.post('/import-csv', requireRole('staff'), async (req: AuthReques
 residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, next) => {
   try {
     const data = ResidentSchema.parse(req.body)
+    if (!canWriteDietOrder(req.userRole)) {
+      return res.status(403).json({
+        error: 'Resident admission includes a clinical diet order and requires the dietitian or manager role.',
+      })
+    }
+    const isNpo = data.dietType === 'NPO' ? true : (data.isNpo ?? false)
     // Portable write: the pool's SQLite path drops RETURNING rows and
     // uuid_generate_v4() defaults don't exist on SQLite, so generate the
     // id client-side and re-read the row after INSERT (B05 inventory pattern).
@@ -532,17 +538,20 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
         (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
          allergies, beverages, birthday_month, birthday_day, serving_location,
          table_assignment, likes, dislikes, special_instructions,
-         diet_ordered_by, diet_order_date, diet_effective_date)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-              NOW(), NOW())`,
+         is_npo, npo_reason, fluid_restriction_ml,
+         diet_ordered_by, diet_order_date, diet_effective_date, profile_version)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
+              NOW(), COALESCE($22, NOW()), 1)`,
       [
         id, data.name, data.room, data.status, data.dietType, data.texture,
         data.portionSize, data.ensurePerDay, data.allergies, data.beverages,
         data.birthdayMonth ?? null, data.birthdayDay ?? null,
         data.servingLocation, data.tableAssignment,
         data.likes, data.dislikes, data.specialInstructions,
+        isNpo, data.npoReason ?? '', data.fluidRestrictionMl ?? null,
         // B04: the admission diet order carries provenance too.
         req.userId ?? null,
+        data.dietEffectiveDate ?? null,
       ]
     )
     const { rows } = await pool.query(
@@ -553,6 +562,12 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
       `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
        VALUES ('CREATE_RESIDENT', $1, $2, 'resident', 'success')`,
       [req.userId, rows[0].id]
+    )
+    await pool.query(
+      `INSERT INTO resident_profile_history
+         (resident_id, profile_version, diet_type, texture, is_npo, allergies)
+       VALUES ($1, 1, $2, $3, $4, $5)`,
+      [id, data.dietType, data.texture, isNpo, data.allergies]
     )
     res.status(201).json(toResident(rows[0]))
   } catch (err) { next(err) }

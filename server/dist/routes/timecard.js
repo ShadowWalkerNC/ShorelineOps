@@ -5,6 +5,7 @@ const express_1 = require("express");
 const crypto_1 = require("crypto");
 const zod_1 = require("zod");
 const pool_1 = require("../db/pool");
+const requireAuth_1 = require("../middleware/requireAuth");
 exports.timecardRouter = (0, express_1.Router)();
 const PunchSchema = zod_1.z.object({
     badge_id: zod_1.z.string().min(1).max(64),
@@ -82,7 +83,7 @@ exports.timecardRouter.post('/webhook', async (req, res, next) => {
     }
 });
 // POST /api/timecard/punch — direct punch from UI or kiosk
-exports.timecardRouter.post('/punch', async (req, res, next) => {
+exports.timecardRouter.post('/punch', requireAuth_1.requireAuth, async (req, res, next) => {
     try {
         const payload = PunchSchema.parse(req.body);
         const operation = payload.operation === 'In' || payload.operation === 'Out' ? payload.operation : 'In';
@@ -98,7 +99,7 @@ exports.timecardRouter.post('/punch', async (req, res, next) => {
     }
 });
 // GET /api/timecard/last-punch/:badgeId
-exports.timecardRouter.get('/last-punch/:badgeId', async (req, res, next) => {
+exports.timecardRouter.get('/last-punch/:badgeId', requireAuth_1.requireAuth, async (req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT * FROM timecard_punches WHERE badge_id = $1 ORDER BY punched_at DESC LIMIT 1', [req.params.badgeId]);
         res.json(rows[0] || null);
@@ -108,7 +109,7 @@ exports.timecardRouter.get('/last-punch/:badgeId', async (req, res, next) => {
     }
 });
 // GET /api/timecard — queryable punches
-exports.timecardRouter.get('/', async (req, res, next) => {
+exports.timecardRouter.get('/', requireAuth_1.requireAuth, async (req, res, next) => {
     try {
         const badgeId = typeof req.query.badge_id === 'string' ? req.query.badge_id : null;
         const limit = parseInt(req.query.limit || '200', 10) || 200;

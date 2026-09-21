@@ -76,22 +76,12 @@ export class OperationsHealerBot {
 
       const missingDietOrders = residents.filter(r => !r.diet_type || !r.texture)
       if (missingDietOrders.length > 0) {
-        let fixed = false
-        if (autoFix) {
-          for (const res of missingDietOrders) {
-            const fallbackDiet = res.diet_type || 'Regular'
-            const fallbackTexture = res.texture || 'Regular'
-            await pool.query('UPDATE residents SET diet_type = $1, texture = $2 WHERE id = $3', [fallbackDiet, fallbackTexture, res.id])
-          }
-          fixed = true
-          remediationsCount += missingDietOrders.length
-        }
         checks.push({
           dimension: 'Clinical Census Integrity',
-          status: fixed ? 'HEALTHY' : 'WARNING',
+          status: 'WARNING',
           details: `Detected ${missingDietOrders.length} resident(s) with missing diet/texture orders.`,
-          remedied: fixed,
-          remedyAction: fixed ? `Auto-assigned default therapeutic profile (Regular/Regular) to ${missingDietOrders.length} resident(s).` : undefined,
+          remedied: false,
+          remedyAction: 'A dietitian or dietary manager must review and enter the clinical order.',
         })
       } else {
         checks.push({
@@ -101,11 +91,11 @@ export class OperationsHealerBot {
           remedied: false,
         })
       }
-    } catch {
+    } catch (err: any) {
       checks.push({
         dimension: 'Clinical Census Integrity',
-        status: 'HEALTHY',
-        details: 'Resident census table checked and verified.',
+        status: 'WARNING',
+        details: `Resident census audit unavailable: ${err.message}`,
         remedied: false,
       })
     }
@@ -169,8 +159,8 @@ export class OperationsHealerBot {
     // 5. Distributor Contract Price Variance
     checks.push({
       dimension: 'Distributor Contract Price Drift',
-      status: 'HEALTHY',
-      details: 'Vendor broadline pricing within 2.1% contract benchmark.',
+      status: 'WARNING',
+      details: 'No live distributor contract benchmark is configured.',
       remedied: false,
     })
 
@@ -197,7 +187,7 @@ export class OperationsHealerBot {
 
     this.timer = setInterval(async () => {
       try {
-        const report = await this.runAudit(true)
+        const report = await this.runAudit(false)
         if (report.autoRemediationsApplied > 0) {
           console.log(`[Self-Healing Bot] Applied ${report.autoRemediationsApplied} automatic remediation(s). Health Score: ${report.healthScorePct}%`)
         }

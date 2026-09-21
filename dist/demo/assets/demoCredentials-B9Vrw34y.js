@@ -1,0 +1,1 @@
+var e=[{id:`demo-admin-1`,name:`Shoreline Demo Admin`,email:`admin@shoreline.demo`,password:`Admin1234!`,role:`admin`,mfaVerified:!0,facilityId:`demo`,platformAdmin:!0}],t=e.map(e=>({role:e.role,email:e.email,password:e.password}));export{t as DEMO_ACCOUNTS,e as DEMO_USERS};

@@ -17,6 +17,8 @@ export interface AuthUser {
   email: string
   role: UserRole
   mfaVerified: boolean
+  facilityId: string
+  platformAdmin: boolean
 }
 
 interface AuthContextValue {
@@ -50,7 +52,9 @@ function isAuthUser(value: unknown): value is AuthUser {
     typeof u.id === 'string' &&
     typeof u.name === 'string' &&
     typeof u.email === 'string' &&
-    typeof u.role === 'string'
+    typeof u.role === 'string' &&
+    typeof u.facilityId === 'string' &&
+    typeof u.platformAdmin === 'boolean'
   )
 }
 
@@ -60,6 +64,8 @@ const DEFAULT_DEMO_USER: AuthUser = {
   email: 'admin@shoreline.demo',
   role: 'admin',
   mfaVerified: true,
+  facilityId: 'demo',
+  platformAdmin: true,
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -103,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: data.email,
             role: data.role,
             mfaVerified: !!data.mfaVerified,
+            facilityId: data.facilityId,
+            platformAdmin: !!data.platformAdmin,
           })
         }
       } catch {
@@ -127,6 +135,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: data.user.email,
       role: data.user.role,
       mfaVerified: !!data.user.mfaVerified,
+      facilityId: data.user.facilityId,
+      platformAdmin: !!data.user.platformAdmin,
     }
     setUser(authUser)
     auditLog('LOGIN', { outcome: 'success' })

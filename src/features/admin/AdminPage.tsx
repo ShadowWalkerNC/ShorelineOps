@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RequireRole } from '../../security/AuthContext'
+import { RequireRole, useAuth } from '../../security/AuthContext'
 import StaffScheduling     from './components/StaffScheduling'
 import UserManager         from './components/UserManager'
 import CallOuts            from './components/CallOuts'
@@ -9,11 +9,14 @@ import LicenseManagerPanel from './components/LicenseManagerPanel'
 
 import SystemHealthDiagnostics from './components/SystemHealthDiagnostics'
 import BackupRecoveryPanel   from './components/BackupRecoveryPanel'
+import OnboardingStatusPanel from './components/OnboardingStatusPanel'
+import PlatformControlPanel from './components/PlatformControlPanel'
 
 type AdminTab =
-  | 'diagnostics' | 'backup' | 'license' | 'scheduling' | 'users' | 'callouts' | 'data' | 'audit'
+  | 'platform' | 'readiness' | 'diagnostics' | 'backup' | 'license' | 'scheduling' | 'users' | 'callouts' | 'data' | 'audit'
 
 const TABS: { id: AdminTab; label: string }[] = [
+  { id: 'readiness',   label: 'Facility Readiness' },
   { id: 'diagnostics', label: 'System Health & Self-Repair' },
   { id: 'backup',      label: 'Backup & Recovery' },
   { id: 'license',     label: 'SaaS Licensing & Entitlements' },
@@ -25,7 +28,9 @@ const TABS: { id: AdminTab; label: string }[] = [
 ]
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<AdminTab>('diagnostics')
+  const { user } = useAuth()
+  const [tab, setTab] = useState<AdminTab>(user?.platformAdmin ? 'platform' : 'readiness')
+  const tabs = user?.platformAdmin ? [{ id: 'platform' as const, label: 'ShorelineOps Control Plane' }, ...TABS] : TABS
 
   return (
     <RequireRole role="admin">
@@ -43,7 +48,7 @@ export default function AdminPage() {
 
         {/* Tab buttons — pill style matching original */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 28 }}>
-          {TABS.map(t => (
+          {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
@@ -74,6 +79,8 @@ export default function AdminPage() {
           boxShadow: 'var(--shadow-sm)',
         }}>
           {tab === 'diagnostics' && <SystemHealthDiagnostics />}
+          {tab === 'platform'    && user?.platformAdmin && <PlatformControlPanel />}
+          {tab === 'readiness'   && <OnboardingStatusPanel />}
           {tab === 'backup'      && <BackupRecoveryPanel />}
           {tab === 'license'     && <LicenseManagerPanel />}
           {tab === 'scheduling'  && <StaffScheduling />}

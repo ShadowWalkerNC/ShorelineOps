@@ -26,6 +26,8 @@ export interface AccessTokenClaims extends jwt.JwtPayload {
   role: ApiRole
   purpose: 'access'
   mfa: boolean
+  facilityId: string
+  platformAdmin: boolean
 }
 
 export function verifyAccessToken(token: string): AccessTokenClaims {
@@ -38,6 +40,8 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
         typeof payload.sub !== 'string' || !payload.sub.trim() ||
         payload.purpose !== 'access' ||
         typeof payload.mfa !== 'boolean' ||
+        typeof payload.facilityId !== 'string' ||
+        typeof payload.platformAdmin !== 'boolean' ||
         typeof payload.exp !== 'number' ||
         !(API_ROLES as readonly unknown[]).includes(payload.role)) {
       throw new Error('Invalid access token claims')
@@ -64,6 +68,8 @@ const ROLE_RANK: Record<ApiRole, number> = {
 export interface AuthRequest extends Request {
   userId?: string
   userRole?: ApiRole
+  facilityId?: string
+  platformAdmin?: boolean
 }
 
 export function getJwtSecret(): string {
@@ -85,10 +91,19 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     const payload = verifyAccessToken(token)
     req.userId = payload.sub
     req.userRole = payload.role
+    req.facilityId = payload.facilityId
+    req.platformAdmin = payload.platformAdmin
     next()
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' })
   }
+}
+
+export function requirePlatformAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.platformAdmin) {
+    return res.status(403).json({ error: 'ShorelineOps platform-owner access required' })
+  }
+  next()
 }
 
 /** Require the caller to have at least the given role rank. */

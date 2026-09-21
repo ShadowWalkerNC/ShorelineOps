@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { tokenManager } from '@/security/tokenManager'
 import {
   Download,
   Upload,
@@ -42,7 +43,7 @@ export default function BackupRecoveryPanel() {
     setDownloading(true)
     setError(null)
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('shoreline_jwt')
+      const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/backup/export', {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -82,7 +83,7 @@ export default function BackupRecoveryPanel() {
       const parsed = JSON.parse(text)
       setFileContent(parsed)
 
-      const token = localStorage.getItem('token') || localStorage.getItem('shoreline_jwt')
+      const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/backup/restore?dryRun=true', {
         method: 'POST',
         headers: {
@@ -114,7 +115,7 @@ export default function BackupRecoveryPanel() {
     setShowConfirmModal(false)
 
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('shoreline_jwt')
+      const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/backup/restore', {
         method: 'POST',
         headers: {

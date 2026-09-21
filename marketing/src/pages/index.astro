@@ -720,7 +720,7 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
             </div>
             <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Cloud SaaS Platform</h3>
             <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-              Hosted in the cloud backed by a secure Supabase database. Staff access it through any web browser on computers, iPads, tablets, or smartphones.
+              Hosted as a Node.js application backed by PostgreSQL. Staff access it through a web browser on computers, iPads, tablets, or smartphones.
             </p>
             <ul class="space-y-3 text-xs sm:text-sm text-slate-700 dark:text-slate-200 border-t border-slate-100 dark:border-slate-800 pt-5 mb-6">
               <li class="flex items-start gap-2.5">
@@ -733,11 +733,11 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
               </li>
               <li class="flex items-start gap-2.5">
                 <Icon name="check" class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <span><strong>Automated Encrypted Backups:</strong> Cloud storage with continuous revision history and data recovery.</span>
+                <span><strong>Managed Recovery:</strong> Backup retention and restore testing are configured as part of the managed deployment.</span>
               </li>
               <li class="flex items-start gap-2.5">
                 <Icon name="check" class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <span><strong>Self-Host for Free or Managed:</strong> 1-click deploy to Vercel for free, or choose our fully managed plan.</span>
+                <span><strong>Self-Host or Managed:</strong> Run the open-source stack yourself or choose a managed ShorelineOps deployment.</span>
               </li>
             </ul>
           </div>
@@ -760,10 +760,10 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
             Self-Hosting Guide
           </div>
           <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3 font-sans">
-            How to Deploy Your Own SaaS Version in 3 Steps
+            Deployment architecture in 3 parts
           </h2>
           <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Deploy your facility's cloud instance using Vercel (frontend hosting) and Supabase (cloud database). Both offer generous free tiers.
+            ShorelineOps uses the Express API as the system of record with a PostgreSQL connection. The browser application does not connect directly to the database.
           </p>
         </div>
 
@@ -772,13 +772,13 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
           <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-apple-subtle flex flex-col justify-between">
             <div>
               <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center mb-4 font-mono">1</div>
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Create Free Supabase Project</h3>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Provision PostgreSQL</h3>
               <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                Sign up at <a href="https://supabase.com" target="_blank" rel="noreferrer" class="text-blue-600 dark:text-blue-400 font-semibold underline">supabase.com</a>. Create a new project, go to <strong>Project Settings → API</strong>, and copy your <strong>URL</strong> and <strong>anon public key</strong>.
+                Create a dedicated PostgreSQL database and provide its server connection string to the API through <strong>DATABASE_URL</strong>. Run the repository migration chain before accepting traffic.
               </p>
             </div>
             <div class="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-              Free cloud PostgreSQL database
+              PostgreSQL is the production system of record
             </div>
           </div>
 
@@ -786,20 +786,20 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
           <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-apple-subtle flex flex-col justify-between">
             <div>
               <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center mb-4 font-mono">2</div>
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">1-Click Deploy to Vercel</h3>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Deploy the API and web bundles</h3>
               <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                Click the button below to fork and deploy the repository directly to your Vercel account with automatic builds and SSL.
+                Build the application, public demo, and marketing site, then run the Node API behind TLS. Health and readiness probes must pass before routing users.
               </p>
             </div>
             <div class="pt-2">
               <a
-                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FShadowWalkerNC%2FShorelineOps&env=VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY&project-name=shoreline-care-os"
+                href="https://github.com/ShadowWalkerNC/ShorelineOps"
                 target="_blank"
                 rel="noreferrer"
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-black text-white text-xs font-semibold rounded-xl hover:bg-slate-800 transition-colors shadow-xs"
               >
-                <svg class="h-3 w-3 fill-current" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z"/></svg>
-                <span>Deploy to Vercel</span>
+                <Icon name="github" class="h-3 w-3" />
+                <span>View deployment source</span>
               </a>
             </div>
           </div>
@@ -808,17 +808,18 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
           <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-apple-subtle flex flex-col justify-between">
             <div>
               <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center mb-4 font-mono">3</div>
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Set Environment Variables</h3>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Configure secrets and verify</h3>
               <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
-                In your Vercel project configuration, enter your Supabase connection credentials:
+                Configure unique production secrets, the allowed frontend origins, and only the integration credentials you intend to enable:
               </p>
               <div class="bg-slate-950 rounded-lg p-2.5 font-mono text-[10px] text-slate-300 border border-slate-800 space-y-1">
-                <div><span class="text-blue-400">VITE_SUPABASE_URL</span>=https://...</div>
-                <div><span class="text-blue-400">VITE_SUPABASE_ANON_KEY</span>=...</div>
+                <div><span class="text-blue-400">DATABASE_URL</span>=postgresql://...</div>
+                <div><span class="text-blue-400">JWT_SECRET</span>=unique-secret</div>
+                <div><span class="text-blue-400">FRONTEND_URL</span>=https://...</div>
               </div>
             </div>
             <div class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-              ✓ Ready for production
+              Verify builds, tests, backup restore, and live integrations
             </div>
           </div>
         </div>
@@ -886,6 +887,4 @@ const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
         </div>
       </div>
     </div>
-
-  </section>
 </BaseLayout>

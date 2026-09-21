@@ -10,6 +10,8 @@ export interface DemoUser {
   email: string
   role: UserRole
   mfaVerified: boolean
+  facilityId: string
+  platformAdmin: boolean
   password: string
 }
 
@@ -21,6 +23,8 @@ export const DEMO_USERS: DemoUser[] = [
     password: 'Admin1234!',
     role: 'admin',
     mfaVerified: true,
+    facilityId: 'demo',
+    platformAdmin: true,
   },
 ]
 

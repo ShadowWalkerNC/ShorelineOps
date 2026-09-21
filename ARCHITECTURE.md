@@ -74,7 +74,7 @@ The user interface implements **shadcn/ui** primitives combined with Apple Human
 
 ## 5. Security, HIPAA Technical Safeguards & Open Core Licensing
 
-- **Authentication & RBAC**: Stateless JWT bearer tokens with Argon2/bcrypt password hashing (enforcing 12+ character complexity, upper, lower, digit, special symbol).
+- **Authentication & RBAC**: JWT access tokens, rotated refresh tokens, TOTP MFA, and bcrypt password hashing.
 - **Role Hierarchy**: `cook` $\to$ `aide` $\to$ `dietitian` $\to$ `manager` $\to$ `admin`.
 - **Open Core Entitlement Engine**:
   - Client: `src/security/license.ts` validates HMAC signatures on license tokens (`SH_PRO_...` / `SH_ENT_...`) and exposes `satisfiesTier()`.
@@ -97,7 +97,7 @@ The user interface implements **shadcn/ui** primitives combined with Apple Human
 
 - **Canonical schema**: `server/src/db/migrate.ts`. `runMigrations()` is called once at
   server boot (`server/src/index.ts`) and applies the ordered migration chain
-  (001–015). This is the **only** schema definition that executes.
+  (001–027). This is the **only** schema definition that executes.
 - **SQLite fallback**: `server/src/db/pool.ts` translates the canonical migration SQL
   to SQLite-compatible syntax at query time. It contains **no DDL of its own** —
   schema and admin seeding flow exclusively through `runMigrations()` + `runSeed()`

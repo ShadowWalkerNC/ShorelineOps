@@ -3,15 +3,17 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
+import { requirePlatformAdmin, requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { globalHealerBot } from '../agent/healer'
 
 const RoleEnum = z.enum([
   'admin',
   'manager',
+  'dietitian',
   'frontdesk',
   'dietary',
+  'distributor',
   'activities',
   'server',
   'staff',
@@ -34,6 +36,8 @@ function toUser(row: any) {
     active: row.active,
     createdAt: row.created_at,
     lastLoginAt: row.last_login_at ?? null,
+    facilityId: row.facility_id || 'default',
+    platformAdmin: !!row.platform_admin,
   }
 }
 
@@ -60,6 +64,7 @@ function toSettings(row: any) {
     mfaRequired: row.mfa_required,
     allowReadonlyExport: row.allow_readonly_export,
     maintenanceMode: row.maintenance_mode,
+    kitchenServiceMode: row.kitchen_service_mode || 'hybrid',
   }
 }
 
@@ -68,12 +73,13 @@ function toSettings(row: any) {
 // ════════════════════════════════════════════════════════════════════════════
 
 // GET /api/admin/users
-adminRouter.get('/users', requireRole('admin'), async (_req: AuthRequest, res, next) => {
+adminRouter.get('/users', requireRole('admin'), async (req: AuthRequest, res, next) => {
   try {
-    const { rows } = await pool.query(
-      'SELECT id, name, email, role, active, created_at, last_login_at FROM users ORDER BY name ASC'
-    )
-    res.json(rows.map(toUser))
+    const base = 'SELECT id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin FROM users'
+    const result = req.platformAdmin
+      ? await pool.query(`${base} ORDER BY name ASC`)
+      : await pool.query(`${base} WHERE facility_id = $1 ORDER BY name ASC`, [req.facilityId || 'default'])
+    res.json(result.rows.map(toUser))
   } catch (err) { next(err) }
 })
 
@@ -85,65 +91,200 @@ adminRouter.post('/users', requireRole('admin'), async (req: AuthRequest, res, n
       email: z.string().email(),
       role: RoleEnum,
       password: z.string().min(12).optional(),
+      facilityId: z.string().min(1).optional(),
+      platformAdmin: z.boolean().optional(),
+      active: z.boolean().optional(),
     }).parse(req.body)
 
-    // Generate a cryptographically strong initial password if one is not supplied
+    if (data.platformAdmin && !req.platformAdmin) {
+      return res.status(403).json({ error: 'Only a platform owner can grant platform access.' })
+    }
+    const facilityId = req.platformAdmin
+      ? (data.facilityId || req.facilityId || 'default')
+      : (req.facilityId || 'default')
+    const { rows: facilities } = await pool.query(
+      'SELECT id, is_initialized, active FROM facility_config WHERE id = $1',
+      [facilityId]
+    )
+    if (!facilities[0]) return res.status(400).json({ error: 'Select a valid facility before creating this account.' })
+    if (!req.platformAdmin && !facilities[0].active) return res.status(400).json({ error: 'This facility is not active.' })
+    if (data.active && (!facilities[0].active || !facilities[0].is_initialized)) {
+      return res.status(409).json({ error: 'Complete facility onboarding and enable the facility before activating accounts.' })
+    }
+
+    const { rows: duplicateUsers } = await pool.query('SELECT id FROM users WHERE email = $1', [data.email.toLowerCase()])
+    if (duplicateUsers[0]) return res.status(409).json({ error: 'An account with this email already exists.' })
+
     const plainPassword = data.password ?? (crypto.randomBytes(18).toString('base64url') + 'A1!')
     const passwordHash = await bcrypt.hash(plainPassword, 12)
+    const active = data.active ?? (!!facilities[0].is_initialized && !!facilities[0].active)
 
     const { rows } = await pool.query(
-      `INSERT INTO users (name, email, password, role)
-       VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, active, created_at, last_login_at`,
-      [data.name, data.email.toLowerCase(), passwordHash, data.role]
+      `INSERT INTO users (name, email, password, role, facility_id, platform_admin, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin`,
+      [data.name, data.email.toLowerCase(), passwordHash, data.role, facilityId, !!data.platformAdmin, active]
     )
     await pool.query(
-      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome)
-       VALUES ('CREATE_USER', $1, $2, 'user', 'success')`,
-      [req.userId, rows[0].id]
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('CREATE_USER', $1, $2, 'user', 'success', $3)`,
+      [req.userId, rows[0].id, JSON.stringify({ facilityId, role: data.role, platformAdmin: !!data.platformAdmin })]
     )
-    // Return new user + temporary password so admin can share it
     res.status(201).json({ ...toUser(rows[0]), temporaryPassword: data.password ? undefined : plainPassword })
   } catch (err) { next(err) }
 })
 
 // PATCH /api/admin/users/:id
-// Handles role changes, activate/deactivate, and optional password reset.
 adminRouter.patch('/users/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
   try {
     const data = z.object({
-      role:     RoleEnum.optional(),
-      active:   z.boolean().optional(),
+      role: RoleEnum.optional(),
+      active: z.boolean().optional(),
       password: z.string().min(12).optional(),
+      facilityId: z.string().min(1).optional(),
+      platformAdmin: z.boolean().optional(),
     }).parse(req.body)
 
     const { rows: existing } = await pool.query(
-      'SELECT id FROM users WHERE id = $1', [req.params.id]
+      'SELECT id, facility_id, platform_admin FROM users WHERE id = $1', [req.params.id]
     )
-    if (!existing[0]) return res.status(404).json({ error: 'User not found' })
+    const target = existing[0]
+    if (!target) return res.status(404).json({ error: 'User not found' })
+    if (!req.platformAdmin && (target.platform_admin || target.facility_id !== (req.facilityId || 'default'))) {
+      return res.status(403).json({ error: 'Facility administrators can manage only their own facility accounts.' })
+    }
+    if ((data.platformAdmin !== undefined || data.facilityId !== undefined) && !req.platformAdmin) {
+      return res.status(403).json({ error: 'Only a platform owner can change platform or facility assignment.' })
+    }
 
     let passwordHash: string | null = null
-    if (data.password) {
-      passwordHash = await bcrypt.hash(data.password, 12)
-    }
+    if (data.password) passwordHash = await bcrypt.hash(data.password, 12)
 
     const { rows } = await pool.query(
       `UPDATE users SET
-         role       = COALESCE($1, role),
-         active     = COALESCE($2, active),
-         password   = CASE WHEN $3::text IS NOT NULL THEN $3::text ELSE password END,
+         role = COALESCE($1, role),
+         active = COALESCE($2, active),
+         password = CASE WHEN $3::text IS NOT NULL THEN $3::text ELSE password END,
+         platform_admin = COALESCE($4, platform_admin),
+         facility_id = COALESCE($5, facility_id),
          updated_at = NOW()
-       WHERE id = $4
-       RETURNING id, name, email, role, active, created_at, last_login_at`,
-      [data.role ?? null, data.active ?? null, passwordHash, req.params.id]
+       WHERE id = $6
+       RETURNING id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin`,
+      [data.role ?? null, data.active ?? null, passwordHash, data.platformAdmin ?? null, data.facilityId ?? null, req.params.id]
     )
     await pool.query(
       `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
        VALUES ('UPDATE_USER', $1, $2, 'user', 'success', $3)`,
-      [req.userId, req.params.id, JSON.stringify({
-        changedFields: Object.keys(data).filter(k => (data as any)[k] !== undefined && k !== 'password'),
-      })]
+      [req.userId, req.params.id, JSON.stringify({ changedFields: Object.keys(data).filter(k => k !== 'password') })]
     )
     res.json(toUser(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// GET /api/admin/facilities — ShorelineOps beta control plane
+adminRouter.get('/facilities', requirePlatformAdmin, async (_req: AuthRequest, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT f.*, COUNT(u.id) AS user_count
+       FROM facility_config f
+       LEFT JOIN users u ON u.facility_id = f.id
+       GROUP BY f.id
+       ORDER BY f.created_at ASC`
+    )
+    res.json(rows.map((row: any) => ({
+      id: row.id,
+      name: row.facility_name,
+      facilityType: row.facility_type,
+      primaryContactEmail: row.primary_contact_email,
+      betaStatus: row.beta_status,
+      planTier: row.plan_tier,
+      active: !!row.active,
+      initialized: !!row.is_initialized,
+      userCount: Number(row.user_count || 0),
+      createdAt: row.created_at,
+    })))
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/facilities — register a beta tenant; access stays locked until provisioned
+adminRouter.post('/facilities', requirePlatformAdmin, async (req: AuthRequest, res, next) => {
+  try {
+    const data = z.object({
+      name: z.string().min(2),
+      primaryContactEmail: z.string().email(),
+      facilityType: z.enum(['Assisted Living', 'Skilled Nursing', 'Memory Care', 'Continuing Care']),
+      address: z.string().optional(),
+      npiLicense: z.string().optional(),
+    }).parse(req.body)
+    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 36) || 'facility'
+    const id = `${slug}-${crypto.randomBytes(3).toString('hex')}`
+    const { rows } = await pool.query(
+      `INSERT INTO facility_config (
+         id, facility_name, npi_license, address, primary_contact_email, facility_type,
+         wings, dining_rooms, is_initialized, beta_status, plan_tier, active
+       ) VALUES ($1, $2, $3, $4, $5, $6, '[]', '[]', false, 'onboarding', 'beta', false)
+       RETURNING *`,
+      [id, data.name, data.npiLicense || '', data.address || '', data.primaryContactEmail.toLowerCase(), data.facilityType]
+    )
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('REGISTER_BETA_FACILITY', $1, $2, 'facility', 'success', $3)`,
+      [req.userId, id, JSON.stringify({ name: data.name })]
+    )
+    res.status(201).json({ id, name: rows[0].facility_name, betaStatus: rows[0].beta_status, initialized: false })
+  } catch (err) { next(err) }
+})
+
+adminRouter.patch('/facilities/:id', requirePlatformAdmin, async (req: AuthRequest, res, next) => {
+  try {
+    const data = z.object({
+      betaStatus: z.enum(['onboarding', 'beta', 'paused', 'graduated']).optional(),
+      planTier: z.enum(['community', 'pro', 'enterprise', 'beta']).optional(),
+      active: z.boolean().optional(),
+    }).parse(req.body)
+    if (data.active) {
+      const { rows: candidates } = await pool.query('SELECT is_initialized FROM facility_config WHERE id = $1', [req.params.id])
+      if (!candidates[0]) return res.status(404).json({ error: 'Facility not found' })
+      if (!candidates[0].is_initialized) {
+        return res.status(409).json({ error: 'Facility onboarding must be complete before access can be enabled.' })
+      }
+    }
+    const { rows } = await pool.query(
+      `UPDATE facility_config SET
+         beta_status = COALESCE($1, beta_status),
+         plan_tier = COALESCE($2, plan_tier),
+         active = COALESCE($3, active),
+         updated_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      [data.betaStatus ?? null, data.planTier ?? null, data.active ?? null, req.params.id]
+    )
+    if (!rows[0]) return res.status(404).json({ error: 'Facility not found' })
+    res.json({ id: rows[0].id, name: rows[0].facility_name, betaStatus: rows[0].beta_status, planTier: rows[0].plan_tier, active: !!rows[0].active })
+  } catch (err) { next(err) }
+})
+
+// GET /api/admin/onboarding/status — deterministic required-data path
+adminRouter.get('/onboarding/status', requireRole('admin'), async (req: AuthRequest, res, next) => {
+  try {
+    const facilityId = req.facilityId || 'default'
+    const { rows: facilities } = await pool.query('SELECT * FROM facility_config WHERE id = $1', [facilityId])
+    const facility = facilities[0]
+    const { rows: admins } = await pool.query(
+      "SELECT COUNT(*) AS count FROM users WHERE facility_id = $1 AND role = 'admin' AND active = true",
+      [facilityId]
+    )
+    const parseList = (value: unknown) => {
+      if (Array.isArray(value)) return value
+      try { return JSON.parse(String(value || '[]')) } catch { return [] }
+    }
+    const steps = [
+      { id: 'facility', label: 'Facility identity and contact', complete: !!facility?.facility_name && !!facility?.primary_contact_email && !!facility?.facility_type },
+      { id: 'layout', label: 'At least one wing and dining location', complete: parseList(facility?.wings).length > 0 && parseList(facility?.dining_rooms).length > 0 },
+      { id: 'baa', label: 'BAA authorization', complete: !!facility?.baa_accepted_at && !!facility?.baa_signee_name },
+      { id: 'admin', label: 'Active facility administrator', complete: Number(admins[0]?.count || 0) > 0 },
+    ]
+    const next = steps.find(step => !step.complete) || null
+    res.json({ facilityId, facilityName: facility?.facility_name || '', complete: !next, steps, nextAction: next?.label || null })
   } catch (err) { next(err) }
 })
 
@@ -161,7 +302,7 @@ adminRouter.get('/audit', requireRole('admin'), async (req: AuthRequest, res, ne
     let queryText: string
     let queryParams: any[]
 
-    if (userId) {
+    if (req.platformAdmin && userId) {
       queryText = `
         SELECT a.*, u.name AS user_name
         FROM audit_log a
@@ -170,7 +311,7 @@ adminRouter.get('/audit', requireRole('admin'), async (req: AuthRequest, res, ne
         ORDER BY a.created_at DESC
         LIMIT $2 OFFSET $3`
       queryParams = [userId, limit, offset]
-    } else {
+    } else if (req.platformAdmin) {
       queryText = `
         SELECT a.*, u.name AS user_name
         FROM audit_log a
@@ -178,6 +319,24 @@ adminRouter.get('/audit', requireRole('admin'), async (req: AuthRequest, res, ne
         ORDER BY a.created_at DESC
         LIMIT $1 OFFSET $2`
       queryParams = [limit, offset]
+    } else if (userId) {
+      queryText = `
+        SELECT a.*, u.name AS user_name
+        FROM audit_log a
+        JOIN users u ON u.id = a.user_id
+        WHERE a.user_id = $1 AND u.facility_id = $2
+        ORDER BY a.created_at DESC
+        LIMIT $3 OFFSET $4`
+      queryParams = [userId, req.facilityId || 'default', limit, offset]
+    } else {
+      queryText = `
+        SELECT a.*, u.name AS user_name
+        FROM audit_log a
+        JOIN users u ON u.id = a.user_id
+        WHERE u.facility_id = $1
+        ORDER BY a.created_at DESC
+        LIMIT $2 OFFSET $3`
+      queryParams = [req.facilityId || 'default', limit, offset]
     }
 
     const { rows } = await pool.query(queryText, queryParams)
@@ -208,6 +367,7 @@ adminRouter.patch('/settings', requireRole('admin'), async (req: AuthRequest, re
       mfaRequired:            z.boolean().optional(),
       allowReadonlyExport:    z.boolean().optional(),
       maintenanceMode:        z.boolean().optional(),
+      kitchenServiceMode:     z.enum(['dining-room', 'room-service-only', 'hybrid']).optional(),
     }).parse(req.body)
 
     const { rows } = await pool.query(
@@ -218,6 +378,7 @@ adminRouter.patch('/settings', requireRole('admin'), async (req: AuthRequest, re
          mfa_required            = COALESCE($4, mfa_required),
          allow_readonly_export   = COALESCE($5, allow_readonly_export),
          maintenance_mode        = COALESCE($6, maintenance_mode),
+         kitchen_service_mode    = COALESCE($7, kitchen_service_mode),
          updated_at              = NOW()
        WHERE id = 1 RETURNING *`,
       [
@@ -227,6 +388,7 @@ adminRouter.patch('/settings', requireRole('admin'), async (req: AuthRequest, re
         data.mfaRequired           ?? null,
         data.allowReadonlyExport   ?? null,
         data.maintenanceMode       ?? null,
+        data.kitchenServiceMode    ?? null,
       ]
     )
     await pool.query(
@@ -434,7 +596,7 @@ async function readFacilitySettings(facilityId: string) {
 // (meal times, wings, dining rooms are needed by kitchen tablets).
 adminRouter.get('/facility-settings', async (req: AuthRequest, res, next) => {
   try {
-    const facilityId = 'default'
+    const facilityId = req.facilityId || 'default'
     let { rows } = await pool.query(
       'SELECT 1 FROM facility_settings WHERE facility_id = $1 LIMIT 1',
       [facilityId]
@@ -454,7 +616,7 @@ adminRouter.get('/facility-settings', async (req: AuthRequest, res, next) => {
 adminRouter.put('/facility-settings', requireRole('manager'), async (req: AuthRequest, res, next) => {
   try {
     const body = FacilitySettingsBodySchema.parse(req.body)
-    const facilityId = 'default'
+    const facilityId = req.facilityId || 'default'
     const changedKeys: FacilitySettingKey[] = []
     for (const key of FACILITY_SETTING_KEYS) {
       const patch = body[key]

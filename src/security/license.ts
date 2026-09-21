@@ -84,22 +84,22 @@ const TIER_FEATURES: Record<LicenseTier, LicenseInfo['features']> = {
 export class LicenseManager {
   /** Check whether current instance is in demo mode */
   static isDemo(): boolean {
+    const demoBuild = (
+      import.meta.env.VITE_DEMO_MODE === 'true' ||
+      import.meta.env.DEV ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    )
+    if (!demoBuild) return false
+
     // If explicitly disabled by user in settings
     if (localStorage.getItem(DEMO_MODE_STORAGE_KEY) === 'false') {
       return false
     }
 
-    // Default to true for demo preview sites, localhost, or if demo mode explicitly set
-    return (
-      import.meta.env.VITE_DEMO_MODE === 'true' ||
-      window.location.hostname.includes('render.com') ||
-      window.location.hostname.includes('vercel.app') ||
-      window.location.hostname.includes('demo') ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      localStorage.getItem(DEMO_MODE_STORAGE_KEY) === 'true' ||
-      !this.getLicenseKey() // Default to unlocked demo evaluation if no key is entered
-    )
+    // Demo unlock is build-time explicit. A production browser cannot turn it
+    // on by changing localStorage.
+    return true
   }
 
   /** Toggle demo evaluation mode */
@@ -133,7 +133,11 @@ export class LicenseManager {
     if (key.startsWith('SH_ENT_') || key.startsWith('SH_PRO_')) {
       try {
         const isEnt = key.startsWith('SH_ENT_')
-        const payloadStr = atob(key.replace(/^SH_(ENT|PRO)_/, ''))
+        const signedToken = key.replace(/^SH_(ENT|PRO)_/, '')
+        const payloadPart = signedToken.split('.')[0]
+        if (!payloadPart) throw new Error('Malformed license')
+        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
+        const payloadStr = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))
         const payload = JSON.parse(payloadStr)
         const tier: LicenseTier = isEnt ? 'enterprise' : 'pro'
         const isExpired = payload.exp && new Date(payload.exp * 1000) < new Date()

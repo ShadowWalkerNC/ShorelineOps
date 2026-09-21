@@ -1,9 +1,10 @@
 /**
  * ============================================================
- * UNIVERSAL DATA ADAPTER & SUPABASE EMULATOR
+ * DEMO-ONLY LOCAL DATA ADAPTER
  * ============================================================
- * Prevents "Cannot read properties of null (reading 'from')"
- * Provides chainable PostgREST / Supabase-like fluent API with:
+ * Provides a chainable PostgREST-like API for the public demo only.
+ * Production data is owned by the Express API and PostgreSQL. This adapter
+ * throws in production so failed API writes cannot appear saved locally.
  *  - Automatic pre-seeding from demo datasets
  *  - Full reactive localStorage persistence
  *  - Multi-condition filtering (.eq, .neq, .or, .order, .limit)
@@ -512,31 +513,7 @@ class QueryBuilder {
   }
 }
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
-
-// ── Supabase Environment Configuration ──────────────────────────────────────────
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const isSupabaseConfigured: boolean = Boolean(
-  supabaseUrl &&
-  supabaseAnonKey &&
-  typeof supabaseUrl === 'string' &&
-  supabaseUrl.startsWith('https://') &&
-  !supabaseUrl.includes('your-project')
-)
-
-// Real client when credentials provided; falls back to universal local adapter
-export const realSupabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl as string, supabaseAnonKey as string, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    })
-  : null
-
-// ── Exported Supabase Instance (Live or Offline Emulator) ───────────────────────
+// ── Exported demo adapter ───────────────────────────────────────────────────────
 const emulatorSupabase = {
   from(tableName: string) {
     return new QueryBuilder(tableName)
@@ -554,5 +531,17 @@ const emulatorSupabase = {
   },
 } as any
 
-export const supabase: SupabaseClient = (realSupabase || emulatorSupabase) as any
+const unavailableInProduction = {
+  from() {
+    throw new Error('The production API is unavailable. No data was saved; reconnect and try again.')
+  },
+  auth: emulatorSupabase.auth,
+  storage: {
+    from() {
+      throw new Error('Production storage is not configured through the demo adapter.')
+    },
+  },
+} as any
+
+export const supabase = (isDemoSeedAllowed() ? emulatorSupabase : unavailableInProduction) as any
 

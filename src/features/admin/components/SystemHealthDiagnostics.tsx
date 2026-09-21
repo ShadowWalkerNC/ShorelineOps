@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { tokenManager } from '@/security/tokenManager'
 import {
   Activity,
   CheckCircle2,
@@ -45,7 +46,7 @@ export default function SystemHealthDiagnostics() {
     setLoading(true)
     setError(null)
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('shoreline_jwt')
+      const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/diagnostics', {
         headers: {
           'Content-Type': 'application/json',
@@ -59,47 +60,8 @@ export default function SystemHealthDiagnostics() {
       setReport(data)
       setLastChecked(new Date().toLocaleTimeString())
     } catch (err: any) {
-      // Fallback sample diagnostic report in offline / demo mode so non-technical users always see meaningful diagnostics
-      setReport({
-        timestamp: new Date().toISOString(),
-        overallStatus: 'OPERATIONAL',
-        healthScorePct: 100,
-        activeResidentCount: 48,
-        autoRemediationsApplied: 0,
-        checks: [
-          {
-            dimension: 'Database & Connection Pool',
-            status: 'HEALTHY',
-            details: 'Local SQLite database operational. Query latency: 4ms. Zero connection pool bottlenecks.',
-            remedied: false,
-          },
-          {
-            dimension: 'Clinical Census Integrity',
-            status: 'HEALTHY',
-            details: 'All active resident profiles have valid clinical diet & texture orders. Zero NPO violations.',
-            remedied: false,
-          },
-          {
-            dimension: 'HACCP Food Safety Temp Audit',
-            status: 'HEALTHY',
-            details: 'HACCP temperature logs compliant with USDA/FDA Food Safety standards (Hot holding >=140°F, Cold <=41°F).',
-            remedied: false,
-          },
-          {
-            dimension: 'In-Memory Cache & ETag Layer',
-            status: 'HEALTHY',
-            details: 'LRU Cache operational. Instantaneous sub-millisecond response for recurring cycle queries.',
-            remedied: false,
-          },
-          {
-            dimension: 'Distributor Price Drift & Variance',
-            status: 'HEALTHY',
-            details: 'Sysco & Dennis Food Service EDI vendor catalogs balanced. Zero excessive price variance detected.',
-            remedied: false,
-          },
-        ],
-      })
-      setLastChecked(new Date().toLocaleTimeString())
+      setReport(null)
+      setError(err?.message || 'Unable to load live diagnostics.')
     } finally {
       setLoading(false)
     }
@@ -109,7 +71,7 @@ export default function SystemHealthDiagnostics() {
     setRepairing(true)
     setError(null)
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('shoreline_jwt')
+      const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/repair', {
         method: 'POST',
         headers: {
@@ -124,8 +86,7 @@ export default function SystemHealthDiagnostics() {
       setReport(data)
       setLastChecked(new Date().toLocaleTimeString())
     } catch (err: any) {
-      // If server route is unavailable or offline, perform client-side safe refresh
-      await fetchDiagnostics()
+      setError(err?.message || 'Unable to run the server repair workflow.')
     } finally {
       setRepairing(false)
     }

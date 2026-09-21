@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { LicenseManager, type LicenseTier } from '@/security/license'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import { ShieldCheck, Sparkles, Key, ExternalLink, CheckCircle2, Lock } from 'lucide-react'
+import { useAuth } from '@/security/AuthContext'
 
 interface FeatureGateProps {
   requiredTier: 'pro' | 'enterprise'
@@ -18,8 +19,9 @@ export default function FeatureGate({
   children,
   fallback,
 }: FeatureGateProps) {
+  const { user } = useAuth()
   const license = LicenseManager.getLicense()
-  const hasAccess = LicenseManager.satisfiesTier(requiredTier)
+  const hasAccess = !!user?.platformAdmin || LicenseManager.satisfiesTier(requiredTier)
   const isDemo = license.tier === 'demo'
 
   const [inputKey, setInputKey] = useState('')

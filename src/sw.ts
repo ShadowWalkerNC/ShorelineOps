@@ -24,19 +24,11 @@ registerRoute(
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-// ── Supabase / API calls — network first, 5 s fallback to stale ────────────
+// Clinical and account API responses may contain PHI. Keep them out of the
+// service-worker cache until an encrypted, reviewed offline data design exists.
 registerRoute(
-  ({ url }) =>
-    url.hostname.includes('supabase.co') ||
-    url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/rest/'),
-  new NetworkFirst({
-    cacheName: cacheName('api'),
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 24 * 60 * 60 }),
-    ],
-  })
+  ({ url }) => url.pathname.startsWith('/api/'),
+  new NetworkOnly()
 )
 
 // ── Static build assets — cache first ──────────────────────────────────────

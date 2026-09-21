@@ -16,7 +16,7 @@ export const billingRouter = Router()
  */
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 if (!stripeWebhookSecret || stripeWebhookSecret.length < 16) {
-  console.warn(
+  console.info(
     '[billing] STRIPE_WEBHOOK_SECRET missing or <16 chars — ' +
     'POST /api/billing/webhook will refuse traffic (fail closed) until it is set'
   )

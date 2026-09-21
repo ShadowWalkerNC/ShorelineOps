@@ -49,30 +49,9 @@
     />
 
     <!-- Critical baseline: prevent FOUC, handle notch safe-areas -->
-    <style>
-      *, *::before, *::after { box-sizing: border-box; }
-
-      html, body {
-        margin: 0; padding: 0;
-        height: 100%; width: 100%;
-        /* Prevent iOS text-size adjustment on rotate */
-        -webkit-text-size-adjust: 100%;
-        -moz-text-size-adjust: 100%;
-             text-size-adjust: 100%;
-      }
-
-      #root {
-        height: 100%;
-        width: 100%;
-        /* Inset content from notch / home indicator */
-        padding-top:    env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
-        padding-left:   env(safe-area-inset-left);
-        padding-right:  env(safe-area-inset-right);
-      }
-    </style>
-    <script type="module" crossorigin src="/app/assets/index-paZ3rGFU.js"></script>
-    <link rel="stylesheet" crossorigin href="/app/assets/index-02enE_PS.css">
+    <style>*,:before,:after{box-sizing:border-box}html,body{-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%;width:100%;height:100%;margin:0;padding:0}#root{width:100%;height:100%;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}</style>
+    <script type="module" crossorigin src="/app/assets/index-CiWaUhQi.js"></script>
+    <link rel="stylesheet" crossorigin href="/app/assets/index-BGypRdOu.css">
   <link rel="manifest" href="/app/manifest.webmanifest"></head>
   <body>
     <div id="root"></div>

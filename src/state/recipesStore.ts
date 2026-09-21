@@ -31,8 +31,11 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
         set({ recipes: data, loading: false })
         return
       }
-    } catch {
-      // Fall back to seed recipes if offline/demo
+    } catch (error) {
+      if (!isDemoSeedAllowed()) {
+        set({ error: error instanceof Error ? error.message : 'Unable to load recipes.', loading: false })
+        return
+      }
     }
     set({ recipes: [..._recipes], loading: false })
   },
@@ -42,7 +45,11 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
       const created = await recipesApi.create(data)
       set(state => ({ recipes: [created, ...state.recipes] }))
       return
-    } catch {
+    } catch (error) {
+      if (!isDemoSeedAllowed()) {
+        set({ error: error instanceof Error ? error.message : 'Recipe was not saved.' })
+        throw error
+      }
       const recipe: Recipe = { ...data, id: uid(), createdAt: now(), updatedAt: now() }
       _recipes = [recipe, ..._recipes]
       set({ recipes: [..._recipes] })
@@ -54,7 +61,11 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
       const updated = await recipesApi.update(id, data)
       set(state => ({ recipes: state.recipes.map(r => r.id === id ? updated : r) }))
       return
-    } catch {
+    } catch (error) {
+      if (!isDemoSeedAllowed()) {
+        set({ error: error instanceof Error ? error.message : 'Recipe changes were not saved.' })
+        throw error
+      }
       _recipes = _recipes.map(r => r.id === id ? { ...r, ...data, updatedAt: now() } : r)
       set({ recipes: [..._recipes] })
     }
@@ -65,7 +76,11 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
       await recipesApi.delete(id)
       set(state => ({ recipes: state.recipes.filter(r => r.id !== id) }))
       return
-    } catch {
+    } catch (error) {
+      if (!isDemoSeedAllowed()) {
+        set({ error: error instanceof Error ? error.message : 'Recipe was not deleted.' })
+        throw error
+      }
       _recipes = _recipes.filter(r => r.id !== id)
       set({ recipes: [..._recipes] })
     }

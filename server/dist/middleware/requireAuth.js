@@ -7,6 +7,7 @@ exports.MFA_TOKEN_AUDIENCE = exports.ACCESS_TOKEN_AUDIENCE = exports.API_ROLES =
 exports.verifyAccessToken = verifyAccessToken;
 exports.getJwtSecret = getJwtSecret;
 exports.requireAuth = requireAuth;
+exports.requirePlatformAdmin = requirePlatformAdmin;
 exports.requireRole = requireRole;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 /** Roles accepted by the API — aligned with frontend UserRole. */
@@ -34,6 +35,8 @@ function verifyAccessToken(token) {
             typeof payload.sub !== 'string' || !payload.sub.trim() ||
             payload.purpose !== 'access' ||
             typeof payload.mfa !== 'boolean' ||
+            typeof payload.facilityId !== 'string' ||
+            typeof payload.platformAdmin !== 'boolean' ||
             typeof payload.exp !== 'number' ||
             !exports.API_ROLES.includes(payload.role)) {
             throw new Error('Invalid access token claims');
@@ -73,11 +76,19 @@ function requireAuth(req, res, next) {
         const payload = verifyAccessToken(token);
         req.userId = payload.sub;
         req.userRole = payload.role;
+        req.facilityId = payload.facilityId;
+        req.platformAdmin = payload.platformAdmin;
         next();
     }
     catch {
         return res.status(401).json({ error: 'Invalid or expired token' });
     }
+}
+function requirePlatformAdmin(req, res, next) {
+    if (!req.platformAdmin) {
+        return res.status(403).json({ error: 'ShorelineOps platform-owner access required' });
+    }
+    next();
 }
 /** Require the caller to have at least the given role rank. */
 function requireRole(role) {

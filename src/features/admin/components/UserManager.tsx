@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useAdminStore } from '../../../state/adminStore'
+import { useAuth } from '../../../security/AuthContext'
 import type { UserRole } from '../../../security/AuthContext'
+import { adminApi } from '../../../api/admin'
+import type { FacilityAccount } from '../../../types/admin'
 
 // Must cover all 10 values of UserRole
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -30,19 +33,26 @@ const ROLE_COLORS: Record<UserRole, string> = {
 }
 
 export default function UserManager() {
-  const { users, loading, fetchUsers, createUser, updateUserRole, toggleUserActive } = useAdminStore()
+  const { user: currentUser } = useAuth()
+  const { users, loading, error, temporaryPassword, clearTemporaryPassword, fetchUsers, createUser, updateUserRole, toggleUserActive } = useAdminStore()
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', role: 'staff' as UserRole })
+  const [facilities, setFacilities] = useState<FacilityAccount[]>([])
+  const [form, setForm] = useState({ name: '', email: '', role: 'staff' as UserRole, facilityId: currentUser?.facilityId || 'default' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { fetchUsers() }, [])
+  useEffect(() => {
+    if (currentUser?.platformAdmin) {
+      adminApi.listFacilities().then(setFacilities).catch(() => setFacilities([]))
+    }
+  }, [currentUser?.platformAdmin])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
     try {
       await createUser(form)
-      setForm({ name: '', email: '', role: 'staff' })
+      setForm({ name: '', email: '', role: 'staff', facilityId: currentUser?.facilityId || 'default' })
       setShowAdd(false)
     } finally {
       setSaving(false)
@@ -96,6 +106,21 @@ export default function UserManager() {
               ))}
             </select>
           </div>
+          {currentUser?.platformAdmin && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Facility</label>
+              <select
+                required
+                value={form.facilityId}
+                onChange={e => setForm(f => ({ ...f, facilityId: e.target.value }))}
+                className="border rounded-lg px-3 py-2 text-sm min-h-11"
+              >
+                {facilities.map(facility => (
+                  <option key={facility.id} value={facility.id}>{facility.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             type="submit"
             disabled={saving}
@@ -104,6 +129,15 @@ export default function UserManager() {
             {saving ? 'Saving…' : 'Create'}
           </button>
         </form>
+      )}
+
+      {error && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {temporaryPassword && (
+        <div role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="font-semibold">Temporary password — shown once</div>
+          <code className="mt-2 block select-all rounded bg-white p-2 font-mono">{temporaryPassword}</code>
+          <button type="button" onClick={clearTemporaryPassword} className="mt-3 min-h-11 rounded-lg border border-amber-400 px-3 font-medium">I saved it</button>
+        </div>
       )}
 
       {loading && <p className="text-sm text-gray-400">Loading…</p>}
@@ -116,6 +150,7 @@ export default function UserManager() {
                 <th className="px-4 py-2 text-left">Name</th>
                 <th className="px-4 py-2 text-left">Email</th>
                 <th className="px-4 py-2 text-left">Role</th>
+                {currentUser?.platformAdmin && <th className="px-4 py-2 text-left">Facility</th>}
                 <th className="px-4 py-2 text-left">Last Login</th>
                 <th className="px-4 py-2 text-left">Status</th>
                 <th className="px-4 py-2 text-left">Actions</th>
@@ -137,6 +172,7 @@ export default function UserManager() {
                       ))}
                     </select>
                   </td>
+                  {currentUser?.platformAdmin && <td className="px-4 py-2.5 text-xs text-gray-500">{u.facilityId}</td>}
                   <td className="px-4 py-2.5 text-gray-400 text-xs">
                     {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never'}
                   </td>
@@ -156,7 +192,7 @@ export default function UserManager() {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">No users found.</td></tr>
+                <tr><td colSpan={currentUser?.platformAdmin ? 7 : 6} className="px-4 py-6 text-center text-gray-400">No users found.</td></tr>
               )}
             </tbody>
           </table>

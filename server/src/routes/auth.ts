@@ -15,9 +15,9 @@ const REFRESH_EXPIRES_DAYS = Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7
 const MFA_PENDING_EXPIRES = '5m' as jwt.SignOptions['expiresIn']
 const ISSUER = process.env.MFA_ISSUER || 'ShorelineOps'
 
-function makeTokens(userId: string, role: ApiRole, mfaVerified: boolean) {
+function makeTokens(userId: string, role: ApiRole, mfaVerified: boolean, facilityId: string, platformAdmin: boolean) {
   const accessToken = jwt.sign(
-    { sub: userId, role, mfa: mfaVerified, purpose: 'access' },
+    { sub: userId, role, mfa: mfaVerified, purpose: 'access', facilityId, platformAdmin },
     getJwtSecret(),
     { expiresIn: JWT_EXPIRES, audience: ACCESS_TOKEN_AUDIENCE, algorithm: 'HS256' }
   )
@@ -76,9 +76,11 @@ async function isMfaRequiredGlobally(): Promise<boolean> {
   }
 }
 
-async function issueSession(user: { id: string; name: string; email: string; role: string }, mfaVerified: boolean) {
+async function issueSession(user: { id: string; name: string; email: string; role: string; facility_id?: string; platform_admin?: boolean }, mfaVerified: boolean) {
   const role = asApiRole(user.role)
-  const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified)
+  const facilityId = user.facility_id || 'default'
+  const platformAdmin = !!user.platform_admin
+  const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified, facilityId, platformAdmin)
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
   const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
 
@@ -103,6 +105,8 @@ async function issueSession(user: { id: string; name: string; email: string; rol
       email: user.email,
       role,
       mfaVerified,
+      facilityId,
+      platformAdmin,
     },
   }
 }
@@ -347,7 +351,7 @@ authRouter.post('/refresh', async (req, res, next) => {
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
 
     const { rows } = await pool.query(
-      `SELECT rt.*, u.id AS uid, u.name, u.email, u.role, u.active, u.mfa_enabled
+      `SELECT rt.*, u.id AS uid, u.name, u.email, u.role, u.active, u.mfa_enabled, u.facility_id, u.platform_admin
        FROM refresh_tokens rt
        JOIN users u ON u.id = rt.user_id
        WHERE rt.token_hash = $1 AND rt.expires_at > $2 AND u.active = true`,
@@ -359,7 +363,7 @@ authRouter.post('/refresh', async (req, res, next) => {
     const role = asApiRole(rows[0].role)
     // Refresh preserves prior MFA satisfaction for enrolled users (session continuity)
     const mfaVerified = !!rows[0].mfa_enabled
-    const { accessToken, refreshToken: newRefreshToken } = makeTokens(rows[0].uid, role, mfaVerified)
+    const { accessToken, refreshToken: newRefreshToken } = makeTokens(rows[0].uid, role, mfaVerified, rows[0].facility_id || 'default', !!rows[0].platform_admin)
     const newHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex')
     const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
 
@@ -379,7 +383,7 @@ authRouter.post('/refresh', async (req, res, next) => {
 authRouter.get('/me', requireAuth, async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, name, email, role, mfa_enabled FROM users WHERE id = $1 AND active = true',
+      'SELECT id, name, email, role, mfa_enabled, facility_id, platform_admin FROM users WHERE id = $1 AND active = true',
       [req.userId]
     )
     if (!rows[0]) return res.status(401).json({ error: 'User not found.' })
@@ -394,6 +398,8 @@ authRouter.get('/me', requireAuth, async (req: AuthRequest, res, next) => {
       role: asApiRole(rows[0].role),
       mfaEnabled: !!rows[0].mfa_enabled,
       mfaVerified: !!payload.mfa,
+      facilityId: rows[0].facility_id || 'default',
+      platformAdmin: !!rows[0].platform_admin,
     })
   } catch (err) { next(err) }
 })

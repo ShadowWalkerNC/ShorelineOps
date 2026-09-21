@@ -6,6 +6,7 @@ import { DeviceProvider } from './hooks/useDevice'
 import './pwa'
 import './index.css'
 import App from './App'
+import AppErrorBoundary from './components/AppErrorBoundary'
 
 // React Router v7 requires basenames without trailing slashes to match routes cleanly
 const rawBase = import.meta.env.BASE_URL || '/'
@@ -16,7 +17,7 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter basename={basename}>
       <AuthProvider>
         <DeviceProvider>
-          <App />
+          <AppErrorBoundary><App /></AppErrorBoundary>
         </DeviceProvider>
       </AuthProvider>
     </BrowserRouter>

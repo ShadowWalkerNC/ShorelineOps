@@ -1,29 +1,37 @@
 "use strict";
 /**
- * Multi-Tenant Request Context & PostgreSQL Row-Level Security Middleware
+ * Facility request context middleware.
  * Shoreline Care OS v6.2
  *
- * Extracts facility context from JWT claims or headers and guarantees
- * strict tenant data isolation across multi-facility health systems.
+ * Extracts the authenticated facility context. This context scopes routes that
+ * explicitly query by facility; it is not a substitute for database RLS.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.tenantContextMiddleware = tenantContextMiddleware;
-const pool_1 = require("../db/pool");
+const requireAuth_1 = require("./requireAuth");
 function tenantContextMiddleware(req, res, next) {
-    // 1. Resolve facilityId from authenticated user claims or facility header
-    const user = req.user;
-    const headerFacilityId = req.headers['x-facility-id'];
-    const resolvedFacilityId = user?.facility_id || headerFacilityId || 'FAC-DEFAULT';
-    req.facilityId = resolvedFacilityId;
-    req.corporateGroupId = user?.corporate_group_id || 'CORP-DEFAULT';
-    // 2. Attach facility context to current database session if connected
-    res.setHeader('X-Facility-Context', resolvedFacilityId);
-    // PostgreSQL SET does not accept bind parameters. set_config is the safe,
-    // parameterized equivalent; true keeps the value local to this statement.
-    if (pool_1.databaseDialect === 'postgres') {
-        pool_1.pool.query(`SELECT set_config('app.current_facility_id', $1, true)`, [resolvedFacilityId]).catch(() => {
-            // Non-fatal when the connection is closing during shutdown.
-        });
+    // Resolve tenant context only from a verified access token. A platform owner
+    // may deliberately select a facility with X-Facility-Id; ordinary users may not.
+    let resolvedFacilityId = 'default';
+    let platformAdmin = false;
+    const authorization = req.headers.authorization;
+    if (authorization?.startsWith('Bearer ')) {
+        try {
+            const claims = (0, requireAuth_1.verifyAccessToken)(authorization.slice(7));
+            resolvedFacilityId = claims.facilityId || 'default';
+            platformAdmin = claims.platformAdmin;
+        }
+        catch {
+            // Authentication middleware returns the authoritative 401 later.
+        }
     }
+    const requestedFacility = req.headers['x-facility-id'];
+    if (platformAdmin && typeof requestedFacility === 'string' && requestedFacility.trim()) {
+        resolvedFacilityId = requestedFacility.trim();
+    }
+    req.facilityId = resolvedFacilityId;
+    req.corporateGroupId = 'shorelineops';
+    // Attach facility context to the response for diagnostics.
+    res.setHeader('X-Facility-Context', resolvedFacilityId);
     next();
 }

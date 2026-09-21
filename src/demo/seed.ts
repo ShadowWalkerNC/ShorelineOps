@@ -388,9 +388,9 @@ export const SEED_PRODUCTION_SHEETS: ProductionSheet[] = [
 
 // ── Admin users ───────────────────────────────────────────────────────────────────
 export const SEED_ADMIN_USERS: AdminUser[] = [
-  { id: 'demo-admin-1',    name: 'Admin User',     email: 'admin@shoreline.demo',    role: 'admin',    active: true, createdAt: '2026-01-01T00:00:00Z', lastLoginAt: '2026-07-03T06:22:00Z' },
-  { id: 'demo-staff-1',    name: 'Staff User',     email: 'staff@shoreline.demo',    role: 'staff',    active: true, createdAt: '2026-01-01T00:00:00Z', lastLoginAt: '2026-07-02T14:10:00Z' },
-  { id: 'demo-readonly-1', name: 'Read-Only User', email: 'readonly@shoreline.demo', role: 'readonly', active: true, createdAt: '2026-01-01T00:00:00Z', lastLoginAt: null },
+  { id: 'demo-admin-1',    name: 'Admin User',     email: 'admin@shoreline.demo',    role: 'admin',    active: true, createdAt: '2026-01-01T00:00:00Z', lastLoginAt: '2026-07-03T06:22:00Z', facilityId: 'demo', platformAdmin: true },
+  { id: 'demo-staff-1',    name: 'Staff User',     email: 'staff@shoreline.demo',    role: 'staff',    active: true, createdAt: '2026-01-01T00:00:00Z', lastLoginAt: '2026-07-02T14:10:00Z', facilityId: 'demo', platformAdmin: false },
+  { id: 'demo-readonly-1', name: 'Read-Only User', email: 'readonly@shoreline.demo', role: 'readonly', active: true, createdAt: '2026-01-01T00:00:00Z', lastLoginAt: null, facilityId: 'demo', platformAdmin: false },
 ]
 
 // ── Audit log ───────────────────────────────────────────────────────────────────

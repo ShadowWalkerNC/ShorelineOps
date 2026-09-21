@@ -1043,6 +1043,21 @@ const migrations = [
       CREATE INDEX IF NOT EXISTS idx_vendor_item_matches_item ON vendor_item_matches(vendor_item_id);
     `,
     },
+    {
+        name: '027_platform_control_plane',
+        sql: `
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS facility_id TEXT DEFAULT 'default';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS platform_admin BOOLEAN NOT NULL DEFAULT false;
+
+      ALTER TABLE facility_config ADD COLUMN IF NOT EXISTS beta_status TEXT NOT NULL DEFAULT 'beta';
+      ALTER TABLE facility_config ADD COLUMN IF NOT EXISTS plan_tier TEXT NOT NULL DEFAULT 'beta';
+      ALTER TABLE facility_config ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+      ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS kitchen_service_mode TEXT NOT NULL DEFAULT 'hybrid';
+
+      CREATE INDEX IF NOT EXISTS idx_users_facility_id ON users(facility_id);
+      CREATE INDEX IF NOT EXISTS idx_facility_config_beta_status ON facility_config(beta_status);
+    `,
+    },
 ];
 // A02: every table migrate.ts expects to exist after a full migration run.
 // Used by assertSchemaIntegrity() — a boot-time fail-closed drift guard.
@@ -1158,6 +1173,11 @@ async function runMigrations(maxRetries = 5, retryDelayMs = 2000) {
         await pool_1.pool.query(sql);
         await pool_1.pool.query('INSERT INTO _migrations (name) VALUES ($1)', [name]);
         console.log(`[migrate] Applied ${name}`);
+    }
+    const platformOwnerEmail = process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
+    if (platformOwnerEmail) {
+        await pool_1.pool.query('UPDATE users SET platform_admin = true, updated_at = NOW() WHERE email = $1', [platformOwnerEmail]);
+        console.log('[migrate] Configured ShorelineOps platform owner synchronized.');
     }
     // A02: fail-closed drift guard — verify the migrated DB actually has every
     // table the schema definition expects before any boot proceeds.

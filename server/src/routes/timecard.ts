@@ -99,7 +99,7 @@ timecardRouter.post('/webhook', async (req, res, next) => {
 })
 
 // POST /api/timecard/punch — direct punch from UI or kiosk
-timecardRouter.post('/punch', async (req, res, next) => {
+timecardRouter.post('/punch', requireAuth, async (req, res, next) => {
   try {
     const payload = PunchSchema.parse(req.body)
     const operation = payload.operation === 'In' || payload.operation === 'Out' ? payload.operation : 'In'
@@ -119,7 +119,7 @@ timecardRouter.post('/punch', async (req, res, next) => {
 })
 
 // GET /api/timecard/last-punch/:badgeId
-timecardRouter.get('/last-punch/:badgeId', async (req, res, next) => {
+timecardRouter.get('/last-punch/:badgeId', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       'SELECT * FROM timecard_punches WHERE badge_id = $1 ORDER BY punched_at DESC LIMIT 1',
@@ -130,7 +130,7 @@ timecardRouter.get('/last-punch/:badgeId', async (req, res, next) => {
 })
 
 // GET /api/timecard — queryable punches
-timecardRouter.get('/', async (req, res, next) => {
+timecardRouter.get('/', requireAuth, async (req, res, next) => {
   try {
     const badgeId = typeof req.query.badge_id === 'string' ? req.query.badge_id : null
     const limit = parseInt(req.query.limit as string || '200', 10) || 200
