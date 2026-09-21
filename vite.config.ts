@@ -108,4 +108,9 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    // Railway health checks use an internal Host header. The public domain is
+    // still enforced by Railway's edge proxy.
+    allowedHosts: true,
+  },
 })
