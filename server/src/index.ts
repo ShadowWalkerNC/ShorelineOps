@@ -197,11 +197,23 @@ if (fs.existsSync(clientDistPath)) {
   })
 
   app.use(express.static(clientDistPath))
-  // /demo/* → React SPA (mirrors Vercel rewrite: /demo/(.*) → /demo/index.html)
-  app.get('/demo/*', (_req, res) => {
+
+  // 1. /demo and /demo/* → Public Interactive Demo (sandboxed / mock fallback, no credentials required)
+  app.get(['/demo', '/demo/*'], (_req, res) => {
     res.sendFile(path.join(clientDistPath, 'demo', 'index.html'))
   })
-  // Everything else → Astro marketing site
+
+  // 2. /app and /app/* → Production Gatekept SaaS Platform (requires real JWT authentication)
+  app.get(['/app', '/app/*'], (_req, res) => {
+    res.sendFile(path.join(clientDistPath, 'app', 'index.html'))
+  })
+
+  // 3. /login redirect -> send users attempting root /login to the gatekept SaaS login
+  app.get('/login', (_req, res) => {
+    res.redirect(301, '/app/login')
+  })
+
+  // 4. Everything else → Public Astro Marketing Website (/pricing, /story, /distributors, etc.)
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ready') {
       return next()

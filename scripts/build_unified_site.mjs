@@ -25,6 +25,7 @@ const marketingDir = path.join(rootDir, 'marketing')
 const marketingDistDir = path.join(marketingDir, 'dist')
 const outDistDir = path.join(rootDir, 'dist')
 const tempDemoDir = path.join(rootDir, 'dist-demo-temp')
+const tempAppDir = path.join(rootDir, 'dist-app-temp')
 
 function copyRecursive(src, dest) {
   if (!fs.existsSync(src)) return
@@ -42,6 +43,7 @@ function copyRecursive(src, dest) {
 
 // Clean up any stale build directories
 if (fs.existsSync(tempDemoDir)) fs.rmSync(tempDemoDir, { recursive: true, force: true })
+if (fs.existsSync(tempAppDir)) fs.rmSync(tempAppDir, { recursive: true, force: true })
 if (fs.existsSync(outDistDir)) fs.rmSync(outDistDir, { recursive: true, force: true })
 
 console.log('🚀 [Build 1/3] Compiling Astro Marketing Website...')
@@ -55,7 +57,7 @@ execSync('npm --prefix marketing run build', {
   },
 })
 
-console.log('\n🚀 [Build 2/3] Compiling Vite Interactive Demo (base: /demo/, demoMode: true)...')
+console.log('\n🚀 [Build 2/4] Compiling Vite Interactive Demo (base: /demo/, demoMode: true)...')
 execSync('npx vite build --base=/demo/', {
   cwd: rootDir,
   stdio: 'inherit',
@@ -66,10 +68,26 @@ execSync('npx vite build --base=/demo/', {
   },
 })
 
-console.log('\n🚀 [Build 3/3] Merging Marketing Site and Demo App into final dist/...')
-// Move the Vite build out of dist/ temporarily
+// Move the demo build out of dist/ temporarily
+if (fs.existsSync(tempDemoDir)) fs.rmSync(tempDemoDir, { recursive: true, force: true })
 fs.renameSync(outDistDir, tempDemoDir)
 
+console.log('\n🚀 [Build 3/4] Compiling Vite SaaS Production App (base: /app/, demoMode: false)...')
+execSync('npx vite build --base=/app/', {
+  cwd: rootDir,
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    VITE_BASE_PATH: '/app/',
+    VITE_DEMO_MODE: 'false',
+  },
+})
+
+// Move the SaaS app build out of dist/ temporarily
+if (fs.existsSync(tempAppDir)) fs.rmSync(tempAppDir, { recursive: true, force: true })
+fs.renameSync(outDistDir, tempAppDir)
+
+console.log('\n🚀 [Build 4/4] Merging Marketing Site, SaaS App, and Demo App into final dist/...')
 // Recreate dist/ and copy marketing site into root
 fs.mkdirSync(outDistDir, { recursive: true })
 copyRecursive(marketingDistDir, outDistDir)
@@ -78,8 +96,17 @@ copyRecursive(marketingDistDir, outDistDir)
 const finalDemoDir = path.join(outDistDir, 'demo')
 fs.renameSync(tempDemoDir, finalDemoDir)
 
+// Move temp SaaS app directory into dist/app/
+const finalAppDir = path.join(outDistDir, 'app')
+fs.renameSync(tempAppDir, finalAppDir)
+
+// Clean up temp directories if any left
+if (fs.existsSync(tempDemoDir)) fs.rmSync(tempDemoDir, { recursive: true, force: true })
+if (fs.existsSync(tempAppDir)) fs.rmSync(tempAppDir, { recursive: true, force: true })
+
 console.log('\n✅ [Success] Unified site ready in dist/:')
-console.log('   - /                       -> dist/index.html (Marketing Homepage)')
-console.log('   - /pricing, /story, etc.  -> dist/*/index.html (Marketing Pages)')
-console.log('   - /demo/                  -> dist/demo/index.html (Interactive Demo Sandbox)')
-console.log('   - Requirements:           0 backend servers (100% static & serverless ready!)\n')
+console.log('   - /                       -> dist/index.html (Marketing Homepage - Public)')
+console.log('   - /pricing, /story, etc.  -> dist/*/index.html (Marketing Pages - Public)')
+console.log('   - /demo/                  -> dist/demo/index.html (Interactive Demo Sandbox - Public)')
+console.log('   - /app/                   -> dist/app/index.html (SaaS Production Platform - Gatekept)')
+console.log('   - /api/                   -> Express REST API\n')
