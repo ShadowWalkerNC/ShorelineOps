@@ -199,13 +199,27 @@ if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath))
 
   // 1. /demo and /demo/* → Public Interactive Demo (sandboxed / mock fallback, no credentials required)
-  app.get(['/demo', '/demo/*'], (_req, res) => {
-    res.sendFile(path.join(clientDistPath, 'demo', 'index.html'))
+  app.get(['/demo', '/demo/*'], (_req, res, next) => {
+    const demoIndex = path.join(clientDistPath, 'demo', 'index.html')
+    if (fs.existsSync(demoIndex)) {
+      return res.sendFile(demoIndex)
+    }
+    // If demo sub-bundle is missing, fall back to root index
+    res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+      if (err) next(err)
+    })
   })
 
   // 2. /app and /app/* → Production Gatekept SaaS Platform (requires real JWT authentication)
-  app.get(['/app', '/app/*'], (_req, res) => {
-    res.sendFile(path.join(clientDistPath, 'app', 'index.html'))
+  app.get(['/app', '/app/*'], (_req, res, next) => {
+    const appIndex = path.join(clientDistPath, 'app', 'index.html')
+    if (fs.existsSync(appIndex)) {
+      return res.sendFile(appIndex)
+    }
+    // Fall back to root index
+    res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+      if (err) next(err)
+    })
   })
 
   // 3. /login redirect -> send users attempting root /login to the gatekept SaaS login
@@ -218,7 +232,9 @@ if (fs.existsSync(clientDistPath)) {
     if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ready') {
       return next()
     }
-    res.sendFile(path.join(clientDistPath, 'index.html'))
+    res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+      if (err) next(err)
+    })
   })
 } else {
   // Root API landing page
