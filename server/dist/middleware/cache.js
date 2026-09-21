@@ -1,0 +1,117 @@
+"use strict";
+/**
+ * High-Performance In-Memory LRU Cache & HTTP Conditional ETag Engine
+ *
+ * Provides:
+ * 1. Low-latency LRU Memory Caching with TTL & maximum capacity
+ * 2. Tag-based cache invalidation (e.g. invalidate 'recipes:*' on recipe write)
+ * 3. HTTP Conditional GET (ETag / If-None-Match) returning 304 Not Modified
+ * 4. Pure computational memoization for heavy dietary calculations
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.serverCache = exports.LruMemoryCache = void 0;
+exports.httpCacheMiddleware = httpCacheMiddleware;
+const crypto_1 = __importDefault(require("crypto"));
+class LruMemoryCache {
+    cache = new Map();
+    maxCapacity;
+    defaultTtlMs;
+    constructor(maxCapacity = 1000, defaultTtlSeconds = 300) {
+        this.maxCapacity = maxCapacity;
+        this.defaultTtlMs = defaultTtlSeconds * 1000;
+    }
+    get(key) {
+        const entry = this.cache.get(key);
+        if (!entry)
+            return null;
+        // Check expiration
+        if (Date.now() > entry.expiresAt) {
+            this.cache.delete(key);
+            return null;
+        }
+        // Refresh LRU order by re-inserting
+        this.cache.delete(key);
+        this.cache.set(key, entry);
+        return entry;
+    }
+    set(key, value, ttlSeconds, tag) {
+        // Evict oldest item if at capacity
+        if (this.cache.size >= this.maxCapacity) {
+            const oldestKey = this.cache.keys().next().value;
+            if (oldestKey)
+                this.cache.delete(oldestKey);
+        }
+        const json = JSON.stringify(value);
+        const eTag = `"${crypto_1.default.createHash('md5').update(json).digest('hex')}"`;
+        const expiresAt = Date.now() + (ttlSeconds ? ttlSeconds * 1000 : this.defaultTtlMs);
+        const entry = { value, eTag, expiresAt, tag };
+        this.cache.set(key, entry);
+        return entry;
+    }
+    invalidateTag(tag) {
+        let count = 0;
+        for (const [key, entry] of this.cache.entries()) {
+            if (entry.tag === tag || key.startsWith(tag)) {
+                this.cache.delete(key);
+                count++;
+            }
+        }
+        return count;
+    }
+    clear() {
+        this.cache.clear();
+    }
+    get size() {
+        return this.cache.size;
+    }
+}
+exports.LruMemoryCache = LruMemoryCache;
+// Global server LRU cache instance
+exports.serverCache = new LruMemoryCache(2000, 300);
+/**
+ * Express middleware for HTTP Conditional Caching & ETag generation
+ */
+function httpCacheMiddleware(ttlSeconds = 60, cacheTag) {
+    return (req, res, next) => {
+        // Only cache GET requests
+        if (req.method !== 'GET')
+            return next();
+        // B04: role-scoped cache key. Endpoints under this middleware serve
+        // role-dependent payloads (e.g. the dietitian-only /residents/flags
+        // worklist); a role-blind key would serve one role's 200 to another
+        // role's request, defeating server-side authorization.
+        const role = req.userRole ?? 'anon';
+        const facilityId = req.facilityId ?? req.headers['x-facility-id'] ?? 'default';
+        const cacheKey = `fac:${facilityId}|${req.originalUrl || req.url}|role:${role}`;
+        const cached = exports.serverCache.get(cacheKey);
+        // Check Client ETag (If-None-Match)
+        const clientEtag = req.headers['if-none-match'];
+        if (cached && clientEtag && clientEtag === cached.eTag) {
+            res.setHeader('ETag', cached.eTag);
+            res.setHeader('Cache-Control', `private, max-age=${ttlSeconds}, must-revalidate`);
+            return res.status(304).end();
+        }
+        // Serve from memory cache if available
+        if (cached) {
+            res.setHeader('ETag', cached.eTag);
+            res.setHeader('X-Cache', 'HIT');
+            res.setHeader('Cache-Control', `private, max-age=${ttlSeconds}, must-revalidate`);
+            return res.json(cached.value);
+        }
+        // Intercept res.json to populate cache and set headers
+        const originalJson = res.json.bind(res);
+        res.json = (body) => {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+                const entry = exports.serverCache.set(cacheKey, body, ttlSeconds, cacheTag);
+                res.setHeader('ETag', entry.eTag);
+                res.setHeader('X-Cache', 'MISS');
+                res.setHeader('Cache-Control', `private, max-age=${ttlSeconds}, must-revalidate`);
+            }
+            return originalJson(body);
+        };
+        next();
+    };
+}
