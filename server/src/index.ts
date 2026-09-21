@@ -184,7 +184,16 @@ app.get('/ready', handleReady)
 app.get('/api/ready', handleReady)
 
 // Check if frontend build exists to serve single-port container
-const clientDistPath = path.resolve(__dirname, '../../dist')
+// In Docker container, server runs from /app/server and dist is at /app/dist (../dist)
+// In local/Nixpacks, server runs from server/dist and root dist is at ../../dist
+const possibleDistPaths = [
+  path.resolve(__dirname, '../../dist'),
+  path.resolve(__dirname, '../dist'),
+  path.resolve(process.cwd(), '../dist'),
+  path.resolve(process.cwd(), 'dist'),
+]
+const clientDistPath = possibleDistPaths.find((p) => fs.existsSync(p)) || possibleDistPaths[0]
+console.log(`[Shoreline API] Static assets path resolved to: ${clientDistPath} (exists: ${fs.existsSync(clientDistPath)})`)
 if (fs.existsSync(clientDistPath)) {
   // OpenAPI 3.1 Documentation Endpoint
   const openApiSpecPath = path.resolve(__dirname, 'docs/openapi.json')

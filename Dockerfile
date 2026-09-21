@@ -1,8 +1,10 @@
-# Stage 1: Build Frontend Single-Page App (PWA)
+# Stage 1: Build Unified Static Apps (Marketing + Demo + Gatekept SaaS)
 FROM node:22-slim AS client-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+COPY server/package*.json ./server/
+COPY marketing/package*.json ./marketing/
+RUN npm install
 COPY . .
 RUN npm run build
 
@@ -10,7 +12,7 @@ RUN npm run build
 FROM node:22-slim AS server-builder
 WORKDIR /app/server
 COPY server/package*.json ./
-RUN npm ci
+RUN npm install
 COPY server/ ./
 RUN npm run build
 
