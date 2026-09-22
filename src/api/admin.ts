@@ -37,6 +37,8 @@ export const adminApi = {
     req<AdminUser>('POST', '/admin/users', data),
   updateUserRole: (id: string, role: UserRole) =>
     req<AdminUser>('PATCH', `/admin/users/${id}`, { role }),
+  updateUserName: (id: string, name: string) =>
+    req<AdminUser>('PATCH', `/admin/users/${id}`, { name }),
   deactivateUser: (id: string) =>
     req<AdminUser>('PATCH', `/admin/users/${id}`, { active: false }),
   reactivateUser: (id: string) =>

@@ -138,6 +138,7 @@ adminRouter.post('/users', requireRole('admin'), async (req: AuthRequest, res, n
 adminRouter.patch('/users/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
   try {
     const data = z.object({
+      name: z.string().trim().min(2).max(120).optional(),
       role: RoleEnum.optional(),
       active: z.boolean().optional(),
       password: z.string().min(12).optional(),
@@ -162,15 +163,16 @@ adminRouter.patch('/users/:id', requireRole('admin'), async (req: AuthRequest, r
 
     const { rows } = await pool.query(
       `UPDATE users SET
-         role = COALESCE($1, role),
-         active = COALESCE($2, active),
-         password = CASE WHEN $3::text IS NOT NULL THEN $3::text ELSE password END,
-         platform_admin = COALESCE($4, platform_admin),
-         facility_id = COALESCE($5, facility_id),
+         name = COALESCE($1, name),
+         role = COALESCE($2, role),
+         active = COALESCE($3, active),
+         password = CASE WHEN $4::text IS NOT NULL THEN $4::text ELSE password END,
+         platform_admin = COALESCE($5, platform_admin),
+         facility_id = COALESCE($6, facility_id),
          updated_at = NOW()
-       WHERE id = $6
+       WHERE id = $7
        RETURNING id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin`,
-      [data.role ?? null, data.active ?? null, passwordHash, data.platformAdmin ?? null, data.facilityId ?? null, req.params.id]
+      [data.name ?? null, data.role ?? null, data.active ?? null, passwordHash, data.platformAdmin ?? null, data.facilityId ?? null, req.params.id]
     )
     await pool.query(
       `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)

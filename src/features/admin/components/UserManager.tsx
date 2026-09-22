@@ -34,11 +34,13 @@ const ROLE_COLORS: Record<UserRole, string> = {
 
 export default function UserManager() {
   const { user: currentUser } = useAuth()
-  const { users, loading, error, temporaryPassword, clearTemporaryPassword, fetchUsers, createUser, updateUserRole, toggleUserActive } = useAdminStore()
+  const { users, loading, error, temporaryPassword, clearTemporaryPassword, fetchUsers, createUser, updateUserRole, updateUserName, toggleUserActive } = useAdminStore()
   const [showAdd, setShowAdd] = useState(false)
   const [facilities, setFacilities] = useState<FacilityAccount[]>([])
   const [form, setForm] = useState({ name: '', email: '', role: 'staff' as UserRole, facilityId: currentUser?.facilityId || 'default' })
   const [saving, setSaving] = useState(false)
+  const [editingNameId, setEditingNameId] = useState<string | null>(null)
+  const [nameDraft, setNameDraft] = useState('')
 
   useEffect(() => { fetchUsers() }, [])
   useEffect(() => {
@@ -159,7 +161,27 @@ export default function UserManager() {
             <tbody className="divide-y">
               {users.map(u => (
                 <tr key={u.id} className={`${!u.active ? 'opacity-50' : ''}`}>
-                  <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}</td>
+                  <td className="px-4 py-2.5 font-medium text-gray-800">
+                    {editingNameId === u.id ? (
+                      <form onSubmit={async e => {
+                        e.preventDefault()
+                        if (!nameDraft.trim()) return
+                        try {
+                          await updateUserName(u.id, nameDraft.trim())
+                          setEditingNameId(null)
+                        } catch { /* Error is shown in the account alert. */ }
+                      }} className="flex flex-wrap items-center gap-2">
+                        <input aria-label={`Name for ${u.email}`} required minLength={2} maxLength={120} value={nameDraft} onChange={e => setNameDraft(e.target.value)} className="min-h-11 rounded-lg border px-2 text-sm" />
+                        <button type="submit" className="min-h-11 text-xs font-semibold text-blue-700">Save</button>
+                        <button type="button" onClick={() => setEditingNameId(null)} className="min-h-11 text-xs text-gray-600">Cancel</button>
+                      </form>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span>{u.name}</span>
+                        <button type="button" aria-label={`Edit name for ${u.email}`} onClick={() => { setEditingNameId(u.id); setNameDraft(u.name) }} className="min-h-11 text-xs text-blue-700 underline">Edit</button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5 text-gray-500">{u.email}</td>
                   <td className="px-4 py-2.5">
                     <select

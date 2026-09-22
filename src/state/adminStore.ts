@@ -27,6 +27,7 @@ interface AdminState {
   fetchUsers: () => Promise<void>
   createUser: (data: { name: string; email: string; role: UserRole; facilityId?: string }) => Promise<void>
   updateUserRole: (id: string, role: UserRole) => Promise<void>
+  updateUserName: (id: string, name: string) => Promise<void>
   toggleUserActive: (id: string, active: boolean) => Promise<void>
   fetchAuditLog: (params?: { limit?: number; offset?: number; userId?: string }) => Promise<void>
   fetchSettings: () => Promise<void>
@@ -84,6 +85,21 @@ export const useAdminStore = create<AdminState>((set) => ({
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Unable to update role.' })
+    }
+  },
+
+  updateUserName: async (id, name) => {
+    try {
+      if (seedAllowed) {
+        _users = _users.map(u => u.id === id ? { ...u, name } : u)
+        set({ users: [..._users], error: null })
+      } else {
+        const updated = await adminApi.updateUserName(id, name)
+        set(state => ({ users: state.users.map(u => u.id === id ? updated : u), error: null }))
+      }
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Unable to update name.' })
+      throw error
     }
   },
 

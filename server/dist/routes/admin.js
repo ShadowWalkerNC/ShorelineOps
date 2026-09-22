@@ -128,6 +128,7 @@ exports.adminRouter.post('/users', (0, requireAuth_1.requireRole)('admin'), asyn
 exports.adminRouter.patch('/users/:id', (0, requireAuth_1.requireRole)('admin'), async (req, res, next) => {
     try {
         const data = zod_1.z.object({
+            name: zod_1.z.string().trim().min(2).max(120).optional(),
             role: RoleEnum.optional(),
             active: zod_1.z.boolean().optional(),
             password: zod_1.z.string().min(12).optional(),
@@ -148,14 +149,15 @@ exports.adminRouter.patch('/users/:id', (0, requireAuth_1.requireRole)('admin'),
         if (data.password)
             passwordHash = await bcryptjs_1.default.hash(data.password, 12);
         const { rows } = await pool_1.pool.query(`UPDATE users SET
-         role = COALESCE($1, role),
-         active = COALESCE($2, active),
-         password = CASE WHEN $3::text IS NOT NULL THEN $3::text ELSE password END,
-         platform_admin = COALESCE($4, platform_admin),
-         facility_id = COALESCE($5, facility_id),
+         name = COALESCE($1, name),
+         role = COALESCE($2, role),
+         active = COALESCE($3, active),
+         password = CASE WHEN $4::text IS NOT NULL THEN $4::text ELSE password END,
+         platform_admin = COALESCE($5, platform_admin),
+         facility_id = COALESCE($6, facility_id),
          updated_at = NOW()
-       WHERE id = $6
-       RETURNING id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin`, [data.role ?? null, data.active ?? null, passwordHash, data.platformAdmin ?? null, data.facilityId ?? null, req.params.id]);
+       WHERE id = $7
+       RETURNING id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin`, [data.name ?? null, data.role ?? null, data.active ?? null, passwordHash, data.platformAdmin ?? null, data.facilityId ?? null, req.params.id]);
         await pool_1.pool.query(`INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
        VALUES ('UPDATE_USER', $1, $2, 'user', 'success', $3)`, [req.userId, req.params.id, JSON.stringify({ changedFields: Object.keys(data).filter(k => k !== 'password') })]);
         res.json(toUser(rows[0]));
