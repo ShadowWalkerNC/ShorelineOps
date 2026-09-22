@@ -2,7 +2,7 @@
 
 ## Decision
 
-ShorelineOps is ready for a controlled, single-facility Ross Manor beta after the Railway deployment and live smoke test in this audit are complete. It is not yet ready for unrestricted multi-facility clinical SaaS sales.
+ShorelineOps is ready for a controlled, single-facility Ross Manor beta. The Railway deployment and live smoke test passed on 2026-09-22. It is not yet ready for unrestricted multi-facility clinical SaaS sales.
 
 The active production architecture is React/Astro -> Express API -> PostgreSQL on Railway. Supabase is not an additional application data layer. It may be used only as a managed PostgreSQL provider in a future environment. The browser does not connect directly to Supabase, and production fallback writes to localStorage/IndexedDB have been disabled.
 
@@ -18,7 +18,7 @@ The active production architecture is React/Astro -> Express API -> PostgreSQL o
 | Error handling and observability | B- | App error boundary, structured API errors, request IDs, explicit integration-disabled states, and real diagnostics replace fabricated healthy fallbacks. External error aggregation, alerting, and uptime monitoring are not configured. |
 | Product and user flow | B- | Public marketing and demo are separated from the authenticated app. Admin now exposes platform, onboarding, diagnostics, backup, users, audit, and settings paths. Complete browser/device/accessibility coverage is still absent. |
 | Integrations | D | EHR and billing fail closed when unconfigured, but PointClickCare live OAuth/FHIR, Stripe durable billing, distributor contract feeds, USDA production credentials, email delivery, and kitchen hardware have not been proven end to end. |
-| Deployment | B pending live verification | API, demo, marketing, and PostgreSQL are separate Railway services. Static-service commands and public URLs are configured. This grade becomes final only after all three services deploy and the smoke test passes. |
+| Deployment | B | API, demo, marketing, and PostgreSQL are separate Railway services and all reported `SUCCESS` on 2026-09-22. The marketing homepage/pricing, public demo, API readiness, and application login returned HTTP 200. Fresh owner login, platform control plane, account management, and Ross Manor readiness were verified in the browser. |
 
 **Controlled Ross Manor beta: 68/100. Shared multi-facility clinical SaaS: 45/100.**
 
@@ -38,6 +38,18 @@ The active production architecture is React/Astro -> Express API -> PostgreSQL o
 - Updated Astro/Tailwind/Vite and patched runtime dependencies to a zero-vulnerability audit.
 - Corrected CI so it builds the API and runs the actual complete test command.
 - Reconciled environment and deployment documentation with Railway/PostgreSQL.
+- Split the Railway public demo and marketing services into dedicated Docker images and corrected their health checks and public links.
+- Corrected the platform account's display name after confirming JEV is a Typesafe tool, not the owner's name. The user-management UI now supports audited name corrections.
+
+## Live verification (2026-09-22)
+
+- Railway: API, demo, marketing, and PostgreSQL deployment statuses `SUCCESS`.
+- API `/ready`: HTTP 200 with a connected PostgreSQL database; migration 027 applied and platform owner synchronized in deployment logs.
+- Public marketing `/` and `/pricing`: HTTP 200; app and demo links target their separate production domains.
+- Public demo `/`: HTTP 200; seeded sample dashboard loads without a login and the browser logged no console errors.
+- Owner login: `shadowwalkernc@gmail.com` returned `role=admin`, `platformAdmin=true`, `facilityId=default`; the live UI displayed ShorelineOps Administrator and the platform control plane.
+- Facility list: Ross Manor is the first and only facility, initialized, active, and in beta. Onboarding status reported all required steps complete.
+- Account management: active owner account displayed and name-edit control visible. The correction was written through the audited admin API and confirmed through `/api/auth/me` and a new browser session.
 
 ## Deployment environment contract
 
@@ -82,4 +94,3 @@ The setup bootstrap secret must be rotated or removed after setup. Secrets must 
 ## Operating boundary
 
 Ross Manor is the only facility authorized for active beta use under the current schema. Additional facilities may be registered in the control plane, but the application deliberately keeps them disabled until shared tenant isolation and facility provisioning are complete.
-

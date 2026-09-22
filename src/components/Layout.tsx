@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../security/AuthContext'
+import { useAuth, type UserRole } from '../security/AuthContext'
 import { LicenseManager } from '../security/license'
 import NotificationBell from './NotificationBell'
 import InstallDesktopModal from './InstallDesktopModal'
@@ -179,13 +179,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     navigate('/login')
   }
 
-  const roleDisplay = user?.role === 'admin'
-    ? 'Director of Dietary'
-    : user?.role === 'manager'
-    ? 'Registered Dietitian (RD)'
-    : user?.role === 'dietary'
-    ? 'Dietary Specialist'
-    : 'Clinical Staff'
+  const roleNames: Record<UserRole, string> = {
+    admin: 'Facility Administrator',
+    manager: 'Dietary Manager',
+    dietitian: 'Registered Dietitian',
+    frontdesk: 'Office Assistant',
+    dietary: 'Dietary Specialist',
+    distributor: 'Distributor Partner',
+    activities: 'Activities Staff',
+    server: 'Dining Server',
+    staff: 'Staff',
+    readonly: 'Read-only Staff',
+  }
+  const roleDisplay = user?.platformAdmin ? 'ShorelineOps Platform Owner' : user ? roleNames[user.role] : ''
 
   const isAdmin = user?.role === 'admin'
 
@@ -350,7 +356,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-[11px]">
               <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 truncate">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="font-bold truncate">Shoreline Care Center</span>
+                <span className="font-bold truncate">ShorelineOps</span>
               </div>
             </div>
           </div>
