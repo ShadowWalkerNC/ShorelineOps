@@ -73,9 +73,12 @@ async function auditEhrSecurityEvent(req, action, reason, extra) {
  * Actor identity comes from the verified JWT claims — never the request body.
  * Best-effort: never breaks the resolve path.
  */
-async function auditReconciliationDecision(req, opts) {
+async function auditReconciliationDecision(req, opts, 
+// F1: inside the resolve transaction pass the tx client so the audit row
+// commits atomically; pool default preserves the old best-effort path.
+db = pool_1.pool) {
     try {
-        await pool_1.pool.query(`INSERT INTO audit_log (action, user_id, resource_type, outcome, ip_address, details)
+        await db.query(`INSERT INTO audit_log (action, user_id, resource_type, outcome, ip_address, details)
        VALUES ('ehr.reconciliation.resolved', $1, 'ehr_reconciliation_queue', 'success', $2, $3)`, [
             opts.actorUserId,
             req.ip ?? null,
@@ -318,60 +321,105 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
         if (!action || !['APPROVED_BY_RD', 'REJECTED_BY_RD'].includes(action)) {
             return res.status(400).json({ error: "action must be 'APPROVED_BY_RD' or 'REJECTED_BY_RD'" });
         }
-        const { rows: [triageItem] } = await pool_1.pool.query('SELECT * FROM ehr_reconciliation_queue WHERE id = $1', [id]);
-        if (!triageItem) {
-            return res.status(404).json({ error: 'Triage item not found' });
+        // F1: apply-then-resolve inside one transaction. The queue row is only
+        // marked after the resident change commits; malformed or unsupported
+        // payloads stay pending so no allergy is silently cleared.
+        const client = await pool_1.pool.connect();
+        let started = false;
+        try {
+            await client.query('BEGIN');
+            started = true;
+            const { rows: [triageItem] } = await client.query('SELECT * FROM ehr_reconciliation_queue WHERE id = $1', [id]);
+            if (!triageItem) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: 'Triage item not found' });
+            }
+            if (triageItem.status !== 'PENDING_TRIAGE') {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: 'Item already ' + triageItem.status + ' — reload the queue' });
+            }
+            if (action === 'APPROVED_BY_RD' && triageItem.resident_id) {
+                const payload = typeof triageItem.incoming_payload === 'string'
+                    ? JSON.parse(triageItem.incoming_payload)
+                    : triageItem.incoming_payload ?? {};
+                if (triageItem.change_type === 'DIET_ORDER') {
+                    if (typeof payload.dietOrder !== 'string' || !payload.dietOrder.trim()) {
+                        await client.query('ROLLBACK');
+                        return res.status(400).json({ error: 'DIET_ORDER payload missing dietOrder — left pending' });
+                    }
+                    await client.query('UPDATE residents SET diet_type = $1, profile_version = profile_version + 1, updated_at = NOW() WHERE id = $2', [payload.dietOrder, triageItem.resident_id]);
+                }
+                else if (triageItem.change_type === 'TEXTURE_UPDATE') {
+                    if (typeof payload.texture !== 'string' || !payload.texture.trim()) {
+                        await client.query('ROLLBACK');
+                        return res.status(400).json({ error: 'TEXTURE_UPDATE payload missing texture — left pending' });
+                    }
+                    await client.query('UPDATE residents SET texture = $1, profile_version = profile_version + 1, updated_at = NOW() WHERE id = $2', [payload.texture, triageItem.resident_id]);
+                }
+                else if (triageItem.change_type === 'NPO_ORDER') {
+                    await client.query("UPDATE residents SET is_npo = true, npo_reason = 'EHR Physician Order', profile_version = profile_version + 1, updated_at = NOW() WHERE id = $1", [triageItem.resident_id]);
+                }
+                else if (triageItem.change_type === 'NEW_ALLERGEN') {
+                    const incoming = Array.isArray(payload.allergies) ? payload.allergies : [];
+                    const fresh = incoming.map((a) => String(a ?? '').trim()).filter(Boolean);
+                    if (fresh.length === 0) {
+                        await client.query('ROLLBACK');
+                        return res.status(400).json({ error: 'NEW_ALLERGEN payload missing allergies — left pending' });
+                    }
+                    const { rows: [resident] } = await client.query('SELECT allergies FROM residents WHERE id = $1', [triageItem.resident_id]);
+                    if (!resident) {
+                        await client.query('ROLLBACK');
+                        return res.status(404).json({ error: 'Resident not found — left pending' });
+                    }
+                    const current = typeof resident.allergies === 'string'
+                        ? JSON.parse(resident.allergies || '[]')
+                        : (resident.allergies || []);
+                    const seen = new Set(current.map((a) => String(a).toLowerCase().trim()));
+                    for (const allergen of fresh) {
+                        if (!seen.has(allergen.toLowerCase())) {
+                            current.push(allergen);
+                            seen.add(allergen.toLowerCase());
+                        }
+                    }
+                    await client.query('UPDATE residents SET allergies = $1, profile_version = profile_version + 1, updated_at = NOW() WHERE id = $2', [current, triageItem.resident_id]);
+                }
+                else {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Unsupported change type ' + triageItem.change_type + ' — left pending' });
+                }
+            }
+            await client.query('UPDATE ehr_reconciliation_queue SET status = $1, resolved_by = $2, resolved_at = NOW() WHERE id = $3', [action, resolvedBy, id]);
+            // A05: audit-log every decision with the JWT-derived actor identity —
+            // item id, resident, change type, decision, actor, timestamp.
+            await auditReconciliationDecision(req, {
+                itemId: id,
+                residentId: triageItem.resident_id ?? null,
+                residentName: triageItem.resident_name ?? null,
+                changeType: triageItem.change_type,
+                decision: action,
+                actorUserId,
+                actorRole,
+            }, client);
+            await client.query('COMMIT');
+            res.json({
+                success: true,
+                resolvedId: id,
+                action,
+                resolvedBy,
+                resolvedAt: new Date().toISOString(),
+            });
         }
-        await pool_1.pool.query(`
-      UPDATE ehr_reconciliation_queue
-      SET status = $1, resolved_by = $2, resolved_at = NOW()
-      WHERE id = $3
-    `, [action, resolvedBy, id]);
-        // A05: audit-log every decision with the JWT-derived actor identity —
-        // item id, resident, change type, decision, actor, timestamp.
-        await auditReconciliationDecision(req, {
-            itemId: id,
-            residentId: triageItem.resident_id ?? null,
-            residentName: triageItem.resident_name ?? null,
-            changeType: triageItem.change_type,
-            decision: action,
-            actorUserId,
-            actorRole,
-        });
-        // If approved, commit change to resident record and increment profile version
-        if (action === 'APPROVED_BY_RD' && triageItem.resident_id) {
-            const payload = typeof triageItem.incoming_payload === 'string'
-                ? JSON.parse(triageItem.incoming_payload)
-                : triageItem.incoming_payload;
-            if (triageItem.change_type === 'DIET_ORDER' && payload.dietOrder) {
-                await pool_1.pool.query(`
-          UPDATE residents 
-          SET diet_type = $1, profile_version = profile_version + 1, updated_at = NOW() 
-          WHERE id = $2
-        `, [payload.dietOrder, triageItem.resident_id]);
+        catch (txErr) {
+            try {
+                if (started)
+                    await client.query('ROLLBACK');
             }
-            else if (triageItem.change_type === 'TEXTURE_UPDATE' && payload.texture) {
-                await pool_1.pool.query(`
-          UPDATE residents 
-          SET texture = $1, profile_version = profile_version + 1, updated_at = NOW() 
-          WHERE id = $2
-        `, [payload.texture, triageItem.resident_id]);
-            }
-            else if (triageItem.change_type === 'NPO_ORDER') {
-                await pool_1.pool.query(`
-          UPDATE residents 
-          SET is_npo = true, npo_reason = 'EHR Physician Order', profile_version = profile_version + 1, updated_at = NOW() 
-          WHERE id = $2
-        `, [triageItem.resident_id]);
-            }
+            catch { /* already closed */ }
+            throw txErr;
         }
-        res.json({
-            success: true,
-            resolvedId: id,
-            action,
-            resolvedBy,
-            resolvedAt: new Date().toISOString(),
-        });
+        finally {
+            client.release();
+        }
     }
     catch (err) {
         res.status(500).json({ error: err.message || 'Failed to resolve reconciliation item' });

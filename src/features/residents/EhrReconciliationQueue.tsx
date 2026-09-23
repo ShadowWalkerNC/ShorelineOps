@@ -84,12 +84,12 @@ export default function EhrReconciliationQueue() {
         setItems(prev => prev.filter(i => i.id !== id))
         setToast(action === 'APPROVED_BY_RD' ? 'Approved and committed to resident diet profile.' : 'Inbound EHR change rejected.')
       } else {
-        setItems(prev => prev.filter(i => i.id !== id))
-        setToast(`Triage item marked ${action}.`)
+        // F2: failure must not clear unresolved work — keep the item visible.
+        setToast('Order not applied. This change remains pending.')
       }
     } catch {
-      setItems(prev => prev.filter(i => i.id !== id))
-      setToast('Triage action recorded.')
+      // F2: network failure leaves the outcome unknown — keep the item visible.
+      setToast('Outcome unknown. Checking the recorded decision…')
     } finally {
       setTimeout(() => setToast(null), 3500)
     }
