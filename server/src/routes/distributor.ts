@@ -69,10 +69,11 @@ distributorRouter.get('/catalog', async (req: Request, res: Response, next: Next
              vim.normalized_unit_cost,
              vim.match_confidence,
              vim.match_status,
+             vim.normalized_uom,
              cp.name AS canonical_product_name,
              cp.standard_uom AS canonical_standard_uom
       FROM vendor_items vi
-      LEFT JOIN vendor_item_matches vim ON vim.vendor_item_id = vi.id AND vim.match_status != 'rejected'
+      LEFT JOIN vendor_item_matches vim ON vim.vendor_item_id = vi.id AND vim.match_status IN ('confirmed', 'candidate')
       LEFT JOIN canonical_products cp ON cp.id = vim.canonical_product_id
       WHERE vi.vendor_id = $1
       ORDER BY vi.category ASC, vi.name ASC
@@ -152,7 +153,7 @@ distributorRouter.post('/catalog-upload', async (req: Request, res: Response, ne
     }))
 
     let importedCount = 0
-    let autoMatchedCount = 0
+    let candidateCount = 0
     let reviewCount = 0
 
     for (const item of itemsToProcess) {
@@ -189,20 +190,21 @@ distributorRouter.post('/catalog-upload', async (req: Request, res: Response, ne
         const { canonicalProduct, confidence } = FuzzyProductMatcher.findBestMatch(item.name, canonicalProducts)
 
         if (canonicalProduct) {
-          const matchStatus = confidence >= 70 ? 'auto_matched' : 'rejected'
-          if (matchStatus === 'auto_matched') {
-            autoMatchedCount++
+          // F6: name similarity is not equivalence. Scores >= 70 become
+          // review candidates; only desk-confirmed matches are comparable.
+          const matchStatus = confidence >= 70 ? 'candidate' : 'rejected'
+          if (matchStatus === 'candidate') {
+            candidateCount++
           } else {
             reviewCount++
           }
 
+          // F6/F7: reimports refresh current prices on every row but only
+          // 'candidate' rows get a fresh status — confirmed/rejected desk
+          // decisions are never overwritten by a later upload.
           await pool.query(
-            `INSERT INTO vendor_item_matches
-               (id, canonical_product_id, vendor_item_id, pack_quantity_in_standard_uom, normalized_unit_cost, match_confidence, match_status, matched_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'system_upload')
-             ON CONFLICT (canonical_product_id, vendor_item_id)
-             DO NOTHING`,
-            [randomUUID(), canonicalProduct.id, itemId, norm.totalStandardUnits, norm.normalizedUnitCost, confidence, matchStatus]
+            'INSERT INTO vendor_item_matches (id, canonical_product_id, vendor_item_id, pack_quantity_in_standard_uom, normalized_unit_cost, normalized_uom, match_confidence, match_status, matched_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (canonical_product_id, vendor_item_id) DO UPDATE SET pack_quantity_in_standard_uom = $4, normalized_unit_cost = $5, normalized_uom = $6, match_confidence = $7, updated_at = NOW(), match_status = CASE WHEN vendor_item_matches.match_status = $10 THEN $8 ELSE vendor_item_matches.match_status END, matched_by = CASE WHEN vendor_item_matches.match_status = $10 THEN $9 ELSE vendor_item_matches.matched_by END',
+            [randomUUID(), canonicalProduct.id, itemId, norm.totalStandardUnits, norm.normalizedUnitCost, norm.standardUom, confidence, matchStatus, 'system_upload', 'candidate']
           )
         }
       }
@@ -211,7 +213,7 @@ distributorRouter.post('/catalog-upload', async (req: Request, res: Response, ne
     res.json({
       ok: true,
       totalImported: importedCount,
-      autoMatchedCount,
+      candidateCount,
       reviewCount,
     })
   } catch (e) { next(e) }
@@ -226,7 +228,7 @@ distributorRouter.get('/canonical-products', async (_req: Request, res: Response
   try {
     const { rows } = await pool.query(`
       SELECT cp.*,
-             (SELECT COUNT(*) FROM vendor_item_matches vim WHERE vim.canonical_product_id = cp.id AND vim.match_status != 'rejected') AS match_count
+             (SELECT COUNT(*) FROM vendor_item_matches vim WHERE vim.canonical_product_id = cp.id AND vim.match_status = 'confirmed') AS match_count
       FROM canonical_products cp
       ORDER BY cp.category ASC, cp.name ASC
     `)
@@ -255,6 +257,9 @@ distributorRouter.post('/canonical-products', async (req: Request, res: Response
 distributorRouter.post('/match', async (req: Request, res: Response, next: NextFunction) => {
   const { canonicalProductId, vendorItemId, matchStatus = 'confirmed' } = req.body
   if (!canonicalProductId || !vendorItemId) return err(res, 400, 'canonicalProductId and vendorItemId required')
+  if (!['confirmed', 'candidate', 'rejected'].includes(matchStatus)) {
+    return err(res, 400, "matchStatus must be 'confirmed', 'candidate', or 'rejected'")
+  }
 
   try {
     // Get vendor item for pack size calculation
@@ -271,17 +276,13 @@ distributorRouter.post('/match', async (req: Request, res: Response, next: NextF
 
     if (existing.length > 0) {
       await pool.query(
-        `UPDATE vendor_item_matches SET
-           match_status = $1, pack_quantity_in_standard_uom = $2, normalized_unit_cost = $3, matched_by = 'manual_desk', updated_at = NOW()
-         WHERE id = $4`,
-        [matchStatus, norm.totalStandardUnits, norm.normalizedUnitCost, existing[0].id]
+        'UPDATE vendor_item_matches SET match_status = $1, pack_quantity_in_standard_uom = $2, normalized_unit_cost = $3, normalized_uom = $4, matched_by = $5, updated_at = NOW() WHERE id = $6',
+        [matchStatus, norm.totalStandardUnits, norm.normalizedUnitCost, norm.standardUom, 'manual_desk', existing[0].id]
       )
     } else {
       await pool.query(
-        `INSERT INTO vendor_item_matches
-           (id, canonical_product_id, vendor_item_id, pack_quantity_in_standard_uom, normalized_unit_cost, match_confidence, match_status, matched_by)
-         VALUES ($1, $2, $3, $4, $5, 100.0, $6, 'manual_desk')`,
-        [randomUUID(), canonicalProductId, vendorItemId, norm.totalStandardUnits, norm.normalizedUnitCost, matchStatus]
+        'INSERT INTO vendor_item_matches (id, canonical_product_id, vendor_item_id, pack_quantity_in_standard_uom, normalized_unit_cost, normalized_uom, match_confidence, match_status, matched_by) VALUES ($1, $2, $3, $4, $5, $6, 100.0, $7, $8)',
+        [randomUUID(), canonicalProductId, vendorItemId, norm.totalStandardUnits, norm.normalizedUnitCost, norm.standardUom, matchStatus, 'manual_desk']
       )
     }
 
@@ -304,7 +305,7 @@ distributorRouter.get('/price-matrix', async (_req: Request, res: Response, next
       FROM vendor_item_matches vim
       JOIN vendor_items vi ON vi.id = vim.vendor_item_id
       JOIN vendors v ON v.id = vi.vendor_id
-      WHERE vim.match_status IN ('confirmed', 'auto_matched') AND vi.active = true
+      WHERE vim.match_status = 'confirmed' AND vi.active = true
     `)
 
     const canonicalProducts: CanonicalProduct[] = canonicalRows.map(r => ({
@@ -328,6 +329,7 @@ distributorRouter.get('/price-matrix', async (_req: Request, res: Response, next
       packQuantityInStandardUom: parseFloat(r.pack_quantity_in_standard_uom || '1'),
       normalizedUnitCost: parseFloat(r.normalized_unit_cost || '0'),
       matchConfidence: parseFloat(r.match_confidence || '100'),
+      normalizedUom: r.normalized_uom || '',
       matchStatus: r.match_status,
       canonicalProductId: r.canonical_product_id,
     } as any))

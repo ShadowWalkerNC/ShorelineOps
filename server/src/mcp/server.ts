@@ -207,7 +207,7 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
         FROM vendor_item_matches vim
         JOIN vendor_items vi ON vi.id = vim.vendor_item_id
         JOIN vendors v ON v.id = vi.vendor_id
-        WHERE vim.match_status IN ('confirmed', 'auto_matched') AND vi.active = true
+        WHERE vim.match_status = 'confirmed' AND vi.active = true
       `)
 
       const canonicalProducts: CanonicalProduct[] = canonicalRows.map(r => ({

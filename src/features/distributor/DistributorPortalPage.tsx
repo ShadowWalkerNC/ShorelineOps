@@ -168,7 +168,7 @@ export default function DistributorPortalPage() {
         vendorId: selectedVendorId,
         csvContent: csvText,
       })
-      showMsg(`Successfully processed ${res.data.totalImported} items (${res.data.autoMatchedCount} auto-matched)`, 'success')
+      showMsg(`Successfully processed ${res.data.totalImported} items (${res.data.candidateCount} need review)`, 'success')
       setCsvText('')
       setActiveTab('catalog')
       fetchCatalog(selectedVendorId)
@@ -585,7 +585,7 @@ export default function DistributorPortalPage() {
                 <th style={{ padding: '10px 12px' }}>Pack Size</th>
                 <th style={{ padding: '10px 12px' }}>Target Canonical Staple</th>
                 <th style={{ padding: '10px 12px' }}>Normalized Rate</th>
-                <th style={{ padding: '10px 12px' }}>Match Confidence</th>
+                <th style={{ padding: '10px 12px' }}>Name Similarity</th>
                 <th style={{ padding: '10px 12px' }}>Actions</th>
               </tr>
             </thead>
@@ -608,7 +608,7 @@ export default function DistributorPortalPage() {
                   <td style={{ padding: '12px' }}>
                     {item.match_confidence ? (
                       <span style={{ padding: '2px 8px', borderRadius: 10, background: item.match_confidence >= 85 ? '#DCFCE7' : '#FEF3C7', color: item.match_confidence >= 85 ? '#166534' : '#92400E', fontSize: 12, fontWeight: 700 }}>
-                        {item.match_confidence}% Match
+                        {item.match_confidence}% similar
                       </span>
                     ) : (
                       <span style={{ color: 'var(--text-muted)' }}>—</span>

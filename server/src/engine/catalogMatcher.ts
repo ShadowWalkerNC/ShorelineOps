@@ -39,8 +39,11 @@ export interface MatchedVendorOffer {
   caseCost: number
   packQuantityInStandardUom: number
   normalizedUnitCost: number
+  /** Uncalibrated name-similarity score (0-100). Display as "name similarity", never as a probability. */
   matchConfidence: number
-  matchStatus: 'confirmed' | 'auto_matched' | 'rejected'
+  /** Normalized basis unit produced alongside normalizedUnitCost (e.g. 'lb', 'fl oz'). */
+  normalizedUom?: string
+  matchStatus: 'confirmed' | 'candidate' | 'rejected'
 }
 
 export interface CanonicalPriceMatrixRow {
@@ -98,6 +101,21 @@ const ABBREVIATIONS: Record<string, string> = {
   'pk': 'pack',
 }
 
+export type UnitDimension = 'mass' | 'volume' | 'count' | 'unknown'
+
+/**
+ * Coarse unit dimension for apples-to-apples ranking. F7: mass, volume,
+ * and count offers must never be price-ranked against each other.
+ * Unknown dimensions stay ranked for backward compatibility, never excluded.
+ */
+export function dimensionOf(uom: string): UnitDimension {
+  const u = (uom || '').trim().toLowerCase()
+  if (['g', 'gram', 'grams', 'kg', 'kilogram', 'kilograms', 'oz', 'ounce', 'ounces', 'lb', 'lbs', 'pound', 'pounds'].includes(u)) return 'mass'
+  if (['ml', 'milliliter', 'milliliters', 'l', 'liter', 'liters', 'fl oz', 'floz', 'fluid ounce', 'fluid ounces', 'qt', 'quart', 'quarts', 'gal', 'gallon', 'gallons'].includes(u)) return 'volume'
+  if (['each', 'ea', 'case', 'cs', 'box', 'bx', 'pack', 'pk', 'ct', 'count', 'can', '#10 can', 'bag'].includes(u)) return 'count'
+  return 'unknown'
+}
+
 export class PackSizeNormalizer {
   /**
    * Normalize an arbitrary distributor pack size string and case cost
@@ -116,8 +134,19 @@ export class PackSizeNormalizer {
       return { totalStandardUnits: 1, standardUom: 'case', normalizedUnitCost: cost }
     }
 
-    // Pattern 1: Count / Size with oz (e.g. "40/4oz", "24/4 oz", "12/8oz")
-    const countOzMatch = raw.match(/^(\d+)\s*\/\s*(\d+(?:\.\d+)?)\s*(?:oz|fl\s*oz|ounce)/i)
+    // Pattern 1a: Count / Size in fluid ounces — VOLUME, never weight
+    // (e.g. "12/32 fl oz"). F7: fluid ounces were previously folded into pounds.
+    const countFlOzMatch = raw.match(/^(\d+)\s*\/\s*(\d+(?:\.\d+)?)\s*fl\s*oz/i)
+    if (countFlOzMatch) {
+      const count = parseFloat(countFlOzMatch[1])
+      const flOz = parseFloat(countFlOzMatch[2])
+      const totalFlOz = count * flOz
+      const normalizedCost = totalFlOz > 0 ? Math.round((cost / totalFlOz) * 10000) / 10000 : cost
+      return { totalStandardUnits: totalFlOz, standardUom: 'fl oz', normalizedUnitCost: normalizedCost }
+    }
+
+    // Pattern 1b: Count / Size with weight ounces (e.g. "40/4oz", "24/4 oz")
+    const countOzMatch = raw.match(/^(\d+)\s*\/\s*(\d+(?:\.\d+)?)\s*(?:oz|ounce)/i)
     if (countOzMatch) {
       const count = parseFloat(countOzMatch[1])
       const oz = parseFloat(countOzMatch[2])
@@ -163,6 +192,14 @@ export class PackSizeNormalizer {
       return { totalStandardUnits: totalLbs, standardUom: 'lb', normalizedUnitCost: normalizedCost }
     }
 
+    // Pattern 5b: Straight fluid ounces (e.g. "32 fl oz") — volume
+    const straightFlOzMatch = raw.match(/(\d+(?:\.\d+)?)\s*fl\s*oz/i)
+    if (straightFlOzMatch) {
+      const totalFlOz = parseFloat(straightFlOzMatch[1])
+      const normalizedCost = totalFlOz > 0 ? Math.round((cost / totalFlOz) * 10000) / 10000 : cost
+      return { totalStandardUnits: totalFlOz, standardUom: 'fl oz', normalizedUnitCost: normalizedCost }
+    }
+
     // Default fallback: 1 case
     return {
       totalStandardUnits: 1,
@@ -197,7 +234,8 @@ export class FuzzyProductMatcher {
   }
 
   /**
-   * Compute Jaccard token similarity score between candidate item and canonical product (0 to 100)
+   * Compute Jaccard token similarity between candidate item and canonical product (0 to 100).
+   * This is an uncalibrated string-similarity heuristic, not a probability of correctness.
    */
   static scoreMatch(candidateName: string, canonicalName: string): number {
     const candTokens = this.extractTokens(candidateName)
@@ -260,12 +298,21 @@ export class PriceMatrixSolver {
     const rows: CanonicalPriceMatrixRow[] = []
 
     for (const canon of canonicalProducts) {
+      // F6: only human-approved equivalents are purchase-comparable.
+      // Review candidates never influence the winner or savings.
       const productOffers = matches
-        .filter(m => m.matchStatus !== 'rejected')
+        .filter(m => m.matchStatus === 'confirmed')
         .filter(m => (m as any).canonicalProductId === canon.id || (m as any).canonical_product_id === canon.id)
 
+      // F7: rank only offers sharing the canonical dimension.
+      const canonDim = dimensionOf(canon.standardUom)
+      const rankableOffers = productOffers.filter(m => {
+        const d = dimensionOf(m.normalizedUom || '')
+        return d === 'unknown' || canonDim === 'unknown' || d === canonDim
+      })
+
       // Sort by lowest normalized unit cost
-      const sortedOffers = [...productOffers].sort((a, b) => a.normalizedUnitCost - b.normalizedUnitCost)
+      const sortedOffers = [...rankableOffers].sort((a, b) => a.normalizedUnitCost - b.normalizedUnitCost)
 
       let winningVendor: CanonicalPriceMatrixRow['winningVendor']
       let runnerUpVendor: CanonicalPriceMatrixRow['runnerUpVendor']

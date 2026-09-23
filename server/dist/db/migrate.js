@@ -1058,6 +1058,17 @@ const migrations = [
       CREATE INDEX IF NOT EXISTS idx_facility_config_beta_status ON facility_config(beta_status);
     `,
     },
+    {
+        name: '028_match_review_basis',
+        sql: `
+      -- F6: fuzzy matches are review candidates, never purchase-comparable.
+      -- Reclassify legacy auto-matched rows so they require desk approval.
+      UPDATE vendor_item_matches SET match_status = 'candidate' WHERE match_status = 'auto_matched';
+      -- F7: record the normalized basis unit so rankings can require
+      -- compatible dimensions and reimports can refresh stale prices.
+      ALTER TABLE vendor_item_matches ADD COLUMN IF NOT EXISTS normalized_uom TEXT NOT NULL DEFAULT '';
+    `,
+    },
 ];
 // A02: every table migrate.ts expects to exist after a full migration run.
 // Used by assertSchemaIntegrity() — a boot-time fail-closed drift guard.
