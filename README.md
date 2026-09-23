@@ -253,6 +253,13 @@ npm test
 ```
 All **207 system integration, clinical dietary, safety, and SDK tests** pass with 100% success rate across all 31 operational domains.
 
+### 5. Operational Safety & Deployment Boundaries
+- **Atomic EHR reconciliation**: approving a triage item applies the resident change (diet, texture, NPO, or new allergen) and marks the queue item resolved in one transaction. Malformed or unsupported payloads stay `PENDING_TRIAGE` — failed actions never display success.
+- **Honest failure states**: unreachable EHR, offline verification, and unevaluated menu audits render pending/unknown states. Offline tray-scan simulations are labeled and never record live assembly.
+- **Draft-bound purchasing**: order lines change only while the parent order is a `draft` and only through manager approval; vendor status updates cannot approve orders. Received quantities move only through the receiving workflow.
+- **One facility per database**: set `SHORELINE_FACILITY_ID` (see `.env.example`). Credentials or headers from another facility are rejected with `403`; facility switching is disabled.
+- **Sample data is labeled**: demo checklists and illustrative audit values are marked as samples and start uncompleted.
+
 ---
 
 ## Cloud Deployment on Render

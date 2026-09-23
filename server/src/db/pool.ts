@@ -46,6 +46,7 @@ function getSqlite(): any {
       // Schema and admin seeding are handled exclusively by the canonical
       // migration path (server/src/db/migrate.ts runMigrations + db/seed.ts runSeed).
       // No DDL lives here by design (A03 consolidation).
+      sqliteDb.configure('busyTimeout', 5000)
       sqliteDb?.run('PRAGMA foreign_keys = ON')
     } catch (loadErr: any) {
       console.warn('[DB] SQLite native library could not be loaded:', loadErr.message)
@@ -98,109 +99,72 @@ function translateQuery(sql: string, params: any[] = []): { sql: string; params:
   return { sql: translatedSql, params: translatedParams }
 }
 
+/** Execute on the supplied connection; transaction clients must never share a handle. */
+function sqliteQuery(db: any, sql: string, params: any[] = []): Promise<{ rows: any[] }> {
+  const translated = translateQuery(sql, params)
+  const cleaned = translated.sql.replace(/--.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '').trim()
+  if (!cleaned) return Promise.resolve({ rows: [] })
+  return new Promise((resolve, reject) => {
+    const isWrite = /^\s*(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|PRAGMA)\b/i.test(cleaned)
+    const finishWrite = (err: any) => {
+      if (err) {
+        // Existing migration compatibility: repeated ADD COLUMN is idempotent.
+        if (err.message.includes('duplicate column name')) return resolve({ rows: [] })
+        return reject(err)
+      }
+      resolve({ rows: [] })
+    }
+    if (isWrite && !/\bRETURNING\b/i.test(cleaned)) {
+      if (translated.params.length === 0 && translated.sql.includes(';')) {
+        db.exec(translated.sql, finishWrite)
+      } else {
+        db.run(translated.sql, translated.params, finishWrite)
+      }
+    } else {
+      db.all(translated.sql, translated.params, (err: any, rows: any[]) => {
+        if (err) return reject(err)
+        resolve({ rows: (rows || []).map(row => {
+          const mapped = { ...row }
+          for (const [key, value] of Object.entries(mapped)) {
+            if (key.toLowerCase().startsWith('count(')) mapped.count = value
+            if (typeof value === 'string' && value.startsWith('[') && value.endsWith(']')) {
+              try { mapped[key] = JSON.parse(value) } catch { /* preserve text */ }
+            }
+          }
+          return mapped
+        }) })
+      })
+    }
+  })
+}
+
 export const pool = {
   async query(sql: string, params: any[] = []): Promise<{ rows: any[] }> {
-    if (!useSqlite && pgPool) {
-      try {
-        return await pgPool.query(sql, params)
-      } catch (err: any) {
-        console.error(`[DB] PostgreSQL query error: ${err.message}`)
-        throw err
-      }
-    }
-
+    if (!useSqlite && pgPool) return pgPool.query(sql, params)
     const db = getSqlite()
-    if (!db) {
-      // In-memory fallback if no database is connected in cloud demo
-      return { rows: [] }
-    }
-
-    const { sql: sQuery, params: sParams } = translateQuery(sql, params)
-
-    return new Promise((resolve, reject) => {
-      const sqlCleaned = sQuery.replace(/--.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '').trim()
-      if (sqlCleaned.length === 0) {
-        return resolve({ rows: [] })
-      }
-
-      // A02: route on the comment-stripped SQL. Migration bodies (and some
-      // queries) begin with `--` comment lines; testing the raw text would
-      // misclassify them as reads, and node-sqlite3's db.all() then silently
-      // executes ONLY the first statement — dropping the remaining tables
-      // with no error (this is how 010/011/012 lost tables on SQLite).
-      // sqlCleaned is only used for the routing decision; the driver still
-      // receives the original sQuery unchanged.
-      const isWrite = /^\s*(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|PRAGMA)\b/i.test(sqlCleaned)
-
-      if (isWrite) {
-        const hasParams = sParams && sParams.length > 0
-        if (!hasParams && sQuery.includes(';')) {
-          db.exec(sQuery, (err: any) => {
-            if (err) {
-              if (err.message.includes('duplicate column name') || err.message.includes('already exists')) {
-                return resolve({ rows: [] })
-              }
-              console.error('[SQLite Exec Error]', err.message, '\nQuery:', sQuery)
-              reject(err)
-            } else {
-              resolve({ rows: [] })
-            }
-          })
-        } else {
-          db.run(sQuery, sParams, function (err: any) {
-            if (err) {
-              if (err.message.includes('duplicate column name') || err.message.includes('already exists')) {
-                return resolve({ rows: [] })
-              }
-              console.error('[SQLite Run Error]', err.message, '\nQuery:', sQuery)
-              reject(err)
-            } else {
-              resolve({ rows: [] })
-            }
-          })
-        }
-      } else {
-        db.all(sQuery, sParams, (err: any, rows: any[]) => {
-          if (err) {
-            console.error('[SQLite Read Error]', err.message, '\nQuery:', sQuery)
-            reject(err)
-          } else {
-            const mappedRows = (rows || []).map((row: any) => {
-              const mapped = { ...row }
-              for (const key of Object.keys(mapped)) {
-                if (key.toLowerCase().startsWith('count(')) {
-                  mapped.count = mapped[key]
-                }
-              }
-              for (const [key, val] of Object.entries(mapped)) {
-                if (typeof val === 'string' && val.startsWith('[') && val.endsWith(']')) {
-                  try {
-                    mapped[key] = JSON.parse(val)
-                  } catch { /* keep string */ }
-                }
-              }
-              return mapped
-            })
-            resolve({ rows: mappedRows })
-          }
-        })
-      }
-    })
+    if (!db) throw new Error('SQLite database is unavailable')
+    return sqliteQuery(db, sql, params)
   },
 
   async connect(): Promise<any> {
-    if (!useSqlite && pgPool) {
-      try {
-        return await pgPool.connect()
-      } catch (err: any) {
-        console.error(`[DB] PostgreSQL connect error: ${err.message}`)
-        throw err
-      }
-    }
-
+    if (!useSqlite && pgPool) return pgPool.connect()
+    // A dedicated connection keeps unrelated pool.query calls out of this
+    // transaction and lets SQLite serialize writers across processes.
+    const sqlite3 = require('sqlite3')
+    const db: any = await new Promise((resolve, reject) => {
+      const connection = new sqlite3.Database(sqlitePath, (err: Error | null) =>
+        err ? reject(err) : resolve(connection))
+    })
+    db.configure('busyTimeout', 5000)
+    await sqliteQuery(db, 'PRAGMA foreign_keys = ON')
+    let released = false
     return {
-      query: (sql: string, params: any[] = []) => this.query(sql, params),
-      release: () => {},
+      query: (sql: string, params: any[] = []) => {
+        if (released) throw new Error('Database client already released')
+        // Acquire the write reservation before reading decision inputs.
+        return sqliteQuery(db, /^\s*BEGIN\s*;?\s*$/i.test(sql) ? 'BEGIN IMMEDIATE' : sql, params)
+      },
+      release: () => { if (!released) { released = true; db.close() } },
     }
   },
 
@@ -210,5 +174,11 @@ export const pool = {
 
   async end() {
     if (pgPool) await pgPool.end()
+    if (sqliteDb) {
+      const db = sqliteDb
+      sqliteDb = null
+      await new Promise<void>((resolve, reject) => db.close((err: Error | null) => err ? reject(err) : resolve()))
+    }
   },
 }
+

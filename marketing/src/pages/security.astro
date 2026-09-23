@@ -1,220 +1,57 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
-import Icon from '../components/Icon.astro'
-
-const effectiveDate = 'March 18, 2026'
 ---
 
-<BaseLayout
-  title="Security Architecture, Technical Safeguards & SLA"
-  description="ShorelineOps Care OS Technical Security Whitepaper, SOC 2 Safeguards, Fail-Closed Database Architecture, and 99.9% Uptime SLA."
-  canonicalPath="/security"
->
-  <div class="relative py-16 sm:py-24 overflow-hidden">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div class="mb-10 text-center sm:text-left">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800/80 text-purple-700 dark:text-purple-300 text-xs font-mono font-semibold mb-4">
-          <Icon name="server" class="w-3.5 h-3.5" />
-          <span>SECURITY WHITEPAPER & SERVICE LEVEL AGREEMENT</span>
-        </div>
-        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white mb-3">
-          Security Architecture & Cloud SLA
-        </h1>
-        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-          Effective Date: {effectiveDate} · Defense-in-Depth Engineering · Zero Split-Brain High Availability
-        </p>
-      </div>
-
-      <!-- Key Metrics Frosted Card -->
-      <div class="p-6 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-12">
-        <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Enterprise Reliability Commitments</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono">99.9%</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Monthly Uptime SLA</div>
-          </div>
-          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-            <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">&lt; 1 hr</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Disaster RTO</div>
-          </div>
-          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400 font-mono">&lt; 15 min</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Disaster RPO</div>
-          </div>
-          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-            <div class="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">72 hrs</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Offline Kitchen Survivability</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Security Sections -->
-      <div class="space-y-10 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-        <!-- Section 1 -->
-        <section class="space-y-3">
-          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span class="text-xs font-mono text-purple-600 dark:text-purple-400">01.</span>
-            Fail-Closed Database & Multi-Tenant Isolation
-          </h2>
-          <p>
-            In mission-critical healthcare operations, silent data loss during network interruptions is unacceptable. Shoreline Care OS employs an explicit <strong>fail-closed</strong> architecture:
-          </p>
-          <ul class="list-disc pl-5 space-y-2">
-            <li>
-              <strong>Elimination of Split-Brain Fallback</strong>: When configured with PostgreSQL in production, Shoreline never silently falls back to a temporary local SQLite store on connection failure. Requests halt cleanly with transactional rollbacks, preserving database integrity.
-            </li>
-            <li>
-              <strong>Tenant Facility Scoping</strong>: Every database table containing clinical or operational data includes a mandatory <code>facility_id</code> foreign key indexed and verified by middleware on every query.
-            </li>
-            <li>
-              <strong>Private HTTP Cache Invalidation</strong>: Intermediate proxies are prohibited from caching Protected Health Information. All clinical endpoints emit <code>Cache-Control: private, no-cache, must-revalidate</code> tagged with the tenant facility ID.
-            </li>
-          </ul>
-        </section>
-
-        <!-- Section 2 -->
-        <section class="space-y-3">
-          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span class="text-xs font-mono text-purple-600 dark:text-purple-400">02.</span>
-            Cryptographic Standards & Key Derivation
-          </h2>
-          <p>
-            Shoreline applies modern cryptographic primitives at every layer of the technology stack:
-          </p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-3 text-xs">
-            <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div class="font-bold text-slate-900 dark:text-white mb-1">Argon2id Authentication</div>
-              <p class="text-slate-500 dark:text-slate-400">
-                Passwords are hashed using memory-hard Argon2id (m=65536, t=3, p=4) with per-user cryptographic salts. Resistant against GPU-accelerated dictionary and rainbow table attacks.
-              </p>
-            </div>
-            <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div class="font-bold text-slate-900 dark:text-white mb-1">AES-256-GCM Encryption</div>
-              <p class="text-slate-500 dark:text-slate-400">
-                All persistent database volumes, automated snapshot backups, and stored EDI credentials are encrypted at-rest using AES-256 in Galois/Counter Mode.
-              </p>
-            </div>
-          </div>
-          <p>
-            Network transmissions enforce <strong>TLS 1.3</strong> exclusively, protected by automated HSTS headers (HTTP Strict Transport Security with 1-year max-age and preload directives), Content Security Policy (CSP), and Helmet HTTP protection.
-          </p>
-        </section>
-
-        <!-- Section 3 -->
-        <section class="space-y-3">
-          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span class="text-xs font-mono text-purple-600 dark:text-purple-400">03.</span>
-            Immutable Audit Logging & Chain of Custody
-          </h2>
-          <p>
-            In adherence to CMS-2567 dietary regulations and HIPAA audit rules, Shoreline maintains an append-only audit ledger (<code>audit_log</code> table):
-          </p>
-          <ul class="list-disc pl-5 space-y-2">
-            <li>
-              <strong>Non-Repudiation</strong>: Every resident diet order modification, IDDSI texture downgrade, NPO order, and Registered Dietitian EHR triage resolution records the verified actor user ID, previous value, proposed value, and timestamp.
-            </li>
-            <li>
-              <strong>Database Immutability Triggers</strong>: PostgreSQL triggers prevent <code>UPDATE</code> or <code>DELETE</code> operations against historical audit log rows.
-            </li>
-            <li>
-              <strong>HACCP Corrective Action Enforcement</strong>: When food or refrigerator temperatures fall outside safe thresholds (&lt;140°F hot hold, &gt;41°F cold hold, &lt;165°F cook temp), the entry cannot be closed without documented corrective actions.
-            </li>
-          </ul>
-        </section>
-
-        <!-- Section 4 -->
-        <section class="space-y-3">
-          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span class="text-xs font-mono text-purple-600 dark:text-purple-400">04.</span>
-            Hardware & Kitchen Tablet Ergonomics
-          </h2>
-          <p>
-            Kitchen kiosks operate under demanding physical conditions:
-          </p>
-          <ul class="list-disc pl-5 space-y-2">
-            <li>
-              <strong>Bluetooth Low Energy (BLE) Direct Connection</strong>: Food probe temperatures are collected directly via standard Web Bluetooth LE drivers, bypassing untrusted cloud intermediaries.
-            </li>
-            <li>
-              <strong>Offline Mutation Sync Queue</strong>: In the event of Wi-Fi interruptions in basement kitchens or walk-in coolers, meal dispatches and HACCP logs are buffered in IndexedDB and re-synchronized upon reconnection.
-            </li>
-            <li>
-              <strong>Touch Safety Targets</strong>: Mobile and kiosk buttons strictly adhere to &ge; 44px touch targets with high-contrast color indicators to prevent mis-taps during active service lines.
-            </li>
-          </ul>
-        </section>
-
-        <!-- Section 5 -->
-        <section class="space-y-3">
-          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span class="text-xs font-mono text-purple-600 dark:text-purple-400">05.</span>
-            Cloud Service Level Agreement (SLA)
-          </h2>
-          <p>
-            Shoreline guarantees <strong>99.9% monthly availability</strong> for our managed SaaS multi-tenant API. Availability is defined as successful responses (HTTP &lt; 500) to client requests originating from verified facility networks.
-          </p>
-          <div class="overflow-x-auto my-3">
-            <table class="w-full text-xs text-left border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-              <thead class="bg-slate-100 dark:bg-slate-800/60 font-semibold text-slate-800 dark:text-slate-200">
-                <tr>
-                  <th class="p-2.5">Monthly Uptime Percentage</th>
-                  <th class="p-2.5">Service Credit %</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-600 dark:text-slate-400">
-                <tr>
-                  <td class="p-2.5">&ge; 99.9%</td>
-                  <td class="p-2.5">Target SLA Achieved</td>
-                </tr>
-                <tr>
-                  <td class="p-2.5">99.0% – 99.89%</td>
-                  <td class="p-2.5">10% of monthly subscription fee</td>
-                </tr>
-                <tr>
-                  <td class="p-2.5">95.0% – 98.99%</td>
-                  <td class="p-2.5">25% of monthly subscription fee</td>
-                </tr>
-                <tr>
-                  <td class="p-2.5">&lt; 95.0%</td>
-                  <td class="p-2.5">50% of monthly subscription fee</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Section 6 -->
-        <section class="space-y-3">
-          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span class="text-xs font-mono text-purple-600 dark:text-purple-400">06.</span>
-            Vulnerability Disclosure & Security Inquiries
-          </h2>
-          <p>
-            We welcome responsible security disclosures from healthcare researchers and white-hat security professionals. To report a security concern or request our completed SOC 2 questionnaire:
-          </p>
-          <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-1 text-slate-600 dark:text-slate-400">
-            <div>Shoreline Operations LLC — Information Security</div>
-            <div>Attn: Chief Information Security Officer (CISO)</div>
-            <div>412 Commercial Street, Suite 400</div>
-            <div>Portland, ME 04101</div>
-            <div>PGP Key ID: 0x4D10B992</div>
-            <div>Email: security@shorelineops.com</div>
-          </div>
-        </section>
-      </div>
-
-      <!-- Action Navigation -->
-      <div class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-4 justify-between items-center text-xs">
-        <a href="/terms" class="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-semibold">
-          <span>Review Terms of Service</span>
-          <Icon name="arrow-right" class="w-3.5 h-3.5" />
-        </a>
-        <a href="/privacy" class="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
-          <span>Read Healthcare Privacy Policy & BAA</span>
-          <Icon name="arrow-right" class="w-3.5 h-3.5" />
-        </a>
-      </div>
-    </div>
-  </div>
+<BaseLayout title="Security & Deployment Responsibilities"
+  description="Understand ShorelineOps access controls, deployment boundaries, offline behavior, and the checks required before facility use."
+  canonicalPath="/security">
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-16 space-y-10 text-slate-700 dark:text-slate-300">
+    <header class="space-y-4">
+      <p class="text-sm text-slate-500">Updated September 23, 2026</p>
+      <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Security and deployment responsibilities</h1>
+      <p class="text-lg">Review the controls, operating limits, and responsibilities that apply to your facility before using ShorelineOps with resident information.</p>
+      <p>This page describes product behavior and deployment requirements. It is not a security certification, compliance determination, or service-level agreement.</p>
+    </header>
+    <section class="space-y-3">
+      <h2 class="text-2xl font-semibold">One facility per deployment</h2>
+      <p>Clinical operations currently require a separate application deployment and database for each facility. Facility identifiers and account roles do not provide complete isolation within a shared clinical database. Switching facility context through a request header is disabled.</p>
+      <p>Use separate database credentials, signing secrets, backups, and access policies for each installation. A shared multi-facility clinical deployment requires additional isolation work and independent validation.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-2xl font-semibold">Accounts and protected actions</h2>
+      <p>The application uses bcrypt password hashing and signed access tokens. Clinical EHR review is limited to dietitian and administrator roles. Purchasing approval and line editing use server-side permission and workflow checks.</p>
+      <p>Administrators must review user access, configure available multi-factor authentication, and test session expiry on shared devices. An application role does not establish a professional credential.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-2xl font-semibold">Clinical decisions and recorded outcomes</h2>
+      <p>Inbound changes require explicit review. Failed requests must remain unresolved until the server confirms the result. Tray verification must use a current signed ticket and available clinical data; unavailable verification requires a hold.</p>
+      <p>Automated checks support facility procedures. They do not replace authorized clinical orders, physical texture checks, or professional review. Menu assessments without supporting data are shown as not evaluated.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-2xl font-semibold">Network outages and recovery</h2>
+      <p>A local SQLite installation can operate without internet while staff remain connected to the local application server. A tablet disconnected from that server cannot verify current orders or confirm saved actions. Browser API responses are not stored in the service-worker cache.</p>
+      <p>There is no guaranteed offline mutation replay. Prepare a facility-approved downtime procedure, keep required current paper records available, and reconcile recorded outcomes after reconnecting before retrying actions.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-2xl font-semibold">Hosting, backups, and audit records</h2>
+      <p>TLS termination, database and backup encryption, retention, monitoring, restore testing, and incident response depend on the chosen hosting configuration. Validate them in the deployed environment; source code alone does not establish these safeguards.</p>
+      <p>Clinical reconciliation and purchase approval record the authenticated actor with the committed decision. Audit durability and tamper resistance must be tested for the selected database and operating permissions.</p>
+      <p>Availability commitments, recovery targets, support response times, and any service credits must be established in an executed service agreement. No measured uptime or recovery guarantee is represented here.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-2xl font-semibold">Before facility rollout</h2>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>Validate clinical review, tray holds, authorization, and recovery with approved synthetic cases.</li>
+        <li>Test the actual phones, tablets, keyboards, and assistive technology used by staff.</li>
+        <li>Complete a backup restore and network-outage drill.</li>
+        <li>Confirm applicable privacy agreements and responsibilities with the facility and hosting provider.</li>
+      </ul>
+      <p>Report suspected vulnerabilities through the security reporting process in the project repository. Do not include resident information or credentials in public issues.</p>
+    </section>
+    <nav aria-label="Related information" class="flex flex-wrap gap-6 border-t border-slate-200 pt-6">
+      <a href="/pricing" class="min-h-12 inline-flex items-center text-blue-700 dark:text-blue-300 underline">Deployment and pricing</a>
+      <a href="/privacy" class="min-h-12 inline-flex items-center text-blue-700 dark:text-blue-300 underline">Privacy policy</a>
+      <a href="/terms" class="min-h-12 inline-flex items-center text-blue-700 dark:text-blue-300 underline">Terms of service</a>
+    </nav>
+  </main>
 </BaseLayout>
