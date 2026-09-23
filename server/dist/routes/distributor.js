@@ -15,6 +15,7 @@ exports.distributorRouter = void 0;
 const express_1 = require("express");
 const crypto_1 = require("crypto");
 const pool_1 = require("../db/pool");
+const requireAuth_1 = require("../middleware/requireAuth");
 const catalogMatcher_1 = require("../engine/catalogMatcher");
 exports.distributorRouter = (0, express_1.Router)();
 function err(res, status, msg) {
@@ -333,18 +334,26 @@ exports.distributorRouter.get('/orders', async (req, res, next) => {
     }
 });
 /** PUT /api/distributor/orders/:id/status — Vendor Rep Status Update */
-exports.distributorRouter.put('/orders/:id/status', async (req, res, next) => {
+exports.distributorRouter.put('/orders/:id/status', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
     const { id } = req.params;
     const { status, expectedDate, notes } = req.body;
     if (!status)
         return err(res, 400, 'status is required');
+    // F5: vendor updates must not stand in for facility approval. Draft and
+    // approved transitions belong to the purchasing approval workflow; this
+    // endpoint records vendor-observable progress on submitted orders only.
+    const VENDOR_STATUSES = ['submitted', 'received', 'cancelled'];
+    if (!VENDOR_STATUSES.includes(status)) {
+        return err(res, 400, 'Use the purchasing approval workflow for draft/approved transitions');
+    }
     try {
-        const { rows } = await pool_1.pool.query(`UPDATE purchase_orders SET
-         status = COALESCE($1, status),
-         expected_date = COALESCE($2, expected_date),
-         notes = COALESCE($3, notes),
-         updated_at = NOW()
-       WHERE id = $4 RETURNING *`, [status, expectedDate, notes, id]);
+        const { rows: [order] } = await pool_1.pool.query('SELECT id, status FROM purchase_orders WHERE id = $1', [id]);
+        if (!order)
+            return err(res, 404, 'Purchase order not found');
+        if (order.status === 'approved') {
+            return err(res, 409, 'Approved orders change only through the purchasing approval workflow');
+        }
+        const { rows } = await pool_1.pool.query('UPDATE purchase_orders SET status = COALESCE($1, status), expected_date = COALESCE($2, expected_date), notes = COALESCE($3, notes), updated_at = NOW() WHERE id = $4 RETURNING *', [status, expectedDate, notes, id]);
         if (!rows.length)
             return err(res, 404, 'Purchase order not found');
         res.json(rows[0]);

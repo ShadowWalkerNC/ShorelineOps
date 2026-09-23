@@ -663,14 +663,19 @@ exports.purchasingRouter.post('/orders/:id/submit', (0, requireAuth_1.requireRol
 });
 // ─── Order lines ──────────────────────────────────────────────────────────
 /** POST /api/purchasing/orders/:id/lines */
-exports.purchasingRouter.post('/orders/:id/lines', async (req, res, next) => {
+exports.purchasingRouter.post('/orders/:id/lines', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
     const { id } = req.params;
     const { vendorItemId, qtyOrdered, unitCost, notes = '' } = req.body;
     if (!vendorItemId || qtyOrdered == null)
         return err(res, 400, 'vendorItemId and qtyOrdered required');
     try {
-        const { rows } = await pool_1.pool.query(`INSERT INTO purchase_order_lines (purchase_order_id, vendor_item_id, qty_ordered, unit_cost, notes)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`, [id, vendorItemId, qtyOrdered, unitCost ?? null, notes]);
+        // F5: lines change only while the parent order is a mutable draft.
+        const { rows: [order] } = await pool_1.pool.query('SELECT id, status FROM purchase_orders WHERE id = $1', [id]);
+        if (!order)
+            return err(res, 404, 'Purchase order not found');
+        if (order.status !== 'draft')
+            return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval');
+        const { rows } = await pool_1.pool.query('INSERT INTO purchase_order_lines (purchase_order_id, vendor_item_id, qty_ordered, unit_cost, notes) VALUES ($1, $2, $3, $4, $5) RETURNING *', [id, vendorItemId, qtyOrdered, unitCost ?? null, notes]);
         res.status(201).json(rows[0]);
     }
     catch (e) {
@@ -678,16 +683,24 @@ exports.purchasingRouter.post('/orders/:id/lines', async (req, res, next) => {
     }
 });
 /** PUT /api/purchasing/orders/:id/lines/:lineId */
-exports.purchasingRouter.put('/orders/:id/lines/:lineId', async (req, res, next) => {
-    const { lineId } = req.params;
-    const { qtyOrdered, qtyReceived, unitCost, notes } = req.body;
+exports.purchasingRouter.put('/orders/:id/lines/:lineId', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+    const { id, lineId } = req.params;
+    const { qtyOrdered, unitCost, notes } = req.body;
+    if (qtyOrdered !== undefined && (typeof qtyOrdered !== 'number' || !Number.isFinite(qtyOrdered) || qtyOrdered <= 0)) {
+        return err(res, 400, 'qtyOrdered must be a positive finite number');
+    }
+    if (unitCost !== undefined && unitCost !== null && (typeof unitCost !== 'number' || !Number.isFinite(unitCost) || unitCost < 0)) {
+        return err(res, 400, 'unitCost must be a non-negative finite number');
+    }
     try {
-        const { rows } = await pool_1.pool.query(`UPDATE purchase_order_lines SET
-         qty_ordered = COALESCE($1, qty_ordered),
-         qty_received = COALESCE($2, qty_received),
-         unit_cost = COALESCE($3, unit_cost),
-         notes = COALESCE($4, notes)
-       WHERE id = $5 RETURNING *`, [qtyOrdered, qtyReceived, unitCost, notes, lineId]);
+        // F5: scope the line to its parent order and freeze approved content.
+        // Received quantities move only through the receiving workflow.
+        const { rows: [order] } = await pool_1.pool.query('SELECT id, status FROM purchase_orders WHERE id = $1', [id]);
+        if (!order)
+            return err(res, 404, 'Purchase order not found');
+        if (order.status !== 'draft')
+            return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval');
+        const { rows } = await pool_1.pool.query('UPDATE purchase_order_lines SET qty_ordered = COALESCE($1, qty_ordered), unit_cost = COALESCE($2, unit_cost), notes = COALESCE($3, notes) WHERE id = $4 AND purchase_order_id = $5 RETURNING *', [qtyOrdered, unitCost, notes, lineId, id]);
         if (!rows.length)
             return err(res, 404, 'Line not found');
         res.json(rows[0]);
@@ -697,10 +710,17 @@ exports.purchasingRouter.put('/orders/:id/lines/:lineId', async (req, res, next)
     }
 });
 /** DELETE /api/purchasing/orders/:id/lines/:lineId */
-exports.purchasingRouter.delete('/orders/:id/lines/:lineId', async (req, res, next) => {
-    const { lineId } = req.params;
+exports.purchasingRouter.delete('/orders/:id/lines/:lineId', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+    const { id, lineId } = req.params;
     try {
-        await pool_1.pool.query(`DELETE FROM purchase_order_lines WHERE id = $1`, [lineId]);
+        const { rows: [order] } = await pool_1.pool.query('SELECT id, status FROM purchase_orders WHERE id = $1', [id]);
+        if (!order)
+            return err(res, 404, 'Purchase order not found');
+        if (order.status !== 'draft')
+            return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval');
+        const { rows } = await pool_1.pool.query('DELETE FROM purchase_order_lines WHERE id = $1 AND purchase_order_id = $2 RETURNING id', [lineId, id]);
+        if (!rows.length)
+            return err(res, 404, 'Line not found');
         res.json({ ok: true });
     }
     catch (e) {

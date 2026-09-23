@@ -385,20 +385,30 @@ distributorRouter.get('/orders', async (req: Request, res: Response, next: NextF
 })
 
 /** PUT /api/distributor/orders/:id/status — Vendor Rep Status Update */
-distributorRouter.put('/orders/:id/status', async (req: Request, res: Response, next: NextFunction) => {
+distributorRouter.put('/orders/:id/status', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { status, expectedDate, notes } = req.body
 
   if (!status) return err(res, 400, 'status is required')
+  // F5: vendor updates must not stand in for facility approval. Draft and
+  // approved transitions belong to the purchasing approval workflow; this
+  // endpoint records vendor-observable progress on submitted orders only.
+  const VENDOR_STATUSES = ['submitted', 'received', 'cancelled']
+  if (!VENDOR_STATUSES.includes(status)) {
+    return err(res, 400, 'Use the purchasing approval workflow for draft/approved transitions')
+  }
 
   try {
+    const { rows: [order] } = await pool.query(
+      'SELECT id, status FROM purchase_orders WHERE id = $1',
+      [id]
+    )
+    if (!order) return err(res, 404, 'Purchase order not found')
+    if (order.status === 'approved') {
+      return err(res, 409, 'Approved orders change only through the purchasing approval workflow')
+    }
     const { rows } = await pool.query(
-      `UPDATE purchase_orders SET
-         status = COALESCE($1, status),
-         expected_date = COALESCE($2, expected_date),
-         notes = COALESCE($3, notes),
-         updated_at = NOW()
-       WHERE id = $4 RETURNING *`,
+      'UPDATE purchase_orders SET status = COALESCE($1, status), expected_date = COALESCE($2, expected_date), notes = COALESCE($3, notes), updated_at = NOW() WHERE id = $4 RETURNING *',
       [status, expectedDate, notes, id]
     )
     if (!rows.length) return err(res, 404, 'Purchase order not found')
