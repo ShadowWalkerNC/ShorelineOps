@@ -18,7 +18,7 @@ export default function OfflinePage() {
           You're offline
         </h1>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 10, maxWidth: 360, lineHeight: 1.6 }}>
-          Shoreline needs a connection to load this page. Any cached content is still available — check your network and try again.
+          Connect to your facility server to load current records and save work. A local server can operate without internet while your device remains connected to it.
         </p>
       </div>
 
@@ -40,7 +40,7 @@ export default function OfflinePage() {
       </button>
 
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 0 }}>
-        Cached routes like Dashboard, Menu, and Residents may still work.
+        A cached screen does not confirm current dietary orders or a saved action. Hold unverified trays and follow your facility's documented downtime procedure. Reconnect and check recorded outcomes before retrying.
       </p>
     </div>
   )

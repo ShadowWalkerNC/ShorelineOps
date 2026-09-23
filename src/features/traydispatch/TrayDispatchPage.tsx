@@ -224,7 +224,7 @@ export default function TrayDispatchPage() {
 
   const addTray = async () => {
     if (!selectedResident) { setError('Select a resident first'); return }
-    if (!newTicketId.trim()) { setError('Enter the tray ticket id'); return }
+    if (!newTicketId.trim()) { setError('Scan or paste the complete signed tray QR code'); return }
     setBusy(true)
     try {
       const res = await fetch(`/api/trayruns/${activeRunId}/events`, {
@@ -232,9 +232,9 @@ export default function TrayDispatchPage() {
         headers: authHeaders(),
         body: JSON.stringify({
           residentId: selectedResident.id,
-          ticketId: newTicketId.trim(),
+          rawQrPayload: newTicketId.trim(),
           event: 'assembled',
-          note: 'Manually added to dispatch run',
+          note: 'Assembly recorded using signed tray card',
         }),
       })
       const data = await res.json()
@@ -264,7 +264,7 @@ export default function TrayDispatchPage() {
       </p>
 
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 14 }}>
+        <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 14 }}>
           {error} <button onClick={() => setError(null)} style={{ marginLeft: 8, minHeight: 44, padding: '0 12px' }}>Dismiss</button>
         </div>
       )}
@@ -344,7 +344,7 @@ export default function TrayDispatchPage() {
       {checklist && checklist.lines.length === 0 && (
         <p style={{ color: '#64748b' }}>
           No trays on this run yet. Scan tray cards at the assembly station (they auto-attach),
-          or add one manually below.
+          or scan the complete signed QR code below.
         </p>
       )}
       {checklist?.lines.map((line) => {
@@ -419,7 +419,8 @@ export default function TrayDispatchPage() {
             <Plus className="w-4 h-4 text-teal-600" />
             <span>Add tray to run</span>
           </div>
-          <input value={residentQuery} onChange={(e) => searchResidents(e.target.value)}
+          <label htmlFor="tray-resident-search">Resident</label>
+          <input id="tray-resident-search" value={residentQuery} onChange={(e) => searchResidents(e.target.value)}
             placeholder="Search resident by name or room…"
             style={{ ...btnBase, width: '100%', background: '#f8fafc', border: '1px solid #cbd5e1', fontSize: 15, marginBottom: 8 }} />
           {residentResults.map((r) => (
@@ -428,13 +429,14 @@ export default function TrayDispatchPage() {
               {r.name} — Room {r.room}{r.is_npo ? ' (NPO)' : ''}
             </button>
           ))}
+          <label htmlFor="tray-signed-code">Complete signed tray QR code</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <input value={newTicketId} onChange={(e) => setNewTicketId(e.target.value)}
-              placeholder="Tray ticket id (e.g. TKT-…)"
+            <input id="tray-signed-code" value={newTicketId} onChange={(e) => setNewTicketId(e.target.value)}
+              placeholder="Scan or paste the full QR code"
               style={{ ...btnBase, background: '#f8fafc', border: '1px solid #cbd5e1', fontSize: 15, flex: '1 1 160px' }} />
             <button onClick={addTray} disabled={busy || !selectedResident}
               style={{ ...btnBase, background: '#0d9488', color: '#fff', fontSize: 15, opacity: busy || !selectedResident ? 0.6 : 1 }}>
-              Record assembled
+              Verify and record assembly
             </button>
           </div>
           {selectedResident?.is_npo && (

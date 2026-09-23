@@ -95,6 +95,9 @@ export default function ClinicalDietaryModal({ isOpen, onClose }: ClinicalDietar
         {/* Tab 1: 7-Day Cycle Balance Audit */}
         {activeTab === 'audit' && (
           <div className="space-y-6">
+            <p className="text-[11px] text-slate-400">
+              Illustrative sample values — not evaluated for the selected menu.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 flex flex-col justify-between">
                 <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">Protein Rotation</div>

@@ -36,7 +36,7 @@ const INITIAL_TASKS: ShiftTask[] = [
     title: 'HACCP 165°F Cook & Hold Temp Log',
     subtitle: 'Log internal temperature for noon batch protein prior to service',
     category: 'haccp',
-    completed: true,
+    completed: false,
     route: '/kitchen/sheet',
   },
   {
@@ -69,7 +69,7 @@ const INITIAL_TASKS: ShiftTask[] = [
     title: 'Walk-In Cooler & Freezer Temp Check',
     subtitle: 'Ensure walk-in <= 40°F, reach-in freezer <= 0°F',
     category: 'haccp',
-    completed: true,
+    completed: false,
   },
   {
     id: 't-6',
@@ -116,9 +116,12 @@ export default function MobileTasksPage() {
           </span>
         </div>
 
-        <h1 className="text-xl font-bold tracking-tight mb-2">
+        <h1 className='text-xl font-bold tracking-tight mb-2'>
           Shift Operations & Safety
         </h1>
+        <p className='text-[11px] text-teal-100/90 mb-2'>
+          Sample checklist — toggles are local and reset on reload; completion is not recorded.
+        </p>
 
         {/* Progress Bar */}
         <div className="space-y-1.5">

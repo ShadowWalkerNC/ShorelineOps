@@ -138,7 +138,7 @@ export default function TrayAssemblyScanner() {
       setScanResult(result)
       setScanHistory(prev => [{ ...result, timestamp: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)])
 
-      if (result.status === 'VALID') {
+      if (result.status === 'VALID' && !result.simulated) {
         playFeedbackSound('success')
         void recordAssembledEvent(rawQrPayload.trim())
       } else {
