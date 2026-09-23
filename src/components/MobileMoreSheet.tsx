@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/security/AuthContext'
 import { useDevice } from '@/hooks/useDevice'
@@ -33,6 +33,23 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
   const { user, logout, atLeast } = useAuth()
   const { deviceMode, setDeviceMode } = useDevice()
   const navigate = useNavigate()
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const prevFocus = useRef<Element | null>(null)
+
+  // F8: dialog behavior — focus the sheet on open, restore focus on
+  // close, and let Escape dismiss. Hooks stay above the early return.
+  useEffect(() => {
+    if (!isOpen) return
+    prevFocus.current = document.activeElement
+    closeRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      if (prevFocus.current instanceof HTMLElement) prevFocus.current.focus()
+    }
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -45,7 +62,7 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
   const roleDisplay = user?.role === 'admin'
     ? 'Director of Dietary'
     : user?.role === 'manager'
-    ? 'Registered Dietitian (RD)'
+    ? 'Manager'
     : user?.role === 'dietary'
     ? 'Dietary Specialist'
     : 'Clinical Staff'
@@ -65,9 +82,9 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
   const accessibleLinks = secondaryLinks.filter(item => !item.minRole || atLeast(item.minRole))
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div role="dialog" aria-modal="true" aria-label="More options" className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
       {/* Backdrop tap dismiss */}
-      <div className="flex-1" onClick={onClose} />
+      <div className="flex-1" onClick={onClose} aria-hidden="true" />
 
       {/* Sheet Content with Safe Area Bottom */}
       <div className="bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 shadow-2xl max-h-[85vh] flex flex-col animate-slideUp">
@@ -92,8 +109,10 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
           </div>
 
           <button
+            ref={closeRef}
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            aria-label="Close menu"
+            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             <X size={18} />
           </button>
