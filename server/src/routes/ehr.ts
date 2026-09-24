@@ -13,7 +13,7 @@ import { USDAFoodDataConnector } from '../integrations/usda'
 import { requireAuth, verifyAccessToken, API_ROLES } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
-import { pool } from '../db/pool'
+import { databaseDialect, pool } from '../db/pool'
 
 export const ehrRouter = Router()
 const pcc = new PointClickCareConnector()
@@ -96,7 +96,7 @@ interface RawBodyRequest extends Request {
 /**
  * A05: audit-logs every RD reconciliation decision (approve or reject).
  * Actor identity comes from the verified JWT claims — never the request body.
- * Best-effort: never breaks the resolve path.
+ * Required: failure rolls back the clinical change and queue resolution.
  */
 async function auditReconciliationDecision(
   req: Request,
@@ -108,9 +108,10 @@ async function auditReconciliationDecision(
     decision: string
     actorUserId: string
     actorRole: string
+    previousProfile?: unknown
+    appliedProfile?: unknown
   },
-  // F1: inside the resolve transaction pass the tx client so the audit row
-  // commits atomically; pool default preserves the old best-effort path.
+  // The audit must succeed in the same transaction as the clinical change.
   db: { query: (sql: string, params: any[]) => Promise<{ rows: any[] }> } = pool
 ): Promise<void> {
   try {
@@ -127,12 +128,15 @@ async function auditReconciliationDecision(
           changeType: opts.changeType,
           decision: opts.decision,
           actorRole: opts.actorRole,
+          previousProfile: opts.previousProfile,
+          appliedProfile: opts.appliedProfile,
           at: new Date().toISOString(),
         }),
       ]
     )
   } catch (err) {
     console.error('[EHR reconciliation] audit write failed:', (err as Error).message)
+    throw err
   }
 }
 
@@ -348,14 +352,26 @@ ehrRouter.get('/reconciliation-queue', requireAuth, async (req: Request, res: Re
   try {
     const { status = 'PENDING_TRIAGE' } = req.query
     const { rows } = await pool.query(`
-      SELECT * FROM ehr_reconciliation_queue 
-      WHERE status = $1 
-      ORDER BY created_at DESC
+      SELECT q.*, r.diet_type AS current_diet_type, r.texture AS current_texture,
+        r.is_npo AS current_is_npo, r.allergies AS current_allergies,
+        r.profile_version AS current_profile_version
+      FROM ehr_reconciliation_queue q LEFT JOIN residents r ON r.id = q.resident_id
+      WHERE q.status = $1
+      ORDER BY q.created_at DESC
     `, [String(status)])
 
     res.json({
       totalPending: rows.length,
-      items: rows,
+      items: rows.map(({ current_diet_type, current_texture, current_is_npo, current_allergies, current_profile_version, ...item }) => ({
+        ...item,
+        current_profile: current_profile_version == null ? null : {
+          diet_type: current_diet_type,
+          texture: current_texture,
+          is_npo: Boolean(current_is_npo),
+          allergies: current_allergies,
+          profile_version: Number(current_profile_version),
+        },
+      })),
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to fetch reconciliation queue' })
@@ -372,7 +388,7 @@ ehrRouter.get('/reconciliation-queue', requireAuth, async (req: Request, res: Re
 ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params
-    const { action } = req.body // 'APPROVED_BY_RD' | 'REJECTED_BY_RD'
+    const { action, expectedProfileVersion } = req.body // 'APPROVED_BY_RD' | 'REJECTED_BY_RD'
     // A05: any client-supplied `resolvedBy` is deliberately ignored — the actor
     // identity comes from the verified JWT claims (req.userId/req.userRole) only.
     const actorUserId = req.userId ?? 'unknown'
@@ -381,6 +397,9 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
 
     if (!action || !['APPROVED_BY_RD', 'REJECTED_BY_RD'].includes(action)) {
       return res.status(400).json({ error: "action must be 'APPROVED_BY_RD' or 'REJECTED_BY_RD'" })
+    }
+    if (expectedProfileVersion !== undefined && (!Number.isSafeInteger(expectedProfileVersion) || expectedProfileVersion < 1)) {
+      return res.status(400).json({ error: 'expectedProfileVersion must be a positive integer' })
     }
 
     // F1: apply-then-resolve inside one transaction. The queue row is only
@@ -393,7 +412,7 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
       started = true
 
       const { rows: [triageItem] } = await client.query(
-        'SELECT * FROM ehr_reconciliation_queue WHERE id = $1',
+        'SELECT * FROM ehr_reconciliation_queue WHERE id = $1' + (databaseDialect === 'postgres' ? ' FOR UPDATE' : ''),
         [id]
       )
 
@@ -406,10 +425,33 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
         return res.status(409).json({ error: 'Item already ' + triageItem.status + ' — reload the queue' })
       }
 
-      if (action === 'APPROVED_BY_RD' && triageItem.resident_id) {
+      let previousProfile: unknown
+      let appliedProfile: unknown
+      if (action === 'APPROVED_BY_RD') {
+        if (!triageItem.resident_id) {
+          await client.query('ROLLBACK')
+          return res.status(400).json({ error: 'Link this change to a resident before approval — left pending' })
+        }
+        const { rows: [before] } = await client.query(
+          'SELECT id, diet_type, texture, allergies, is_npo, profile_version FROM residents WHERE id = $1' + (databaseDialect === 'postgres' ? ' FOR UPDATE' : ''),
+          [triageItem.resident_id]
+        )
+        if (!before) {
+          await client.query('ROLLBACK')
+          return res.status(404).json({ error: 'Resident not found — left pending' })
+        }
+        if (expectedProfileVersion !== undefined && Number(before.profile_version) !== expectedProfileVersion) {
+          await client.query('ROLLBACK')
+          return res.status(409).json({ error: 'Resident order changed — reload and review before applying' })
+        }
+        previousProfile = before
         const payload = typeof triageItem.incoming_payload === 'string'
           ? JSON.parse(triageItem.incoming_payload)
           : triageItem.incoming_payload ?? {}
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+          await client.query('ROLLBACK')
+          return res.status(400).json({ error: 'Invalid change payload — left pending' })
+        }
 
         if (triageItem.change_type === 'DIET_ORDER') {
           if (typeof payload.dietOrder !== 'string' || !payload.dietOrder.trim()) {
@@ -435,8 +477,12 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
             [triageItem.resident_id]
           )
         } else if (triageItem.change_type === 'NEW_ALLERGEN') {
-          const incoming = Array.isArray(payload.allergies) ? payload.allergies : []
-          const fresh = incoming.map((a: unknown) => String(a ?? '').trim()).filter(Boolean)
+          const incoming: unknown[] = Array.isArray(payload.allergies) ? payload.allergies : []
+          if (incoming.some(a => typeof a !== 'string' || !a.trim() || a.length > 200)) {
+            await client.query('ROLLBACK')
+            return res.status(400).json({ error: 'Allergies must be nonempty text values — left pending' })
+          }
+          const fresh = (incoming as string[]).map(a => a.trim())
           if (fresh.length === 0) {
             await client.query('ROLLBACK')
             return res.status(400).json({ error: 'NEW_ALLERGEN payload missing allergies — left pending' })
@@ -450,8 +496,9 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
             return res.status(404).json({ error: 'Resident not found — left pending' })
           }
           const current: string[] = typeof resident.allergies === 'string'
-            ? JSON.parse(resident.allergies || '[]')
+            ? JSON.parse(resident.allergies === '{}' ? '[]' : resident.allergies || '[]')
             : (resident.allergies || [])
+          if (!Array.isArray(current) || current.some(a => typeof a !== 'string')) throw new Error('Invalid existing allergy data')
           const seen = new Set(current.map((a) => String(a).toLowerCase().trim()))
           for (const allergen of fresh) {
             if (!seen.has(allergen.toLowerCase())) {
@@ -467,6 +514,11 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
           await client.query('ROLLBACK')
           return res.status(400).json({ error: 'Unsupported change type ' + triageItem.change_type + ' — left pending' })
         }
+        const { rows: [after] } = await client.query(
+          'SELECT id, diet_type, texture, allergies, is_npo, profile_version FROM residents WHERE id = $1',
+          [triageItem.resident_id]
+        )
+        appliedProfile = after
       }
 
       await client.query(
@@ -484,6 +536,8 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
         decision: action,
         actorUserId,
         actorRole,
+        previousProfile,
+        appliedProfile,
       }, client)
 
       await client.query('COMMIT')
@@ -502,7 +556,7 @@ ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, asy
       client.release()
     }
   } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to resolve reconciliation item' })
+    res.status(err instanceof SyntaxError ? 400 : 500).json({ error: 'Could not apply the decision. Reload the queue to check its recorded state.' })
   }
 })
 

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HYDRATION_PASS_TARGET_OZ = exports.HYDRATION_PASSES = exports.KITCHEN_DEFAULT_ENTREE = exports.CANONICAL_SNACK_SLOTS = exports.CANONICAL_MEALS = exports.kitchenRouter = void 0;
+const traySafety_1 = require("../engine/traySafety");
 const express_1 = require("express");
 const pool_1 = require("../db/pool");
 const requireAuth_1 = require("../middleware/requireAuth");
@@ -525,86 +526,9 @@ exports.kitchenRouter.post('/explode-recipe-variants', async (req, res, next) =>
  */
 exports.kitchenRouter.post('/verify-tray-scan', async (req, res, next) => {
     try {
-        const { rawQrPayload, ticketId: inputTicketId, residentId: inputResidentId, profileVersion: inputProfileVersion } = req.body;
-        let ticketId = inputTicketId;
-        let residentId = inputResidentId;
-        let ticketProfileVersion = inputProfileVersion ? Number(inputProfileVersion) : 1;
-        let payloadHash = '';
-        if (rawQrPayload && typeof rawQrPayload === 'string') {
-            const parts = rawQrPayload.split(':');
-            if (parts.length >= 3) {
-                ticketId = parts[0];
-                ticketProfileVersion = parseInt(parts[1], 10);
-                payloadHash = parts[2];
-            }
-        }
-        // Lookup resident by ID or extracted ticket prefix
-        // B01: CAST(... AS TEXT) works on both PostgreSQL and SQLite (id::text is pg-only).
-        let resQuery = 'SELECT id, name, room, diet_type, texture, is_npo, npo_reason, profile_version FROM residents WHERE id = $1';
-        let queryParams = [residentId];
-        if (!residentId && ticketId && ticketId.startsWith('TKT-')) {
-            const idPrefix = ticketId.split('-')[1];
-            resQuery = 'SELECT id, name, room, diet_type, texture, is_npo, npo_reason, profile_version FROM residents WHERE CAST(id AS TEXT) LIKE $1';
-            queryParams = [`${idPrefix}%`];
-        }
-        const { rows } = await pool_1.pool.query(resQuery, queryParams);
-        if (rows.length === 0) {
-            return res.json({
-                status: 'INVALID_HASH',
-                message: 'No active resident profile found matching scanned tray card.',
-            });
-        }
-        const resident = rows[0];
-        const currentVersion = resident.profile_version || 1;
-        // 1. Strict NPO Lockout
-        if (resident.is_npo) {
-            return res.json({
-                status: 'NPO_ALERT',
-                residentName: resident.name,
-                roomBed: resident.room,
-                currentProfileVersion: currentVersion,
-                ticketProfileVersion,
-                message: `HALT: Resident is designated NPO${resident.npo_reason ? ` (${resident.npo_reason})` : ''}. All oral food service is prohibited.`,
-            });
-        }
-        // 2. Clinical Hold: Inbound EHR Diet Order Change Pending RD Triage Sign-off
-        try {
-            const { rows: triageRows } = await pool_1.pool.query(`SELECT id, conflict_reason, change_type FROM ehr_reconciliation_queue WHERE resident_id = $1 AND status = 'PENDING_TRIAGE' LIMIT 1`, [resident.id]);
-            if (triageRows.length > 0) {
-                return res.json({
-                    status: 'HOLD_TRAY_RD_SIGNOFF',
-                    residentName: resident.name,
-                    roomBed: resident.room,
-                    currentProfileVersion: currentVersion,
-                    ticketProfileVersion,
-                    triageReason: triageRows[0].conflict_reason,
-                    message: `CLINICAL HOLD: Incoming EHR ${triageRows[0].change_type} is awaiting RD reconciliation sign-off. Hold tray at station.`,
-                });
-            }
-        }
-        catch {
-            // Non-fatal if table not yet initialized in test harness
-        }
-        // 3. Superseded Stale Card Check
-        if (currentVersion > ticketProfileVersion) {
-            return res.json({
-                status: 'SUPERSEDED',
-                residentName: resident.name,
-                roomBed: resident.room,
-                currentProfileVersion: currentVersion,
-                ticketProfileVersion,
-                message: `HALT: Diet order has been updated (v${currentVersion}). This tray card (v${ticketProfileVersion}) is STALE and must be discarded.`,
-            });
-        }
-        // 4. Valid Tray Ticket
-        return res.json({
-            status: 'VALID',
-            residentName: resident.name,
-            roomBed: resident.room,
-            currentProfileVersion: currentVersion,
-            ticketProfileVersion,
-            message: `Verified: ${resident.name} (Room ${resident.room}) - ${resident.diet_type} / ${resident.texture}.`,
-        });
+        const result = await (0, traySafety_1.verifyTray)(req.body.rawQrPayload);
+        const { claims, ...publicResult } = result;
+        return res.json({ ...publicResult, ticketId: claims?.ticketId, residentId: claims?.residentId, mealSlot: claims?.mealSlot, serviceDate: claims?.serviceDate });
     }
     catch (err) {
         next(err);

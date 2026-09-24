@@ -159,7 +159,7 @@ distributorRouter.post('/catalog-upload', async (req: Request, res: Response, ne
     for (const item of itemsToProcess) {
       // Upsert vendor_item
       const { rows: existing } = await pool.query(
-        'SELECT id FROM vendor_items WHERE vendor_id = $1 AND vendor_sku = $2',
+        'SELECT * FROM vendor_items WHERE vendor_id = $1 AND vendor_sku = $2',
         [vendorId, item.sku]
       )
 
@@ -184,6 +184,15 @@ distributorRouter.post('/catalog-upload', async (req: Request, res: Response, ne
 
       // Compute normalized pack size and cost
       const norm = PackSizeNormalizer.normalize(item.packSize || '', item.unitCost)
+
+      // Refresh all reviewed mappings; changed specifications require review again.
+      const previous = existing[0]
+      const changed = previous && (previous.name !== item.name || (previous.brand || '') !== (item.brand || '') || (previous.pack_size || '') !== (item.packSize || '') || previous.uom !== (item.uom || 'case'))
+      await pool.query(
+        `UPDATE vendor_item_matches SET pack_quantity_in_standard_uom = $1, normalized_unit_cost = $2, normalized_uom = $3,
+         match_status = CASE WHEN match_status = 'confirmed' AND $4 THEN 'candidate' ELSE match_status END, updated_at = NOW() WHERE vendor_item_id = $5`,
+        [norm.totalStandardUnits, norm.normalizedUnitCost, norm.standardUom, Boolean(changed), itemId]
+      )
 
       // Run fuzzy matcher
       if (canonicalProducts.length > 0) {
@@ -254,7 +263,7 @@ distributorRouter.post('/canonical-products', async (req: Request, res: Response
 })
 
 /** POST /api/distributor/match — Confirm or reject SKU match */
-distributorRouter.post('/match', async (req: Request, res: Response, next: NextFunction) => {
+distributorRouter.post('/match', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
   const { canonicalProductId, vendorItemId, matchStatus = 'confirmed' } = req.body
   if (!canonicalProductId || !vendorItemId) return err(res, 400, 'canonicalProductId and vendorItemId required')
   if (!['confirmed', 'candidate', 'rejected'].includes(matchStatus)) {
@@ -406,11 +415,11 @@ distributorRouter.put('/orders/:id/status', requireRole('manager'), async (req: 
       [id]
     )
     if (!order) return err(res, 404, 'Purchase order not found')
-    if (order.status === 'approved') {
-      return err(res, 409, 'Approved orders change only through the purchasing approval workflow')
+    if (order.status !== 'submitted') {
+      return err(res, 409, 'Vendor status changes require a submitted purchase order')
     }
     const { rows } = await pool.query(
-      'UPDATE purchase_orders SET status = COALESCE($1, status), expected_date = COALESCE($2, expected_date), notes = COALESCE($3, notes), updated_at = NOW() WHERE id = $4 RETURNING *',
+      `UPDATE purchase_orders SET status = COALESCE($1, status), expected_date = COALESCE($2, expected_date), notes = COALESCE($3, notes), updated_at = NOW() WHERE id = $4 AND status = 'submitted' RETURNING *`,
       [status, expectedDate, notes, id]
     )
     if (!rows.length) return err(res, 404, 'Purchase order not found')

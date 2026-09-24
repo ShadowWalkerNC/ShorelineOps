@@ -38,7 +38,7 @@
  */
 import { Router, Request, Response, NextFunction } from 'express'
 import { randomUUID } from 'crypto'
-import { pool } from '../db/pool'
+import { pool, databaseDialect } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
@@ -573,6 +573,7 @@ purchasingRouter.get('/orders/:id', async (req: Request, res: Response, next: Ne
 purchasingRouter.put('/orders/:id', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { status, expectedDate, notes } = req.body
+  if (status !== undefined) return err(res, 400, 'Use the dedicated approval, submission, or cancellation workflow')
   try {
     const { rows } = await pool.query(
       `UPDATE purchase_orders SET
@@ -580,7 +581,7 @@ purchasingRouter.put('/orders/:id', requireRole('manager'), async (req: Request,
          expected_date = COALESCE($2, expected_date),
          notes = COALESCE($3, notes),
          updated_at = NOW()
-       WHERE id = $4 RETURNING *`,
+       WHERE id = $4 AND status = 'draft' RETURNING *`,
       [status, expectedDate, notes, id]
     )
     if (!rows.length) return err(res, 404, 'Order not found')
@@ -604,7 +605,7 @@ purchasingRouter.delete('/orders/:id', requireRole('admin'), async (req: Request
 
 /** Return the PO or null. */
 async function findOrder(client: { query: (sql: string, params?: any[]) => Promise<{ rows: any[] }> }, id: string) {
-  const { rows: [order] } = await client.query(`SELECT * FROM purchase_orders WHERE id = $1`, [id])
+  const { rows: [order] } = await client.query(`SELECT * FROM purchase_orders WHERE id = $1${databaseDialect === 'postgres' ? ' FOR UPDATE' : ''}`, [id])
   return order ?? null
 }
 
@@ -708,18 +709,22 @@ purchasingRouter.post('/orders/:id/submit', requireRole('staff'), async (req: Re
 purchasingRouter.post('/orders/:id/lines', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { vendorItemId, qtyOrdered, unitCost, notes = '' } = req.body
+  if (typeof qtyOrdered !== 'number' || !Number.isFinite(qtyOrdered) || qtyOrdered <= 0 || (unitCost != null && (typeof unitCost !== 'number' || !Number.isFinite(unitCost) || unitCost < 0))) return err(res, 400, 'Invalid quantity or cost')
   if (!vendorItemId || qtyOrdered == null) return err(res, 400, 'vendorItemId and qtyOrdered required')
+  const client = await pool.connect()
   try {
+    await client.query('BEGIN')
     // F5: lines change only while the parent order is a mutable draft.
-    const { rows: [order] } = await pool.query('SELECT id, status FROM purchase_orders WHERE id = $1', [id])
-    if (!order) return err(res, 404, 'Purchase order not found')
-    if (order.status !== 'draft') return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval')
-    const { rows } = await pool.query(
+    const { rows: [order] } = await client.query(`SELECT id, status FROM purchase_orders WHERE id = $1${databaseDialect === 'postgres' ? ' FOR UPDATE' : ''}`, [id])
+    if (!order) { await client.query('ROLLBACK'); return err(res, 404, 'Purchase order not found') }
+    if (order.status !== 'draft') { await client.query('ROLLBACK'); return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval') }
+    const { rows } = await client.query(
       'INSERT INTO purchase_order_lines (purchase_order_id, vendor_item_id, qty_ordered, unit_cost, notes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [id, vendorItemId, qtyOrdered, unitCost ?? null, notes]
     )
+    await client.query('COMMIT')
     res.status(201).json(rows[0])
-  } catch (e) { next(e) }
+  } catch (e) { await client.query('ROLLBACK'); next(e) } finally { client.release() }
 })
 
 /** PUT /api/purchasing/orders/:id/lines/:lineId */
@@ -732,32 +737,38 @@ purchasingRouter.put('/orders/:id/lines/:lineId', requireRole('manager'), async 
   if (unitCost !== undefined && unitCost !== null && (typeof unitCost !== 'number' || !Number.isFinite(unitCost) || unitCost < 0)) {
     return err(res, 400, 'unitCost must be a non-negative finite number')
   }
+  const client = await pool.connect()
   try {
+    await client.query('BEGIN')
     // F5: scope the line to its parent order and freeze approved content.
     // Received quantities move only through the receiving workflow.
-    const { rows: [order] } = await pool.query('SELECT id, status FROM purchase_orders WHERE id = $1', [id])
-    if (!order) return err(res, 404, 'Purchase order not found')
-    if (order.status !== 'draft') return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval')
-    const { rows } = await pool.query(
+    const { rows: [order] } = await client.query(`SELECT id, status FROM purchase_orders WHERE id = $1${databaseDialect === 'postgres' ? ' FOR UPDATE' : ''}`, [id])
+    if (!order) { await client.query('ROLLBACK'); return err(res, 404, 'Purchase order not found') }
+    if (order.status !== 'draft') { await client.query('ROLLBACK'); return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval') }
+    const { rows } = await client.query(
       'UPDATE purchase_order_lines SET qty_ordered = COALESCE($1, qty_ordered), unit_cost = COALESCE($2, unit_cost), notes = COALESCE($3, notes) WHERE id = $4 AND purchase_order_id = $5 RETURNING *',
       [qtyOrdered, unitCost, notes, lineId, id]
     )
-    if (!rows.length) return err(res, 404, 'Line not found')
+    if (!rows.length) { await client.query('ROLLBACK'); return err(res, 404, 'Line not found') }
+    await client.query('COMMIT')
     res.json(rows[0])
-  } catch (e) { next(e) }
+  } catch (e) { await client.query('ROLLBACK'); next(e) } finally { client.release() }
 })
 
 /** DELETE /api/purchasing/orders/:id/lines/:lineId */
 purchasingRouter.delete('/orders/:id/lines/:lineId', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
   const { id, lineId } = req.params
+  const client = await pool.connect()
   try {
-    const { rows: [order] } = await pool.query('SELECT id, status FROM purchase_orders WHERE id = $1', [id])
-    if (!order) return err(res, 404, 'Purchase order not found')
-    if (order.status !== 'draft') return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval')
-    const { rows } = await pool.query('DELETE FROM purchase_order_lines WHERE id = $1 AND purchase_order_id = $2 RETURNING id', [lineId, id])
-    if (!rows.length) return err(res, 404, 'Line not found')
+    await client.query('BEGIN')
+    const { rows: [order] } = await client.query(`SELECT id, status FROM purchase_orders WHERE id = $1${databaseDialect === 'postgres' ? ' FOR UPDATE' : ''}`, [id])
+    if (!order) { await client.query('ROLLBACK'); return err(res, 404, 'Purchase order not found') }
+    if (order.status !== 'draft') { await client.query('ROLLBACK'); return err(res, 409, 'Order lines change only while the order is a draft — changes require reapproval') }
+    const { rows } = await client.query('DELETE FROM purchase_order_lines WHERE id = $1 AND purchase_order_id = $2 RETURNING id', [lineId, id])
+    if (!rows.length) { await client.query('ROLLBACK'); return err(res, 404, 'Line not found') }
+    await client.query('COMMIT')
     res.json({ ok: true })
-  } catch (e) { next(e) }
+  } catch (e) { await client.query('ROLLBACK'); next(e) } finally { client.release() }
 })
 
 // ─── PO Receiving — closes the receiving loop (B10) ──────────────────────────

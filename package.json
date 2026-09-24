@@ -27,7 +27,7 @@
     "setup:local": "powershell -ExecutionPolicy Bypass -File Setup.ps1",
     "launch": "node launcher.js",
     "start": "node server/dist/index.js",
-    "test": "node server/dist/system.test.js && node --test server/dist/auth-security.test.js server/dist/seed-security.test.js",
+    "test": "node scripts/run-tests.mjs",
     "drill:failure": "node scripts/meal_service_failure_drill.js",
     "audit:operations": "node scripts/operations_consultant_audit.js",
     "preview": "vite preview",

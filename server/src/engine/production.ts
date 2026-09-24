@@ -9,7 +9,7 @@
  * - Signed QR verification tokens on individualized tray cards
  */
 
-import crypto from 'crypto'
+import { signTray } from './traySafety'
 import { UnitConversionEngine } from './units'
 import { activeCensus, activeCensusCount } from '../db/census'
 import { pool } from '../db/pool'
@@ -513,10 +513,10 @@ export class KitchenProductionEngine {
           entree = `Minced & Moist ${mealInfo.entreeName}`
         }
 
-        // Cryptographic QR Token: "ticketId:profileVersion:hash"
-        const hashPayload = `${r.id}:${profileVersion}:${r.dietType}:${r.texture}:${r.isNpo ? 'NPO' : 'ORAL'}`
-        const hash = crypto.createHash('sha256').update(hashPayload).digest('hex').slice(0, 12)
-        const qrToken = `${ticketId}:${profileVersion}:${hash}`
+        const qrToken = signTray({ ticketId, residentId: r.id, version: profileVersion,
+          diet: r.dietType, texture: r.texture, allergies: r.allergies || [],
+          mealSlot: mealInfo.mealSlot, serviceDate: mealInfo.serviceDate,
+          foods: [mealInfo.entreeName, ...mealInfo.sideNames], beverages: r.beverages || ['Water'] })
 
         return {
           ticketId,

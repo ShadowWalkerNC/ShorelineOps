@@ -13,6 +13,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PriceMatrixSolver = exports.FuzzyProductMatcher = exports.PackSizeNormalizer = void 0;
 exports.dimensionOf = dimensionOf;
+const units_1 = require("./units");
 /** Common foodservice abbreviations dictionary */
 const ABBREVIATIONS = {
     'b/s': 'boneless skinless',
@@ -47,7 +48,7 @@ const ABBREVIATIONS = {
 /**
  * Coarse unit dimension for apples-to-apples ranking. F7: mass, volume,
  * and count offers must never be price-ranked against each other.
- * Unknown dimensions stay ranked for backward compatibility, never excluded.
+ * Unknown dimensions cannot be ranked.
  */
 function dimensionOf(uom) {
     const u = (uom || '').trim().toLowerCase();
@@ -222,11 +223,30 @@ class PriceMatrixSolver {
             const productOffers = matches
                 .filter(m => m.matchStatus === 'confirmed')
                 .filter(m => m.canonicalProductId === canon.id || m.canonical_product_id === canon.id);
-            // F7: rank only offers sharing the canonical dimension.
+            // Recompute using current pack/price, then convert both quantity and cost
+            // to the canonical basis. Same dimension alone is not the same unit.
             const canonDim = dimensionOf(canon.standardUom);
-            const rankableOffers = productOffers.filter(m => {
-                const d = dimensionOf(m.normalizedUom || '');
-                return d === 'unknown' || canonDim === 'unknown' || d === canonDim;
+            const target = units_1.UnitConversionEngine.normalizeUnit(canon.standardUom);
+            const rankableOffers = productOffers.flatMap(m => {
+                const norm = PackSizeNormalizer.normalize(m.packSize, m.caseCost);
+                const sourceDim = dimensionOf(norm.standardUom);
+                if (canonDim === 'unknown' || sourceDim !== canonDim || !Number.isFinite(m.caseCost) || m.caseCost <= 0 || norm.totalStandardUnits <= 0)
+                    return [];
+                const source = units_1.UnitConversionEngine.normalizeUnit(norm.standardUom);
+                let factor = 1;
+                if (canonDim === 'count') {
+                    // Pack, case, can and each are not interchangeable counts.
+                    if (source !== target || norm.standardUom === 'case')
+                        return [];
+                }
+                else {
+                    const units = canonDim === 'mass' ? units_1.MASS_TO_GRAMS : units_1.VOLUME_TO_ML;
+                    factor = units[source] / units[target];
+                    if (!Number.isFinite(factor) || factor <= 0)
+                        return [];
+                }
+                const quantity = norm.totalStandardUnits * factor;
+                return [{ ...m, normalizedUom: canon.standardUom, packQuantityInStandardUom: quantity, normalizedUnitCost: m.caseCost / quantity }];
             });
             // Sort by lowest normalized unit cost
             const sortedOffers = [...rankableOffers].sort((a, b) => a.normalizedUnitCost - b.normalizedUnitCost);
@@ -262,7 +282,7 @@ class PriceMatrixSolver {
                 category: canon.category,
                 standardUom: canon.standardUom,
                 allergens: canon.allergens || [],
-                offers: productOffers,
+                offers: rankableOffers,
                 winningVendor,
                 runnerUpVendor,
                 costSavingsPerUnit,

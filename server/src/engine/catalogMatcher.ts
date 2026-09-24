@@ -106,7 +106,7 @@ export type UnitDimension = 'mass' | 'volume' | 'count' | 'unknown'
 /**
  * Coarse unit dimension for apples-to-apples ranking. F7: mass, volume,
  * and count offers must never be price-ranked against each other.
- * Unknown dimensions stay ranked for backward compatibility, never excluded.
+ * Unknown dimensions cannot be ranked.
  */
 export function dimensionOf(uom: string): UnitDimension {
   const u = (uom || '').trim().toLowerCase()
@@ -304,11 +304,26 @@ export class PriceMatrixSolver {
         .filter(m => m.matchStatus === 'confirmed')
         .filter(m => (m as any).canonicalProductId === canon.id || (m as any).canonical_product_id === canon.id)
 
-      // F7: rank only offers sharing the canonical dimension.
+      // Recompute using current pack/price, then convert both quantity and cost
+      // to the canonical basis. Same dimension alone is not the same unit.
       const canonDim = dimensionOf(canon.standardUom)
-      const rankableOffers = productOffers.filter(m => {
-        const d = dimensionOf(m.normalizedUom || '')
-        return d === 'unknown' || canonDim === 'unknown' || d === canonDim
+      const target = UnitConversionEngine.normalizeUnit(canon.standardUom)
+      const rankableOffers = productOffers.flatMap(m => {
+        const norm = PackSizeNormalizer.normalize(m.packSize, m.caseCost)
+        const sourceDim = dimensionOf(norm.standardUom)
+        if (canonDim === 'unknown' || sourceDim !== canonDim || !Number.isFinite(m.caseCost) || m.caseCost <= 0 || norm.totalStandardUnits <= 0) return []
+        const source = UnitConversionEngine.normalizeUnit(norm.standardUom)
+        let factor = 1
+        if (canonDim === 'count') {
+          // Pack, case, can and each are not interchangeable counts.
+          if (source !== target || norm.standardUom === 'case') return []
+        } else {
+          const units: Record<string, number> = canonDim === 'mass' ? MASS_TO_GRAMS : VOLUME_TO_ML
+          factor = units[source] / units[target]
+          if (!Number.isFinite(factor) || factor <= 0) return []
+        }
+        const quantity = norm.totalStandardUnits * factor
+        return [{ ...m, normalizedUom: canon.standardUom, packQuantityInStandardUom: quantity, normalizedUnitCost: m.caseCost / quantity }]
       })
 
       // Sort by lowest normalized unit cost
@@ -349,7 +364,7 @@ export class PriceMatrixSolver {
         category: canon.category,
         standardUom: canon.standardUom,
         allergens: canon.allergens || [],
-        offers: productOffers,
+        offers: rankableOffers,
         winningVendor,
         runnerUpVendor,
         costSavingsPerUnit,

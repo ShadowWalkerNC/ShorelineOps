@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.trayrunsRouter = void 0;
+const traySafety_1 = require("../engine/traySafety");
 const express_1 = require("express");
 const zod_1 = require("zod");
 const crypto_1 = require("crypto");
@@ -22,14 +23,13 @@ const EnsureBodySchema = zod_1.z.object({
     wing: zod_1.z.string().max(120).default(''),
 });
 const EventBodySchema = zod_1.z.object({
+    rawQrPayload: zod_1.z.string().max(8192),
     residentId: zod_1.z.string().uuid().nullable().optional(),
     ticketId: zod_1.z.string().max(64).default(''),
     event: zod_1.z.enum(trayTracking_1.TRAY_EVENTS),
     note: zod_1.z.string().max(2000).default(''),
     /** For 'remade': id of the new tray ticket; folded into the note so the link is durable. */
     newTicketId: zod_1.z.string().max(64).optional(),
-}).refine((d) => d.residentId || d.ticketId, {
-    message: 'residentId or ticketId is required',
 });
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function audit(req, action, resourceId, outcome = 'success', details) {
@@ -281,34 +281,22 @@ exports.trayrunsRouter.get('/:id/checklist', (0, requireAuth_1.requireRole)('sta
 // ── Event append (append-only: no update/delete endpoints exist) ─────────────
 // POST /api/trayruns/:id/events
 exports.trayrunsRouter.post('/:id/events', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+    const client = await pool_1.pool.connect();
+    let committed = false;
     try {
-        const run = await fetchRun(req.params.id);
+        await client.query('BEGIN');
+        const run = (await client.query('SELECT * FROM tray_runs WHERE id = $1', [req.params.id])).rows[0];
         if (!run)
             return res.status(404).json({ error: 'Tray run not found' });
         const data = EventBodySchema.parse(req.body);
-        const residentId = data.residentId ?? null;
-        const ticketId = data.ticketId ?? '';
-        // Resolve the resident (explicit id, else ticket-prefix lookup).
-        let resident = null;
-        if (residentId) {
-            const { rows } = await pool_1.pool.query('SELECT id, name, room, is_npo, npo_reason FROM residents WHERE id = $1', [residentId]);
-            if (!rows[0])
-                return res.status(404).json({ error: 'Resident not found' });
-            resident = rows[0];
-        }
-        else {
-            resident = await resolveResidentByTicket(ticketId);
-        }
-        // NPO hard-block (non-overridable): no tray may be assembled, dispatched,
-        // delivered, missed, or remade for a resident with an active NPO order.
-        if (resident?.is_npo) {
-            await audit(req, 'TRAY_EVENT_BLOCKED_NPO', run.id, 'failure', {
-                event: data.event, residentId: resident.id, npoReason: resident.npo_reason ?? '',
-            });
-            return res.status(403).json({
-                error: `NPO_ALERT: ${resident.name} is NPO${resident.npo_reason ? ` (${resident.npo_reason})` : ''}. All tray service is prohibited.`,
-            });
-        }
+        const verification = await (0, traySafety_1.verifyTray)(data.rawQrPayload, client, true);
+        if (verification.status !== 'VALID' || !verification.claims)
+            return res.status(409).json({ error: verification.message, status: verification.status });
+        const claims = verification.claims;
+        if ((data.residentId && data.residentId !== claims.residentId) || (data.ticketId && data.ticketId !== claims.ticketId) || claims.mealSlot !== run.meal_slot || claims.serviceDate !== (run.service_date instanceof Date ? run.service_date.toISOString().slice(0, 10) : String(run.service_date).slice(0, 10)))
+            return res.status(409).json({ error: 'Ticket does not match this resident, meal, or service date' });
+        const ticketId = claims.ticketId;
+        const resident = { id: claims.residentId };
         // Missed/remade events must carry a reason; remade links the new ticket.
         if ((data.event === 'missed' || data.event === 'remade') && !data.note.trim()) {
             return res.status(400).json({ error: `A reason is required for '${data.event}' events` });
@@ -316,7 +304,7 @@ exports.trayrunsRouter.post('/:id/events', (0, requireAuth_1.requireRole)('staff
         // Enforce forward-only transitions on this tray line. The grouping matches
         // the engine's lineKey (ticket-first) exactly, so a remake's new ticket
         // starts a fresh line while the old one stays terminal.
-        const existing = await fetchEvents(run.id);
+        const existing = (await client.query('SELECT * FROM tray_events WHERE run_id = $1 ORDER BY at ASC, created_at ASC', [run.id])).rows.map(toEvent);
         const newKey = (0, trayTracking_1.lineKey)({ resident_id: resident?.id ?? null, ticket_id: ticketId });
         const lineHist = existing
             .filter((e) => (0, trayTracking_1.lineKey)(e) === newKey)
@@ -339,17 +327,22 @@ exports.trayrunsRouter.post('/:id/events', (0, requireAuth_1.requireRole)('staff
         const id = (0, crypto_1.randomUUID)();
         // `at` is intentionally omitted: the server timestamp is authoritative
         // (DEFAULT NOW()), keeping events append-only with real user + timestamp.
-        await pool_1.pool.query(`INSERT INTO tray_events (id, run_id, resident_id, ticket_id, event, by, note)
+        await client.query(`INSERT INTO tray_events (id, run_id, resident_id, ticket_id, event, by, note)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`, [id, run.id, resident?.id ?? null, ticketId, data.event, req.userId ?? null, note]);
-        await audit(req, 'TRAY_EVENT', id, 'success', {
-            runId: run.id, event: data.event, residentId: resident?.id ?? null, ticketId,
-        });
-        const { rows } = await pool_1.pool.query('SELECT * FROM tray_events WHERE id = $1', [id]);
+        await client.query(`INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details) VALUES ($1, $2, $3, $4, $5, $6)`, ['TRAY_EVENT', req.userId ?? null, id, 'tray_tracking', 'success', JSON.stringify({ runId: run.id, event: data.event, residentId: resident.id, ticketId })]);
+        const { rows } = await client.query('SELECT * FROM tray_events WHERE id = $1', [id]);
         if (!rows[0])
             return res.status(500).json({ error: 'Failed to read created event' });
+        await client.query('COMMIT');
+        committed = true;
         res.status(201).json(toEvent(rows[0]));
     }
     catch (err) {
         next(err);
+    }
+    finally {
+        if (!committed)
+            await client.query('ROLLBACK');
+        client.release();
     }
 });

@@ -9,13 +9,10 @@
  * - Pan yield scaling (2" hotel pans, sheet pans) & HACCP 165°F temp monitoring
  * - Signed QR verification tokens on individualized tray cards
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KitchenProductionEngine = void 0;
 exports.iddsiFoodLevelForTexture = iddsiFoodLevelForTexture;
-const crypto_1 = __importDefault(require("crypto"));
+const traySafety_1 = require("./traySafety");
 const units_1 = require("./units");
 const census_1 = require("../db/census");
 const pool_1 = require("../db/pool");
@@ -315,10 +312,10 @@ class KitchenProductionEngine {
             else if (r.texture === 'Mechanical Soft') {
                 entree = `Minced & Moist ${mealInfo.entreeName}`;
             }
-            // Cryptographic QR Token: "ticketId:profileVersion:hash"
-            const hashPayload = `${r.id}:${profileVersion}:${r.dietType}:${r.texture}:${r.isNpo ? 'NPO' : 'ORAL'}`;
-            const hash = crypto_1.default.createHash('sha256').update(hashPayload).digest('hex').slice(0, 12);
-            const qrToken = `${ticketId}:${profileVersion}:${hash}`;
+            const qrToken = (0, traySafety_1.signTray)({ ticketId, residentId: r.id, version: profileVersion,
+                diet: r.dietType, texture: r.texture, allergies: r.allergies || [],
+                mealSlot: mealInfo.mealSlot, serviceDate: mealInfo.serviceDate,
+                foods: [mealInfo.entreeName, ...mealInfo.sideNames], beverages: r.beverages || ['Water'] });
             return {
                 ticketId,
                 residentId: r.id,

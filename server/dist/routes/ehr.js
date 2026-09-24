@@ -71,11 +71,10 @@ async function auditEhrSecurityEvent(req, action, reason, extra) {
 /**
  * A05: audit-logs every RD reconciliation decision (approve or reject).
  * Actor identity comes from the verified JWT claims — never the request body.
- * Best-effort: never breaks the resolve path.
+ * Required: failure rolls back the clinical change and queue resolution.
  */
 async function auditReconciliationDecision(req, opts, 
-// F1: inside the resolve transaction pass the tx client so the audit row
-// commits atomically; pool default preserves the old best-effort path.
+// The audit must succeed in the same transaction as the clinical change.
 db = pool_1.pool) {
     try {
         await db.query(`INSERT INTO audit_log (action, user_id, resource_type, outcome, ip_address, details)
@@ -89,12 +88,15 @@ db = pool_1.pool) {
                 changeType: opts.changeType,
                 decision: opts.decision,
                 actorRole: opts.actorRole,
+                previousProfile: opts.previousProfile,
+                appliedProfile: opts.appliedProfile,
                 at: new Date().toISOString(),
             }),
         ]);
     }
     catch (err) {
         console.error('[EHR reconciliation] audit write failed:', err.message);
+        throw err;
     }
 }
 /**
@@ -289,13 +291,25 @@ exports.ehrRouter.get('/reconciliation-queue', requireAuth_1.requireAuth, async 
     try {
         const { status = 'PENDING_TRIAGE' } = req.query;
         const { rows } = await pool_1.pool.query(`
-      SELECT * FROM ehr_reconciliation_queue 
-      WHERE status = $1 
-      ORDER BY created_at DESC
+      SELECT q.*, r.diet_type AS current_diet_type, r.texture AS current_texture,
+        r.is_npo AS current_is_npo, r.allergies AS current_allergies,
+        r.profile_version AS current_profile_version
+      FROM ehr_reconciliation_queue q LEFT JOIN residents r ON r.id = q.resident_id
+      WHERE q.status = $1
+      ORDER BY q.created_at DESC
     `, [String(status)]);
         res.json({
             totalPending: rows.length,
-            items: rows,
+            items: rows.map(({ current_diet_type, current_texture, current_is_npo, current_allergies, current_profile_version, ...item }) => ({
+                ...item,
+                current_profile: current_profile_version == null ? null : {
+                    diet_type: current_diet_type,
+                    texture: current_texture,
+                    is_npo: Boolean(current_is_npo),
+                    allergies: current_allergies,
+                    profile_version: Number(current_profile_version),
+                },
+            })),
         });
     }
     catch (err) {
@@ -312,7 +326,7 @@ exports.ehrRouter.get('/reconciliation-queue', requireAuth_1.requireAuth, async 
 exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { action } = req.body; // 'APPROVED_BY_RD' | 'REJECTED_BY_RD'
+        const { action, expectedProfileVersion } = req.body; // 'APPROVED_BY_RD' | 'REJECTED_BY_RD'
         // A05: any client-supplied `resolvedBy` is deliberately ignored — the actor
         // identity comes from the verified JWT claims (req.userId/req.userRole) only.
         const actorUserId = req.userId ?? 'unknown';
@@ -320,6 +334,9 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
         const resolvedBy = actorUserId;
         if (!action || !['APPROVED_BY_RD', 'REJECTED_BY_RD'].includes(action)) {
             return res.status(400).json({ error: "action must be 'APPROVED_BY_RD' or 'REJECTED_BY_RD'" });
+        }
+        if (expectedProfileVersion !== undefined && (!Number.isSafeInteger(expectedProfileVersion) || expectedProfileVersion < 1)) {
+            return res.status(400).json({ error: 'expectedProfileVersion must be a positive integer' });
         }
         // F1: apply-then-resolve inside one transaction. The queue row is only
         // marked after the resident change commits; malformed or unsupported
@@ -329,7 +346,7 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
         try {
             await client.query('BEGIN');
             started = true;
-            const { rows: [triageItem] } = await client.query('SELECT * FROM ehr_reconciliation_queue WHERE id = $1', [id]);
+            const { rows: [triageItem] } = await client.query('SELECT * FROM ehr_reconciliation_queue WHERE id = $1' + (pool_1.databaseDialect === 'postgres' ? ' FOR UPDATE' : ''), [id]);
             if (!triageItem) {
                 await client.query('ROLLBACK');
                 return res.status(404).json({ error: 'Triage item not found' });
@@ -338,10 +355,30 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
                 await client.query('ROLLBACK');
                 return res.status(409).json({ error: 'Item already ' + triageItem.status + ' — reload the queue' });
             }
-            if (action === 'APPROVED_BY_RD' && triageItem.resident_id) {
+            let previousProfile;
+            let appliedProfile;
+            if (action === 'APPROVED_BY_RD') {
+                if (!triageItem.resident_id) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Link this change to a resident before approval — left pending' });
+                }
+                const { rows: [before] } = await client.query('SELECT id, diet_type, texture, allergies, is_npo, profile_version FROM residents WHERE id = $1' + (pool_1.databaseDialect === 'postgres' ? ' FOR UPDATE' : ''), [triageItem.resident_id]);
+                if (!before) {
+                    await client.query('ROLLBACK');
+                    return res.status(404).json({ error: 'Resident not found — left pending' });
+                }
+                if (expectedProfileVersion !== undefined && Number(before.profile_version) !== expectedProfileVersion) {
+                    await client.query('ROLLBACK');
+                    return res.status(409).json({ error: 'Resident order changed — reload and review before applying' });
+                }
+                previousProfile = before;
                 const payload = typeof triageItem.incoming_payload === 'string'
                     ? JSON.parse(triageItem.incoming_payload)
                     : triageItem.incoming_payload ?? {};
+                if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Invalid change payload — left pending' });
+                }
                 if (triageItem.change_type === 'DIET_ORDER') {
                     if (typeof payload.dietOrder !== 'string' || !payload.dietOrder.trim()) {
                         await client.query('ROLLBACK');
@@ -361,7 +398,11 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
                 }
                 else if (triageItem.change_type === 'NEW_ALLERGEN') {
                     const incoming = Array.isArray(payload.allergies) ? payload.allergies : [];
-                    const fresh = incoming.map((a) => String(a ?? '').trim()).filter(Boolean);
+                    if (incoming.some(a => typeof a !== 'string' || !a.trim() || a.length > 200)) {
+                        await client.query('ROLLBACK');
+                        return res.status(400).json({ error: 'Allergies must be nonempty text values — left pending' });
+                    }
+                    const fresh = incoming.map(a => a.trim());
                     if (fresh.length === 0) {
                         await client.query('ROLLBACK');
                         return res.status(400).json({ error: 'NEW_ALLERGEN payload missing allergies — left pending' });
@@ -372,8 +413,10 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
                         return res.status(404).json({ error: 'Resident not found — left pending' });
                     }
                     const current = typeof resident.allergies === 'string'
-                        ? JSON.parse(resident.allergies || '[]')
+                        ? JSON.parse(resident.allergies === '{}' ? '[]' : resident.allergies || '[]')
                         : (resident.allergies || []);
+                    if (!Array.isArray(current) || current.some(a => typeof a !== 'string'))
+                        throw new Error('Invalid existing allergy data');
                     const seen = new Set(current.map((a) => String(a).toLowerCase().trim()));
                     for (const allergen of fresh) {
                         if (!seen.has(allergen.toLowerCase())) {
@@ -387,6 +430,8 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
                     await client.query('ROLLBACK');
                     return res.status(400).json({ error: 'Unsupported change type ' + triageItem.change_type + ' — left pending' });
                 }
+                const { rows: [after] } = await client.query('SELECT id, diet_type, texture, allergies, is_npo, profile_version FROM residents WHERE id = $1', [triageItem.resident_id]);
+                appliedProfile = after;
             }
             await client.query('UPDATE ehr_reconciliation_queue SET status = $1, resolved_by = $2, resolved_at = NOW() WHERE id = $3', [action, resolvedBy, id]);
             // A05: audit-log every decision with the JWT-derived actor identity —
@@ -399,6 +444,8 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
                 decision: action,
                 actorUserId,
                 actorRole,
+                previousProfile,
+                appliedProfile,
             }, client);
             await client.query('COMMIT');
             res.json({
@@ -422,7 +469,7 @@ exports.ehrRouter.post('/reconciliation-queue/:id/resolve', requireDietitianOrAd
         }
     }
     catch (err) {
-        res.status(500).json({ error: err.message || 'Failed to resolve reconciliation item' });
+        res.status(err instanceof SyntaxError ? 400 : 500).json({ error: 'Could not apply the decision. Reload the queue to check its recorded state.' });
     }
 });
 // B13: POST /api/ehr/simulate-inbound-triage was CUT (mock/simulated endpoint).
