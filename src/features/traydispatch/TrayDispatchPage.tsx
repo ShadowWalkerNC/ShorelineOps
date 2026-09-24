@@ -187,12 +187,15 @@ export default function TrayDispatchPage() {
       newTicket = ticket.trim()
     }
     if (event === 'dispatched' && !window.confirm(`Dispatch tray for ${line.residentName ?? line.ticketId} (Room ${line.room ?? '—'})?`)) return
+    const rawQrPayload = window.prompt('Scan or paste the complete signed QR code from this tray card:')
+    if (!rawQrPayload?.trim()) return
     setBusy(true)
     try {
       const res = await fetch(`/api/trayruns/${activeRunId}/events`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
+          rawQrPayload: rawQrPayload.trim(),
           residentId: line.residentId,
           ticketId: line.ticketId,
           event,

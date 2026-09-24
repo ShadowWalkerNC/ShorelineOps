@@ -1,5 +1,15 @@
 # TODO — ShorelineOps Roadmap & Active Work
 
+## Decision workflow follow-up — 2026-09-24
+
+- [x] Complete atomic EHR decisions, signed tray event checks, purchasing approval boundaries, current unit-safe catalog comparison, and honest decision UI.
+- [x] Verify local builds, TypeScript, 228 system checks and 28 additional regression tests.
+- [ ] Validate PostgreSQL concurrency and deployment-specific integrations before release.
+- [ ] Validate keyboard, screen-reader, mobile-device and scanner behavior.
+- [ ] Establish canonical clinical recipe/allergen and restricted-diet evidence before expanding tray eligibility.
+
+See [the decision workflow handoff](docs/DECISION_WORKFLOW_HANDOFF.md) for scope and remaining acceptance gates. Historical milestones below are not a production certification.
+
 ## ✅ V1 Milestones (Completed & Verified)
 - [x] **Resident Manager**: Complete profile, diet orders (NAS, NCS, Renal), IDDSI texture requirements, allergies, beverage flags, supplements, and dining room table assignments.
 - [x] **Weekly Menu Planner**: 4-week cycle menus, Choice A/B meal slots, active week flagging, and printable menu views.

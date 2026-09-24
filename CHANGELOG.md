@@ -2,6 +2,14 @@
 
 All notable changes to the ShorelineOps platform are documented in this file.
 
+## Unreleased — 2026-09-24
+
+- Complete EHR atomic audit/version checks and honest reconciliation feedback.
+- Require signed tray cards and current safety checks when recording tray events.
+- Close purchase status bypasses, freeze approved lines, and compare current confirmed offers in canonical units.
+- Replace illustrative clinical results and shift completion with explicit unavailable states; improve shared form labels and dialogs.
+- Build and run isolated regression tests through `npm test`. See [validation and limitations](docs/DECISION_WORKFLOW_HANDOFF.md).
+
 ---
 
 ## [v7.0.0] — 2026-09-19

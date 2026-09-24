@@ -13,20 +13,25 @@ type Props = {
 type FieldControlProps = {
   id?: string
   'aria-describedby'?: string
+  'aria-invalid'?: boolean
+  'aria-required'?: boolean
 }
 
 export default function FormField({ label, required, error, children, hint, id: idProp }: Props) {
   // F8: associate the label with its control so screen readers announce
   // it. The id is generated when the caller does not supply one.
   const autoId = useId()
-  const fieldId = idProp || autoId
+  const child = isValidElement<FieldControlProps>(children) ? children : null
+  const fieldId = idProp || child?.props.id || autoId
   const hintId = hint && !error ? `${fieldId}-hint` : undefined
   const errorId = error ? `${fieldId}-error` : undefined
-  const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
+  const describedBy = [child?.props['aria-describedby'], hintId, errorId].filter(Boolean).join(' ') || undefined
   const control = isValidElement(children)
     ? cloneElement(children as ReactElement<FieldControlProps>, {
-        id: (children as ReactElement<FieldControlProps>).props.id ?? fieldId,
+        id: fieldId,
         'aria-describedby': describedBy,
+        'aria-invalid': error ? true : child?.props['aria-invalid'],
+        'aria-required': required || child?.props['aria-required'],
       })
     : children
   return (

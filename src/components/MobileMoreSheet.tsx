@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/security/AuthContext'
 import { useDevice } from '@/hooks/useDevice'
@@ -33,39 +34,13 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
   const { user, logout, atLeast } = useAuth()
   const { deviceMode, setDeviceMode } = useDevice()
   const navigate = useNavigate()
-  const sheetRef = useRef<HTMLDivElement>(null)
-  const closeRef = useRef<HTMLButtonElement>(null)
-  const prevFocus = useRef<Element | null>(null)
-
-  // F8: dialog behavior — focus the sheet on open, restore focus on
-  // close, and let Escape dismiss. Hooks stay above the early return.
-  useEffect(() => {
-    if (!isOpen) return
-    prevFocus.current = document.activeElement
-    closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      if (prevFocus.current instanceof HTMLElement) prevFocus.current.focus()
-    }
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
   const handleLogout = () => {
     logout()
     onClose()
     navigate('/login')
   }
 
-  const roleDisplay = user?.role === 'admin'
-    ? 'Director of Dietary'
-    : user?.role === 'manager'
-    ? 'Manager'
-    : user?.role === 'dietary'
-    ? 'Dietary Specialist'
-    : 'Clinical Staff'
+  const roleDisplay = user?.role ? `${user.role.charAt(0).toUpperCase()}${user.role.slice(1)}` : 'Signed out'
 
   const secondaryLinks = [
     { label: 'Inventory & Par Levels', to: '/inventory', icon: Boxes, color: 'text-amber-500', minRole: undefined },
@@ -82,12 +57,9 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
   const accessibleLinks = secondaryLinks.filter(item => !item.minRole || atLeast(item.minRole))
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="More options" className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
-      {/* Backdrop tap dismiss */}
-      <div className="flex-1" onClick={onClose} aria-hidden="true" />
-
-      {/* Sheet Content with Safe Area Bottom */}
-      <div className="bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 shadow-2xl max-h-[85vh] flex flex-col animate-slideUp">
+    <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent aria-describedby={undefined} className="top-auto bottom-0 translate-y-0 gap-0 max-w-2xl rounded-b-none rounded-t-3xl max-h-[85dvh] flex flex-col p-5">
+        <DialogTitle className="sr-only">More options</DialogTitle>
         {/* Grab Handle */}
         <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 shrink-0" />
 
@@ -99,7 +71,7 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
             </div>
             <div>
               <div className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                {user?.name || 'Clinician'}
+                {user?.name || 'User'}
               </div>
               <div className="text-[11px] text-teal-600 dark:text-teal-400 font-medium flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" />
@@ -108,14 +80,6 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
             </div>
           </div>
 
-          <button
-            ref={closeRef}
-            onClick={onClose}
-            aria-label="Close menu"
-            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            <X size={18} />
-          </button>
         </div>
 
         {/* Scrollable Nav Grid */}
@@ -164,7 +128,7 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
               <div className="grid grid-cols-4 gap-1.5 text-[11px] font-semibold">
                 <button
                   onClick={() => setDeviceMode('auto')}
-                  className={`py-2 px-1.5 rounded-xl border text-center transition-all ${
+                  className={`min-h-12 py-2 px-1.5 rounded-xl border text-center transition-all ${
                     deviceMode === 'auto'
                       ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
                       : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -174,7 +138,7 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
                 </button>
                 <button
                   onClick={() => setDeviceMode('mobile')}
-                  className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
+                  className={`min-h-12 py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
                     deviceMode === 'mobile'
                       ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
                       : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -185,7 +149,7 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
                 </button>
                 <button
                   onClick={() => setDeviceMode('tablet')}
-                  className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
+                  className={`min-h-12 py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
                     deviceMode === 'tablet'
                       ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
                       : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -196,7 +160,7 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
                 </button>
                 <button
                   onClick={() => setDeviceMode('desktop')}
-                  className={`py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
+                  className={`min-h-12 py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition-all ${
                     deviceMode === 'desktop'
                       ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
                       : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -210,17 +174,17 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
           )}
         </div>
 
-        {/* Sheet Footer: End Clinician Session */}
+        {/* Sheet Footer: Sign out */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 pb-[env(safe-area-inset-bottom)] shrink-0">
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold transition-colors"
           >
             <LogOut size={15} />
-            <span>End Clinician Session</span>
+            <span>Sign out</span>
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

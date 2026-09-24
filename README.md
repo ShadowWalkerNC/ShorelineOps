@@ -6,8 +6,8 @@
 
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
 [![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#platform-interface-tour)
-[![Security: HIPAA Aligned](https://img.shields.io/badge/Security-HIPAA%20Aligned-emerald.svg)](SECURITY.md)
-[![Tests: 207/207 Passing](https://img.shields.io/badge/Tests-207%2F207%20Passing%20(100%25)-brightgreen.svg)](#4-run-automated-test-suite)
+[![Security: Deployment Responsibilities](https://img.shields.io/badge/Security-Deployment%20Responsibilities-blue.svg)](docs/CLAIM_EVIDENCE.md)
+[![Tests: Local Regression Suite](https://img.shields.io/badge/Tests-Local%20Regression%20Suite-brightgreen.svg)](#4-run-automated-test-suite)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7.svg?logo=render&logoColor=white)](docs/RenderDeployment.md)
 
 **Engineered by a healthcare executive chef, not a venture fund.**  
@@ -251,14 +251,16 @@ npm run dev:all
 ```bash
 npm test
 ```
-All **207 system integration, clinical dietary, safety, and SDK tests** pass with 100% success rate across all 31 operational domains.
+`npm test` compiles the server and runs the system and regression suites against disposable SQLite databases, without inheriting deployment database credentials. On September 24, 2026: **228 system checks and 28 additional tests passed**. These local results do not establish PostgreSQL concurrency, device accessibility, external integration, or production readiness. See the [decision workflow handoff](docs/DECISION_WORKFLOW_HANDOFF.md).
 
 ### 5. Operational Safety & Deployment Boundaries
 - **Atomic EHR reconciliation**: approving a triage item applies the resident change (diet, texture, NPO, or new allergen) and marks the queue item resolved in one transaction. Malformed or unsupported payloads stay `PENDING_TRIAGE` — failed actions never display success.
-- **Honest failure states**: unreachable EHR, offline verification, and unevaluated menu audits render pending/unknown states. Offline tray-scan simulations are labeled and never record live assembly.
+- **Honest failure states**: unreachable EHR, offline verification, and unevaluated menu audits render pending/unknown states. A scanner error cannot create simulated success or record assembly.
+- **Signed tray cards**: reprint legacy cards. Assembly and later events require the complete signed QR code, current resident version, matching meal/date, and successful safety checks at the write boundary. Missing recipes, unresolved EHR changes, and unsupported allergy/restricted-diet evidence hold the tray. No clinical override is provided.
 - **Draft-bound purchasing**: order lines change only while the parent order is a `draft` and only through manager approval; vendor status updates cannot approve orders. Received quantities move only through the receiving workflow.
 - **One facility per database**: set `SHORELINE_FACILITY_ID` (see `.env.example`). Credentials or headers from another facility are rejected with `403`; facility switching is disabled.
-- **Sample data is labeled**: demo checklists and illustrative audit values are marked as samples and start uncompleted.
+- **No invented clinical results**: menu review displays “Not evaluated”; shift operations links to operational records without fabricated assignments or completion.
+- **Reviewed catalog comparisons**: only confirmed matches with current prices and compatible canonical units enter the price matrix. Specification changes require review again; name similarity never establishes clinical equivalence.
 
 ---
 
