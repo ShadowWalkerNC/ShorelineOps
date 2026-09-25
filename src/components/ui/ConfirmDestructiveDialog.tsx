@@ -11,14 +11,18 @@ import { Button } from './button'
 import { AlertTriangle, Trash2 } from 'lucide-react'
 
 export interface ConfirmDestructiveDialogProps {
-  open: boolean
+  open?: boolean
+  isOpen?: boolean
   onClose: () => void
   onConfirm: () => Promise<void> | void
   title?: string
-  resourceType: string
+  resourceType?: string
+  itemType?: string
   itemName: string
+  impactSummary?: string
   consequences?: string[]
   requireNameConfirmation?: boolean
+  destructiveActionLabel?: string
 }
 
 /**
@@ -26,16 +30,22 @@ export interface ConfirmDestructiveDialogProps {
  * Clearly articulates what is being deleted, what data is affected,
  * and asks for conscious user verification instead of a vague generic prompt.
  */
-export default function ConfirmDestructiveDialog({
+export function ConfirmDestructiveDialog({
   open,
+  isOpen,
   onClose,
   onConfirm,
   title,
   resourceType,
+  itemType,
   itemName,
+  impactSummary,
   consequences = [],
   requireNameConfirmation = false,
+  destructiveActionLabel,
 }: ConfirmDestructiveDialogProps) {
+  const isModalOpen = open ?? isOpen ?? false
+  const effectiveResourceType = resourceType || itemType || 'Item'
   const [typedName, setTypedName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -54,7 +64,7 @@ export default function ConfirmDestructiveDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen && !isSubmitting) onClose() }}>
+    <Dialog open={isModalOpen} onOpenChange={(openVal) => { if (!openVal && !isSubmitting) onClose() }}>
       <DialogContent className="sm:max-w-[460px] p-6 rounded-3xl border border-rose-200/80 dark:border-rose-900/60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl shadow-2xl">
         <DialogHeader className="flex flex-col items-center sm:items-start text-center sm:text-left gap-2">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200/80 dark:border-rose-900/80 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 shadow-xs">
@@ -62,7 +72,7 @@ export default function ConfirmDestructiveDialog({
           </div>
           <div>
             <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white font-sans">
-              {title || `Delete ${resourceType}?`}
+              {title || `Delete ${effectiveResourceType}?`}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               This action cannot be undone. Please confirm your intention.
@@ -72,11 +82,17 @@ export default function ConfirmDestructiveDialog({
 
         <div className="space-y-4 my-2">
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-xs">
-            <div className="text-slate-500 dark:text-slate-400 font-medium">Selected {resourceType}:</div>
+            <div className="text-slate-500 dark:text-slate-400 font-medium">Selected {effectiveResourceType}:</div>
             <div className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-0.5 truncate">
               {itemName}
             </div>
           </div>
+
+          {impactSummary && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-900 dark:text-rose-200 leading-relaxed">
+              {impactSummary}
+            </div>
+          )}
 
           {consequences.length > 0 && (
             <div className="space-y-2">
@@ -123,10 +139,12 @@ export default function ConfirmDestructiveDialog({
             className="w-full sm:w-auto h-11 px-5 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 shadow-md shadow-rose-600/20"
           >
             <Trash2 className="w-4 h-4" />
-            <span>{isSubmitting ? 'Deleting...' : `Confirm Delete`}</span>
+            <span>{isSubmitting ? 'Deleting...' : (destructiveActionLabel || `Confirm Delete`)}</span>
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
+
+export default ConfirmDestructiveDialog

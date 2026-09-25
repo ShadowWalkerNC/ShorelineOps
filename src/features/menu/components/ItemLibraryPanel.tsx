@@ -8,6 +8,7 @@ import { ITEM_MEAL_CATEGORIES, DIETARY_TAGS } from '@/types/menu'
 import type { ItemMealCategory, DietaryTag } from '@/types/menu'
 import { useRecipesStore } from '@/state/recipesStore'
 import MenuItemForm from './MenuItemForm'
+import { ConfirmDestructiveDialog } from '@/components/ui/ConfirmDestructiveDialog'
 
 type Props = {
   items: MenuItem[]
@@ -149,6 +150,7 @@ export default function ItemLibraryPanel({ items, onAdd, onUpdate, onDelete, onC
   const [dietFilter,  setDietFilter]  = useState<DietaryTag[]>([])
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
   const [adding,      setAdding]      = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null)
 
   function toggleDietFilter(tag: DietaryTag) {
     setDietFilter(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
@@ -172,9 +174,14 @@ export default function ItemLibraryPanel({ items, onAdd, onUpdate, onDelete, onC
     })
   }, [items, tab, search, dietFilter])
 
-  async function handleDelete(item: MenuItem) {
-    if (!window.confirm(`Delete "${item.name}" from the library?`)) return
-    await onDelete(item.id)
+  function handleDelete(item: MenuItem) {
+    setItemToDelete(item)
+  }
+
+  async function confirmDeleteItem() {
+    if (!itemToDelete) return
+    await onDelete(itemToDelete.id)
+    setItemToDelete(null)
   }
 
   function recipeNameFor(recipeId?: string) {
@@ -291,6 +298,21 @@ export default function ItemLibraryPanel({ items, onAdd, onUpdate, onDelete, onC
           ))
         )}
       </div>
+      {/* Confirm Delete Menu Item Dialog */}
+      <ConfirmDestructiveDialog
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={confirmDeleteItem}
+        title="Delete Menu Item"
+        itemName={itemToDelete?.name || 'Selected Item'}
+        itemType="Menu Item"
+        impactSummary="Removing this item from the central library will prevent it from being assigned to future cycle menus and may affect production sheets referencing it."
+        consequences={[
+          'The item will no longer appear in the Item Library or cycle picker.',
+          'Existing scheduled menus containing this item will retain their snapshot but cannot link back to this master item.',
+        ]}
+        destructiveActionLabel="Delete Menu Item"
+      />
     </div>
   )
 }

@@ -186,7 +186,6 @@ export default function TrayDispatchPage() {
       note = reason.trim()
       newTicket = ticket.trim()
     }
-    if (event === 'dispatched' && !window.confirm(`Dispatch tray for ${line.residentName ?? line.ticketId} (Room ${line.room ?? '—'})?`)) return
     const rawQrPayload = window.prompt('Scan or paste the complete signed QR code from this tray card:')
     if (!rawQrPayload?.trim()) return
     setBusy(true)

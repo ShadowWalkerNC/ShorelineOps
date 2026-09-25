@@ -29,6 +29,7 @@ import {
 
 import SystemHealthDiagnostics from '@/features/admin/components/SystemHealthDiagnostics'
 import BackupRecoveryPanel from '@/features/admin/components/BackupRecoveryPanel'
+import { ConfirmDestructiveDialog } from '@/components/ui/ConfirmDestructiveDialog'
 
 type SettingsTab = 'facility' | 'wings' | 'clinical' | 'integrations' | 'security' | 'health-backup'
 
@@ -140,11 +141,17 @@ export default function SettingsPage() {
     }
   }
 
-  const handleReset = async () => {
-    if (!window.confirm('Reset all facility settings to factory defaults? This applies to every device.')) return
+  const [showResetDialog, setShowResetDialog] = useState(false)
+
+  const handleReset = () => {
+    setShowResetDialog(true)
+  }
+
+  const confirmReset = async () => {
     try {
       await resetDefaults()
       showToast('Settings reset to defaults and synced to all devices.')
+      setShowResetDialog(false)
     } catch (err: any) {
       showToast(err.message || 'Failed to reset settings.', 'error')
     }
@@ -742,6 +749,23 @@ export default function SettingsPage() {
           {isSaving ? 'Saving…' : 'Save All Settings'}
         </AppleButton>
       </div>
+
+      {/* Confirm Reset Facility Defaults Dialog */}
+      <ConfirmDestructiveDialog
+        isOpen={showResetDialog}
+        onClose={() => setShowResetDialog(false)}
+        onConfirm={confirmReset}
+        title="Reset Facility Settings to Factory Defaults"
+        itemName="Facility Configuration"
+        itemType="System Settings"
+        impactSummary="Resetting will restore all facility settings, wings, dining rooms, meal times, and dietary thresholds across all connected devices to their initial factory default state."
+        consequences={[
+          'Custom wing and dining room configurations will be restored to defaults.',
+          'Meal schedule times and service windows will be reset.',
+          'This configuration change will propagate immediately to all active client tablets and kiosks.',
+        ]}
+        destructiveActionLabel="Reset to Factory Defaults"
+      />
     </div>
   )
 }

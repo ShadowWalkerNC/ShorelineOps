@@ -5,6 +5,7 @@ import WeekGrid from './components/WeekGrid'
 import ItemLibraryPanel from './components/ItemLibraryPanel'
 import DayEditorModal from './components/DayEditorModal'
 import ClinicalDietaryModal from './components/ClinicalDietaryModal'
+import { ConfirmDestructiveDialog } from '@/components/ui/ConfirmDestructiveDialog'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import type { DayOfWeek, MealSlot, MealEntry, MenuItem } from '@/types'
 import { DAYS_OF_WEEK, MEAL_GROUPS, MEAL_SLOTS } from '@/types/menu'
@@ -181,6 +182,7 @@ export default function MenuPage() {
   const [editDay, setEditDay] = useState<DayOfWeek | null>(null)
   const [drawerMenuItem, setDrawerMenuItem] = useState<MenuItem | null>(null)
   const [showClinicalModal, setShowClinicalModal] = useState(false)
+  const [showDeleteWeekDialog, setShowDeleteWeekDialog] = useState(false)
 
   useEffect(() => { fetchWeeks(); fetchItems(); fetchRecipes() }, []) // eslint-disable-line
 
@@ -222,9 +224,15 @@ export default function MenuPage() {
     } finally { setWeekSaving(false) }
   }, [copyingFrom, copyName, weeks, addWeek, updateWeek])
 
-  const handleDeleteWeek = useCallback(async () => {
-    if (!selectedWeek || !window.confirm(`Delete "${selectedWeek.name}"? This cannot be undone.`)) return
+  const handleDeleteWeek = useCallback(() => {
+    if (!selectedWeek) return
+    setShowDeleteWeekDialog(true)
+  }, [selectedWeek])
+
+  const confirmDeleteWeek = useCallback(async () => {
+    if (!selectedWeek) return
     await deleteWeek(selectedWeek.id)
+    setShowDeleteWeekDialog(false)
   }, [selectedWeek, deleteWeek])
 
   const handleSetActive = useCallback(async () => {
@@ -627,6 +635,23 @@ export default function MenuPage() {
       <ClinicalDietaryModal
         isOpen={showClinicalModal}
         onClose={() => setShowClinicalModal(false)}
+      />
+
+      {/* Confirm Delete Cycle Menu Week Dialog */}
+      <ConfirmDestructiveDialog
+        isOpen={showDeleteWeekDialog}
+        onClose={() => setShowDeleteWeekDialog(false)}
+        onConfirm={confirmDeleteWeek}
+        title="Delete Cycle Menu Week"
+        itemName={selectedWeek?.name || 'Selected Week'}
+        itemType="Cycle Menu Week"
+        impactSummary="Deleting this cycle week will permanently remove all planned breakfast, lunch, and supper meal configurations and associated recipes for all 7 days."
+        consequences={[
+          'All day and meal slot plans assigned to this week will be permanently erased.',
+          'Any active production batch sheets referencing this week must be reassigned.',
+          'Cycle history and food cost metrics tied to this specific week will be disconnected.',
+        ]}
+        destructiveActionLabel="Delete Cycle Week"
       />
     </div>
   )
