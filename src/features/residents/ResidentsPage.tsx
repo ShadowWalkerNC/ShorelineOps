@@ -3,6 +3,7 @@ import { useResidentsStore } from '@/state/residentsStore'
 import ResidentCardList from './components/ResidentCardList'
 import ResidentFormModal from './components/ResidentFormModal'
 import CensusImportModal from './components/CensusImportModal'
+import ConfirmDestructiveDialog from '@/components/ui/ConfirmDestructiveDialog'
 import EhrReconciliationQueue from './EhrReconciliationQueue'
 import DietReviewFlags from './DietReviewFlags'
 import FeatureGate from '@/components/FeatureGate'
@@ -58,6 +59,7 @@ export default function ResidentsPage() {
 
   const [editing, setEditing] = useState<Resident | null | undefined>(undefined)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [deletingResident, setDeletingResident] = useState<Resident | null>(null)
   const isModalOpen = editing !== undefined
 
   const handleSave = useCallback(
@@ -70,13 +72,11 @@ export default function ResidentsPage() {
 
   const handleEdit = useCallback((r: Resident) => setEditing(r), [])
   const handleDelete = useCallback(
-    async (id: string) => {
+    (id: string) => {
       const r = residents.find(x => x.id === id)
-      if (!r) return
-      if (!window.confirm(`Delete resident record for ${r.name}? This cannot be undone.`)) return
-      await remove(id)
+      if (r) setDeletingResident(r)
     },
-    [residents, remove]
+    [residents]
   )
 
   // Clinical Census Metrics
@@ -328,6 +328,26 @@ export default function ResidentsPage() {
         onClose={() => setShowImportModal(false)}
         onSuccess={() => fetchRef.current(debouncedQuery || undefined)}
       />
+      {/* Explicit Destructive Action Confirmation Dialog */}
+      {deletingResident && (
+        <ConfirmDestructiveDialog
+          open={Boolean(deletingResident)}
+          onClose={() => setDeletingResident(null)}
+          onConfirm={async () => {
+            if (deletingResident) {
+              await remove(deletingResident.id)
+              setDeletingResident(null)
+            }
+          }}
+          resourceType="Resident Census Record"
+          itemName={`${deletingResident.name} (Room ${deletingResident.room})`}
+          consequences={[
+            'Permanently archives all active diet orders and texture requirements.',
+            'Voids scheduled tray delivery tickets for this resident.',
+            'Removes table assignment and allergen alerts across kitchen stations.',
+          ]}
+        />
+      )}
     </div>
   )
 }

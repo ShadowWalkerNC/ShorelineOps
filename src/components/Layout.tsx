@@ -45,6 +45,8 @@ import {
 } from 'lucide-react'
 import { useDevice } from '@/hooks/useDevice'
 import MobileMoreSheet from './MobileMoreSheet'
+import BrandShowcaseModal from './brand/BrandShowcaseModal'
+import PageTransition from './ui/PageTransition'
 
 function useClock() {
   const [now, setNow] = useState(new Date())
@@ -169,6 +171,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [moreSheetOpen, setMoreSheetOpen] = useState(false)
   const [installModalOpen, setInstallModalOpen] = useState(false)
+  const [brandGuideOpen, setBrandGuideOpen] = useState(false)
   const now = useClock()
 
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -505,6 +508,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {timeStr}
               </div>
 
+              {/* Shoreline Brand & UI System Showcase */}
+              <button
+                onClick={() => setBrandGuideOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/80 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 text-xs font-bold transition-colors shadow-2xs"
+                title="Open Shoreline Brand Guide"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span className="hidden sm:inline">Brand Guide</span>
+              </button>
+
               {/* 1-Click Install Desktop App Button */}
               {isDesktop && (
                 <button
@@ -555,7 +568,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           )}
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
 
         {/* ── MOBILE BOTTOM NAVIGATION (Jakob's Law Thumb-Zone Ergonomics) ── */}
@@ -627,6 +640,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         />
 
         {/* 1-Click Non-Tech Desktop Installation Modal */}
+        <BrandShowcaseModal open={brandGuideOpen} onClose={() => setBrandGuideOpen(false)} />
+
         <InstallDesktopModal
           open={installModalOpen}
           onClose={() => setInstallModalOpen(false)}
