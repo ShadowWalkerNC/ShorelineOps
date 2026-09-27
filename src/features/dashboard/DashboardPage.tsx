@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useResidentsStore } from '@/state/residentsStore'
 import { useMenuStore } from '@/state/menuStore'
@@ -9,10 +9,33 @@ import { useBudgetStore } from '@/state/budgetStore'
 import { useAuth } from '@/security/AuthContext'
 import { useDevice } from '@/hooks/useDevice'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
-import { Zap, ClipboardList, AlertOctagon, AlertTriangle, Utensils, Calendar, CheckCircle2, Store, ArrowUpDown } from 'lucide-react'
+import {
+  Zap,
+  ClipboardList,
+  AlertOctagon,
+  AlertTriangle,
+  Utensils,
+  Calendar,
+  CheckCircle2,
+  Store,
+  ArrowUpDown,
+  ChevronRight,
+  ShieldCheck,
+  TrendingUp,
+  Boxes,
+  Users,
+  Clock,
+  ExternalLink,
+  ChefHat,
+  Heart,
+  Droplet,
+} from 'lucide-react'
 import type { DayOfWeek } from '@/types'
+import type { Resident } from '@/types/resident'
 import MobileDashboardView from './components/MobileDashboardView'
 import TabletDashboardView from './components/TabletDashboardView'
+import ResidentQuickDrawer from '@/features/residents/components/ResidentQuickDrawer'
+import PageTransition from '@/components/ui/PageTransition'
 
 function getGreeting() {
   const h = new Date().getHours()
@@ -25,237 +48,256 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES: DayOfWeek[] = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 const KEY_ALLERGIES = ['Gluten-Free','Dairy-Free','Nut Allergy','Egg Allergy','Shellfish','Soy-Free','Vegan','Vegetarian','Kosher','Halal']
 
-const DASH_CSS = `
-  .dash-metrics {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  @media (min-width: 1024px) {
-    .dash-metrics { grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-  }
-  .dash-metrics-wide {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  @media (min-width: 768px) {
-    .dash-metrics-wide { grid-template-columns: repeat(3, 1fr); }
-  }
-  @media (min-width: 1200px) {
-    .dash-metrics-wide { grid-template-columns: repeat(6, 1fr); }
-  }
-  .dash-two-col {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-  @media (min-width: 1024px) {
-    .dash-two-col { grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-  }
-  .dash-three-col {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-  @media (min-width: 900px) {
-    .dash-three-col { grid-template-columns: 1fr 1fr; }
-  }
-  @media (min-width: 1200px) {
-    .dash-three-col { grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 20px; }
-  }
-  .dash-quick-links-section { display: none; }
-  @media (min-width: 768px) {
-    .dash-quick-links-section { display: block; }
-    .dash-quick-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-  }
-  .metric-card {
-    background: var(--bg-card); border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg); padding: 14px 12px;
-    display: flex; align-items: center; gap: 10px;
-    box-shadow: var(--shadow-sm); cursor: pointer;
-    transition: all 0.18s ease; text-decoration: none; color: inherit;
-  }
-  .metric-card:active { transform: scale(0.97); }
-  @media (min-width: 1024px) {
-    .metric-card { padding: 20px 18px; gap: 14px; }
-    .metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--color-primary); }
-  }
-  .metric-card.alert-card { border-color: #fca5a5; background: #fff5f5; }
-  .metric-card.warn-card  { border-color: #fde68a; background: #fffbeb; }
-  .metric-icon {
-    width: 36px; height: 36px; border-radius: var(--radius-md);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  @media (min-width: 1024px) { .metric-icon { width: 44px; height: 44px; } }
-  .metric-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .metric-value { font-size: 22px; font-weight: 700; color: var(--text-primary); font-family: 'Outfit', sans-serif; line-height: 1; }
-  @media (min-width: 1024px) { .metric-value { font-size: 28px; } }
-  .metric-sub { font-size: 10px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .prep-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .prep-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
-    border: 1px solid transparent; cursor: pointer; transition: all 0.15s ease;
-    text-decoration: none; white-space: nowrap;
-  }
-  .prep-pill:active { transform: scale(0.95); }
-  .bday-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--radius-md); background: var(--bg-app); border: 1px solid var(--border-color); gap: 10px; }
-  .bday-table { display: none; }
-  @media (min-width: 768px) {
-    .bday-row { display: none; }
-    .bday-table { display: block; }
-  }
-  .sl-section-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
-  .sl-section-header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: var(--color-primary-light); }
-  .sl-section-body { padding: 14px 16px; }
-  .quick-link-card {
-    background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
-    padding: 16px 18px; display: flex; align-items: center; gap: 14px;
-    box-shadow: var(--shadow-sm); transition: all 0.18s ease; cursor: pointer;
-    text-decoration: none; color: inherit; min-height: 52px;
-  }
-  .quick-link-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--color-primary); }
-  .menu-meal-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  @media (min-width: 600px) {
-    .menu-meal-grid { grid-template-columns: 1fr 1fr; }
-  }
-`
-
-function InjectDashStyles() {
-  useEffect(() => {
-    const id = 'sl-dash-css'
-    if (document.getElementById(id)) return
-    const el = document.createElement('style')
-    el.id = id
-    el.textContent = DASH_CSS
-    document.head.appendChild(el)
-  }, [])
-  return null
-}
-
-function MetricCard({ label, value, sub, iconBg, icon, to, alertClass }: {
-  label: string; value: string | number; sub?: string
-  iconBg: string; icon: React.ReactNode; to?: string; alertClass?: string
+function MetricCard({
+  label,
+  value,
+  sub,
+  iconBg,
+  icon,
+  to,
+  alertType,
+}: {
+  label: string
+  value: string | number
+  sub?: string
+  iconBg: string
+  icon: React.ReactNode
+  to?: string
+  alertType?: 'danger' | 'warning'
 }) {
   const navigate = useNavigate()
   return (
-    <div className={`metric-card${alertClass ? ' ' + alertClass : ''}`} onClick={() => to && navigate(to)} role={to ? 'link' : undefined}>
-      <div className="metric-icon" style={{ background: iconBg }}>{icon}</div>
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div className="metric-label">{label}</div>
-        <div className="metric-value">{value}</div>
-        {sub && <div className="metric-sub">{sub}</div>}
-      </div>
-    </div>
-  )
-}
-
-function PrepPill({ label, count, bg, color, border }: { label: string; count: number; bg: string; color: string; border: string }) {
-  if (count === 0) return null
-  return (
-    <Link to="/residents" className="prep-pill" style={{ background: bg, color, borderColor: border }}>
-      <span style={{ fontSize: 15, fontWeight: 800, fontFamily: 'Outfit, sans-serif' }}>{count}</span>
-      <span>{label}</span>
-    </Link>
-  )
-}
-
-function SectionCard({ title, children, action, headerBg }: { title: string; children: React.ReactNode; action?: React.ReactNode; headerBg?: string }) {
-  return (
-    <div className="sl-section-card">
-      <div className="sl-section-header" style={headerBg ? { background: headerBg } : undefined}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0 }}>{title}</h3>
-        {action}
-      </div>
-      <div className="sl-section-body">{children}</div>
-    </div>
-  )
-}
-
-function QuickLink({ to, label, desc, iconColor, icon, badge }: { to: string; label: string; desc: string; iconColor: string; icon: React.ReactNode; badge?: number }) {
-  return (
-    <Link to={to} className="quick-link-card">
-      <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
+    <div
+      onClick={() => to && navigate(to)}
+      role={to ? 'link' : undefined}
+      className={`group p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-3.5 shadow-xs hover:shadow-md ${
+        alertType === 'danger'
+          ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900/60 hover:border-rose-400'
+          : alertType === 'warning'
+          ? 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-900/60 hover:border-amber-400'
+          : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-slate-200/80 dark:border-slate-800/80 hover:border-teal-500/40'
+      }`}
+    >
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${iconBg}`}>
         {icon}
-        {badge != null && badge > 0 && (
-          <span style={{ position: 'absolute', top: -5, right: -5, background: '#dc2626', color: '#fff', fontSize: 9, fontWeight: 800, borderRadius: 10, minWidth: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{badge}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono truncate">
+          {label}
+        </div>
+        <div className="text-2xl font-black text-slate-900 dark:text-white font-sans tracking-tight">
+          {value}
+        </div>
+        {sub && (
+          <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
+            {sub}
+          </div>
         )}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'Outfit, sans-serif', marginBottom: 2 }}>{label}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{desc}</div>
+    </div>
+  )
+}
+
+function PrepPill({
+  label,
+  count,
+  bgClass,
+  textClass,
+  borderClass,
+  onClick,
+}: {
+  label: string
+  count: number
+  bgClass: string
+  textClass: string
+  borderClass: string
+  onClick?: () => void
+}) {
+  if (count === 0) return null
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-[0.97] ${bgClass} ${textClass} ${borderClass} hover:opacity-90 shadow-xs`}
+    >
+      <span className="font-mono text-sm font-black">{count}</span>
+      <span>{label}</span>
+    </button>
+  )
+}
+
+function SectionCard({
+  title,
+  children,
+  action,
+  icon,
+}: {
+  title: string
+  children: React.ReactNode
+  action?: React.ReactNode
+  icon?: React.ReactNode
+}) {
+  return (
+    <AppleCard className="p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xs">
+      <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white font-sans flex items-center gap-2">
+          {icon}
+          <span>{title}</span>
+        </h3>
+        {action}
       </div>
-      <svg width="13" height="13" fill="none" stroke="var(--text-muted)" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path d="m9 18 6-6-6-6"/></svg>
+      <div className="p-5">{children}</div>
+    </AppleCard>
+  )
+}
+
+function QuickLink({
+  to,
+  label,
+  desc,
+  iconColor,
+  icon,
+  badge,
+}: {
+  to: string
+  label: string
+  desc: string
+  iconColor: string
+  icon: React.ReactNode
+  badge?: number
+}) {
+  return (
+    <Link
+      to={to}
+      className="group p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-teal-500/40 transition-all duration-200 flex items-center gap-3.5 no-underline active:scale-[0.98]"
+    >
+      <div className={`w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center shrink-0 relative shadow-xs`}>
+        {icon}
+        {badge != null && badge > 0 && (
+          <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-black font-mono rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-xs animate-pulse">
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-bold text-slate-900 dark:text-white font-sans group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors truncate">
+          {label}
+        </div>
+        <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+          {desc}
+        </div>
+      </div>
+      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-teal-500 group-hover:translate-x-0.5 transition-all shrink-0" />
     </Link>
   )
 }
 
-function MealColumn({ mealLabel, opt1Names, opt2Names }: { mealLabel: string; opt1Names: string[]; opt2Names: string[] }) {
+function MealColumn({
+  mealLabel,
+  opt1Names,
+  opt2Names,
+}: {
+  mealLabel: string
+  opt1Names: string[]
+  opt2Names: string[]
+}) {
   return (
-    <div style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>{mealLabel}</div>
-      {[{ label: 'Option 1', names: opt1Names }, { label: 'Option 2', names: opt2Names }].map(({ label, names }) => (
-        <div key={label} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 3 }}>{label}</div>
-          {names.length ? (
-            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {names.map(n => (
-                <li key={n} style={{ fontSize: 12, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--color-primary)', flexShrink: 0, opacity: 0.5 }} />
-                  {n}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
-          )}
-        </div>
-      ))}
+    <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-850/70 border border-slate-200/80 dark:border-slate-800/80 space-y-3">
+      <div className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">
+        {mealLabel} Service
+      </div>
+      {[{ label: 'Option 1', names: opt1Names }, { label: 'Option 2', names: opt2Names }].map(
+        ({ label, names }) => (
+          <div key={label} className="space-y-1">
+            <div className="text-[10px] font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wider font-mono">
+              {label}
+            </div>
+            {names.length ? (
+              <ul className="space-y-1">
+                {names.map(n => (
+                  <li
+                    key={n}
+                    className="text-xs text-slate-800 dark:text-slate-200 font-medium flex items-center gap-1.5"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                    <span>{n}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-xs text-slate-400 italic">None planned</span>
+            )}
+          </div>
+        )
+      )}
     </div>
   )
 }
 
 function BudgetStrip() {
-  const fetch        = useBudgetStore(s => s.fetch)
-  const period       = useBudgetStore(s => s.period)
+  const fetch = useBudgetStore(s => s.fetch)
+  const period = useBudgetStore(s => s.period)
   const getTotalBudget = useBudgetStore(s => s.getTotalBudget)
-  const getTotalSpent  = useBudgetStore(s => s.getTotalSpent)
-  const getProjected   = useBudgetStore(s => s.getProjected)
+  const getTotalSpent = useBudgetStore(s => s.getTotalSpent)
+  const getProjected = useBudgetStore(s => s.getProjected)
 
-  useEffect(() => { fetch() }, [fetch])
+  useEffect(() => {
+    fetch()
+  }, [fetch])
 
   const totalBudget = getTotalBudget()
-  const totalSpent  = getTotalSpent()
-  const projected   = getProjected()
-  const pct         = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0
-  const color       = pct > 90 ? '#dc2626' : pct > 75 ? '#d97706' : '#059669'
-  const fmt         = (n: number) => `$${n.toFixed(2)}`
+  const totalSpent = getTotalSpent()
+  const projected = getProjected()
+  const pct = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0
+  const isHigh = pct > 90
+  const isWarn = pct > 75
+  const barColor = isHigh ? 'bg-rose-500' : isWarn ? 'bg-amber-500' : 'bg-emerald-500'
+  const textColor = isHigh
+    ? 'text-rose-600 dark:text-rose-400'
+    : isWarn
+    ? 'text-amber-600 dark:text-amber-400'
+    : 'text-emerald-600 dark:text-emerald-400'
+  const fmt = (n: number) => `$${n.toFixed(2)}`
 
   return (
-    <Link to="/reporting" style={{ display: 'block', textDecoration: 'none' }}>
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', boxShadow: 'var(--shadow-sm)', marginBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{period.label} Dietary Operating Budget</span>
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Spent: <b style={{ color: 'var(--text-primary)' }}>{fmt(totalSpent)}</b></span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Budget: <b style={{ color: 'var(--text-primary)' }}>{fmt(totalBudget)}</b></span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Projected: <b style={{ color }}>{fmt(projected)}</b></span>
-            <span style={{ fontSize: 12, fontWeight: 800, color }}>{pct.toFixed(1)}% used</span>
+    <Link to="/reporting" className="block mb-4 group text-inherit no-underline">
+      <AppleCard className="p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800/80 hover:border-teal-500/40 transition-all duration-200 shadow-xs hover:shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-900 dark:text-white font-sans">
+              {period.label} Dietary Operating Budget
+            </span>
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold ${
+                isHigh
+                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                  : isWarn
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+              }`}
+            >
+              {pct.toFixed(1)}% used
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400 flex-wrap">
+            <span>
+              Spent: <strong className="text-slate-900 dark:text-white font-mono">{fmt(totalSpent)}</strong>
+            </span>
+            <span>
+              Budget: <strong className="text-slate-900 dark:text-white font-mono">{fmt(totalBudget)}</strong>
+            </span>
+            <span>
+              Projected: <strong className={`font-mono ${textColor}`}>{fmt(projected)}</strong>
+            </span>
           </div>
         </div>
-        <div style={{ height: 10, background: 'var(--bg-app)', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 5, transition: 'width 0.5s ease' }} />
+        <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/60 dark:border-slate-700/60">
+          <div
+            className={`h-full ${barColor} rounded-full transition-all duration-500`}
+            style={{ width: `${pct}%` }}
+          />
         </div>
-      </div>
+      </AppleCard>
     </Link>
   )
 }
@@ -264,59 +306,57 @@ export default function DashboardPage() {
   const { user, atLeast } = useAuth()
   const { residents, loading, fetch } = useResidentsStore()
   const { weeks, items, fetchWeeks, fetchItems } = useMenuStore()
-  // communicationsStore exposes `fetch`, not `fetchThreads`
   const { threads, fetch: fetchThreads } = useCommunicationsStore()
   const { sheets, fetchSheets } = useProductionStore()
   const { fetch: fetchInventory, getLowParItems, getZeroItems } = useInventoryStore()
 
-  const budgetFetch       = useBudgetStore(s => s.fetch)
-  const period            = useBudgetStore(s => s.period)
-  const getTotalBudget    = useBudgetStore(s => s.getTotalBudget)
-  const getTotalSpent     = useBudgetStore(s => s.getTotalSpent)
-  const getDailyPerRes    = useBudgetStore(s => s.getDailyPerRes)
+  const budgetFetch = useBudgetStore(s => s.fetch)
+  const period = useBudgetStore(s => s.period)
+  const getTotalBudget = useBudgetStore(s => s.getTotalBudget)
+  const getTotalSpent = useBudgetStore(s => s.getTotalSpent)
+  const getDailyPerRes = useBudgetStore(s => s.getDailyPerRes)
 
-  useEffect(() => { fetch() },           []) // eslint-disable-line
-  useEffect(() => { fetchWeeks() },      []) // eslint-disable-line
-  useEffect(() => { fetchItems() },      []) // eslint-disable-line
-  useEffect(() => { fetchThreads() },    []) // eslint-disable-line
-  useEffect(() => { fetchSheets() },     []) // eslint-disable-line
-  useEffect(() => { fetchInventory() },  []) // eslint-disable-line
-  useEffect(() => { budgetFetch() },     [budgetFetch])
+  const [selectedResident, setSelectedResident] = useState<Resident | null>(null)
 
-  // ── Budget (live from store) ───────────────────────────────────────────────
+  useEffect(() => { fetch() }, [])
+  useEffect(() => { fetchWeeks() }, [])
+  useEffect(() => { fetchItems() }, [])
+  useEffect(() => { fetchThreads() }, [])
+  useEffect(() => { fetchSheets() }, [])
+  useEffect(() => { fetchInventory() }, [])
+  useEffect(() => { budgetFetch() }, [budgetFetch])
+
   const totalBudget = getTotalBudget()
-  const totalSpent  = getTotalSpent()
+  const totalSpent = getTotalSpent()
   const dailyPerRes = getDailyPerRes()
-  const budgetPct   = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
+  const budgetPct = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
 
-  // ── Live inventory ─────────────────────────────────────────────────────────
   const lowParItems = getLowParItems()
-  const zeroItems   = getZeroItems()
+  const zeroItems = getZeroItems()
 
-  // ── Residents ──────────────────────────────────────────────────────────────
-  const active      = useMemo(() => residents.filter(r => r.status === 'Active'), [residents])
-  const hospital    = useMemo(() => residents.filter(r => r.status === 'Hospital').length, [residents])
-  const loa         = useMemo(() => residents.filter(r => r.status === 'LOA').length, [residents])
+  const active = useMemo(() => residents.filter(r => r.status === 'Active'), [residents])
+  const hospital = useMemo(() => residents.filter(r => r.status === 'Hospital').length, [residents])
+  const loa = useMemo(() => residents.filter(r => r.status === 'LOA').length, [residents])
   const totalEnsure = useMemo(() => residents.reduce((s, r) => s + (r.ensurePerDay ?? 0), 0), [residents])
-  const roomTrays   = useMemo(() => active.filter(r => r.servingLocation === 'Room').length, [active])
-  const diningRoom  = useMemo(() => active.filter(r => r.servingLocation === 'Dining Room').length, [active])
+  const roomTrays = useMemo(() => residents.filter(r => r.status === 'Active' && r.servingLocation === 'Room').length, [residents])
+  const diningRoom = useMemo(() => residents.filter(r => r.status === 'Active' && r.servingLocation !== 'Room').length, [residents])
 
-  const cutUp  = useMemo(() => active.filter(r => r.texture === 'Cut-Up').length, [active])
-  const minced = useMemo(() => active.filter(r => r.texture === 'Minced' || r.texture === 'Minced & Moist').length, [active])
-  const pureed = useMemo(() => active.filter(r => r.texture === 'Pureed').length, [active])
+  const cutUp = useMemo(() => residents.filter(r => r.status === 'Active' && r.texture === 'Cut-Up').length, [residents])
+  const minced = useMemo(() => residents.filter(r => r.status === 'Active' && (r.texture === 'Minced' || r.texture === 'Minced & Moist')).length, [residents])
+  const pureed = useMemo(() => residents.filter(r => r.status === 'Active' && r.texture === 'Pureed').length, [residents])
 
   const keyAllergyCount = useMemo(() => {
-    const map: Record<string, number> = {}
-    active.forEach(r => r.allergies?.forEach((a: string) => {
-      if (KEY_ALLERGIES.includes(a)) map[a] = (map[a] ?? 0) + 1
-    }))
-    return map
-  }, [active])
+    const counts: Record<string, number> = {}
+    for (const allergy of KEY_ALLERGIES) {
+      const c = residents.filter(r => r.status === 'Active' && r.allergies?.includes(allergy)).length
+      if (c > 0) counts[allergy] = c
+    }
+    return counts
+  }, [residents])
 
-  // ── Birthdays ─────────────────────────────────────────────────────────────
   const upcomingBirthdays = useMemo(() => {
     const today = new Date()
-    const results: { name: string; room: string; monthDay: string; daysUntil: number }[] = []
+    const results: { resident: Resident; name: string; room: string; monthDay: string; daysUntil: number }[] = []
     residents.forEach(r => {
       if (!r.birthdayMonth || !r.birthdayDay) return
       const monthIdx = MONTH_NAMES.indexOf(r.birthdayMonth)
@@ -324,46 +364,36 @@ export default function DashboardPage() {
       const bday = new Date(today.getFullYear(), monthIdx, r.birthdayDay)
       if (bday < new Date(today.getFullYear(), today.getMonth(), today.getDate())) bday.setFullYear(today.getFullYear() + 1)
       const diff = Math.round((bday.getTime() - today.getTime()) / 86400000)
-      if (diff <= 30) results.push({ name: r.name, room: r.room, monthDay: `${r.birthdayMonth.slice(0,3)} ${r.birthdayDay}`, daysUntil: diff })
+      if (diff <= 30) results.push({ resident: r, name: r.name, room: r.room, monthDay: `${r.birthdayMonth.slice(0, 3)} ${r.birthdayDay}`, daysUntil: diff })
     })
     return results.sort((a, b) => a.daysUntil - b.daysUntil)
   }, [residents])
 
-  // ── Menu ────────────────────────────────────────────────────────────────────
-  const todayDay   = DAY_NAMES[new Date().getDay()]
+  const todayDay = DAY_NAMES[new Date().getDay()]
   const activeWeek = useMemo(() => weeks.find(w => w.active) ?? weeks[0] ?? null, [weeks])
-  const todayMenu  = useMemo(() => activeWeek?.days?.[todayDay] ?? null, [activeWeek, todayDay])
-  const itemMap    = useMemo(() => Object.fromEntries(items.map(i => [i.id, i.name])), [items])
+  const todayMenu = useMemo(() => activeWeek?.days?.[todayDay] ?? null, [activeWeek, todayDay])
+  const itemMap = useMemo(() => Object.fromEntries(items.map(i => [i.id, i.name])), [items])
 
   function resolveNames(ids: string[] = []) {
     return ids.map(id => itemMap[id] ?? id).filter(Boolean)
   }
 
-  const lunchOpt1   = todayMenu ? resolveNames([...(todayMenu.lunchOpt1Meat?.itemIds ?? []), ...(todayMenu.lunchOpt1Veggie?.itemIds ?? []), ...(todayMenu.lunchOpt1Starch?.itemIds ?? [])]) : []
-  const lunchOpt2   = todayMenu ? resolveNames([...(todayMenu.lunchOpt2Meat?.itemIds ?? []), ...(todayMenu.lunchOpt2Veggie?.itemIds ?? []), ...(todayMenu.lunchOpt2Starch?.itemIds ?? [])]) : []
-  const dinnerOpt1  = todayMenu ? resolveNames([...(todayMenu.dinnerOpt1Meat?.itemIds ?? []), ...(todayMenu.dinnerOpt1Veggie?.itemIds ?? []), ...(todayMenu.dinnerOpt1Starch?.itemIds ?? [])]) : []
-  const dinnerOpt2  = todayMenu ? resolveNames([...(todayMenu.dinnerOpt2Meat?.itemIds ?? []), ...(todayMenu.dinnerOpt2Veggie?.itemIds ?? []), ...(todayMenu.dinnerOpt2Starch?.itemIds ?? [])]) : []
-  const lunchDessert  = todayMenu ? resolveNames(todayMenu.lunchDessert?.itemIds ?? []).join(', ')  : ''
+  const lunchOpt1 = todayMenu ? resolveNames([...(todayMenu.lunchOpt1Meat?.itemIds ?? []), ...(todayMenu.lunchOpt1Veggie?.itemIds ?? []), ...(todayMenu.lunchOpt1Starch?.itemIds ?? [])]) : []
+  const lunchOpt2 = todayMenu ? resolveNames([...(todayMenu.lunchOpt2Meat?.itemIds ?? []), ...(todayMenu.lunchOpt2Veggie?.itemIds ?? []), ...(todayMenu.lunchOpt2Starch?.itemIds ?? [])]) : []
+  const dinnerOpt1 = todayMenu ? resolveNames([...(todayMenu.dinnerOpt1Meat?.itemIds ?? []), ...(todayMenu.dinnerOpt1Veggie?.itemIds ?? []), ...(todayMenu.dinnerOpt1Starch?.itemIds ?? [])]) : []
+  const dinnerOpt2 = todayMenu ? resolveNames([...(todayMenu.dinnerOpt2Meat?.itemIds ?? []), ...(todayMenu.dinnerOpt2Veggie?.itemIds ?? []), ...(todayMenu.dinnerOpt2Starch?.itemIds ?? [])]) : []
+  const lunchDessert = todayMenu ? resolveNames(todayMenu.lunchDessert?.itemIds ?? []).join(', ') : ''
   const dinnerDessert = todayMenu ? resolveNames(todayMenu.dinnerDessert?.itemIds ?? []).join(', ') : ''
 
-  // ── Communications ─────────────────────────────────────────────────────────
-  // ThreadStatus values: 'Draft' | 'Pending Review' | 'Approved' | 'Distributed' | 'Archived'
-  const pendingApprovals = useMemo(() => threads.filter(t =>
-    t.status === 'Pending Review'
-  ).length, [threads])
-  const unreadThreads = useMemo(() => threads.filter(t =>
-    t.status === 'Draft' || t.status === 'Pending Review'
-  ).length, [threads])
-
-  // ── Production ────────────────────────────────────────────────────────────
+  const pendingApprovals = useMemo(() => threads.filter(t => t.status === 'Pending Review').length, [threads])
+  const unreadThreads = useMemo(() => threads.filter(t => t.status === 'Draft' || t.status === 'Pending Review').length, [threads])
   const completedSheets = useMemo(() => sheets.filter(s => !!s.signedOffAt).length, [sheets])
-  const totalSheets     = sheets.length
-  const prodPct         = totalSheets > 0 ? Math.round((completedSheets / totalSheets) * 100) : 0
+  const totalSheets = sheets.length
+  const prodPct = totalSheets > 0 ? Math.round((completedSheets / totalSheets) * 100) : 0
 
-  // ── Derived flags ────────────────────────────────────────────────────────
   const hasAnyPrep = cutUp > 0 || minced > 0 || pureed > 0 || Object.keys(keyAllergyCount).length > 0
-  const todayStr   = new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
-  const isManager  = atLeast('manager')
+  const todayStr = new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+  const isManager = atLeast('manager')
   const { isMobile, isTablet } = useDevice()
 
   const dashboardProps = {
@@ -412,91 +442,76 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="sl-page fade-in">
-      <InjectDashStyles />
+    <PageTransition className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+      {/* ── Page Header Card ── */}
+      <AppleCard className="p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+                {getGreeting()}, {user?.name?.split(' ')[0] ?? 'there'}
+              </h1>
+              <AppleBadge color="green" dot className="text-xs">
+                {loading ? '…' : active.length} Active Residents
+              </AppleBadge>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+              <span>{todayStr} &bull; Clinical Nutrition &amp; Production Command Center</span>
+            </p>
+          </div>
 
-      {/* ── Greeting ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.3px', margin: 0 }}>
-            {getGreeting()}, {user?.name?.split(' ')[0] ?? 'there'}
-          </h2>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{todayStr}</p>
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <Link to="/kitchen/orders">
+              <AppleButton variant="primary" size="md" icon={<Utensils className="w-4 h-4" />}>
+                Meal Tally Entry
+              </AppleButton>
+            </Link>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-success-light)', border: '1px solid var(--color-success)', color: 'var(--color-success-hover)', fontWeight: 700, fontSize: 12, padding: '5px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }} />
-          {loading ? '…' : active.length} active residents
-        </div>
-      </div>
+      </AppleCard>
 
       {/* ── Enterprise Quick Action Hub ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: 12,
-        marginBottom: 18,
-      }}>
-        {/* B13: Digital Tray Scanner card removed — it launched the cut /kitchen/tablet route */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(52,199,89,0.08) 0%, rgba(52,199,89,0.02) 100%)',
-          border: '1px solid rgba(52,199,89,0.25)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/25 flex items-center justify-between gap-3 shadow-xs">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Zap className="w-4 h-4 text-emerald-600" />
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#248a3d' }}>Multi-Distributor MRP</span>
+            <div className="flex items-center gap-2 font-bold text-xs text-emerald-800 dark:text-emerald-300">
+              <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Multi-Distributor MRP</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Dennis vs. Sysco lowest $/gram</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Dennis vs. Sysco lowest $/gram
+            </div>
           </div>
           <Link to="/purchasing">
             <AppleButton size="sm" variant="success">Optimize PO</AppleButton>
           </Link>
         </div>
 
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(175,82,222,0.08) 0%, rgba(175,82,222,0.02) 100%)',
-          border: '1px solid rgba(175,82,222,0.25)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}>
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/25 flex items-center justify-between gap-3 shadow-xs">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ClipboardList className="w-4 h-4 text-purple-600" />
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#8944ab' }}>CMS-2567 Survey</span>
+            <div className="flex items-center gap-2 font-bold text-xs text-purple-800 dark:text-purple-300">
+              <ClipboardList className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span>CMS-2567 Survey</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>90-Day HACCP & F-Tag binder</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              90-Day HACCP &amp; F-Tag binder
+            </div>
           </div>
           <Link to="/reporting">
             <AppleButton size="sm" variant="tinted">Survey Pack</AppleButton>
           </Link>
         </div>
 
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)',
-          border: '1px solid rgba(139,92,246,0.25)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}>
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-500/25 flex items-center justify-between gap-3 shadow-xs">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ArrowUpDown className="w-4 h-4 text-violet-600" />
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#6d28d9' }}>Distributor SKU Match</span>
+            <div className="flex items-center gap-2 font-bold text-xs text-violet-800 dark:text-violet-300">
+              <ArrowUpDown className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              <span>Distributor SKU Match</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Cut+Dry matrix &amp; Dennis/Sysco split</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Cut+Dry matrix &amp; Dennis/Sysco split
+            </div>
           </div>
           <Link to="/distributor">
             <AppleButton size="sm" variant="tinted">Open Portal</AppleButton>
@@ -504,52 +519,78 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Row 1: Resident metrics ── */}
-      <div className="dash-metrics">
-        <MetricCard label="Total Residents" value={loading ? '…' : residents.length} sub={`${active.length} active · ${hospital + loa} away`} iconBg="var(--color-primary-light)" to="/residents"
-          icon={<svg width="18" height="18" fill="none" stroke="var(--color-primary)" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
-        <MetricCard label="Hosp / LOA" value={hospital + loa} sub={`${hospital} hosp · ${loa} LOA`} iconBg="var(--color-warning-light)" to="/residents"
-          alertClass={hospital > 0 ? 'warn-card' : undefined}
-          icon={<svg width="18" height="18" fill="none" stroke="var(--color-warning-hover)" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4l3 3"/></svg>} />
-        <MetricCard label="Ensure / Day" value={totalEnsure} sub="supplement cans" iconBg="var(--color-success-light)" to="/residents"
-          icon={<svg width="18" height="18" fill="none" stroke="var(--color-success)" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>} />
-        <MetricCard label="Room Trays" value={roomTrays} sub={`${diningRoom} dining room`} iconBg="var(--color-teal-light)" to="/residents"
-          icon={<svg width="18" height="18" fill="none" stroke="var(--color-teal)" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>} />
+      {/* ── Row 1: Clinical Census Metric Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <MetricCard
+          label="Total Residents"
+          value={loading ? '…' : residents.length}
+          sub={`${active.length} active · ${hospital + loa} away`}
+          iconBg="bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400"
+          to="/residents"
+          icon={<Users className="w-5 h-5" />}
+        />
+        <MetricCard
+          label="Hosp / LOA"
+          value={hospital + loa}
+          sub={`${hospital} hosp · ${loa} LOA`}
+          iconBg="bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
+          to="/residents"
+          alertType={hospital > 0 ? 'warning' : undefined}
+          icon={<Clock className="w-5 h-5" />}
+        />
+        <MetricCard
+          label="Ensure / Day"
+          value={totalEnsure}
+          sub="supplement cans"
+          iconBg="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
+          to="/residents"
+          icon={<Heart className="w-5 h-5" />}
+        />
+        <MetricCard
+          label="Room Trays"
+          value={roomTrays}
+          sub={`${diningRoom} in dining room`}
+          iconBg="bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400"
+          to="/residents"
+          icon={<Utensils className="w-5 h-5" />}
+        />
       </div>
 
-      {/* ── Row 2: Operations metrics ── */}
-      <div className="dash-metrics-wide">
+      {/* ── Row 2: Operational & Budget Metrics ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         <MetricCard
           label="Inventory Alerts"
           value={lowParItems.length}
           sub={zeroItems.length > 0 ? `${zeroItems.length} at zero!` : 'items below par'}
-          iconBg={lowParItems.length > 0 ? '#fee2e2' : 'var(--color-success-light)'}
+          iconBg={lowParItems.length > 0 ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'}
           to="/inventory"
-          alertClass={zeroItems.length > 0 ? 'alert-card' : lowParItems.length > 3 ? 'warn-card' : undefined}
-          icon={<svg width="18" height="18" fill="none" stroke={lowParItems.length > 0 ? '#dc2626' : 'var(--color-success)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>}
+          alertType={zeroItems.length > 0 ? 'danger' : lowParItems.length > 3 ? 'warning' : undefined}
+          icon={<Boxes className="w-5 h-5" />}
         />
         <MetricCard
           label="Pending Approvals"
           value={pendingApprovals}
           sub="awaiting review"
-          iconBg={pendingApprovals > 0 ? '#fffbeb' : 'var(--color-success-light)'}
-          alertClass={pendingApprovals > 0 ? 'warn-card' : undefined}
-          icon={<svg width="18" height="18" fill="none" stroke={pendingApprovals > 0 ? '#d97706' : 'var(--color-success)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+          iconBg={pendingApprovals > 0 ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'}
+          to="/residents"
+          alertType={pendingApprovals > 0 ? 'warning' : undefined}
+          icon={<ClipboardList className="w-5 h-5" />}
         />
         <MetricCard
           label="Active Threads"
           value={unreadThreads}
-          sub="draft or pending review"
-          iconBg="var(--color-primary-light)"
-          icon={<svg width="18" height="18" fill="none" stroke="var(--color-primary)" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg>}
+          sub="unresolved shifts"
+          iconBg={unreadThreads > 0 ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}
+          to="/timecards"
+          icon={<Clock className="w-5 h-5" />}
         />
         <MetricCard
-          label="Production Today"
-          value={totalSheets > 0 ? `${prodPct}%` : '—'}
-          sub={totalSheets > 0 ? `${completedSheets}/${totalSheets} sheets signed off` : 'No sheets loaded'}
-          iconBg={prodPct === 100 ? 'var(--color-success-light)' : 'var(--color-primary-light)'}
+          label="Production Sheets"
+          value={`${prodPct}%`}
+          sub={`${completedSheets}/${totalSheets} signed`}
+          iconBg={prodPct === 100 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400' : 'bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400'}
           to="/production"
-          icon={<svg width="18" height="18" fill="none" stroke={prodPct === 100 ? 'var(--color-success)' : 'var(--color-primary)'} strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>}
+          icon={<ChefHat className="w-5 h-5" />}
         />
         {isManager && (
           <>
@@ -557,17 +598,17 @@ export default function DashboardPage() {
               label="Budget (MTD)"
               value={`${budgetPct.toFixed(0)}%`}
               sub={`$${totalSpent.toFixed(0)} of $${totalBudget.toFixed(0)}`}
-              iconBg="var(--color-teal-light)"
+              iconBg="bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400"
               to="/reporting"
-              icon={<svg width="18" height="18" fill="none" stroke="var(--color-teal)" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+              icon={<TrendingUp className="w-5 h-5" />}
             />
             <MetricCard
               label="$/Resident/Day"
               value={`$${dailyPerRes.toFixed(2)}`}
               sub={`Target $${period.budgetPerResidentPerDay.toFixed(2)}`}
-              iconBg="var(--color-purple-light)"
+              iconBg="bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400"
               to="/reporting"
-              icon={<svg width="18" height="18" fill="none" stroke="var(--color-purple)" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
+              icon={<Store className="w-5 h-5" />}
             />
           </>
         )}
@@ -576,179 +617,312 @@ export default function DashboardPage() {
       {/* ── Budget strip (managers only) ── */}
       {isManager && <BudgetStrip />}
 
-      {/* ── Inventory alerts banner ── */}
+      {/* ── Inventory Alerts Callout Banner ── */}
       {lowParItems.length > 0 && (
-        <Link to="/inventory" style={{ textDecoration: 'none', display: 'block', marginBottom: 14 }}>
-          <div style={{ padding: '10px 16px', background: zeroItems.length > 0 ? '#fef2f2' : '#fffbeb', border: `1px solid ${zeroItems.length > 0 ? '#fecaca' : '#fde68a'}`, borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            {zeroItems.length > 0 ? <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
-            <span style={{ fontSize: 12, fontWeight: 700, color: zeroItems.length > 0 ? '#991b1b' : '#92400e', flex: 1 }}>
-              {zeroItems.length > 0 ? `${zeroItems.length} item(s) completely out of stock — ` : ''}
-              {lowParItems.length} item(s) below par level:
-              {' '}{lowParItems.slice(0,4).map(i => i.item).join(', ')}{lowParItems.length > 4 ? ` +${lowParItems.length - 4} more` : ''}
+        <Link to="/inventory" className="block text-inherit no-underline">
+          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 transition-all ${zeroItems.length > 0 ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900/60 text-rose-900 dark:text-rose-200' : 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-900/60 text-amber-900 dark:text-amber-200'}`}>
+            <div className="flex items-center gap-2.5">
+              {zeroItems.length > 0 ? (
+                <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              )}
+              <span className="text-xs font-bold leading-snug">
+                {zeroItems.length > 0 ? `${zeroItems.length} item(s) completely out of stock! ` : ''}
+                {lowParItems.length} item(s) below par level:
+                {' '}{lowParItems.slice(0, 4).map(i => i.item).join(', ')}
+                {lowParItems.length > 4 ? ` +${lowParItems.length - 4} more` : ''}
+              </span>
+            </div>
+            <span className="text-xs font-bold text-teal-700 dark:text-teal-400 whitespace-nowrap flex items-center gap-1">
+              View Inventory <ChevronRight className="w-3.5 h-3.5" />
             </span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>View Inventory →</span>
           </div>
         </Link>
       )}
 
-      {/* ── Special prep ── */}
+      {/* ── Special Prep Today Card ── */}
       {hasAnyPrep && (
-        <div className="sl-section-card" style={{ marginBottom: 14 }}>
-          <div className="sl-section-header">
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span>Special Prep Today</span>
-            </h3>
-            <Link to="/residents" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>View residents →</Link>
-          </div>
-          <div className="sl-section-body">
-            <div className="prep-pills">
-              <PrepPill label="Cut-Up"  count={cutUp}  bg="var(--color-warning-light)" color="var(--color-warning-hover)" border="rgba(201,146,88,.35)" />
-              <PrepPill label="Minced"  count={minced} bg="var(--color-purple-light)"  color="var(--color-purple)"       border="rgba(137,120,164,.35)" />
-              <PrepPill label="Puréed"  count={pureed} bg="var(--color-teal-light)"    color="var(--color-teal-hover)"   border="rgba(58,157,168,.35)" />
-              {Object.entries(keyAllergyCount).sort((a, b) => b[1]-a[1]).map(([allergy, count]) => (
-                <PrepPill key={allergy} label={allergy} count={count} bg="var(--color-danger-light)" color="var(--color-danger-hover)" border="rgba(188,106,88,.35)" />
+        <SectionCard
+          title="Special Prep & Dysphagia Today"
+          icon={<AlertTriangle className="w-4 h-4 text-amber-500" />}
+          action={
+            <Link to="/residents" className="text-xs font-bold text-teal-700 dark:text-teal-400 hover:underline">
+              View Census →
+            </Link>
+          }
+        >
+          <div className="flex flex-wrap gap-2">
+            <PrepPill
+              label="Cut-Up"
+              count={cutUp}
+              bgClass="bg-sky-50 dark:bg-sky-950/50"
+              textClass="text-sky-800 dark:text-sky-300"
+              borderClass="border-sky-300 dark:border-sky-800"
+            />
+            <PrepPill
+              label="Minced & Moist"
+              count={minced}
+              bgClass="bg-amber-50 dark:bg-amber-950/50"
+              textClass="text-amber-800 dark:text-amber-300"
+              borderClass="border-amber-300 dark:border-amber-800"
+            />
+            <PrepPill
+              label="Puréed (L4)"
+              count={pureed}
+              bgClass="bg-emerald-50 dark:bg-emerald-950/50"
+              textClass="text-emerald-800 dark:text-emerald-300"
+              borderClass="border-emerald-300 dark:border-emerald-800"
+            />
+            {Object.entries(keyAllergyCount)
+              .sort((a, b) => b[1] - a[1])
+              .map(([allergy, count]) => (
+                <PrepPill
+                  key={allergy}
+                  label={allergy}
+                  count={count}
+                  bgClass="bg-rose-50 dark:bg-rose-950/50"
+                  textClass="text-rose-800 dark:text-rose-300"
+                  borderClass="border-rose-300 dark:border-rose-800"
+                />
               ))}
-            </div>
           </div>
-        </div>
+        </SectionCard>
       )}
 
-      {/* ── Today's menu ── */}
-      <div className="sl-section-card" style={{ marginBottom: 14 }}>
-        <div className="sl-section-header">
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Utensils className="w-4 h-4 text-primary" />
-            <span>Today's Menu — {todayDay}</span>
-          </h3>
-          <Link to="/menu" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Edit menu →</Link>
-        </div>
-        <div className="sl-section-body">
-          {!activeWeek ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No active menu week. <Link to="/menu" style={{ color: 'var(--color-primary)' }}>Set one up →</Link></p>
-          ) : !todayMenu ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No menu entries for {todayDay} yet.</p>
-          ) : (
-            <div className="menu-meal-grid">
-              <MealColumn mealLabel="Lunch"  opt1Names={lunchOpt1}  opt2Names={lunchOpt2} />
-              <MealColumn mealLabel="Dinner" opt1Names={dinnerOpt1} opt2Names={dinnerOpt2} />
-            </div>
-          )}
-          {(lunchDessert || dinnerDessert) && (
-            <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'var(--color-success-light)', border: '1px solid rgba(74,163,104,.2)', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              {lunchDessert  && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}><strong>Lunch dessert:</strong> {lunchDessert}</span>}
-              {dinnerDessert && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}><strong>Dinner dessert:</strong> {dinnerDessert}</span>}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* ── Today's Menu Card ── */}
+      <SectionCard
+        title={`Today's Cycle Menu — ${todayDay}`}
+        icon={<Utensils className="w-4 h-4 text-teal-600" />}
+        action={
+          <Link to="/menu" className="text-xs font-bold text-teal-700 dark:text-teal-400 hover:underline">
+            Edit Menu Planner →
+          </Link>
+        }
+      >
+        {!activeWeek ? (
+          <p className="text-xs text-slate-500 italic">No active menu week configured.</p>
+        ) : !todayMenu ? (
+          <p className="text-xs text-slate-500 italic">No menu entries for {todayDay} yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <MealColumn mealLabel="Lunch" opt1Names={lunchOpt1} opt2Names={lunchOpt2} />
+            <MealColumn mealLabel="Dinner" opt1Names={dinnerOpt1} opt2Names={dinnerOpt2} />
+          </div>
+        )}
+        {(lunchDessert || dinnerDessert) && (
+          <div className="mt-3 p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/80 flex items-center gap-4 flex-wrap text-xs text-slate-700 dark:text-slate-300 font-medium">
+            {lunchDessert && (
+              <span>
+                <strong>Lunch Dessert:</strong> {lunchDessert}
+              </span>
+            )}
+            {dinnerDessert && (
+              <span>
+                <strong>Dinner Dessert:</strong> {dinnerDessert}
+              </span>
+            )}
+          </div>
+        )}
+      </SectionCard>
 
-      {/* ── Three-col: Birthdays + Dietary + Production status ── */}
-      <div className="dash-three-col">
+      {/* ── Three-Column Operations Grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Upcoming Birthdays Card */}
         <SectionCard
           title="Upcoming Birthdays"
-          action={upcomingBirthdays.length > 3 ? <Link to="/residents" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>See all →</Link> : undefined}
+          icon={<Calendar className="w-4 h-4 text-teal-600" />}
+          action={
+            upcomingBirthdays.length > 3 ? (
+              <Link to="/residents" className="text-xs font-bold text-teal-700 dark:text-teal-400 hover:underline">
+                See all →
+              </Link>
+            ) : undefined
+          }
         >
           {upcomingBirthdays.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{loading ? 'Loading…' : 'None in the next 30 days.'}</p>
+            <p className="text-xs text-slate-400 italic">None in the next 30 days.</p>
           ) : (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {upcomingBirthdays.slice(0, 3).map((b, i) => (
-                  <div key={i} className="bday-row">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Calendar className="w-4 h-4 text-primary" />
+            <div className="space-y-2">
+              {upcomingBirthdays.slice(0, 4).map((b, i) => (
+                <div
+                  key={i}
+                  onClick={() => setSelectedResident(b.resident)}
+                  className="p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 hover:border-teal-500/40 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center font-bold text-xs shrink-0">
+                      {b.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {b.name}
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Room {b.room} · {b.monthDay}</div>
+                      <div className="text-[11px] text-slate-400 truncate">
+                        Room {b.room} &bull; {b.monthDay}
                       </div>
                     </div>
-                    <span style={{ background: b.daysUntil === 0 ? 'var(--color-success)' : b.daysUntil <= 7 ? 'var(--color-warning-light)' : 'var(--bg-app)', color: b.daysUntil === 0 ? '#fff' : b.daysUntil <= 7 ? 'var(--color-warning-hover)' : 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '3px 9px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                      {b.daysUntil === 0 ? 'Today' : `${b.daysUntil}d`}
-                    </span>
                   </div>
-                ))}
-              </div>
-              <div className="bday-table">
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>{['Room','Resident','Date','In'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', padding: '6px 8px', borderBottom: '1px solid var(--border-color)', background: 'var(--color-primary-light)' }}>{h}</th>
-                  ))}</tr></thead>
-                  <tbody>
-                    {upcomingBirthdays.map((b, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '8px', fontSize: 12, fontWeight: 700, color: 'var(--color-primary)' }}>{b.room}</td>
-                        <td style={{ padding: '8px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{b.name}</td>
-                        <td style={{ padding: '8px', fontSize: 12, color: 'var(--text-secondary)' }}>{b.monthDay}</td>
-                        <td style={{ padding: '8px' }}><span style={{ background: b.daysUntil === 0 ? 'var(--color-success)' : b.daysUntil <= 7 ? 'var(--color-warning-light)' : 'var(--bg-app)', color: b.daysUntil === 0 ? '#fff' : b.daysUntil <= 7 ? 'var(--color-warning-hover)' : 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '2px 7px', fontWeight: 600, fontSize: 11 }}>{b.daysUntil === 0 ? 'Today!' : `${b.daysUntil}d`}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </SectionCard>
-
-        <SectionCard title="Active Dietary Breakdown">
-          {loading ? <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading…</p> : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { label: 'Regular',        count: active.filter(r => r.dietType === 'Regular').length,        color: 'var(--color-primary)' },
-                { label: 'Diabetic',        count: active.filter(r => r.dietType === 'Diabetic').length,        color: 'var(--color-warning-hover)' },
-                { label: 'Cardiac',         count: active.filter(r => r.dietType === 'Cardiac').length,         color: 'var(--color-danger-hover)' },
-                { label: 'Low Sodium',      count: active.filter(r => r.dietType === 'Low Sodium').length,      color: 'var(--color-teal-hover)' },
-                { label: 'Renal',           count: active.filter(r => r.dietType === 'Renal').length,           color: 'var(--color-purple)' },
-                { label: 'Mechanical Soft', count: active.filter(r => r.dietType === 'Mechanical Soft').length, color: 'var(--color-success)' },
-              ].filter(d => d.count > 0).map(d => (
-                <div key={d.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ flex: 1, height: 6, borderRadius: 6, background: 'var(--border-color)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${Math.round((d.count / (active.length || 1)) * 100)}%`, background: d.color, borderRadius: 6, transition: 'width 0.5s ease' }} />
-                  </div>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', minWidth: 96 }}>{d.label}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', minWidth: 18, textAlign: 'right' }}>{d.count}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold font-mono shrink-0 ${
+                      b.daysUntil === 0
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : b.daysUntil <= 7
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    {b.daysUntil === 0 ? 'Today!' : `${b.daysUntil}d`}
+                  </span>
                 </div>
               ))}
             </div>
           )}
         </SectionCard>
 
+        {/* Active Dietary Breakdown Card */}
+        <SectionCard
+          title="Active Dietary Breakdown"
+          icon={<Heart className="w-4 h-4 text-teal-600" />}
+        >
+          {loading ? (
+            <p className="text-xs text-slate-400 italic">Loading…</p>
+          ) : (
+            <div className="space-y-2.5">
+              {[
+                { label: 'Regular', count: active.filter(r => r.dietType === 'Regular').length, color: 'bg-teal-500' },
+                { label: 'Diabetic', count: active.filter(r => r.dietType === 'Diabetic').length, color: 'bg-amber-500' },
+                { label: 'Cardiac', count: active.filter(r => r.dietType === 'Cardiac').length, color: 'bg-rose-500' },
+                { label: 'Low Sodium', count: active.filter(r => r.dietType === 'Low Sodium').length, color: 'bg-sky-500' },
+                { label: 'Renal', count: active.filter(r => r.dietType === 'Renal').length, color: 'bg-purple-500' },
+                { label: 'Mechanical Soft', count: active.filter(r => r.dietType === 'Mechanical Soft').length, color: 'bg-emerald-500' },
+              ]
+                .filter(d => d.count > 0)
+                .map(d => (
+                  <div key={d.label} className="space-y-1">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span className="text-slate-600 dark:text-slate-300">{d.label}</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">{d.count}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${d.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${Math.round((d.count / (active.length || 1)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </SectionCard>
+
+        {/* Production Status Card */}
         <SectionCard
           title="Production Status"
-          action={<Link to="/production" style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Open →</Link>}
+          icon={<ChefHat className="w-4 h-4 text-teal-600" />}
+          action={
+            <Link to="/production" className="text-xs font-bold text-teal-700 dark:text-teal-400 hover:underline">
+              Open →
+            </Link>
+          }
         >
           {totalSheets === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No production sheets loaded for today. <Link to="/production" style={{ color: 'var(--color-primary)' }}>Go to Production →</Link></p>
+            <p className="text-xs text-slate-400 italic">No production sheets loaded for today.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1, height: 14, background: 'var(--bg-app)', borderRadius: 7, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                  <div style={{ height: '100%', width: `${prodPct}%`, background: prodPct === 100 ? '#059669' : 'var(--color-primary)', borderRadius: 7, transition: 'width 0.5s ease' }} />
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 800, color: prodPct === 100 ? '#059669' : 'var(--color-primary)', minWidth: 40, textAlign: 'right' }}>{prodPct}%</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-slate-600 dark:text-slate-400">Sheet Sign-Offs:</span>
+                <span className="font-mono font-bold text-teal-600 dark:text-teal-400">{prodPct}%</span>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{completedSheets} of {totalSheets} sheets signed off</div>
-              {prodPct === 100 && <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--color-success-light)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, color: 'var(--color-success-hover)' }}><CheckCircle2 className="w-4 h-4 text-emerald-600" /> All sheets complete!</div>}
+              <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/60 dark:border-slate-700/60">
+                <div
+                  className={`h-full ${prodPct === 100 ? 'bg-emerald-500' : 'bg-teal-500'} rounded-full transition-all duration-500`}
+                  style={{ width: `${prodPct}%` }}
+                />
+              </div>
+              <div className="text-xs text-slate-500">
+                {completedSheets} of {totalSheets} daily sheets signed off
+              </div>
+              {prodPct === 100 && (
+                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>All sheets complete!</span>
+                </div>
+              )}
             </div>
           )}
         </SectionCard>
       </div>
 
-      {/* ── Quick Access ── */}
-      <div className="dash-quick-links-section">
-        <h3 style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Quick Access</h3>
-        <div className="dash-quick-links">
-          <QuickLink to="/residents"      label="Residents"        desc="Diet orders & resident profiles"  iconColor="var(--color-primary-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-primary)"       strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>} />
-          <QuickLink to="/menu"           label="Menu Planner"     desc="Plan daily meals & cycle menus"   iconColor="var(--color-teal-light)"     icon={<svg width="16" height="16" fill="none" stroke="var(--color-teal)"         strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>} />
-          <QuickLink to="/production"     label="Production"       desc="Worksheets, tray tickets"         iconColor="var(--color-success-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-success)"       strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>} />
-          <QuickLink to="/inventory"      label="Inventory"        desc="Stock levels & truck orders"      iconColor="var(--color-warning-light)"  icon={<svg width="16" height="16" fill="none" stroke="var(--color-warning-hover)" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>} badge={lowParItems.length} />
-          <QuickLink to="/recipes"        label="Recipe Book"      desc="Browse & scale recipes"           iconColor="var(--color-purple-light)"   icon={<svg width="16" height="16" fill="none" stroke="var(--color-purple)"        strokeWidth="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>} />
-          {isManager && <QuickLink to="/reporting" label="Budget" desc="Budget targets, spending log & per-resident cost" iconColor="var(--color-success-light)" icon={<svg width="16" height="16" fill="none" stroke="var(--color-success)" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>} />}
-          {isManager && <QuickLink to="/staff"  label="Staff"  desc="Schedules & staff management"    iconColor="var(--color-purple-light)"   icon={<svg width="16" height="16" fill="none" stroke="var(--color-purple)"  strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />}
+      {/* ── Quick Access Hub ── */}
+      <div className="space-y-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">
+          Quick Access Operations Hub
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <QuickLink
+            to="/residents"
+            label="Residents & Diets"
+            desc="Diet orders, textures & EMR charts"
+            iconColor="bg-teal-50 dark:bg-teal-950 text-teal-600"
+            icon={<Users className="w-5 h-5" />}
+          />
+          <QuickLink
+            to="/menu"
+            label="Menu Planner"
+            desc="Plan 4-week seasonal cycle menus"
+            iconColor="bg-sky-50 dark:bg-sky-950 text-sky-600"
+            icon={<Calendar className="w-5 h-5" />}
+          />
+          <QuickLink
+            to="/production"
+            label="Production Sheets"
+            desc="Station scaling & HACCP temp logs"
+            iconColor="bg-emerald-50 dark:bg-emerald-950 text-emerald-600"
+            icon={<ChefHat className="w-5 h-5" />}
+          />
+          <QuickLink
+            to="/inventory"
+            label="Inventory & Stock"
+            desc="Par levels, stock counts & MRP"
+            iconColor="bg-amber-50 dark:bg-amber-950 text-amber-600"
+            icon={<Boxes className="w-5 h-5" />}
+            badge={lowParItems.length}
+          />
+          <QuickLink
+            to="/recipes"
+            label="Master Recipe Book"
+            desc="Yield scaler & USDA solver"
+            iconColor="bg-purple-50 dark:bg-purple-950 text-purple-600"
+            icon={<Utensils className="w-5 h-5" />}
+          />
+          {isManager && (
+            <>
+              <QuickLink
+                to="/reporting"
+                label="Budget & $/CPD"
+                desc="Per-resident daily cost & audit binder"
+                iconColor="bg-emerald-50 dark:bg-emerald-950 text-emerald-600"
+                icon={<TrendingUp className="w-5 h-5" />}
+              />
+              <QuickLink
+                to="/staff"
+                label="Staff & Schedules"
+                desc="Shift roster & credential check"
+                iconColor="bg-violet-50 dark:bg-violet-950 text-violet-600"
+                icon={<Clock className="w-5 h-5" />}
+              />
+            </>
+          )}
         </div>
       </div>
-    </div>
+
+      {/* ── Slide-Out Quick Inspection Drawer ── */}
+      <ResidentQuickDrawer
+        resident={selectedResident}
+        isOpen={Boolean(selectedResident)}
+        onClose={() => setSelectedResident(null)}
+      />
+    </PageTransition>
   )
 }
