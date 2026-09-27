@@ -29,6 +29,7 @@ const inventory_1 = require("./routes/inventory");
 const trayruns_1 = require("./routes/trayruns");
 const errorHandler_1 = require("./middleware/errorHandler");
 const requireAuth_1 = require("./middleware/requireAuth");
+const idempotency_1 = require("./middleware/idempotency");
 const pool_1 = require("./db/pool");
 const migrate_1 = require("./db/migrate");
 const seed_1 = require("./db/seed");
@@ -126,8 +127,9 @@ const webhooks_1 = require("./routes/webhooks");
 const hardware_1 = require("./routes/hardware");
 const billing_1 = require("./routes/billing");
 const tenantContext_1 = require("./middleware/tenantContext");
-// Global Tenant Context
+// Global Tenant Context & Idempotency Protection
 app.use('/api', tenantContext_1.tenantContextMiddleware);
+app.use('/api', (0, idempotency_1.idempotencyMiddleware)());
 // Do not let API routes pretend to work while migrations are incomplete. Static
 // marketing and demo assets remain available on services without a database.
 app.use('/api', (req, res, next) => {

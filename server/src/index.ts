@@ -24,6 +24,7 @@ import { inventoryRouter } from './routes/inventory'
 import { trayrunsRouter } from './routes/trayruns'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
+import { idempotencyMiddleware } from './middleware/idempotency'
 import { pool } from './db/pool'
 import { runMigrations } from './db/migrate'
 import { isDemoSeedEnabled, runSeed } from './db/seed'
@@ -130,8 +131,9 @@ import { hardwareRouter } from './routes/hardware'
 import { billingRouter } from './routes/billing'
 import { tenantContextMiddleware } from './middleware/tenantContext'
 
-// Global Tenant Context
+// Global Tenant Context & Idempotency Protection
 app.use('/api', tenantContextMiddleware)
+app.use('/api', idempotencyMiddleware())
 
 // Do not let API routes pretend to work while migrations are incomplete. Static
 // marketing and demo assets remain available on services without a database.
