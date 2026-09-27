@@ -41,7 +41,7 @@ export default function BrandShowcaseModal({ open, onClose }: BrandShowcaseModal
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl shadow-2xl">
           <DialogHeader className="mb-6">
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-3 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 text-[10px] font-bold tracking-wider uppercase font-mono border border-blue-200/60 dark:border-blue-800/60">
+              <span className="px-3 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400 text-[10px] font-bold tracking-wider uppercase font-mono border border-teal-200/60 dark:border-teal-800/60">
                 Design System Showcase
               </span>
             </div>
@@ -59,7 +59,7 @@ export default function BrandShowcaseModal({ open, onClose }: BrandShowcaseModal
               onClick={() => setActiveTab('buttons')}
               className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'buttons'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-600 text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -69,7 +69,7 @@ export default function BrandShowcaseModal({ open, onClose }: BrandShowcaseModal
               onClick={() => setActiveTab('cards')}
               className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'cards'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-600 text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -79,7 +79,7 @@ export default function BrandShowcaseModal({ open, onClose }: BrandShowcaseModal
               onClick={() => setActiveTab('clinical')}
               className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'clinical'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-600 text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -89,7 +89,7 @@ export default function BrandShowcaseModal({ open, onClose }: BrandShowcaseModal
               onClick={() => setActiveTab('dialogs')}
               className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'dialogs'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-600 text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >

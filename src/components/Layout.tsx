@@ -637,6 +637,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <MobileMoreSheet
           isOpen={moreSheetOpen}
           onClose={() => setMoreSheetOpen(false)}
+          onOpenBrandGuide={() => setBrandGuideOpen(true)}
         />
 
         {/* 1-Click Non-Tech Desktop Installation Modal */}

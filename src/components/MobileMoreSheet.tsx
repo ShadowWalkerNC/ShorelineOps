@@ -28,9 +28,10 @@ import {
 interface MobileMoreSheetProps {
   isOpen: boolean
   onClose: () => void
+  onOpenBrandGuide?: () => void
 }
 
-export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
+export default function MobileMoreSheet({ isOpen, onClose, onOpenBrandGuide }: MobileMoreSheetProps) {
   const { user, logout, atLeast } = useAuth()
   const { deviceMode, setDeviceMode } = useDevice()
   const navigate = useNavigate()
@@ -117,6 +118,31 @@ export default function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProp
               })}
             </div>
           </div>
+
+          {/* Design System & Brand Guide Trigger */}
+          {onOpenBrandGuide && (
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenBrandGuide()
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 text-teal-800 dark:text-teal-200 hover:bg-teal-100/70 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 shadow-2xs flex items-center justify-center text-teal-600 dark:text-teal-400">
+                    <Sparkles size={18} />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold leading-tight">Design System &amp; Brand Guide</div>
+                    <div className="text-[10px] text-teal-600 dark:text-teal-400 font-mono">Tokens, touch targets &amp; IDDSI badges</div>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-teal-600 dark:text-teal-400" />
+              </button>
+            </div>
+          )}
 
           {/* Device Experience Simulator (DEV mode only) */}
           {import.meta.env.DEV && (

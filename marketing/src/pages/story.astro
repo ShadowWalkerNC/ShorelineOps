@@ -5,117 +5,183 @@ import Icon from '../components/Icon.astro'
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
 ---
 
-<BaseLayout title="Founder Story — Built by an Healthcare Executive Chef in Maine" description="Why ShorelineOps was created inside a real senior living kitchen dealing with dysphagia textures, allergen risks, and food distributor ordering.">
-  <section class="py-16 sm:py-24">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+<BaseLayout 
+  title="Founder Narrative — Built by a Healthcare Executive Chef in Maine" 
+  description="Why ShorelineOps was forged inside an assisted living kitchen dealing with dysphagia textures, allergen risks, and food distributor ordering."
+>
+  <section class="py-16 sm:py-24 border-b border-slate-200 dark:border-obsidian-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Header -->
-      <div class="text-center mb-12 sm:mb-16">
-        <div class="inline-block px-3.5 py-1 bg-teal-50 dark:bg-teal-950/70 border border-teal-200/70 dark:border-teal-800/60 rounded-full text-teal-700 dark:text-teal-400 text-xs font-semibold uppercase tracking-wider mb-4 font-mono shadow-2xs">
-          Practitioner-Led Healthcare Dining
+      <!-- Editorial Header -->
+      <div class="max-w-3xl mb-14">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-shoreline-500/10 border border-shoreline-500/20 text-shoreline-700 dark:text-shoreline-300 text-[11px] font-mono uppercase tracking-wider mb-4">
+          <span class="w-1.5 h-1.5 rounded-full bg-shoreline-500"></span>
+          <span>FOUNDER PERSPECTIVE · DIETARY OPERATIONS</span>
         </div>
-        <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4 leading-tight">
+        <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4 font-display">
           Why I Built ShorelineOps Inside a Real Senior Living Kitchen.
         </h1>
-        <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 italic">
+        <p class="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-serif italic border-l-2 border-shoreline-500 pl-4 py-1">
           "Nobody selling healthcare dietary software has ever cooked a pureed dinner service for 80 residents with 14 different allergy restrictions while balancing food cost."
         </p>
       </div>
 
-      <!-- Story Narrative Body -->
-      <div class="space-y-6 text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+      <!-- Split Editorial Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        <p>
-          If you have ever stepped into a senior living dietary department at 4:30 PM, you know the daily high-stakes reality:
-        </p>
-        
-        <div class="p-6 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 space-y-3">
-          <div class="text-amber-800 dark:text-amber-300 font-bold text-xs uppercase tracking-wider font-mono">The Daily 4:30 PM Rush</div>
-          <ul class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
-            <li class="flex items-start gap-2.5">
-              <span class="text-amber-600 font-bold">1.</span>
-              <span><strong>Last-Minute Clinical Changes:</strong> Nursing calls down right before tray line with two room transfers, a new physician Low Sodium diet order, and a resident newly designated NPO awaiting swallow evaluation.</span>
-            </li>
-            <li class="flex items-start gap-2.5">
-              <span class="text-amber-600 font-bold">2.</span>
-              <span><strong>Kitchen Ergonomics Under Fire:</strong> Line cooks with wet nitrile gloves are trying to read faded handwriting on a greasy whiteboard while staging 4 pans of hot entrees.</span>
-            </li>
-            <li class="flex items-start gap-2.5">
-              <span class="text-amber-600 font-bold">3.</span>
-              <span><strong>Clipboard Inventory Guesswork:</strong> Building weekly orders for <strong>Dennis Food Service</strong> or <strong>Sysco</strong> using clipboards and guesswork, hoping you don't stock out of thickener or pureed meats before Friday truck delivery.</span>
-            </li>
-          </ul>
+        <!-- Left Sidebar: Field Intelligence & Profile -->
+        <div class="lg:col-span-4 space-y-6">
+          <div class="border border-slate-200 dark:border-obsidian-border rounded-xl bg-white dark:bg-obsidian-card p-6 shadow-subtle">
+            <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">FIELD PRACTITIONER</div>
+            <div class="text-base font-bold text-slate-900 dark:text-white font-display">Executive Chef &amp; Systems Architect</div>
+            <div class="text-xs text-slate-500 font-mono mb-4">Portland, Maine · Healthcare Dining</div>
+            
+            <div class="border-t border-slate-100 dark:border-obsidian-border pt-4 space-y-3 text-xs">
+              <div class="flex justify-between py-1 border-b border-slate-50 dark:border-obsidian-border/50">
+                <span class="text-slate-500">Facility Scope</span>
+                <span class="font-mono font-semibold text-slate-900 dark:text-white">65–120 Beds</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-50 dark:border-obsidian-border/50">
+                <span class="text-slate-500">Active Diets</span>
+                <span class="font-mono font-semibold text-slate-900 dark:text-white">14 Clinical Variants</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-50 dark:border-obsidian-border/50">
+                <span class="text-slate-500">HACCP Baseline</span>
+                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">165°F Cook / 140°F Hold</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-slate-500">Primary Broadline</span>
+                <span class="font-mono font-semibold text-slate-900 dark:text-white">Dennis / Sysco Split</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="border border-amber-500/20 rounded-xl bg-amber-500/5 p-6 text-xs text-amber-900 dark:text-amber-300">
+            <div class="font-mono font-bold uppercase tracking-wider text-[10px] text-amber-700 dark:text-amber-400 mb-2">
+              WHY OPEN CORE?
+            </div>
+            <p class="leading-relaxed">
+              When a resident chokes on the wrong texture, it is not an IT ticket—it is a medical emergency. Clinical dining safety, IDDSI compliance, and thermal tray tickets should be a fundamental human right in elder care, not an unaffordable luxury.
+            </p>
+          </div>
         </div>
 
-        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white pt-4">The Legacy Industry Dilemma</h2>
-        <p class="text-xs sm:text-sm">
-          When I looked across the commercial software landscape, I found two deeply frustrating options:
-        </p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-            <div class="font-bold text-slate-900 dark:text-white text-sm mb-1">1. Proprietary Monopolies ($1,200+/mo)</div>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Bulky software designed for 500-bed hospital chains, bloated with unnecessary complexity, requiring 6 months of onboarding, and locking you into a single distributor.</p>
-          </div>
-          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-            <div class="font-bold text-slate-900 dark:text-white text-sm mb-1">2. Paper Binders & Spreadsheets</div>
-            <p class="text-xs text-slate-500 dark:text-slate-400">What most independent and assisted living homes actually use because commercial software is unaffordable, resulting in human error and survey anxiety.</p>
-          </div>
-        </div>
+        <!-- Right Main Body: The Full Narrative -->
+        <div class="lg:col-span-8 space-y-8 text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+          
+          <div class="space-y-4">
+            <p>
+              If you have ever stepped into a senior living dietary department at 4:30 PM, you know the daily high-stakes reality:
+            </p>
+            
+            <div class="border border-slate-200 dark:border-obsidian-border rounded-xl bg-white dark:bg-obsidian-card p-6 shadow-subtle divide-y divide-slate-100 dark:divide-obsidian-border">
+              <div class="pb-4">
+                <div class="flex items-center gap-2 text-xs font-mono font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
+                  <span>01</span>
+                  <span>LAST-MINUTE CLINICAL EHR CHANGES</span>
+                </div>
+                <p class="text-xs text-slate-600 dark:text-slate-400">
+                  Nursing calls down right before tray line with two room transfers, a new physician Low Sodium order, and a resident newly designated strict NPO awaiting swallow evaluation.
+                </p>
+              </div>
 
-        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white pt-4">The ShorelineOps Vision: Open Core + Clinical Precision</h2>
-        <p class="text-xs sm:text-sm">
-          I built <strong>ShorelineOps</strong> to be the tool I needed in the kitchen every single morning:
-        </p>
-        <ul class="space-y-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
-          <li class="flex items-start gap-2.5">
-            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <span><strong>100% Free Open-Source Core:</strong> Any independent care home, hospice, or non-profit assisted living community can run our software completely free. Clinical safety should never be paywalled.</span>
-          </li>
-          <li class="flex items-start gap-2.5">
-            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <span><strong>Big, High-Contrast Touch Targets (44px+):</strong> Touch tablet kiosk mode designed specifically for gloved line cooks to tap easily during hot line service.</span>
-          </li>
-          <li class="flex items-start gap-2.5">
-            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <span><strong>IDDSI 2.0 Hard-Blocks:</strong> Strict clinical safety rules preventing a Regular texture plate from ever being served to an IDDSI Level 4 Pureed resident.</span>
-          </li>
-          <li class="flex items-start gap-2.5">
-            <Icon name="check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <span><strong>Algorithmic Split MRP Purchasing:</strong> Automatically compares line-item contract quotes across Dennis Food Service, Sysco, and US Foods, awarding each line to the lowest-cost vendor.</span>
-          </li>
-        </ul>
+              <div class="py-4">
+                <div class="flex items-center gap-2 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
+                  <span>02</span>
+                  <span>GLOVED KITCHEN ERGONOMICS</span>
+                </div>
+                <p class="text-xs text-slate-600 dark:text-slate-400">
+                  Line cooks with wet nitrile gloves are trying to read faded handwriting on a greasy whiteboard while staging 4 hotel pans of hot entrees under a 165°F heat lamp.
+                </p>
+              </div>
 
-        <!-- Visual Real Screenshot of Tablet -->
-        <div class="my-8 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-          <img src="/screenshots/kitchen_tablet_kiosk.png" alt="Shoreline Touch Tablet Kiosk" class="w-full h-auto object-cover" />
-        </div>
-
-        <!-- Contact Box -->
-        <div class="p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 my-8 text-center shadow-apple-card">
-          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Let’s Talk Culinary & Dietary Operations</h3>
-          <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-lg mx-auto mb-6 leading-relaxed">
-            Whether you are a Dietary Manager in New England or an Executive Director looking to tighten food spend and survey readiness, we would love to show you ShorelineOps.
-          </p>
-          <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href={DEMO_URL}
-              target="_blank"
-              rel="noreferrer"
-              class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-blue-600/30 inline-flex items-center justify-center gap-1.5"
-            >
-              <span>Launch Interactive Demo App</span>
-              <Icon name="arrow-right" class="w-3.5 h-3.5" />
-            </a>
-            <a
-              href="/distributors"
-              class="w-full sm:w-auto px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs sm:text-sm hover:bg-slate-200 transition-all"
-            >
-              For Food Distributors (Dennis & Sysco)
-            </a>
+              <div class="pt-4">
+                <div class="flex items-center gap-2 text-xs font-mono font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                  <span>03</span>
+                  <span>CLIPBOARD MRP GUESSWORK</span>
+                </div>
+                <p class="text-xs text-slate-600 dark:text-slate-400">
+                  Building weekly food orders for Dennis Food Service or Sysco using clipboards and guesswork, hoping you don't stock out of thickener or pureed meats before Friday truck delivery.
+                </p>
+              </div>
+            </div>
           </div>
+
+          <div class="space-y-4 pt-4">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">
+              The Legacy Software Trap
+            </h2>
+            <p>
+              When evaluating legacy healthcare dining software, independent facilities face a false binary:
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="border border-slate-200 dark:border-obsidian-border rounded-xl p-5 bg-white dark:bg-obsidian-card">
+                <div class="text-xs font-mono font-bold text-slate-900 dark:text-white uppercase mb-1">Proprietary Monopolies</div>
+                <div class="text-xs text-slate-500 font-mono mb-2">$1,200+/mo · Multi-Year Lock-in</div>
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Bloated software engineered in 2004 for 800-bed hospital conglomerates. Requires 6 months of IT onboarding, complex server provisioning, and exclusive distributor contracts.
+                </p>
+              </div>
+
+              <div class="border border-slate-200 dark:border-obsidian-border rounded-xl p-5 bg-white dark:bg-obsidian-card">
+                <div class="text-xs font-mono font-bold text-slate-900 dark:text-white uppercase mb-1">Paper Binders &amp; Spreadsheets</div>
+                <div class="text-xs text-slate-500 font-mono mb-2">$0 · Maximum Survey Risk</div>
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  What 80% of independent homes actually rely on. Handwritten notes, disconnected recipe sheets, and high anxiety whenever state health inspectors audit CMS F-Tag 812 compliance.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4 pt-4">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">
+              The ShorelineOps Alternative
+            </h2>
+            <p>
+              We built ShorelineOps as a third way: an open-source, practitioner-designed operating system that runs locally on simple hardware, scales seamlessly to the cloud, and treats clinical safety with mathematical rigor.
+            </p>
+
+            <!-- Kiosk Interface Showcase -->
+            <div class="border border-slate-200 dark:border-obsidian-border rounded-xl overflow-hidden bg-black shadow-elevated">
+              <img src="/screenshots/kitchen_tablet_kiosk.png" alt="Shoreline Touch Tablet Kiosk" class="w-full h-auto object-cover opacity-95" />
+              <div class="p-3 bg-obsidian-surface border-t border-obsidian-border text-center text-[11px] font-mono text-slate-400">
+                TOUCH TABLET KIOSK · 44PX TOUCH TARGETS · REAL-TIME HACCP 165°F LOGGING
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Action Surface -->
+          <div class="border border-slate-200 dark:border-obsidian-border rounded-xl p-6 sm:p-8 bg-slate-50/60 dark:bg-obsidian-surface/60 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div>
+              <div class="text-sm font-bold text-slate-900 dark:text-white font-display mb-1">
+                Explore the Live System
+              </div>
+              <div class="text-xs text-slate-500">
+                Test the interactive sandbox with pre-loaded census and recipe data.
+              </div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <a
+                href={DEMO_URL}
+                class="py-2.5 px-4 rounded-lg bg-shoreline-600 hover:bg-shoreline-700 text-white text-xs font-semibold font-mono uppercase tracking-wider shadow-sm transition-colors inline-flex items-center gap-2"
+              >
+                <span>Launch Demo</span>
+                <Icon name="arrow-right" class="w-3.5 h-3.5" />
+              </a>
+              <a
+                href="/pricing"
+                class="py-2.5 px-4 rounded-lg border border-slate-300 dark:border-obsidian-border bg-white dark:bg-obsidian-card hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold font-mono uppercase tracking-wider transition-colors"
+              >
+                View Pricing
+              </a>
+            </div>
+          </div>
+
         </div>
 
       </div>
+
     </div>
   </section>
 </BaseLayout>

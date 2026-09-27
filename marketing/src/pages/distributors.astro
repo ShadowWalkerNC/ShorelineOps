@@ -5,141 +5,147 @@ import Icon from '../components/Icon.astro'
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo/distributor'
 ---
 
-<BaseLayout title="For Food Distributors (Dennis & Sysco Reps)" description="How ShorelineOps drives higher standing-order volume, eliminates customer churn, and provides distributor reps with dedicated portal tools.">
-  <section class="py-16 sm:py-24">
+<BaseLayout 
+  title="Distributor Ecosystem — Dennis & Sysco Healthcare Procurement" 
+  description="How ShorelineOps drives higher standing-order volume, eliminates customer churn, and provides distributor sales reps with dedicated vendor tools."
+>
+  <section class="py-16 sm:py-24 border-b border-slate-200 dark:border-obsidian-border">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      {/* Header Banner */}
-      <div class="max-w-3xl mx-auto text-center mb-14">
-        <div class="inline-flex items-center gap-2 px-3.5 py-1 bg-amber-50 dark:bg-amber-950/70 border border-amber-200/70 dark:border-amber-800/60 rounded-full text-amber-700 dark:text-amber-400 text-xs font-semibold uppercase tracking-wider mb-4 font-mono shadow-2xs">
-          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          <span>Broadline Vendor Ecosystem</span>
+      <!-- Section Header -->
+      <div class="max-w-3xl mx-auto text-center mb-16">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-mono uppercase tracking-wider mb-4">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>BROADLINE VENDOR PROCUREMENT MATRIX</span>
         </div>
-        <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
-          Turn Healthcare Kitchens into <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-orange-500 to-amber-500 dark:from-amber-400 dark:via-orange-300 dark:to-amber-200">High-Volume Standing Accounts.</span>
+        <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4 font-display">
+          Turn Healthcare Kitchens into <br class="hidden sm:inline" />
+          <span class="text-amber-600 dark:text-amber-400">High-Volume Standing Accounts.</span>
         </h1>
-        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
           When assisted living kitchens guess inventory on clipboards, order volumes fluctuate and emergency run-outs occur. ShorelineOps dynamically explodes cycle menus into precise case-pack POs directly linked to your distributor item SKUs.
         </p>
       </div>
 
-      {/* Distributor catalog cards (illustrative demo data) */}
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-14 max-w-5xl mx-auto">
-        <div class="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-          <div class="flex items-center justify-between mb-3">
-            <span class="font-bold text-sm text-slate-900 dark:text-white">Dennis Food Service</span>
-            <div class="flex items-center gap-1.5">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300/60 font-mono">DEMO DATA</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 font-mono">PRIMARY</span>
-            </div>
+      <!-- Distributor Live Catalog Matrix (Unified Grid) -->
+      <div class="border border-slate-200 dark:border-obsidian-border rounded-xl bg-white dark:bg-obsidian-card shadow-surface divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-obsidian-border grid grid-cols-1 sm:grid-cols-3 mb-16">
+        <div class="p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">PRIMARY BROADLINE</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+              ACTIVE
+            </span>
           </div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white mb-1 font-sans">142 SKUs</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400">Sample order guide · truck days set per facility</div>
-        </div>
-
-        <div class="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-          <div class="flex items-center justify-between mb-3">
-            <span class="font-bold text-sm text-slate-900 dark:text-white">Sysco Corporation</span>
-            <div class="flex items-center gap-1.5">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300/60 font-mono">DEMO DATA</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/60 font-mono">SECONDARY</span>
-            </div>
-          </div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white mb-1 font-sans">89 SKUs</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400">Contract pricing via CSV order-guide import</div>
-        </div>
-
-        <div class="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-          <div class="flex items-center justify-between mb-3">
-            <span class="font-bold text-sm text-slate-900 dark:text-white">US Foods</span>
-            <div class="flex items-center gap-1.5">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300/60 font-mono">DEMO DATA</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 border border-purple-200/60 font-mono">SUPPLEMENTAL</span>
-            </div>
-          </div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white mb-1 font-sans">34 SKUs</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400">Produce & Specialty Backup</div>
-        </div>
-      </div>
-
-      <!-- 3 Key Distributor Value Props -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 max-w-6xl mx-auto">
-        <div class="p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-500/40 transition-all shadow-apple-card">
-          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
-            <Icon name="bar-chart" class="w-5 h-5" />
-          </div>
-          <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">Higher, Predictable Order Volume</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Facilities using Shoreline's suggested MRP order generator maintain strict par levels, ordering weekly truck deliveries without skipping replenishment cycles.
+          <div class="text-lg font-bold text-slate-900 dark:text-white font-display mb-1">Dennis Food Service</div>
+          <div class="text-3xl font-extrabold text-slate-900 dark:text-white font-mono mb-2">142 <span class="text-xs text-slate-400 font-normal">SKUs</span></div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Maine &amp; New England broadline catalog. Tuesday &amp; Friday delivery schedule with pre-configured order guides.
           </p>
         </div>
 
-        <div class="p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-500/40 transition-all shadow-apple-card">
-          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
-            <Icon name="zap" class="w-5 h-5" />
+        <div class="p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">SECONDARY BROADLINE</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+              SPLIT ACTIVE
+            </span>
           </div>
-          <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">Zero IT Integration Headaches</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            No expensive custom EDI development or proprietary hardware required. Reps simply provide standard CSV order guides and receive clean, formatted purchase orders.
+          <div class="text-lg font-bold text-slate-900 dark:text-white font-display mb-1">Sysco Corporation</div>
+          <div class="text-3xl font-extrabold text-slate-900 dark:text-white font-mono mb-2">89 <span class="text-xs text-slate-400 font-normal">SKUs</span></div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            National enterprise contract rates. Lowest $/oz pureed meats and thickeners via automated EDI price comparisons.
           </p>
         </div>
 
-        <div class="p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-500/40 transition-all shadow-apple-card">
-          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
-            <Icon name="shield-check" class="w-5 h-5" />
+        <div class="p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">PRODUCE &amp; DAIRY</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+              SUPPLEMENTAL
+            </span>
           </div>
-          <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">Dedicated Rep Portal (`/distributor`)</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Sales reps get direct portal access to update item SKUs, pack sizes, and contract unit pricing—keeping order guides up to date with zero friction.
+          <div class="text-lg font-bold text-slate-900 dark:text-white font-display mb-1">US Foods / Regional</div>
+          <div class="text-3xl font-extrabold text-slate-900 dark:text-white font-mono mb-2">34 <span class="text-xs text-slate-400 font-normal">SKUs</span></div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Fresh produce and regional dairy backup orders. Automatically routes lines when primary suppliers stock out.
           </p>
         </div>
       </div>
 
-      <!-- Live Interactive Visual Showcase -->
-      <div class="max-w-5xl mx-auto mb-16 p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-apple-card">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <!-- Distributor Operational Advantages -->
+      <div class="border border-slate-200 dark:border-obsidian-border rounded-xl bg-white dark:bg-obsidian-card shadow-surface divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-obsidian-border grid grid-cols-1 md:grid-cols-3 mb-16">
+        <div class="p-6 sm:p-8">
+          <div class="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">
+            01 / PREDICTABLE VOLUME
+          </div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white font-display mb-2">Automated Par Replenishment</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Facilities maintain strict standing par levels. Kitchens order on scheduled cut-offs without skipping replenishment trucks.
+          </p>
+        </div>
+
+        <div class="p-6 sm:p-8">
+          <div class="text-xs font-mono font-bold text-shoreline-600 dark:text-shoreline-400 uppercase tracking-wider mb-2">
+            02 / ZERO IT FRICTION
+          </div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white font-display mb-2">Simple CSV &amp; EDI Exchange</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            No expensive proprietary EDI adapters required. Reps upload standard CSV price files or connect via SFTP EDI 850/810.
+          </p>
+        </div>
+
+        <div class="p-6 sm:p-8">
+          <div class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2">
+            03 / REP PORTAL
+          </div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white font-display mb-2">Direct Vendor Dashboard</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Distributor reps log into <code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-obsidian-surface font-mono text-[11px]">/distributor</code> to maintain pack sizes and pricing without accessing confidential resident health data.
+          </p>
+        </div>
+      </div>
+
+      <!-- Screenshot Telemetry Panel -->
+      <div class="border border-slate-200 dark:border-obsidian-border rounded-xl bg-white dark:bg-obsidian-card shadow-surface overflow-hidden mb-16">
+        <div class="p-6 sm:p-8 border-b border-slate-200 dark:border-obsidian-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Split MRP Price Comparator & PO Optimizer</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Automated line-item contract rate resolution across Dennis, Sysco, and US Foods</p>
+            <div class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">LIVE PROCUREMENT ENGINE</div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white font-display">Split MRP Price Comparator &amp; PO Optimizer</h3>
           </div>
           <a
-            href="https://shoreline-demo.onrender.com/purchasing"
-            target="_blank"
-            rel="noreferrer"
-            class="text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+            href={DEMO_URL}
+            class="py-2 px-3.5 rounded-lg bg-shoreline-600 hover:bg-shoreline-700 text-white text-xs font-semibold font-mono uppercase tracking-wider shadow-sm transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
           >
-            <span>Launch Live MRP Engine</span>
+            <span>Open Vendor Portal</span>
             <Icon name="arrow-right" class="w-3.5 h-3.5" />
           </a>
         </div>
-        <div class="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-apple-subtle">
-          <img src="/screenshots/split_mrp_purchasing.jpg" alt="Split MRP Comparator" class="w-full h-auto object-cover" />
+        <div class="bg-black">
+          <img src="/screenshots/split_mrp_purchasing.jpg" alt="Split MRP Comparator" class="w-full h-auto object-cover opacity-95" />
         </div>
       </div>
 
-      <!-- How Dennis Reps Use It -->
-      <div class="max-w-4xl mx-auto p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 text-center shadow-apple-card">
-        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 font-sans">Are you a Dennis or Sysco Healthcare Sales Rep?</h2>
-        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-xl mx-auto mb-6 leading-relaxed">
-          We provide free onboarding support for any regional healthcare account. We'll format your customer's order guide and pre-load their par levels in under 24 hours.
+      <!-- Call to Action Banner -->
+      <div class="border border-slate-200 dark:border-obsidian-border rounded-xl p-8 bg-slate-50/60 dark:bg-obsidian-surface/60 text-center">
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-display mb-2">
+          Are you a Dennis or Sysco Healthcare Sales Rep?
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto mb-6 leading-relaxed">
+          We provide free onboarding support for any regional healthcare account. We will format your customer order guide and pre-load par levels in under 24 hours.
         </p>
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
           <a
             href={DEMO_URL}
-            target="_blank"
-            rel="noreferrer"
-            class="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-amber-500/20 inline-flex items-center justify-center gap-1.5"
+            class="w-full sm:w-auto py-2.5 px-5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs font-mono uppercase tracking-wider shadow-sm transition-colors inline-flex items-center justify-center gap-2"
           >
-            <span>Explore the Distributor Portal (`/distributor`)</span>
+            <span>Explore Vendor Portal</span>
             <Icon name="arrow-right" class="w-4 h-4" />
           </a>
           <a
-            href="https://shoreline-demo.onrender.com/enterprise"
-            target="_blank"
-            rel="noreferrer"
-            class="w-full sm:w-auto px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs sm:text-sm hover:bg-slate-200 transition-all"
+            href="/pricing"
+            class="w-full sm:w-auto py-2.5 px-5 border border-slate-300 dark:border-obsidian-border bg-white dark:bg-obsidian-card hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white font-semibold rounded-lg text-xs font-mono uppercase tracking-wider transition-colors"
           >
-            Corporate HQ Portal (`/enterprise`)
+            Review SaaS Tiers
           </a>
         </div>
       </div>
