@@ -471,47 +471,35 @@ export default function DashboardPage() {
         </div>
       </AppleCard>
 
-      {/* ── Enterprise Quick Action Hub ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/25 flex items-center justify-between gap-3 shadow-xs">
+      {/* ── Precision Command Surface (Unified Grid, Zero Clutter) ── */}
+      <div className="border border-slate-200/90 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-2xs divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80 dark:divide-slate-800 grid grid-cols-1 sm:grid-cols-3">
+        <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 font-bold text-xs text-emerald-800 dark:text-emerald-300">
-              <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Multi-Distributor MRP</span>
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Dennis vs. Sysco lowest $/gram
-            </div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">PROCUREMENT MATRIX</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Multi-Distributor Split MRP</div>
+            <div className="text-[11px] text-slate-500">Dennis vs. Sysco $/lb optimizer</div>
           </div>
           <Link to="/purchasing">
-            <AppleButton size="sm" variant="success">Optimize PO</AppleButton>
+            <AppleButton size="sm" variant="primary">Optimize PO</AppleButton>
           </Link>
         </div>
 
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/25 flex items-center justify-between gap-3 shadow-xs">
+        <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 font-bold text-xs text-purple-800 dark:text-purple-300">
-              <ClipboardList className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span>CMS-2567 Survey</span>
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              90-Day HACCP &amp; F-Tag binder
-            </div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">SURVEY READINESS</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">CMS-2567 Defense Binder</div>
+            <div className="text-[11px] text-slate-500">90-Day HACCP &amp; F-Tag audit logs</div>
           </div>
           <Link to="/reporting">
             <AppleButton size="sm" variant="tinted">Survey Pack</AppleButton>
           </Link>
         </div>
 
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-500/25 flex items-center justify-between gap-3 shadow-xs">
+        <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 font-bold text-xs text-violet-800 dark:text-violet-300">
-              <ArrowUpDown className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              <span>Distributor SKU Match</span>
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Cut+Dry matrix &amp; Dennis/Sysco split
-            </div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">VENDOR PORTAL</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Distributor SKU Matcher</div>
+            <div className="text-[11px] text-slate-500">Cut+Dry canonical pack converter</div>
           </div>
           <Link to="/distributor">
             <AppleButton size="sm" variant="tinted">Open Portal</AppleButton>

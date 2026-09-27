@@ -5,10 +5,29 @@ export default {
   theme: {
     extend: {
       colors: {
+        shoreline: {
+          50: '#F0FDFA',
+          100: '#CCFBF1',
+          200: '#99F6E4',
+          300: '#5EEAD4',
+          400: '#2DD4BF',
+          500: '#14B8A6',
+          600: '#0D9488',
+          700: '#0F766E',
+          800: '#115E59',
+          900: '#134E4A',
+          950: '#042F2E',
+        },
+        obsidian: {
+          DEFAULT: '#070A11',
+          subtle: '#0D121E',
+          surface: '#131A29',
+          border: '#1C2538',
+        },
         primary: {
-          DEFAULT: '#0071e3',
-          light: '#0077ed',
-          dark: '#005bb5',
+          DEFAULT: '#0D9488',
+          light: '#14B8A6',
+          dark: '#0F766E',
         },
         apple: {
           blue: '#0071e3',
@@ -19,15 +38,15 @@ export default {
           pink: '#ff2d55',
           purple: '#af52de',
           red: '#ff3b30',
-          teal: '#59adc4',
+          teal: '#0D9488',
           yellow: '#ffcc00',
           gray: '#8e8e93',
         },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'system-ui', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', '"Inter"', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'Menlo', 'monospace'],
       },
       borderRadius: {
         '2xl': '20px',
@@ -35,9 +54,9 @@ export default {
         '4xl': '36px',
       },
       boxShadow: {
-        'apple-subtle': '0 2px 8px rgba(0, 0, 0, 0.04)',
-        'apple-card': '0 4px 24px rgba(0, 0, 0, 0.06)',
-        'apple-elevated': '0 12px 32px rgba(0, 0, 0, 0.12)',
+        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'surface': '0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
+        'elevated': '0 20px 40px -12px rgba(0, 0, 0, 0.12), 0 1px 3px 0 rgba(0, 0, 0, 0.05)',
       },
     },
   },

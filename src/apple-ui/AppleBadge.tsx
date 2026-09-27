@@ -6,7 +6,8 @@ export type AppleBadgeColor =
   | "orange"
   | "red"
   | "purple"
-  | "gray";
+  | "gray"
+  | "teal";
 
 export interface AppleBadgeProps {
   color?: AppleBadgeColor;
@@ -16,6 +17,10 @@ export interface AppleBadgeProps {
 }
 
 const colorStyles: Record<AppleBadgeColor, { pill: string; dot: string }> = {
+  teal: {
+    pill: "bg-teal-500/12 text-teal-800 dark:text-teal-300 border-teal-500/25",
+    dot: "bg-teal-600",
+  },
   blue: {
     pill: "bg-[#0071e3]/10 text-[#0071e3] dark:text-[#2997ff] border-[#0071e3]/20",
     dot: "bg-[#0071e3]",

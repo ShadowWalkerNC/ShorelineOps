@@ -20,13 +20,13 @@ export interface AppleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement
 
 const variantStyles: Record<AppleButtonVariant, string> = {
   primary:
-    "bg-[#0071e3] text-white hover:bg-[#0077ED] active:bg-[#0062c4] shadow-sm",
+    "bg-[#0D9488] text-white hover:bg-[#0F766E] active:bg-[#115E59] shadow-sm",
   secondary:
     "bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 hover:bg-slate-200 dark:hover:bg-zinc-700",
   tinted:
-    "bg-[#0071e3]/10 text-[#0071e3] dark:text-[#2997ff] hover:bg-[#0071e3]/15",
+    "bg-[#0D9488]/10 text-[#0F766E] dark:text-[#2DD4BF] hover:bg-[#0D9488]/15",
   plain:
-    "bg-transparent text-[#0071e3] dark:text-[#2997ff] hover:underline shadow-none",
+    "bg-transparent text-[#0D9488] dark:text-[#2DD4BF] hover:underline shadow-none",
   glass:
     "backdrop-blur-xl bg-white/70 dark:bg-zinc-900/70 border border-black/5 dark:border-white/10 text-slate-900 dark:text-white hover:bg-white/85 dark:hover:bg-zinc-800/85 shadow-sm",
   destructive:
