@@ -119,6 +119,228 @@ function BatchClinicalStrip({
   )
 }
 
+function calculatePans(portions: number): { summary: string; full: number; half: number; third: number } {
+  if (portions <= 0) return { summary: '0 pans needed', full: 0, half: 0, third: 0 }
+  const full = Math.floor(portions / 25)
+  const rem = portions % 25
+  let half = 0
+  let third = 0
+  if (rem > 12) {
+    half = 1
+  } else if (rem > 0) {
+    third = 1
+  }
+  const parts: string[] = []
+  if (full > 0) parts.push(`${full} Full Hotel Pan${full > 1 ? 's' : ''} (2.5")`)
+  if (half > 0) parts.push('1 Half Pan')
+  if (third > 0) parts.push('1 Third Pan')
+  return { summary: parts.join(' + ') || '1 Third Pan', full, half, third }
+}
+
+interface AllDayPanScalingViewProps {
+  dish1: string
+  dish2: string
+  batches: Record<'choice1' | 'choice2' | 'alt' | 'declined', SheetMember[]>
+  cookStatus: Record<string, 'prep' | 'cooking' | 'staged'>
+  onStatusChange: (dishKey: string, status: 'prep' | 'cooking' | 'staged') => void
+}
+
+function AllDayPanScalingView({
+  dish1,
+  dish2,
+  batches,
+  cookStatus,
+  onStatusChange,
+}: AllDayPanScalingViewProps) {
+  const c1Members = batches.choice1.filter(m => !m.isNpo)
+  const c2Members = batches.choice2.filter(m => !m.isNpo)
+
+  const getTextureBreakdown = (members: SheetMember[]) => {
+    const counts: Record<string, number> = {}
+    for (const m of members) {
+      const tex = m.texture || 'Regular'
+      counts[tex] = (counts[tex] || 0) + 1
+    }
+    return counts
+  }
+
+  const c1Textures = getTextureBreakdown(c1Members)
+  const c2Textures = getTextureBreakdown(c2Members)
+
+  const c1Pans = calculatePans(c1Members.length)
+  const c2Pans = calculatePans(c2Members.length)
+
+  return (
+    <div className="space-y-4">
+      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/70 dark:bg-slate-900/60 p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+          <div className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            TOAST KDS ALL-DAY PRODUCTION ENGINE · BULK PAN SCALING
+          </div>
+          <div className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-bold">
+            HACCP MINIMUM: 165°F CORE COOK / 140°F STEAM TABLE HOLD
+          </div>
+        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Combines active resident orders across dining rooms into consolidated hotel pans. Eliminates guesswork on hot line staging and blender puree yields.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Dish 1 Production Card */}
+        <AppleCard className="p-5 space-y-4 border-l-4 border-l-teal-500">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-mono font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                STATION 01 · HOT LINE PRIMARY
+              </div>
+              <h4 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">{dish1}</h4>
+              <div className="text-xs text-slate-500 mt-0.5">
+                Batch Capacity: <strong className="text-slate-800 dark:text-slate-200">{c1Members.length} active plates</strong> ({batches.choice1.length - c1Members.length} NPO excluded)
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 font-mono text-xs font-bold">
+                {c1Pans.summary}
+              </span>
+            </div>
+          </div>
+
+          {/* Texture Explosion Grid */}
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              Texture Explosion &amp; Kitchen Yields
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+              {Object.entries(c1Textures).map(([tex, cnt]) => (
+                <div key={tex} className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                  <div className="font-mono font-bold text-sm text-slate-900 dark:text-white">{cnt}</div>
+                  <div className="text-[11px] text-slate-500 truncate">{iddsiChipLabel(tex)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cook Status Stepper */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-xs font-mono text-slate-400">Line Cook Stage:</span>
+            <div className="flex items-center gap-1 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => onStatusChange('dish1', 'prep')}
+                className={`px-2.5 py-1.5 rounded-lg border transition-all ${
+                  cookStatus.dish1 === 'prep'
+                    ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                1. Raw Prep
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusChange('dish1', 'cooking')}
+                className={`px-2.5 py-1.5 rounded-lg border transition-all ${
+                  cookStatus.dish1 === 'cooking'
+                    ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                2. Cooking (165°F)
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusChange('dish1', 'staged')}
+                className={`px-2.5 py-1.5 rounded-lg border transition-all ${
+                  cookStatus.dish1 === 'staged'
+                    ? 'bg-emerald-600 text-white font-bold border-emerald-600 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                3. Steam Table Ready
+              </button>
+            </div>
+          </div>
+        </AppleCard>
+
+        {/* Dish 2 Production Card */}
+        <AppleCard className="p-5 space-y-4 border-l-4 border-l-purple-500">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-mono font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                STATION 02 · HOT LINE ALTERNATE
+              </div>
+              <h4 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">{dish2}</h4>
+              <div className="text-xs text-slate-500 mt-0.5">
+                Batch Capacity: <strong className="text-slate-800 dark:text-slate-200">{c2Members.length} active plates</strong> ({batches.choice2.length - c2Members.length} NPO excluded)
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 font-mono text-xs font-bold">
+                {c2Pans.summary}
+              </span>
+            </div>
+          </div>
+
+          {/* Texture Explosion Grid */}
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              Texture Explosion &amp; Kitchen Yields
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+              {Object.entries(c2Textures).map(([tex, cnt]) => (
+                <div key={tex} className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                  <div className="font-mono font-bold text-sm text-slate-900 dark:text-white">{cnt}</div>
+                  <div className="text-[11px] text-slate-500 truncate">{iddsiChipLabel(tex)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cook Status Stepper */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-xs font-mono text-slate-400">Line Cook Stage:</span>
+            <div className="flex items-center gap-1 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => onStatusChange('dish2', 'prep')}
+                className={`px-2.5 py-1.5 rounded-lg border transition-all ${
+                  cookStatus.dish2 === 'prep'
+                    ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                1. Raw Prep
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusChange('dish2', 'cooking')}
+                className={`px-2.5 py-1.5 rounded-lg border transition-all ${
+                  cookStatus.dish2 === 'cooking'
+                    ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                2. Cooking (165°F)
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusChange('dish2', 'staged')}
+                className={`px-2.5 py-1.5 rounded-lg border transition-all ${
+                  cookStatus.dish2 === 'staged'
+                    ? 'bg-emerald-600 text-white font-bold border-emerald-600 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                3. Steam Table Ready
+              </button>
+            </div>
+          </div>
+        </AppleCard>
+      </div>
+    </div>
+  )
+}
+
 function KitchenSheetPageInner() {
   const [week, setWeek] = useState(getSunday())
   const [day, setDay] = useState(DAYS[new Date().getDay()])
@@ -140,6 +362,11 @@ function KitchenSheetPageInner() {
   const [dish1, setDish1] = useState('')
   const [dish2, setDish2] = useState('')
   const [generatingOrders, setGeneratingOrders] = useState(false)
+  const [viewMode, setViewMode] = useState<'batches' | 'all-day-kds'>('batches')
+  const [cookStatus, setCookStatus] = useState<Record<string, 'prep' | 'cooking' | 'staged'>>({
+    dish1: 'prep',
+    dish2: 'prep',
+  })
 
   const token = tokenManager.getAccessToken()
 
@@ -382,26 +609,67 @@ function KitchenSheetPageInner() {
         </AppleCard>
       </div>
 
-      {/* ── Section A2: B02 Clinical Safety Strip — per-batch allergens/textures ── */}
+      {/* ── Section A2: Production Views (Toast KDS Mode vs Clinical Batch Mode) ── */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <ShieldAlert className="w-4 h-4 text-rose-500" />
-          <h3 className="font-bold text-base text-slate-900 dark:text-white">
-            Batch Clinical Safety — allergens &amp; IDDSI textures per production batch
-          </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-rose-500" />
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">
+              {viewMode === 'batches'
+                ? 'Batch Clinical Safety — allergens & IDDSI textures per production batch'
+                : 'Toast KDS All-Day Display — Pan Scaling & Bulk Production'}
+            </h3>
+          </div>
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-mono self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setViewMode('batches')}
+              className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                viewMode === 'batches'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Batch Breakdown
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('all-day-kds')}
+              className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                viewMode === 'all-day-kds'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Toast KDS All-Day Pan Scaling
+            </button>
+          </div>
         </div>
+
         {hasOrderData ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <BatchClinicalStrip title="Primary batch" dish={choice1Name} members={batches.choice1} />
-              <BatchClinicalStrip title="Alternate batch" dish={choice2Name} members={batches.choice2} />
-              <BatchClinicalStrip title="Standing alternatives" dish="Individual alt plates" members={batches.alt} />
-              <BatchClinicalStrip title="Declined" dish="No tray prepared" members={batches.declined} />
-            </div>
-            <p className="text-sm text-slate-400 px-1">
-              Built from recorded orders for this service. Residents with no recorded choice are not assigned to a batch.
-            </p>
-          </>
+          viewMode === 'all-day-kds' ? (
+            <AllDayPanScalingView
+              dish1={choice1Name}
+              dish2={choice2Name}
+              batches={batches}
+              cookStatus={cookStatus}
+              onStatusChange={(dishKey, status) =>
+                setCookStatus(prev => ({ ...prev, [dishKey]: status }))
+              }
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <BatchClinicalStrip title="Primary batch" dish={choice1Name} members={batches.choice1} />
+                <BatchClinicalStrip title="Alternate batch" dish={choice2Name} members={batches.choice2} />
+                <BatchClinicalStrip title="Standing alternatives" dish="Individual alt plates" members={batches.alt} />
+                <BatchClinicalStrip title="Declined" dish="No tray prepared" members={batches.declined} />
+              </div>
+              <p className="text-sm text-slate-400 px-1">
+                Built from recorded orders for this service. Residents with no recorded choice are not assigned to a batch.
+              </p>
+            </>
+          )
         ) : (
           <AppleCard className="p-6 text-sm text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-4 border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20">
             <div className="flex items-center gap-3">
