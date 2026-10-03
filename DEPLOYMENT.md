@@ -60,7 +60,7 @@ ShorelineOps uses an enterprise-grade multi-stage container build based on Debia
 
 ### Production Docker Compose Stack
 
-The stack includes PostgreSQL 16, backend API, and an optional NGINX reverse proxy.
+The stack includes PostgreSQL 16, backend API, and an optional NGINX reverse proxy (disabled by default — enable with `docker compose --profile proxy up`; HTTP-only, no tested TLS setup).
 
 #### Deployment Steps
 
@@ -84,6 +84,12 @@ The stack includes PostgreSQL 16, backend API, and an optional NGINX reverse pro
 
 ---
 
+#### External managed database (override file)
+
+A host `DATABASE_URL` export alone is ignored: the production Compose file constructs the api `DATABASE_URL` from `DB_USER`/`DB_PASSWORD`/`DB_NAME`. To use an external database, create `docker-compose.external-db.yml` with an api `DATABASE_URL` entry, then start with `docker compose -f docker-compose.production.yml -f docker-compose.external-db.yml up -d --no-deps api` (`--no-deps` is required: plain `up api` still starts the bundled postgres via the api `depends_on`. Base-file `${DB_*:?...}` interpolation runs before the override merges, so `DB_USER`/`DB_PASSWORD`/`DB_NAME` must still be exported even though the override replaces `DATABASE_URL` — dummy values are fine for the unused bundled service. Remote TLS verifies certificates by default).
+
+---
+
 ## 3. Cloud Platform Deployment (Railway / Render / Fly.io)
 
 ### Railway
@@ -94,17 +100,18 @@ The stack includes PostgreSQL 16, backend API, and an optional NGINX reverse pro
    - `NODE_ENV`: `production`
    - `PORT`: `3001`
    - `DATABASE_URL`: `${{Postgres.DATABASE_URL}}`
-   - `DATABASE_SSL_REJECT_UNAUTHORIZED`: `false` (for managed DB certificates)
    - `JWT_SECRET`: *(your generated 32+ character hex string)*
    - `SEED_ADMIN_EMAIL`: `admin@yourcommunity.org`
    - `SEED_ADMIN_PASSWORD`: *(12+ character complex password)*
+   - Only if the managed database provably fails certificate verification: `DATABASE_SSL_REJECT_UNAUTHORIZED`: `false` (explicit unverified TLS; remote connections verify certificates by default).
+5. Set the health check to `/ready` (readiness), not `/health` (liveness).
 
 ### Render
 1. Create a **Web Service** pointing to the GitHub repository.
 2. Select **Docker** as the runtime environment.
 3. Provision a **PostgreSQL** database on Render.
 4. Link `DATABASE_URL` and configure `JWT_SECRET`.
-5. Set Health Check Path to `/health`.
+5. Set Health Check Path to `/ready`.
 
 ---
 
@@ -139,7 +146,8 @@ User=www-data
 WorkingDirectory=/var/www/shorelineops/server
 Environment=NODE_ENV=production
 Environment=PORT=3001
-Environment=DATABASE_URL=postgresql://shoreline:your_secure_password@localhost:5432/shorelineops
+# Local plaintext requires explicit ?sslmode=disable; remote databases must use verified TLS (default).
+Environment=DATABASE_URL=postgresql://shoreline:your_secure_password@localhost:5432/shorelineops?sslmode=disable
 Environment=JWT_SECRET=your_32_character_jwt_secret_here
 ExecStart=/usr/bin/node dist/index.js
 Restart=always
@@ -213,22 +221,30 @@ ShorelineOps exposes two dedicated health endpoints:
 
 ## 6. Automated Database Backups
 
-### Linux Cron Backup Script (`scripts/backup.sh`)
+Use the maintained scripts (`scripts/backup.sh` on Linux/macOS,
+`scripts/backup.ps1` on Windows) rather than a hand-rolled `pg_dump | gzip`
+pipeline. Both scripts write to a temp file first and publish only when the
+dump exit code is 0 and the output validates as non-empty (the raw dump is
+validated before compression, since empty input still produces non-empty
+gzip); rotation (30-day retention) runs only after a successful publish and
+is skipped on failure.
+
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-BACKUP_DIR="/var/backups/shorelineops"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-mkdir -p "$BACKUP_DIR"
-
-echo "[Backup] Creating PostgreSQL snapshot..."
-pg_dump "$DATABASE_URL" | gzip > "$BACKUP_DIR/shorelineops_$TIMESTAMP.sql.gz"
-
-# Retain 30 days of backups
-find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +30 -delete
-echo "[Backup] Complete: $BACKUP_DIR/shorelineops_$TIMESTAMP.sql.gz"
+DB_USER=$DB_USER DB_NAME=$DB_NAME BACKUP_DIR=/var/backups/shorelineops ./scripts/backup.sh
 ```
+
+```powershell
+.\scripts\backup.ps1 -BackupDir C:\backups\shorelineops -DbUser $env:DB_USER -DbName $env:DB_NAME
+```
+
+`backup.sh` requires explicit `DB_USER`/`DB_NAME` matching the deployment's Compose-required values (`DB_USER`/`DB_NAME` for production, `POSTGRES_USER`/`POSTGRES_DB` for local) for the container dump path (no stale defaults); the `DATABASE_URL` fallback (used only when the database container is not running) runs without `DB_USER`/`DB_NAME`.
+
+`backup.ps1` requires explicit `-DbUser`/`-DbName` matching the deployment's Compose-required values (`DB_USER`/`DB_NAME` for production, `POSTGRES_USER`/`POSTGRES_DB` for local); it ships no stale defaults and rejects shell metacharacters (quotes, `%`, `&`, etc.) before running.
+
+> **Pending acceptance gate:** backup output is currently a plaintext dump.
+> Encryption at rest and an isolated restore drill are still open (see
+> `docs/audits/DEPLOYMENT_IMPLEMENTATION_2026-10-01.md`. Store artifacts
+> accordingly and do not claim otherwise.
 
 ---
 

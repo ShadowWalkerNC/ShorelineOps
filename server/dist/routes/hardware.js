@@ -2,7 +2,7 @@
 /**
  * Hardware Routes — Shoreline v6.0
  *
- * POST   /api/hardware/print/tray-card          Print a thermal tray card
+ * POST   /api/hardware/print/tray-card          DISABLED (503 — see below)
  *
  * B13: simulated printer registry (GET /printers), simulated BLE probe scan
  * (GET /probes), simulated probe reads (GET /probes/:probeId/temperature) and
@@ -12,9 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.hardwareRouter = void 0;
 const express_1 = require("express");
 const crypto_1 = require("crypto");
-const thermalPrint_1 = require("../hardware/thermalPrint");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
+const idempotency_1 = require("../middleware/idempotency");
 const emitter_1 = require("../webhooks/emitter");
 exports.hardwareRouter = (0, express_1.Router)();
 // ── C01: Durable HACCP temperature logging (migration 023) ───────────────────
@@ -26,49 +26,26 @@ exports.hardwareRouter = (0, express_1.Router)();
 // temp checks never serve food, so they cannot bypass clinical gates.
 // ── Thermal Printing ──────────────────────────────────────────────────────────
 /**
- * POST /api/hardware/print/tray-card
- * Body: ThermalPrintResidentInput
+ * POST /api/hardware/print/tray-card — DISABLED (review 2026-10-01).
+ *
+ * The legacy handler could not print safely: fluid consistency has no
+ * canonical column (so it assumed a default), it printed NPO/inactive
+ * residents as serviceable, and idempotent replay could re-issue an obsolete
+ * clinical job. The endpoint stays mounted behind the hardware.print
+ * capability gate and answers 503 with an explicit code — no database reads
+ * or writes, no print job, no idempotency replay.
+ *
+ * Canonical path: GET /api/kitchen/traycards-generated, the validated signed
+ * tray contract (kitchen execution/printing capability). Print from cards
+ * generated there once this endpoint shares that contract.
  */
-exports.hardwareRouter.post('/print/tray-card', async (req, res, next) => {
-    try {
-        const resident = req.body;
-        // Validate required fields
-        if (!resident.id || !resident.name || !resident.room) {
-            return res.status(400).json({
-                error: 'id, name, and room are required resident fields',
-            });
-        }
-        const job = thermalPrint_1.ThermalPrintEngine.printTrayCard({
-            id: resident.id,
-            name: resident.name,
-            room: resident.room,
-            wing: resident.wing,
-            diet: resident.diet ?? 'Regular',
-            texture: resident.texture ?? 'IDDSI Level 7 Regular',
-            fluids: resident.fluids ?? 'Thin',
-            allergies: resident.allergies ?? [],
-            mealDate: resident.mealDate,
-            mealType: resident.mealType,
-        });
-        const zpl = thermalPrint_1.ThermalPrintEngine.generateZplString(job);
-        const directPrint = req.body.directPrint === true;
-        const printerHost = req.body.printerHost || '192.168.1.101';
-        const printerPort = req.body.printerPort || 9100;
-        let socketResult;
-        if (directPrint) {
-            socketResult = await thermalPrint_1.ThermalPrintEngine.sendZplToNetworkPrinter(printerHost, printerPort, zpl);
-        }
-        return res.status(201).json({
-            message: 'Tray card print job generated',
-            job,
-            zpl,
-            directPrintRequested: directPrint,
-            socketResult,
-        });
-    }
-    catch (err) {
-        next(err);
-    }
+exports.hardwareRouter.post('/print/tray-card', (0, permissions_1.requireCapability)('hardware.print'), (_req, res) => {
+    return res.status(503).json({
+        error: 'Legacy hardware tray-card printing is unavailable. Generate a signed tray card instead.',
+        code: 'HARDWARE_PRINT_UNAVAILABLE',
+        canonical: 'GET /api/kitchen/traycards-generated',
+        guidance: 'Use GET /api/kitchen/traycards-generated (kitchen.write or hardware.print) for the validated signed tray contract; this legacy print path stays disabled until it shares that contract.',
+    });
 });
 // ─────────────────────────────────────────────────────────────────────────────
 // B13 scope cuts: the simulated hardware endpoints were CUT from this file:
@@ -76,7 +53,9 @@ exports.hardwareRouter.post('/print/tray-card', async (req, res, next) => {
 //   GET    /api/hardware/probes                        (simulated BLE scan)
 //   GET    /api/hardware/probes/:probeId/temperature   (simulated temp reads)
 //   POST   /api/hardware/probes/:probeId/log-haccp     (simulated HACCP logging)
-// Kept: POST /api/hardware/print/tray-card (real ZPL thermal-print engine).
+// Disabled (review 2026-10-01): POST /api/hardware/print/tray-card answers 503
+// HARDWARE_PRINT_UNAVAILABLE until it shares the validated signed tray
+// contract (GET /api/kitchen/traycards-generated).
 // ─────────────────────────────────────────────────────────────────────────────
 // ═════════════════════════════════════════════════════════════════════════════
 // C01 — HACCP temperature compliance (durable, survey-evidence)
@@ -140,7 +119,8 @@ async function buildSchedule() {
 }
 // ── GET /api/hardware/haccp/equipment ───────────────────────────────────────
 // List temperature-monitored equipment (active only by default).
-exports.hardwareRouter.get('/haccp/equipment', async (req, res, next) => {
+// hardware.haccpRead: kitchen execution + readonly surveyors. No vendors.
+exports.hardwareRouter.get('/haccp/equipment', (0, permissions_1.requireCapability)('hardware.haccpRead'), async (req, res, next) => {
     try {
         const includeInactive = req.query.includeInactive === 'true';
         const { rows } = await pool_1.pool.query(`SELECT * FROM haccp_equipment ${includeInactive ? '' : 'WHERE active = $1'} ORDER BY name`, includeInactive ? [] : [true]);
@@ -151,8 +131,8 @@ exports.hardwareRouter.get('/haccp/equipment', async (req, res, next) => {
     }
 });
 // ── POST /api/hardware/haccp/equipment ──────────────────────────────────────
-// Register a piece of monitored equipment. Manager role.
-exports.hardwareRouter.post('/haccp/equipment', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+// Register a piece of monitored equipment. Manager/admin only. Replay after the gate.
+exports.hardwareRouter.post('/haccp/equipment', (0, permissions_1.requireCapability)('hardware.haccpManage'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { name, type, targetTempF, checkFrequency = 'daily' } = req.body ?? {};
         if (typeof name !== 'string' || !name.trim()) {
@@ -180,8 +160,8 @@ exports.hardwareRouter.post('/haccp/equipment', (0, requireAuth_1.requireRole)('
     }
 });
 // ── PATCH /api/hardware/haccp/equipment/:id ─────────────────────────────────
-// Update target temp, frequency, name, or active flag. Manager role.
-exports.hardwareRouter.patch('/haccp/equipment/:id', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+// Update target temp, frequency, name, or active flag. Manager/admin only. Replay after the gate.
+exports.hardwareRouter.patch('/haccp/equipment/:id', (0, permissions_1.requireCapability)('hardware.haccpManage'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const existing = await getEquipment(req.params.id);
         if (!existing)
@@ -220,8 +200,8 @@ exports.hardwareRouter.patch('/haccp/equipment/:id', (0, requireAuth_1.requireRo
     }
 });
 // ── GET /api/hardware/haccp/schedule ────────────────────────────────────────
-// Equipment temp schedule with due/overdue surfacing.
-exports.hardwareRouter.get('/haccp/schedule', async (_req, res, next) => {
+// Equipment temp schedule with due/overdue surfacing. hardware.haccpRead.
+exports.hardwareRouter.get('/haccp/schedule', (0, permissions_1.requireCapability)('hardware.haccpRead'), async (_req, res, next) => {
     try {
         const schedule = await buildSchedule();
         const overdue = schedule.filter(s => s.status === 'overdue').length;
@@ -235,7 +215,7 @@ exports.hardwareRouter.get('/haccp/schedule', async (_req, res, next) => {
 // ── GET /api/hardware/haccp/logs ───────────────────────────────────────────
 // Query persisted temp logs. ?start=YYYY-MM-DD&end=YYYY-MM-DD
 // &equipmentId=&violationsOnly=true&checkType=food|equipment
-exports.hardwareRouter.get('/haccp/logs', async (req, res, next) => {
+exports.hardwareRouter.get('/haccp/logs', (0, permissions_1.requireCapability)('hardware.haccpRead'), async (req, res, next) => {
     try {
         const { start, end, equipmentId, violationsOnly, checkType } = req.query;
         const conditions = [];
@@ -275,7 +255,9 @@ exports.hardwareRouter.get('/haccp/logs', async (req, res, next) => {
 // Compliance is computed server-side and a violation (non-compliant) CANNOT
 // be persisted without correctiveAction text — enforced here AND again by
 // the client flow, so a bare LOGGED record can never be created.
-exports.hardwareRouter.post('/haccp/log-temp', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// hardware.haccpLog: kitchen execution roles log temps (no frontdesk/
+// readonly/vendors). Replay after the gate.
+exports.hardwareRouter.post('/haccp/log-temp', (0, permissions_1.requireCapability)('hardware.haccpLog'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { checkType, itemName = '', equipmentId, tempF, targetTempF, correctiveAction = '', source = 'manual', probeDevice, recordedBy, } = req.body ?? {};
         if (!['food', 'equipment'].includes(checkType)) {
@@ -398,7 +380,7 @@ exports.hardwareRouter.post('/haccp/log-temp', (0, requireAuth_1.requireRole)('s
 // Attach (or update) the corrective action on a logged violation. This is the
 // only way an OPEN violation closes — the corrective action text is the
 // closure requirement. Setting an empty value is rejected.
-exports.hardwareRouter.patch('/haccp/logs/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.hardwareRouter.patch('/haccp/logs/:id', (0, permissions_1.requireCapability)('hardware.haccpLog'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { correctiveAction } = req.body ?? {};
         if (typeof correctiveAction !== 'string' || !correctiveAction.trim()) {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
 import { useDevice } from '@/hooks/useDevice'
+import { useAuth } from '@/security/AuthContext'
 import type { Resident } from '@/types/resident'
 import {
   User,
@@ -47,6 +48,9 @@ const STATUS_COLORS: Record<Resident['status'], 'green' | 'orange' | 'blue' | 'g
 }
 
 function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: Resident) => void; onDelete: (id: string) => void }) {
+  const { hasCapability } = useAuth()
+  const canEdit = hasCapability('residents.write') || hasCapability('residents.clinicalWrite')
+  const canDelete = hasCapability('residents.delete')
   const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
   const textureInfo = TEXTURE_COLORS[r.texture] || TEXTURE_COLORS.Regular
@@ -225,21 +229,25 @@ function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: R
         </button>
 
         <div className="flex items-center gap-1.5">
-          <AppleButton
-            variant="secondary"
-            size="sm"
-            icon={<Edit2 className="w-3.5 h-3.5" />}
-            onClick={() => onEdit(r)}
-          >
-            Edit Order
-          </AppleButton>
-          <button
-            onClick={() => onDelete(r.id)}
-            className="w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
-            title="Archive Patient Record"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {canEdit && (
+            <AppleButton
+              variant="secondary"
+              size="sm"
+              icon={<Edit2 className="w-3.5 h-3.5" />}
+              onClick={() => onEdit(r)}
+            >
+              Edit Order
+            </AppleButton>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => onDelete(r.id)}
+              className="w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
+              title="Archive Patient Record"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </AppleCard>
@@ -247,6 +255,8 @@ function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: R
 }
 
 export default function ResidentCardList({ residents, onEdit, onDelete }: Props) {
+  const { hasCapability } = useAuth()
+  const canEdit = hasCapability('residents.write') || hasCapability('residents.clinicalWrite')
   const { isMobile } = useDevice()
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
 
@@ -337,9 +347,13 @@ export default function ResidentCardList({ residents, onEdit, onDelete }: Props)
                         {r.servingLocation} {r.tableAssignment && `(${r.tableAssignment})`}
                       </td>
                       <td className="p-3 text-right">
-                        <AppleButton variant="secondary" size="sm" onClick={() => onEdit(r)}>
-                          Edit
-                        </AppleButton>
+                        {canEdit ? (
+                          <AppleButton variant="secondary" size="sm" onClick={() => onEdit(r)}>
+                            Edit
+                          </AppleButton>
+                        ) : (
+                          <span className="text-xs text-slate-400 font-mono">View Only</span>
+                        )}
                       </td>
                     </tr>
                   )

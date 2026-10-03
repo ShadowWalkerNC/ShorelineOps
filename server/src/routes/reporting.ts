@@ -33,8 +33,9 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { randomUUID } from 'crypto'
 import { pool } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { requireCapability } from '../middleware/permissions'
+import { idempotencyMiddleware } from '../middleware/idempotency'
 import { getMenuSlotCosts, rollupDailyCost } from '../engine/costing'
 
 export const reportingRouter = Router()
@@ -43,14 +44,75 @@ function err(res: Response, status: number, msg: string) {
   return res.status(status).json({ error: msg })
 }
 
+/**
+ * Canonical resident columns (migration 001): name, room, status ('Active'),
+ * diet_type, texture, allergies/beverages (TEXT[] on pg, JSON text on
+ * SQLite). There are no first_name/last_name/diet_order/supplements columns —
+ * legacy report keys are mapped from the canonical columns below so existing
+ * response contracts keep working.
+ */
+function normList(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((a): a is string => typeof a === 'string')
+  if (typeof v === 'string') {
+    const t = v.trim()
+    if (!t || t === '[]') return []
+    try {
+      const p: unknown = JSON.parse(t)
+      if (Array.isArray(p)) return p.filter((a): a is string => typeof a === 'string')
+    } catch { /* not JSON — treat as empty */ }
+  }
+  return []
+}
+
+function parseJsonObject(v: unknown): Record<string, any> {
+  if (v && typeof v === 'object' && !Array.isArray(v)) return v as Record<string, any>
+  if (typeof v === 'string') {
+    try {
+      const p: unknown = JSON.parse(v)
+      if (p && typeof p === 'object' && !Array.isArray(p)) return p as Record<string, any>
+    } catch { /* fall through */ }
+  }
+  return {}
+}
+
+function parseJsonArray(v: unknown): Array<Record<string, any>> {
+  if (Array.isArray(v)) return v as Array<Record<string, any>>
+  if (typeof v === 'string') {
+    try {
+      const p: unknown = JSON.parse(v)
+      if (Array.isArray(p)) return p as Array<Record<string, any>>
+    } catch { /* fall through */ }
+  }
+  return []
+}
+
+/** Map a canonical resident row to the legacy risk-report entry shape. */
+function toRiskEntry(r: any) {
+  const name = String(r.name ?? '').trim()
+  const space = name.indexOf(' ')
+  return {
+    id: r.id,
+    first_name: space === -1 ? name : name.slice(0, space),
+    last_name: space === -1 ? '' : name.slice(space + 1),
+    name,
+    room: r.room,
+    diet_order: r.diet_type,
+    diet_type: r.diet_type,
+    texture: r.texture,
+    allergies: normList(r.allergies),
+    beverages: normList(r.beverages),
+  }
+}
+
 // ─── Summary (dashboard-level) ────────────────────────────────────────────
 
 /**
  * GET /api/reporting/summary?start=YYYY-MM-DD&end=YYYY-MM-DD
  *
- * Returns the key operational metrics for the date range.
+ * Returns the key operational metrics for the date range. Aggregate counts
+ * only (no resident-level PHI), so reporting.opsRead suffices.
  */
-reportingRouter.get('/summary', async (req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/summary', requireCapability('reporting.opsRead'), async (req: Request, res: Response, next: NextFunction) => {
   const { start, end } = req.query
   const startDate = (start as string) ?? new Date().toISOString().slice(0, 10)
   const endDate   = (end   as string) ?? new Date().toISOString().slice(0, 10)
@@ -79,39 +141,36 @@ reportingRouter.get('/summary', async (req: Request, res: Response, next: NextFu
     )
     const substitutions = parseInt(subRows[0].cnt, 10)
 
-    // Active resident count (for context)
+    // Active resident count (for context). Canonical status is 'Active'.
     const { rows: resRows } = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM residents WHERE status = 'active'`
+      `SELECT COUNT(*) AS cnt FROM residents WHERE status = 'Active'`
     )
     const activeResidents = parseInt(resRows[0].cnt, 10)
 
-    // Allergy risk: count residents with at least one allergen flag
-    // (simplified: count residents who have allergens listed)
+    // Allergy risk: count residents with at least one allergen flag.
+    // The allergies column is TEXT[] on pg / JSON text on SQLite, so the
+    // emptiness check runs in JS (portable) rather than dialect SQL.
     const { rows: allergyRows } = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM residents
-       WHERE status = 'active'
-         AND allergies IS NOT NULL
-         AND allergies != ''
-         AND allergies != '[]'`
+      `SELECT allergies FROM residents WHERE status = 'Active'`
     )
-    const allergyFlagCount = parseInt(allergyRows[0].cnt, 10)
+    const allergyFlagCount = allergyRows.filter(r => normList(r.allergies).length > 0).length
 
-    // Diet mismatches: residents whose texture is 'puree' or 'minced'
-    // but that's more of a tray-card validation — here we count residents
-    // whose texture/diet_order fields are populated (proxy for mismatch risk)
+    // Special diets: residents with a non-Regular texture (proxy for
+    // mismatch risk; tray-card validation itself lives in the kitchen flow).
     const { rows: mismatchRows } = await pool.query(
       `SELECT COUNT(*) AS cnt FROM residents
-       WHERE status = 'active'
+       WHERE status = 'Active'
          AND (texture IS NOT NULL AND texture != '' AND texture != 'Regular')`
     )
     const specialDietCount = parseInt(mismatchRows[0].cnt, 10)
 
-    // Dietary labor hours and estimated spend from timecard_punches
+    // Dietary labor hours and estimated spend from timecard_punches.
+    // Canonical punch-time column is punched_at (migration 004).
     const { rows: laborRows } = await pool.query(
       `SELECT
          COUNT(*) AS total_punches
        FROM timecard_punches
-       WHERE timestamp >= $1 AND timestamp <= $2`,
+       WHERE punched_at >= $1 AND punched_at <= $2`,
       [startDate, endDate]
     )
     const totalPunches = parseInt(laborRows[0]?.total_punches || '0', 10)
@@ -147,8 +206,8 @@ reportingRouter.get('/summary', async (req: Request, res: Response, next: NextFu
       totalResidentDays,
       costPerResidentDay: costPerResidentDay !== null ? costPerResidentDay.toFixed(2) : null,
       costSourceCounts: {
-        rolledUpDays: parseInt(srcRows[0].auto_days, 10),
-        manualDays: parseInt(srcRows[0].manual_days, 10),
+        rolledUpDays: parseInt(srcRows[0]?.auto_days ?? '0', 10),
+        manualDays: parseInt(srcRows[0]?.manual_days ?? '0', 10),
       },
       breakdown: {
         perishableFoodCost,
@@ -170,19 +229,21 @@ reportingRouter.get('/summary', async (req: Request, res: Response, next: NextFu
 
 // ─── Daily Cost Log ────────────────────────────────────────────────────────
 
-/** GET /api/reporting/cost-log?start=&end= */
-reportingRouter.get('/cost-log', async (req: Request, res: Response, next: NextFunction) => {
+/** GET /api/reporting/cost-log?start=&end= — line-level financial detail: finance readers only. */
+reportingRouter.get('/cost-log', requireCapability('reporting.financeRead'), async (req: Request, res: Response, next: NextFunction) => {
   const { start, end } = req.query
   try {
+    // Portable range filter (no pg-only ::date casts): log_date is DATE on
+    // pg / TEXT on SQLite, and ISO-8601 strings compare correctly on both.
     const { rows } = await pool.query(
       `SELECT dcl.*, u.name AS logged_by_name
        FROM daily_cost_log dcl
        LEFT JOIN users u ON u.id = dcl.created_by
-       WHERE ($1::date IS NULL OR dcl.log_date >= $1::date)
-         AND ($2::date IS NULL OR dcl.log_date <= $2::date)
+       WHERE ($1 IS NULL OR dcl.log_date >= $1)
+         AND ($2 IS NULL OR dcl.log_date <= $2)
        ORDER BY dcl.log_date DESC
        LIMIT 365`,
-      [start ?? null, end ?? null]
+      [typeof start === 'string' ? start : null, typeof end === 'string' ? end : null]
     )
     // C06: rolled-up entries carry an "[auto-rollup]" notes prefix; expose the
     // origin so $/CPD views can show rolled costs vs manual entries.
@@ -193,8 +254,8 @@ reportingRouter.get('/cost-log', async (req: Request, res: Response, next: NextF
   } catch (e) { next(e) }
 })
 
-/** POST /api/reporting/cost-log */
-reportingRouter.post('/cost-log', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+/** POST /api/reporting/cost-log — manager/admin only. Replay after the gate. */
+reportingRouter.post('/cost-log', requireCapability('reporting.costWrite'), idempotencyMiddleware(), async (req: Request, res: Response, next: NextFunction) => {
   const ar = req as AuthRequest
   const { logDate, residentCount, foodCost, notes = '' } = req.body
   if (!logDate || residentCount == null || foodCost == null) {
@@ -226,7 +287,7 @@ reportingRouter.post('/cost-log', requireRole('manager'), async (req: Request, r
  * per-item costs with provenance (SKU-matched vs estimated), per-resident-day
  * rollup, and the resident census used for the daily total.
  */
-reportingRouter.get('/cpd-breakdown', async (req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/cpd-breakdown', requireCapability('reporting.financeRead'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const date = (req.query.date as string) || new Date().toISOString().slice(0, 10)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -238,7 +299,7 @@ reportingRouter.get('/cpd-breakdown', async (req: Request, res: Response, next: 
     const { weekName, slots } = await getMenuSlotCosts(pool, dayName)
     const perResidentDayCost = Math.round(slots.reduce((s, slot) => s + slot.slotPlateCost, 0) * 10000) / 10000
     const { rows: censusRows } = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM residents WHERE status = 'active'`
+      `SELECT COUNT(*) AS cnt FROM residents WHERE status = 'Active'`
     )
     const residentCount = parseInt(censusRows[0]?.cnt || '0', 10)
     res.json({
@@ -261,7 +322,7 @@ reportingRouter.get('/cpd-breakdown', async (req: Request, res: Response, next: 
  * same date overwrites the auto-rollup entry, never duplicates it.
  * Body: { date?: 'YYYY-MM-DD' } (defaults to today)
  */
-reportingRouter.post('/cost-log/rollup', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+reportingRouter.post('/cost-log/rollup', requireCapability('reporting.costWrite'), idempotencyMiddleware(), async (req: Request, res: Response, next: NextFunction) => {
   const ar = req as AuthRequest
   try {
     const date = (req.body?.date as string) || new Date().toISOString().slice(0, 10)
@@ -275,30 +336,36 @@ reportingRouter.post('/cost-log/rollup', requireRole('manager'), async (req: Req
 
 // ─── Substitution Log ─────────────────────────────────────────────────────
 
-/** GET /api/reporting/substitutions?start=&end= */
-reportingRouter.get('/substitutions', async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * GET /api/reporting/substitutions?start=&end=
+ * Full-detail rows (sl.* + resident_name/room + free-text reason that can
+ * carry diagnosis/allergy/history): clinical readers only. Response contract
+ * unchanged for clinical roles.
+ */
+reportingRouter.get('/substitutions', requireCapability('reporting.clinicalRead'), async (req: Request, res: Response, next: NextFunction) => {
   const { start, end } = req.query
   try {
+    // Canonical resident name column is `name` (no first_name/last_name).
     const { rows } = await pool.query(
       `SELECT sl.*,
-              r.first_name || ' ' || r.last_name AS resident_name,
+              r.name AS resident_name,
               r.room,
               u.name AS logged_by_name
        FROM substitution_log sl
        LEFT JOIN residents r ON r.id = sl.resident_id
        LEFT JOIN users u ON u.id = sl.logged_by
-       WHERE ($1::date IS NULL OR sl.meal_date >= $1::date)
-         AND ($2::date IS NULL OR sl.meal_date <= $2::date)
+       WHERE ($1 IS NULL OR sl.meal_date >= $1)
+         AND ($2 IS NULL OR sl.meal_date <= $2)
        ORDER BY sl.meal_date DESC, sl.created_at DESC
        LIMIT 500`,
-      [start ?? null, end ?? null]
+      [typeof start === 'string' ? start : null, typeof end === 'string' ? end : null]
     )
     res.json(rows)
   } catch (e) { next(e) }
 })
 
-/** POST /api/reporting/substitutions */
-reportingRouter.post('/substitutions', async (req: Request, res: Response, next: NextFunction) => {
+/** POST /api/reporting/substitutions — kitchen execution roles. Replay after the gate. */
+reportingRouter.post('/substitutions', requireCapability('reporting.substitutionWrite'), idempotencyMiddleware(), async (req: Request, res: Response, next: NextFunction) => {
   const ar = req as AuthRequest
   const { residentId, mealDate, mealType, originalItem, substituteItem, reason = '' } = req.body
   if (!mealDate || !originalItem || !substituteItem) {
@@ -316,8 +383,8 @@ reportingRouter.post('/substitutions', async (req: Request, res: Response, next:
   } catch (e) { next(e) }
 })
 
-/** DELETE /api/reporting/substitutions/:id */
-reportingRouter.delete('/substitutions/:id', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+/** DELETE /api/reporting/substitutions/:id — manager/admin only. Replay after the gate. */
+reportingRouter.delete('/substitutions/:id', requireCapability('reporting.substitutionDelete'), idempotencyMiddleware(), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   try {
     await pool.query(`DELETE FROM substitution_log WHERE id = $1`, [id])
@@ -329,22 +396,20 @@ reportingRouter.delete('/substitutions/:id', requireRole('manager'), async (req:
 
 /**
  * GET /api/reporting/allergy-risk
- * Lists all active residents who have allergens recorded.
+ * Lists all active residents who have allergens recorded. Resident-level
+ * clinical data, so reporting.clinicalRead only.
  * Full meal-level cross-validation is a V2 enhancement requiring
  * structured recipe ingredients with allergen tags.
  */
-reportingRouter.get('/allergy-risk', async (_req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/allergy-risk', requireCapability('reporting.clinicalRead'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, first_name, last_name, room, diet_order, texture, allergies, beverages
+      `SELECT id, name, room, diet_type, texture, allergies, beverages
        FROM residents
-       WHERE status = 'active'
-         AND allergies IS NOT NULL
-         AND allergies != ''
-         AND allergies != '[]'
-       ORDER BY last_name, first_name`
+       WHERE status = 'Active'
+       ORDER BY name`
     )
-    res.json(rows)
+    res.json(rows.filter(r => normList(r.allergies).length > 0).map(toRiskEntry))
   } catch (e) { next(e) }
 })
 
@@ -354,20 +419,33 @@ reportingRouter.get('/allergy-risk', async (_req: Request, res: Response, next: 
  * GET /api/reporting/diet-mismatches
  * Lists active residents with a non-regular texture or therapeutic diet order.
  * These are the residents most likely to have tray-card errors.
+ * Resident-level clinical data, so reporting.clinicalRead only.
  */
-reportingRouter.get('/diet-mismatches', async (_req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/diet-mismatches', requireCapability('reporting.clinicalRead'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
+    // Canonical diet column is diet_type; LOWER() LIKE keeps the
+    // regular-diet exclusion portable across pg and SQLite.
     const { rows } = await pool.query(
-      `SELECT id, first_name, last_name, room, diet_order, texture, allergies, beverages, supplements
+      `SELECT id, name, room, diet_type, texture, allergies, beverages, ensure_per_day
        FROM residents
-       WHERE status = 'active'
+       WHERE status = 'Active'
          AND (
            (texture IS NOT NULL AND texture != '' AND texture != 'Regular') OR
-           (diet_order IS NOT NULL AND diet_order != '' AND diet_order NOT ILIKE '%regular%')
+           (diet_type IS NOT NULL AND diet_type != '' AND LOWER(diet_type) NOT LIKE '%regular%')
          )
-       ORDER BY last_name, first_name`
+       ORDER BY name`
     )
-    res.json(rows)
+    // The canonical schema has no supplements column: the entry's
+    // supplements list is derived from the recorded Ensure order, and the
+    // raw ensurePerDay count is included alongside.
+    res.json(rows.map(r => {
+      const ensurePerDay = Number(r.ensure_per_day ?? 0)
+      return {
+        ...toRiskEntry(r),
+        supplements: ensurePerDay > 0 ? [`Ensure (${ensurePerDay}/day)`] : [],
+        ensurePerDay,
+      }
+    }))
   } catch (e) { next(e) }
 })
 
@@ -375,30 +453,58 @@ reportingRouter.get('/diet-mismatches', async (_req: Request, res: Response, nex
 
 /**
  * GET /api/reporting/production-variance?start=&end=
- * Returns production sheets with planned vs produced counts.
- * Variance = (produced - planned) / planned * 100
+ * Returns one entry per scheduled production-sheet row (canonical
+ * production_sheets columns: day/slot/rows/counts — there is no
+ * date/planned_count/produced_count). The canonical schema tracks planned
+ * portions only: produced and variancePct are null until actual cooked
+ * counts are recorded, and are never fabricated.
  */
-reportingRouter.get('/production-variance', async (req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/production-variance', requireCapability('reporting.opsRead'), async (req: Request, res: Response, next: NextFunction) => {
   const { start, end } = req.query
   try {
-    // production_sheets table — check what columns exist by trying a safe query
+    const startDay = typeof start === 'string' ? start : null
+    const endDay = typeof end === 'string' ? end : null
     const { rows } = await pool.query(
       `SELECT *
        FROM production_sheets
-       WHERE ($1::date IS NULL OR date >= $1::date)
-         AND ($2::date IS NULL OR date <= $2::date)
-       ORDER BY date DESC
+       WHERE ($1 IS NULL OR day >= $1)
+         AND ($2 IS NULL OR day <= $2)
+       ORDER BY day DESC
        LIMIT 200`,
-      [start ?? null, end ?? null]
+      [startDay, endDay]
     )
-    // Calculate variance where both planned and produced counts are available
-    const withVariance = rows.map(r => {
-      const planned  = parseFloat(r.planned_count ?? r.total_count ?? 0)
-      const produced = parseFloat(r.produced_count ?? r.actual_count ?? planned)
-      const variance = planned > 0 ? ((produced - planned) / planned * 100).toFixed(1) : null
-      return { ...r, planned, produced, variancePct: variance }
-    })
-    res.json(withVariance)
+    const entries: Array<{
+      id: string; date: string; meal_type: string; item_name: string | null
+      planned: number; produced: null; variancePct: null
+    }> = []
+    for (const sheet of rows) {
+      const sheetRows = parseJsonArray(sheet.rows)
+      if (sheetRows.length === 0) {
+        const counts = parseJsonObject(sheet.counts)
+        entries.push({
+          id: String(sheet.id),
+          date: sheet.day,
+          meal_type: sheet.slot,
+          item_name: null,
+          planned: Number(counts.total ?? 0),
+          produced: null,
+          variancePct: null,
+        })
+      } else {
+        sheetRows.forEach((row, i) => {
+          entries.push({
+            id: `${sheet.id}:${row.menuItemId ?? i}`,
+            date: sheet.day,
+            meal_type: sheet.slot,
+            item_name: row.menuItemName ?? null,
+            planned: Number(row.total ?? row.projectedPortions ?? 0),
+            produced: null,
+            variancePct: null,
+          })
+        })
+      }
+    }
+    res.json(entries)
   } catch (e) { next(e) }
 })
 
@@ -408,7 +514,7 @@ reportingRouter.get('/production-variance', async (req: Request, res: Response, 
  * GET /api/reporting/compliance-summary?start=&end=
  * Returns a structured JSON payload for printing a compliance summary report.
  */
-reportingRouter.get('/compliance-summary', async (req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/compliance-summary', requireCapability('reporting.opsRead'), async (req: Request, res: Response, next: NextFunction) => {
   const { start, end } = req.query
   const startDate = (start as string) ?? new Date().toISOString().slice(0, 10)
   const endDate   = (end   as string) ?? new Date().toISOString().slice(0, 10)
@@ -425,12 +531,12 @@ reportingRouter.get('/compliance-summary', async (req: Request, res: Response, n
         [startDate, endDate]
       ),
       pool.query(
-        `SELECT COUNT(*) AS cnt FROM residents WHERE status='active' AND allergies IS NOT NULL AND allergies != '' AND allergies != '[]'`
+        `SELECT allergies FROM residents WHERE status = 'Active'`
       ),
       pool.query(
-        `SELECT COUNT(*) AS cnt FROM residents WHERE status='active' AND (
+        `SELECT COUNT(*) AS cnt FROM residents WHERE status = 'Active' AND (
            (texture IS NOT NULL AND texture != '' AND texture != 'Regular') OR
-           (diet_order IS NOT NULL AND diet_order != '' AND diet_order NOT ILIKE '%regular%')
+           (diet_type IS NOT NULL AND diet_type != '' AND LOWER(diet_type) NOT LIKE '%regular%')
          )`
       ),
     ])
@@ -449,7 +555,7 @@ reportingRouter.get('/compliance-summary', async (req: Request, res: Response, n
         totalFoodCost: foodCost.toFixed(2),
         totalResidentDays: residentDays,
         substitutions: parseInt(subRes.rows[0].cnt, 10),
-        residentsWithAllergens: parseInt(allergyRes.rows[0].cnt, 10),
+        residentsWithAllergens: allergyRes.rows.filter(r => normList(r.allergies).length > 0).length,
         residentsWithSpecialDiets: parseInt(mismatchRes.rows[0].cnt, 10),
       },
     })
@@ -464,7 +570,9 @@ import { requireTier } from '../middleware/requireTier'
  * 
  * Generates official CMS-2567 Dietary Survey Audit Pack (Federal F-Tags F800 - F814)
  */
-reportingRouter.get('/cms-survey-export', requireTier('enterprise'), async (req: Request, res: Response, next: NextFunction) => {
+// Resident-level clinical survey data: clinical readers on the enterprise
+// tier (capability first, then tier — both precede any response).
+reportingRouter.get('/cms-survey-export', requireCapability('reporting.clinicalRead'), requireTier('enterprise'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { format = 'json' } = req.query
     const { rows: residents } = await pool.query(
@@ -516,7 +624,7 @@ reportingRouter.get('/cms-survey-export', requireTier('enterprise'), async (req:
 // recorded-by staff, compliance flags, and corrective actions. format=binder
 // renders a plain-text survey-binder page for printing.
 // ═══════════════════════════════════════════════════════════════════════════
-reportingRouter.get('/haccp-temperature-log', async (req: Request, res: Response, next: NextFunction) => {
+reportingRouter.get('/haccp-temperature-log', requireCapability('reporting.opsRead'), async (req: Request, res: Response, next: NextFunction) => {
   const { start, end, equipmentId, violationsOnly, format = 'json' } = req.query
   const startDate = (start as string) ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
   const endDate   = (end   as string) ?? new Date().toISOString().slice(0, 10)
@@ -632,16 +740,16 @@ function toBudgetEntry(row: any) {
   }
 }
 
-// GET /api/reporting/budget-periods
-reportingRouter.get('/budget-periods', async (_req, res, next) => {
+// GET /api/reporting/budget-periods — line-level financial detail: finance readers only.
+reportingRouter.get('/budget-periods', requireCapability('reporting.financeRead'), async (_req, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM budget_periods ORDER BY year DESC, month DESC')
     res.json(rows.map(toBudgetPeriod))
   } catch (err) { next(err) }
 })
 
-// POST /api/reporting/budget-periods
-reportingRouter.post('/budget-periods', requireRole('staff'), async (req: AuthRequest, res, next) => {
+// POST /api/reporting/budget-periods — manager/admin only. Replay after the gate.
+reportingRouter.post('/budget-periods', requireCapability('reporting.budgetWrite'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const d = req.body
     const id = d.id || randomUUID()
@@ -666,8 +774,8 @@ reportingRouter.post('/budget-periods', requireRole('staff'), async (req: AuthRe
   } catch (err) { next(err) }
 })
 
-// GET /api/reporting/budget-entries[?periodId=]
-reportingRouter.get('/budget-entries', async (req, res, next) => {
+// GET /api/reporting/budget-entries[?periodId=] — line-level financial detail: finance readers only.
+reportingRouter.get('/budget-entries', requireCapability('reporting.financeRead'), async (req, res, next) => {
   try {
     const periodId = req.query.periodId as string
     if (periodId) {
@@ -679,8 +787,8 @@ reportingRouter.get('/budget-entries', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// POST /api/reporting/budget-entries
-reportingRouter.post('/budget-entries', requireRole('staff'), async (req: AuthRequest, res, next) => {
+// POST /api/reporting/budget-entries — manager/admin only. Replay after the gate.
+reportingRouter.post('/budget-entries', requireCapability('reporting.budgetWrite'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const d = req.body
     const id = d.id || randomUUID()
@@ -698,8 +806,8 @@ reportingRouter.post('/budget-entries', requireRole('staff'), async (req: AuthRe
   } catch (err) { next(err) }
 })
 
-// PUT /api/reporting/budget-entries/:id
-reportingRouter.put('/budget-entries/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+// PUT /api/reporting/budget-entries/:id — manager/admin only. Replay after the gate.
+reportingRouter.put('/budget-entries/:id', requireCapability('reporting.budgetWrite'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const d = req.body
     await pool.query(
@@ -723,8 +831,8 @@ reportingRouter.put('/budget-entries/:id', requireRole('staff'), async (req: Aut
   } catch (err) { next(err) }
 })
 
-// DELETE /api/reporting/budget-entries/:id
-reportingRouter.delete('/budget-entries/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+// DELETE /api/reporting/budget-entries/:id — manager/admin only. Replay after the gate.
+reportingRouter.delete('/budget-entries/:id', requireCapability('reporting.budgetWrite'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     await pool.query('DELETE FROM budget_entries WHERE id = $1', [req.params.id])
     res.status(204).send()

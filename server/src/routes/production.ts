@@ -2,8 +2,9 @@ import { Router } from 'express'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { requireCapability } from '../middleware/permissions'
+import { idempotencyMiddleware } from '../middleware/idempotency'
 import { KitchenProductionEngine } from '../engine/production'
 
 export const productionRouter = Router()
@@ -130,7 +131,8 @@ async function generateSheet(weekId: string, day: string, slot: string) {
 // ════════════════════════════════════════════════════════════════════════════
 
 // GET /api/production/sheets[?weekId=]
-productionRouter.get('/sheets', async (req: AuthRequest, res, next) => {
+// production.read: planning roles + readonly. Servers/frontdesk/vendors excluded.
+productionRouter.get('/sheets', requireCapability('production.read'), async (req: AuthRequest, res, next) => {
   try {
     const weekId = typeof req.query.weekId === 'string' ? req.query.weekId : null
     let queryResult
@@ -149,7 +151,8 @@ productionRouter.get('/sheets', async (req: AuthRequest, res, next) => {
 })
 
 // POST /api/production/sheets
-productionRouter.post('/sheets', requireRole('staff'), async (req: AuthRequest, res, next) => {
+// production.write only (no servers/frontdesk/readonly). Replay after the gate.
+productionRouter.post('/sheets', requireCapability('production.write'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const body = req.body
     const id = body.id || randomUUID()
@@ -175,8 +178,10 @@ productionRouter.post('/sheets', requireRole('staff'), async (req: AuthRequest, 
 })
 
 // GET /api/production/sheets/generate?weekId=&day=&slot=
-// Returns an existing sheet or auto-generates one on the fly (does NOT persist).
-productionRouter.get('/sheets/generate', async (req: AuthRequest, res, next) => {
+// Returns an existing sheet or auto-generates AND PERSISTS one on a miss.
+// It stays GET for frontend compatibility (src/api/production.ts getSheet),
+// but because a miss writes, it requires production.write — not just read.
+productionRouter.get('/sheets/generate', requireCapability('production.write'), async (req: AuthRequest, res, next) => {
   try {
     const weekId = req.query.weekId as string
     const day    = req.query.day    as string
@@ -218,7 +223,8 @@ productionRouter.get('/sheets/generate', async (req: AuthRequest, res, next) => 
 })
 
 // PUT /api/production/sheets/:id
-productionRouter.put('/sheets/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+// production.write only. Replay after the gate.
+productionRouter.put('/sheets/:id', requireCapability('production.write'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const data = SheetUpdateSchema.parse(req.body)
     const { rows: existing } = await pool.query(
@@ -253,7 +259,8 @@ productionRouter.put('/sheets/:id', requireRole('staff'), async (req: AuthReques
 })
 
 // POST /api/production/sheets/:id/signoff
-productionRouter.post('/sheets/:id/signoff', requireRole('staff'), async (req: AuthRequest, res, next) => {
+// production.write only. Replay after the gate.
+productionRouter.post('/sheets/:id/signoff', requireCapability('production.write'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const { staffName } = z.object({ staffName: z.string().min(1) }).parse(req.body)
     const { rows: existing } = await pool.query(
@@ -284,7 +291,8 @@ productionRouter.post('/sheets/:id/signoff', requireRole('staff'), async (req: A
 })
 
 // DELETE /api/production/sheets/:id
-productionRouter.delete('/sheets/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
+// production.delete (admin only). Replay after the gate.
+productionRouter.delete('/sheets/:id', requireCapability('production.delete'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query(
       'SELECT id FROM production_sheets WHERE id = $1', [req.params.id]

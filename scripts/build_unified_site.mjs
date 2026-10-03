@@ -27,6 +27,21 @@ const outDistDir = path.join(rootDir, 'dist')
 const tempDemoDir = path.join(rootDir, 'dist-demo-temp')
 const tempAppDir = path.join(rootDir, 'dist-app-temp')
 
+// Production hardening: every production child build MUST run with
+// NODE_ENV=production. Vite derives import.meta.env.DEV from NODE_ENV (not
+// --mode), so an inherited NODE_ENV=development or a .env file carrying
+// NODE_ENV=development otherwise flips the bundle into DEV behavior
+// (demo auto-login, dev JSX payloads). Pins are last so neither inherited
+// env nor per-build extras can downgrade them.
+function productionEnv(extra) {
+  return {
+    ...process.env,
+    ...extra,
+    NODE_ENV: 'production',
+    VITE_USER_NODE_ENV: 'production',
+  }
+}
+
 function copyRecursive(src, dest) {
   if (!fs.existsSync(src)) return
   const stat = fs.statSync(src)
@@ -50,22 +65,20 @@ console.log('🚀 [Build 1/3] Compiling Astro Marketing Website...')
 execSync('npm --prefix marketing run build', {
   cwd: rootDir,
   stdio: 'inherit',
-  env: {
-    ...process.env,
+  env: productionEnv({
     PUBLIC_DEMO_URL: '/demo',
     PUBLIC_APP_URL: '/app',
-  },
+  }),
 })
 
 console.log('\n🚀 [Build 2/4] Compiling Vite Interactive Demo (base: /demo/, demoMode: true)...')
-execSync('npx vite build --base=/demo/', {
+execSync('npx vite build --mode production --base=/demo/', {
   cwd: rootDir,
   stdio: 'inherit',
-  env: {
-    ...process.env,
+  env: productionEnv({
     VITE_BASE_PATH: '/demo/',
     VITE_DEMO_MODE: 'true',
-  },
+  }),
 })
 
 // Move the demo build out of dist/ temporarily
@@ -73,14 +86,13 @@ if (fs.existsSync(tempDemoDir)) fs.rmSync(tempDemoDir, { recursive: true, force:
 fs.renameSync(outDistDir, tempDemoDir)
 
 console.log('\n🚀 [Build 3/4] Compiling Vite SaaS Production App (base: /app/, demoMode: false)...')
-execSync('npx vite build --base=/app/', {
+execSync('npx vite build --mode production --base=/app/', {
   cwd: rootDir,
   stdio: 'inherit',
-  env: {
-    ...process.env,
+  env: productionEnv({
     VITE_BASE_PATH: '/app/',
     VITE_DEMO_MODE: 'false',
-  },
+  }),
 })
 
 // Move the SaaS app build out of dist/ temporarily

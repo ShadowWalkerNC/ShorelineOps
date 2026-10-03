@@ -29,7 +29,6 @@ const inventory_1 = require("./routes/inventory");
 const trayruns_1 = require("./routes/trayruns");
 const errorHandler_1 = require("./middleware/errorHandler");
 const requireAuth_1 = require("./middleware/requireAuth");
-const idempotency_1 = require("./middleware/idempotency");
 const pool_1 = require("./db/pool");
 const migrate_1 = require("./db/migrate");
 const seed_1 = require("./db/seed");
@@ -127,9 +126,11 @@ const webhooks_1 = require("./routes/webhooks");
 const hardware_1 = require("./routes/hardware");
 const billing_1 = require("./routes/billing");
 const tenantContext_1 = require("./middleware/tenantContext");
-// Global Tenant Context & Idempotency Protection
+// Global tenant context. Idempotency replay is intentionally NOT global:
+// each mutating owned route mounts idempotencyMiddleware() AFTER requireAuth
+// and its requireCapability/requireTier gates so replay observes the current
+// principal, role, and permission (remediation 2026-09-30).
 app.use('/api', tenantContext_1.tenantContextMiddleware);
-app.use('/api', (0, idempotency_1.idempotencyMiddleware)());
 // Do not let API routes pretend to work while migrations are incomplete. Static
 // marketing and demo assets remain available on services without a database.
 app.use('/api', (req, res, next) => {
@@ -167,6 +168,7 @@ if (process.env.ENABLE_TIMECARD_PLUGIN !== 'false') {
 }
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const shellRouting_1 = require("./shellRouting");
 // Health and Readiness Probes for Kubernetes / Docker / Cloud Load Balancers / Render
 const handleHealth = (_req, res) => {
     res.json({
@@ -227,40 +229,52 @@ if (fs_1.default.existsSync(clientDistPath)) {
         }
     });
     app.use(express_1.default.static(clientDistPath));
-    // 1. /demo and /demo/* → Public Interactive Demo (sandboxed / mock fallback, no credentials required)
-    app.get(['/demo', '/demo/*'], (_req, res, next) => {
-        const demoIndex = path_1.default.join(clientDistPath, 'demo', 'index.html');
-        if (fs_1.default.existsSync(demoIndex)) {
-            return res.sendFile(demoIndex);
+    // 1. /demo and /demo/* → Public Interactive Demo (sandboxed / mock fallback, no credentials required).
+    // A missing demo bundle is an honest 503 — never marketing HTML as application HTML.
+    app.get(['/demo', '/demo/*'], (req, res, next) => {
+        const decision = (0, shellRouting_1.resolveStaticRequest)(clientDistPath, req.path);
+        if (decision.kind === 'file') {
+            return res.sendFile(decision.file, (err) => {
+                if (err)
+                    next(err);
+            });
         }
-        // If demo sub-bundle is missing, fall back to root index
-        res.sendFile(path_1.default.join(clientDistPath, 'index.html'), (err) => {
-            if (err)
-                next(err);
-        });
+        if (decision.kind === 'status') {
+            return res.status(decision.status).type('txt').send(decision.body);
+        }
+        return next();
     });
-    // 2. /app and /app/* → Production Gatekept SaaS Platform (requires real JWT authentication)
-    app.get(['/app', '/app/*'], (_req, res, next) => {
-        const appIndex = path_1.default.join(clientDistPath, 'app', 'index.html');
-        if (fs_1.default.existsSync(appIndex)) {
-            return res.sendFile(appIndex);
+    // 2. /app and /app/* → Production Gatekept SaaS Platform (requires real JWT authentication).
+    // A missing app bundle is an honest 503 — never marketing HTML as application HTML.
+    app.get(['/app', '/app/*'], (req, res, next) => {
+        const decision = (0, shellRouting_1.resolveStaticRequest)(clientDistPath, req.path);
+        if (decision.kind === 'file') {
+            return res.sendFile(decision.file, (err) => {
+                if (err)
+                    next(err);
+            });
         }
-        // Fall back to root index
-        res.sendFile(path_1.default.join(clientDistPath, 'index.html'), (err) => {
-            if (err)
-                next(err);
-        });
+        if (decision.kind === 'status') {
+            return res.status(decision.status).type('txt').send(decision.body);
+        }
+        return next();
     });
     // 3. /login redirect -> send users attempting root /login to the gatekept SaaS login
     app.get('/login', (_req, res) => {
         res.redirect(301, '/app/login');
     });
-    // 4. Everything else → Public Astro Marketing Website (/pricing, /story, /distributors, etc.)
+    // 4. Everything else → Public Astro Marketing Website (/pricing, /story, /distributors, etc.).
+    // /api, /health, and /ready pass through to Express; missing assets are an
+    // honest 404 — never marketing HTML served as a script or stylesheet.
     app.get('*', (req, res, next) => {
-        if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ready') {
+        const decision = (0, shellRouting_1.resolveStaticRequest)(clientDistPath, req.path);
+        if (decision.kind === 'next') {
             return next();
         }
-        res.sendFile(path_1.default.join(clientDistPath, 'index.html'), (err) => {
+        if (decision.kind === 'status') {
+            return res.status(decision.status).type('txt').send(decision.body);
+        }
+        res.sendFile(decision.file, (err) => {
             if (err)
                 next(err);
         });

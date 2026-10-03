@@ -2,6 +2,29 @@
 
 ShorelineOps is configured for seamless deployment on Vercel across both the **Interactive Demo Application** (React 18 + Vite SPA) and the **Marketing / Developer Portal** (Astro).
 
+## Unified static hosting (root `vercel.json`)
+
+The root project builds one `dist/` tree (`node scripts/build_unified_site.mjs`):
+marketing at `/`, the demo SPA at `/demo`, the gatekept app SPA at `/app`.
+Routing rules:
+
+| Request | Served |
+|---|---|
+| `/`, `/pricing`, `/story`, … | Marketing files from `dist/` (filesystem) |
+| `/demo`, `/demo/*` | `dist/demo/index.html` (SPA shell, deep links included) |
+| `/app`, `/app/*` | `dist/app/index.html` (SPA shell, deep links included) |
+| Existing files (`/demo/assets/*`, `/app/assets/*`, `/_astro/*`, images) | The file itself — filesystem takes precedence over rewrites (same as the canonical Vite SPA config) |
+| `/api/*` | Vercel native 404 — there is intentionally no `/api` rewrite, so API calls on static hosting fail honestly instead of receiving marketing HTML |
+
+The Express server (`server/src/index.ts`, via `server/src/shellRouting.ts`)
+mirrors this: distinct shells per prefix, honest 503 for a missing shell
+bundle, honest 404 for a missing asset, and `/api`/`/health`/`/ready`
+passthrough. Covered by `server/src/static-routing.test.ts` with synthetic
+temp bundles.
+
+The two-project layout below is a legacy alternative; prefer the unified root
+project unless the projects must deploy independently.
+
 ---
 
 ## 1. Project Overview & Architecture on Vercel

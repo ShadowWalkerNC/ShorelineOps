@@ -7,6 +7,8 @@
  */
 import { Router, Request, Response } from 'express'
 import { requireAuth } from '../middleware/requireAuth'
+import { requireCapability } from '../middleware/permissions'
+import { idempotencyMiddleware } from '../middleware/idempotency'
 import { requireTier } from '../middleware/requireTier'
 import { serverCache } from '../middleware/cache'
 
@@ -100,20 +102,23 @@ const MANAGED_FACILITIES: ManagedFacility[] = [
   },
 ]
 
-// GET /api/enterprise/facilities - List managed facilities
-enterpriseRouter.get('/facilities', requireAuth, requireTier('enterprise'), async (req: Request, res: Response) => {
+// GET /api/enterprise/facilities - List managed facilities (manager/admin only)
+enterpriseRouter.get('/facilities', requireAuth, requireCapability('enterprise.read'), requireTier('enterprise'), async (req: Request, res: Response) => {
   const cacheKey = 'enterprise_facilities_list'
   const cached = serverCache.get(cacheKey)
   if (cached) {
-    return res.json({ facilities: cached.value, cached: true })
+    return res.json({ facilities: cached.value, cached: true, simulated: true })
   }
 
   serverCache.set(cacheKey, MANAGED_FACILITIES, 60, 'enterprise')
-  return res.json({ facilities: MANAGED_FACILITIES, cached: false })
+  return res.json({ facilities: MANAGED_FACILITIES, cached: false, simulated: true })
 })
 
-// POST /api/enterprise/syndicate-menu - Syndicate master menu across network
-enterpriseRouter.post('/syndicate-menu', requireAuth, requireTier('enterprise'), async (req: Request, res: Response) => {
+// POST /api/enterprise/syndicate-menu - SIMULATED syndication across the parked
+// sample network. Manager/admin only. This updates in-memory sample timestamps
+// only — the response is explicitly labelled simulated and must never be
+// presented as a real production multi-site operation.
+enterpriseRouter.post('/syndicate-menu', requireAuth, requireCapability('enterprise.write'), requireTier('enterprise'), idempotencyMiddleware(), async (req: Request, res: Response) => {
   const { menuId, targetFacilityIds } = req.body
 
   if (!menuId || !Array.isArray(targetFacilityIds) || targetFacilityIds.length === 0) {
@@ -130,20 +135,23 @@ enterpriseRouter.post('/syndicate-menu', requireAuth, requireTier('enterprise'),
   serverCache.invalidateTag('enterprise')
 
   return res.json({
-    status: 'SYNDICATED',
+    status: 'SIMULATED',
+    simulated: true,
+    note: 'Sample-network simulation only: no production facility was contacted or updated.',
     menuId,
     targetFacilitiesCount: targetFacilityIds.length,
     syndicatedAt: new Date().toISOString(),
   })
 })
 
-// GET /api/enterprise/benchmarks - Cross-facility $/CPD benchmarking
-enterpriseRouter.get('/benchmarks', requireAuth, requireTier('enterprise'), async (req: Request, res: Response) => {
+// GET /api/enterprise/benchmarks - Cross-facility $/CPD benchmarking (manager/admin only)
+enterpriseRouter.get('/benchmarks', requireAuth, requireCapability('enterprise.read'), requireTier('enterprise'), async (req: Request, res: Response) => {
   const totalCensus = MANAGED_FACILITIES.reduce((sum, f) => sum + f.activeCensus, 0)
   const networkAvgCpd = MANAGED_FACILITIES.reduce((sum, f) => sum + (f.currentCpd * f.activeCensus), 0) / (totalCensus || 1)
   const networkTargetCpd = MANAGED_FACILITIES.reduce((sum, f) => sum + (f.targetCpd * f.activeCensus), 0) / (totalCensus || 1)
 
   return res.json({
+    simulated: true,
     totalFacilities: MANAGED_FACILITIES.length,
     totalActiveCensus: totalCensus,
     networkAvgCpd: parseFloat(networkAvgCpd.toFixed(2)),

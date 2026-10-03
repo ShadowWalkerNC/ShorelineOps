@@ -28,6 +28,7 @@ Set these on `shoreline-api`:
 - `NODE_ENV=production`
 - `DATABASE_URL=${{shoreline-db.DATABASE_URL}}` (use Railway's reference picker)
 - `JWT_SECRET` with at least 32 random characters
+- Remote `DATABASE_URL` connections verify TLS certificates by default; set `DATABASE_SSL_REJECT_UNAUTHORIZED=false` only when the managed chain provably fails verification
 - `SETUP_BOOTSTRAP_SECRET` with at least 16 random characters for first-time owner creation
 - `FRONTEND_URL` to the public service origin (comma-separated when custom domains are added)
 

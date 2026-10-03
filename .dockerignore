@@ -18,3 +18,9 @@ server/.env.*
 coverage
 dist-installer
 ORIGINAL_REQUEST.md
+# Backup artifacts must never ship inside images (may contain PHI).
+backups/
+**/backups/
+shorelineops_backup_*
+*.sql.gz
+*.sql.dump

@@ -6,6 +6,10 @@
  * HIPAA: PHI-bearing JWTs must not persist in localStorage.
  */
 import axios from 'axios'
+import {
+  createDemoUnavailableError,
+  isDemoBuild,
+} from '../../server/src/apiClientPolicy'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -20,6 +24,9 @@ export const tokenManager = {
   },
 
   refresh: async (): Promise<void> => {
+    if (isDemoBuild(import.meta.env)) {
+      throw createDemoUnavailableError({ method: 'POST', url: `${API_BASE}/auth/refresh` })
+    }
     const refreshToken = sessionStorage.getItem('_rt')
     if (!refreshToken) throw new Error('No refresh token')
     const { data } = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken })

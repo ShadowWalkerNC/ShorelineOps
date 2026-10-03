@@ -24,7 +24,6 @@ import { inventoryRouter } from './routes/inventory'
 import { trayrunsRouter } from './routes/trayruns'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
-import { idempotencyMiddleware } from './middleware/idempotency'
 import { pool } from './db/pool'
 import { runMigrations } from './db/migrate'
 import { isDemoSeedEnabled, runSeed } from './db/seed'
@@ -131,9 +130,11 @@ import { hardwareRouter } from './routes/hardware'
 import { billingRouter } from './routes/billing'
 import { tenantContextMiddleware } from './middleware/tenantContext'
 
-// Global Tenant Context & Idempotency Protection
+// Global tenant context. Idempotency replay is intentionally NOT global:
+// each mutating owned route mounts idempotencyMiddleware() AFTER requireAuth
+// and its requireCapability/requireTier gates so replay observes the current
+// principal, role, and permission (remediation 2026-09-30).
 app.use('/api', tenantContextMiddleware)
-app.use('/api', idempotencyMiddleware())
 
 // Do not let API routes pretend to work while migrations are incomplete. Static
 // marketing and demo assets remain available on services without a database.
@@ -174,6 +175,7 @@ if (process.env.ENABLE_TIMECARD_PLUGIN !== 'false') {
 
 import path from 'path'
 import fs from 'fs'
+import { resolveStaticRequest } from './shellRouting'
 
 // Health and Readiness Probes for Kubernetes / Docker / Cloud Load Balancers / Render
 const handleHealth = (_req: express.Request, res: express.Response) => {
@@ -239,28 +241,34 @@ if (fs.existsSync(clientDistPath)) {
 
   app.use(express.static(clientDistPath))
 
-  // 1. /demo and /demo/* → Public Interactive Demo (sandboxed / mock fallback, no credentials required)
-  app.get(['/demo', '/demo/*'], (_req, res, next) => {
-    const demoIndex = path.join(clientDistPath, 'demo', 'index.html')
-    if (fs.existsSync(demoIndex)) {
-      return res.sendFile(demoIndex)
+  // 1. /demo and /demo/* → Public Interactive Demo (sandboxed / mock fallback, no credentials required).
+  // A missing demo bundle is an honest 503 — never marketing HTML as application HTML.
+  app.get(['/demo', '/demo/*'], (req, res, next) => {
+    const decision = resolveStaticRequest(clientDistPath, req.path)
+    if (decision.kind === 'file') {
+      return res.sendFile(decision.file, (err) => {
+        if (err) next(err)
+      })
     }
-    // If demo sub-bundle is missing, fall back to root index
-    res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
-      if (err) next(err)
-    })
+    if (decision.kind === 'status') {
+      return res.status(decision.status).type('txt').send(decision.body)
+    }
+    return next()
   })
 
-  // 2. /app and /app/* → Production Gatekept SaaS Platform (requires real JWT authentication)
-  app.get(['/app', '/app/*'], (_req, res, next) => {
-    const appIndex = path.join(clientDistPath, 'app', 'index.html')
-    if (fs.existsSync(appIndex)) {
-      return res.sendFile(appIndex)
+  // 2. /app and /app/* → Production Gatekept SaaS Platform (requires real JWT authentication).
+  // A missing app bundle is an honest 503 — never marketing HTML as application HTML.
+  app.get(['/app', '/app/*'], (req, res, next) => {
+    const decision = resolveStaticRequest(clientDistPath, req.path)
+    if (decision.kind === 'file') {
+      return res.sendFile(decision.file, (err) => {
+        if (err) next(err)
+      })
     }
-    // Fall back to root index
-    res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
-      if (err) next(err)
-    })
+    if (decision.kind === 'status') {
+      return res.status(decision.status).type('txt').send(decision.body)
+    }
+    return next()
   })
 
   // 3. /login redirect -> send users attempting root /login to the gatekept SaaS login
@@ -268,12 +276,18 @@ if (fs.existsSync(clientDistPath)) {
     res.redirect(301, '/app/login')
   })
 
-  // 4. Everything else → Public Astro Marketing Website (/pricing, /story, /distributors, etc.)
+  // 4. Everything else → Public Astro Marketing Website (/pricing, /story, /distributors, etc.).
+  // /api, /health, and /ready pass through to Express; missing assets are an
+  // honest 404 — never marketing HTML served as a script or stylesheet.
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ready') {
+    const decision = resolveStaticRequest(clientDistPath, req.path)
+    if (decision.kind === 'next') {
       return next()
     }
-    res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+    if (decision.kind === 'status') {
+      return res.status(decision.status).type('txt').send(decision.body)
+    }
+    res.sendFile(decision.file, (err) => {
       if (err) next(err)
     })
   })

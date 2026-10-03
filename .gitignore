@@ -19,3 +19,10 @@ dist-installer
 .agents
 ORIGINAL_REQUEST.md
 .env*
+
+# Database backup artifacts may contain PHI: never commit them.
+backups/
+**/backups/
+shorelineops_backup_*
+*.sql.gz
+*.sql.dump

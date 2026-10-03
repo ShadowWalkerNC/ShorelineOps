@@ -2,7 +2,8 @@ import { Router } from 'express'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { pool } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
+import { requireCapability, can } from '../middleware/permissions'
+import { idempotencyMiddleware } from '../middleware/idempotency'
 import type { AuthRequest, ApiRole } from '../middleware/requireAuth'
 
 export const residentsRouter = Router()
@@ -180,10 +181,38 @@ function toResident(row: any) {
   }
 }
 
+/** Service-critical projection for food-service execution roles. */
+export function toServiceResident(row: any) {
+  const allergies = Array.isArray(row.allergies) ? row.allergies : normAllergies(row.allergies)
+  const beverages = Array.isArray(row.beverages) ? row.beverages : normAllergies(row.beverages)
+  return {
+    id: row.id,
+    name: row.name,
+    room: row.room,
+    status: row.status,
+    dietType: row.diet_type,
+    texture: row.texture,
+    portionSize: row.portion_size,
+    ensurePerDay: row.ensure_per_day,
+    allergies,
+    beverages,
+    servingLocation: row.serving_location,
+    tableAssignment: row.table_assignment,
+    isNpo: Boolean(row.is_npo),
+    npoReason: row.npo_reason ?? '',
+    fluidRestrictionMl: row.fluid_restriction_ml ?? null,
+    profileVersion: row.profile_version ?? 1,
+  }
+}
+
+function seesFullClinical(role: ApiRole | undefined): boolean {
+  return can(role, 'residents.read')
+}
+
 // ─────────────────────────────────────────────
 // GET /api/residents[?q=<search>]
 // ─────────────────────────────────────────────
-residentsRouter.get('/', async (req: AuthRequest, res, next) => {
+residentsRouter.get('/', requireCapability('residents.read', 'residents.serviceRead'), async (req: AuthRequest, res, next) => {
   try {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
 
@@ -211,7 +240,8 @@ residentsRouter.get('/', async (req: AuthRequest, res, next) => {
       [req.userId, JSON.stringify({ search: q || null, count: rows.length })]
     )
 
-    res.json(rows.map(toResident))
+    const full = seesFullClinical(req.userRole)
+    res.json(rows.map((r) => (full ? toResident(r) : toServiceResident(r))))
   } catch (err) { next(err) }
 })
 
@@ -233,16 +263,12 @@ function toFlag(row: any) {
 
 // ─────────────────────────────────────────────
 // GET /api/residents/flags  — open RD review worklist
-// B04: dietitian/manager only (strict). NOTE: registered BEFORE '/:id' so
-// Express doesn't treat "flags" as a resident id.
+// B04: dietitian/manager only (strict residents.clinicalWrite — no admin
+// wildcard). NOTE: registered BEFORE '/:id' so Express doesn't treat "flags"
+// as a resident id.
 // ─────────────────────────────────────────────
-residentsRouter.get('/flags', requireRole('staff'), async (req: AuthRequest, res, next) => {
+residentsRouter.get('/flags', requireCapability('residents.clinicalWrite'), async (req: AuthRequest, res, next) => {
   try {
-    if (!canWriteDietOrder(req.userRole)) {
-      return res.status(403).json({
-        error: 'The diet review worklist is only visible to the dietitian and manager roles.',
-      })
-    }
     const { rows } = await pool.query(`
       SELECT f.*, r.name AS resident_name, r.room AS resident_room
       FROM diet_review_flags f
@@ -256,8 +282,11 @@ residentsRouter.get('/flags', requireRole('staff'), async (req: AuthRequest, res
 
 // ─────────────────────────────────────────────
 // GET /api/residents/:id
+// Full clinical profile for admin/manager/dietitian; service-critical
+// projection for food-service execution roles (mirrors the list endpoint).
+// Distributor holds neither capability (no PHI).
 // ─────────────────────────────────────────────
-residentsRouter.get('/:id', async (req: AuthRequest, res, next) => {
+residentsRouter.get('/:id', requireCapability('residents.read', 'residents.serviceRead'), async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM residents WHERE id = $1', [req.params.id])
     if (!rows[0]) return res.status(404).json({ error: 'Resident not found' })
@@ -266,16 +295,17 @@ residentsRouter.get('/:id', async (req: AuthRequest, res, next) => {
        VALUES ('VIEW_RESIDENT', $1, $2, 'resident', 'success')`,
       [req.userId, req.params.id]
     )
-    res.json(toResident(rows[0]))
+    res.json(seesFullClinical(req.userRole) ? toResident(rows[0]) : toServiceResident(rows[0]))
   } catch (err) { next(err) }
 })
 
 // ─────────────────────────────────────────────
 // GET /api/residents/:id/history
 // Diet/texture/allergy/NPO change trail, newest first (A06 audit trail).
-// Same auth as the resident read (requireAuth is mounted at the router level).
+// Full clinical readers only (admin/manager/dietitian): the service
+// projection intentionally carries no history.
 // ─────────────────────────────────────────────
-residentsRouter.get('/:id/history', async (req: AuthRequest, res, next) => {
+residentsRouter.get('/:id/history', requireCapability('residents.historyRead'), async (req: AuthRequest, res, next) => {
   try {
     const { rows: existing } = await pool.query(
       'SELECT id FROM residents WHERE id = $1', [req.params.id]
@@ -366,16 +396,14 @@ export function parseCsvRows(text: string): Record<string, string>[] {
 // ─────────────────────────────────────────────
 // POST /api/residents/import-csv
 // Decision 9: Bulk Census & Diet Order CSV Importer
-// Dietitian / Manager / Admin only
+// Dietitian / Manager only (residents.import): the CSV writes diet orders,
+// textures, NPO flags, and allergies directly, so it carries the same
+// dietitian/manager-only clinical authority as other diet writes — no admin
+// wildcard. Replay runs after the capability gate, so a denied role can never
+// replay an import.
 // ─────────────────────────────────────────────
-residentsRouter.post('/import-csv', requireRole('staff'), async (req: AuthRequest, res, next) => {
+residentsRouter.post('/import-csv', requireCapability('residents.import'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
-    if (!canWriteDietOrder(req.userRole) && req.userRole !== 'admin') {
-      return res.status(403).json({
-        error: 'Importing census and clinical diet orders requires the dietitian, manager, or admin role.',
-      })
-    }
-
     const { csv } = z.object({ csv: z.string().min(1, 'CSV content cannot be empty') }).parse(req.body)
 
     const parsedRows = parseCsvRows(csv)
@@ -519,15 +547,13 @@ residentsRouter.post('/import-csv', requireRole('staff'), async (req: AuthReques
 
 // ─────────────────────────────────────────────
 // POST /api/residents
+// Admission always carries a clinical diet order: dietitian/manager only
+// (residents.clinicalWrite, no admin wildcard). The capability gate IS the
+// clinical authorization here, so replay after it is safe.
 // ─────────────────────────────────────────────
-residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, next) => {
+residentsRouter.post('/', requireCapability('residents.clinicalWrite'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const data = ResidentSchema.parse(req.body)
-    if (!canWriteDietOrder(req.userRole)) {
-      return res.status(403).json({
-        error: 'Resident admission includes a clinical diet order and requires the dietitian or manager role.',
-      })
-    }
     const isNpo = data.dietType === 'NPO' ? true : (data.isNpo ?? false)
     // Portable write: the pool's SQLite path drops RETURNING rows and
     // uuid_generate_v4() defaults don't exist on SQLite, so generate the
@@ -575,8 +601,15 @@ residentsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, ne
 
 // ─────────────────────────────────────────────
 // PUT /api/residents/:id
+// Demographic edits: admin/manager/dietitian/frontdesk (residents.write).
+// Clinical diet fields: dietitian/manager only via the in-handler
+// field-level guard below (no admin wildcard). Food-service aides use the
+// flag-for-RD-review path instead of edit access.
+// No idempotency replay on this complex clinical write: the field-level
+// guard must execute on every request, and route-level replay cannot run it
+// first — so this endpoint never replays.
 // ─────────────────────────────────────────────
-residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+residentsRouter.put('/:id', requireCapability('residents.write', 'residents.clinicalWrite'), async (req: AuthRequest, res, next) => {
   try {
     const data = ResidentSchema.partial().parse(req.body)
     const { rows: existing } = await pool.query(
@@ -699,9 +732,10 @@ residentsRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res, 
 // ─────────────────────────────────────────────
 // POST /api/residents/:id/flags — flag for RD review
 // B04 (Owner Decision 3): aides are read-only on clinical diet fields, so
-// they get this path instead of edit access. Any staff role may flag.
+// they get this path instead of edit access. Any staff job may flag
+// (residents.flagWrite); readonly/distributor may not. Replay after the gate.
 // ─────────────────────────────────────────────
-residentsRouter.post('/:id/flags', requireRole('staff'), async (req: AuthRequest, res, next) => {
+residentsRouter.post('/:id/flags', requireCapability('residents.flagWrite'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const { message } = z.object({
       message: z.string().trim().min(1).max(1000),
@@ -737,16 +771,12 @@ residentsRouter.post('/:id/flags', requireRole('staff'), async (req: AuthRequest
 
 // ─────────────────────────────────────────────
 // POST /api/residents/flags/:flagId/resolve — RD worklist resolution
-// B04: dietitian/manager only (strict) — same authority as the diet writes
-// the flag is asking about. Does NOT touch the A05 EHR reconcile path.
+// B04: dietitian/manager only (strict residents.clinicalWrite) — same
+// authority as the diet writes the flag is asking about. Does NOT touch the
+// A05 EHR reconcile path. Replay after the gate.
 // ─────────────────────────────────────────────
-residentsRouter.post('/flags/:flagId/resolve', requireRole('staff'), async (req: AuthRequest, res, next) => {
+residentsRouter.post('/flags/:flagId/resolve', requireCapability('residents.clinicalWrite'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
-    if (!canWriteDietOrder(req.userRole)) {
-      return res.status(403).json({
-        error: 'Resolving diet review flags requires the dietitian or manager role.',
-      })
-    }
     const { action } = z.object({
       action: z.enum(['RESOLVED', 'DISMISSED']),
     }).parse(req.body)
@@ -780,9 +810,10 @@ residentsRouter.post('/flags/:flagId/resolve', requireRole('staff'), async (req:
 })
 
 // ─────────────────────────────────────────────
-// DELETE /api/residents/:id  (admin only)
+// DELETE /api/residents/:id  (admin only — residents.delete)
+// Replay after the gate so a denied role can never replay a deletion.
 // ─────────────────────────────────────────────
-residentsRouter.delete('/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
+residentsRouter.delete('/:id', requireCapability('residents.delete'), idempotencyMiddleware(), async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query(
       'SELECT id FROM residents WHERE id = $1', [req.params.id]

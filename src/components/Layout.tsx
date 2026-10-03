@@ -41,6 +41,8 @@ import {
   Tablet,
   Monitor,
   ChevronRight,
+  Globe,
+  ExternalLink,
   type LucideIcon,
 } from 'lucide-react'
 import { useDevice } from '@/hooks/useDevice'
@@ -217,7 +219,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {isMobile && (
         <div className="fixed top-0 left-0 right-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3.5 z-40">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Shoreline Care OS" className="h-7 w-auto object-contain" />
+            <img src="/brand/shorelineops-icon.svg" alt="ShorelineOps" className="h-7 w-7 object-contain" />
+            <span className="font-display font-extrabold text-sm tracking-tight text-slate-900 dark:text-white">
+              Shoreline<span className="text-teal-600 dark:text-teal-400">Ops</span>
+            </span>
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 border border-teal-200/60 dark:border-teal-800/50 text-[10px] font-bold text-teal-700 dark:text-teal-300">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>EHR Sync</span>
@@ -260,7 +265,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex animate-fadeIn">
           <div className="w-72 bg-white dark:bg-slate-900 h-full flex flex-col p-4 shadow-2xl border-r border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-3">
-              <img src="/logo.png" alt="Shoreline Care OS" className="h-8 w-auto object-contain" />
+              <div className="flex items-center gap-2.5">
+                <img src="/brand/shorelineops-icon.svg" alt="ShorelineOps" className="h-7 w-7 object-contain" />
+                <span className="font-display font-extrabold text-sm tracking-tight text-slate-900 dark:text-white">
+                  Shoreline<span className="text-teal-600 dark:text-teal-400">Ops</span>
+                </span>
+              </div>
               <button onClick={() => setMobileOpen(false)} className="text-slate-400 p-1.5 rounded-lg hover:bg-slate-100">
                 <CloseIcon size={18} />
               </button>
@@ -289,7 +299,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col items-center gap-4 w-full">
             {/* Tablet Brand Icon */}
             <div className="p-2 rounded-2xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200/60 dark:border-teal-800/60 shadow-2xs">
-              <img src="/logo.png" alt="Care OS" className="h-6 w-6 object-contain" />
+              <img src="/brand/shorelineops-icon.svg" alt="Care OS" className="h-6 w-6 object-contain" />
             </div>
 
             {/* Tablet Touch Rail Items (Touch Target >= 48px) */}
@@ -349,7 +359,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Medical Brand & Clinical Facility Header */}
           <div className="p-4 border-b border-slate-200/70 dark:border-slate-800/70 space-y-2">
             <div className="flex items-center justify-between">
-              <img src="/logo.png" alt="Shoreline Care OS" className="h-8 w-auto object-contain" />
+              <div className="flex items-center gap-2.5">
+                <img src="/brand/shorelineops-icon.svg" alt="ShorelineOps" className="h-8 w-8 object-contain shrink-0" />
+                <span className="font-display font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
+                  Shoreline<span className="text-teal-600 dark:text-teal-400">Ops</span>
+                </span>
+              </div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/80 px-2 py-0.5 rounded-md border border-teal-200/60 dark:border-teal-800/60 font-mono">
                 v5.0
               </span>
@@ -428,9 +443,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {!isMobile && (
           <header className="h-14 px-4 sm:px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between z-20 shrink-0">
             
-            {/* Left: Clean Clinical Search */}
-            <div className="flex items-center gap-3">
-              <div className="relative w-64 lg:w-80">
+            {/* Left: Clean Clinical Search & Site Ecosystem Nav */}
+            <div className="flex items-center gap-3 lg:gap-4">
+              <div className="relative w-56 lg:w-72">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
@@ -439,6 +454,40 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => navigate('/residents')}
                 />
               </div>
+
+              {/* Ecosystem Nav Links */}
+              <nav className="hidden xl:flex items-center gap-2 border-l border-slate-200/80 dark:border-slate-800/80 pl-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <a
+                  href="/"
+                  className="hover:text-teal-700 dark:hover:text-teal-300 transition-colors flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-100/60 dark:hover:bg-slate-800/60"
+                  title="Return to ShorelineOps public site"
+                >
+                  <Globe className="w-3 h-3 text-slate-400" />
+                  <span>Website</span>
+                </a>
+                <a
+                  href="/pricing"
+                  className="hover:text-teal-700 dark:hover:text-teal-300 transition-colors px-2 py-1 rounded-lg hover:bg-slate-100/60 dark:hover:bg-slate-800/60"
+                  title="View licensing tiers and pricing"
+                >
+                  <span>Pricing</span>
+                </a>
+                <a
+                  href="/distributors"
+                  className="hover:text-teal-700 dark:hover:text-teal-300 transition-colors px-2 py-1 rounded-lg hover:bg-slate-100/60 dark:hover:bg-slate-800/60"
+                  title="Vendor EDI & distributor partners"
+                >
+                  <span>Distributors</span>
+                </a>
+              </nav>
+
+              {/* Demo Mode Badge */}
+              {import.meta.env.VITE_DEMO_MODE === 'true' && (
+                <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/30 text-[10px] font-bold font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+                  <span>DEMO SANDBOX</span>
+                </div>
+              )}
             </div>
 
             {/* Right: Telemetry & Device View Controls */}
@@ -568,7 +617,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           )}
-          <PageTransition>{children}</PageTransition>
+          {children}
         </main>
 
         {/* ── MOBILE BOTTOM NAVIGATION (Jakob's Law Thumb-Zone Ergonomics) ── */}

@@ -191,6 +191,8 @@ function requireDietitianOrAdmin(req: AuthRequest, res: Response, next: NextFunc
       ? payload.role
       : undefined
     req.userId = payload.sub
+    req.facilityId = payload.facilityId
+    req.platformAdmin = payload.platformAdmin
     if (!role || !(SIMULATOR_ROLES as readonly string[]).includes(role)) {
       void auditEhrSecurityEvent(
         req, 'ehr.simulate.denied', 'insufficient role',
@@ -213,7 +215,7 @@ function requireDietitianOrAdmin(req: AuthRequest, res: Response, next: NextFunc
  * → 503 EHR_NOT_CONNECTED. The built-in connector is a synthetic stub, so a
  * served payload is explicitly flagged `demo: true`.
  */
-ehrRouter.get('/census', requireAuth, requireTier('enterprise'), async (_req: Request, res: Response) => {
+ehrRouter.get('/census', requireAuth, requireDietitianOrAdmin, requireTier('enterprise'), async (_req: Request, res: Response) => {
   try {
     if (!pcc.isConnected()) {
       return res.status(503).json({
@@ -348,7 +350,7 @@ ehrRouter.post('/nutrients/usda', requireAuth, async (req: Request, res: Respons
  * GET /api/ehr/reconciliation-queue
  * Lists all pending, approved, and rejected inbound EHR triage items for Registered Dietitians
  */
-ehrRouter.get('/reconciliation-queue', requireAuth, async (req: Request, res: Response) => {
+ehrRouter.get('/reconciliation-queue', requireAuth, requireDietitianOrAdmin, async (req: Request, res: Response) => {
   try {
     const { status = 'PENDING_TRIAGE' } = req.query
     const { rows } = await pool.query(`

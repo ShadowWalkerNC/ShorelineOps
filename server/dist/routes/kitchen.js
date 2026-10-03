@@ -4,7 +4,8 @@ exports.HYDRATION_PASS_TARGET_OZ = exports.HYDRATION_PASSES = exports.KITCHEN_DE
 const traySafety_1 = require("../engine/traySafety");
 const express_1 = require("express");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
+const idempotency_1 = require("../middleware/idempotency");
 const census_1 = require("../db/census");
 const crypto_1 = require("crypto");
 exports.kitchenRouter = (0, express_1.Router)();
@@ -23,8 +24,9 @@ exports.KITCHEN_DEFAULT_ENTREE = 'NO SELECTION — CONFIRM WITH DIETARY';
 // Portable CASE expression works on both SQLite and PostgreSQL.
 const mealMatch = (col) => `CASE WHEN ${col} = 'Supper' THEN 'Dinner' ELSE ${col} END = $3`;
 // ── GET /api/kitchen/orders ──────────────────────────────────────────────────
-// Returns residents + their orders for a given week
-exports.kitchenRouter.get('/orders', async (req, res, next) => {
+// Returns residents + their orders for a given week.
+// kitchen.read: execution roles + activities + readonly. Distributor/frontdesk excluded.
+exports.kitchenRouter.get('/orders', (0, permissions_1.requireCapability)('kitchen.read'), async (req, res, next) => {
     try {
         const { week } = req.query;
         if (!week)
@@ -63,8 +65,9 @@ exports.kitchenRouter.get('/orders', async (req, res, next) => {
     }
 });
 // ── PUT /api/kitchen/orders ──────────────────────────────────────────────────
-// Update a single order cell
-exports.kitchenRouter.put('/orders', async (req, res, next) => {
+// Update a single order cell. kitchen.write only (readonly cannot mutate).
+// Replay after the capability gate.
+exports.kitchenRouter.put('/orders', (0, permissions_1.requireCapability)('kitchen.write'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { resident_id, week_start_date, day_of_week, meal_type, choice_selected = null, modifier_text = '', is_alternative = 0, is_declined = 0 } = req.body;
         if (!resident_id || !week_start_date || !day_of_week || !meal_type) {
@@ -93,8 +96,9 @@ exports.kitchenRouter.put('/orders', async (req, res, next) => {
     }
 });
 // ── POST /api/kitchen/orders/initialize-week ─────────────────────────────────
-// Pre-fill orders for a week with standing alternatives or Choice 1
-exports.kitchenRouter.post('/orders/initialize-week', async (req, res, next) => {
+// Pre-fill orders for a week with standing alternatives or Choice 1.
+// kitchen.write only. Replay after the capability gate.
+exports.kitchenRouter.post('/orders/initialize-week', (0, permissions_1.requireCapability)('kitchen.write'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { week } = req.body;
         if (!week)
@@ -140,8 +144,9 @@ exports.kitchenRouter.post('/orders/initialize-week', async (req, res, next) => 
     }
 });
 // ── GET /api/kitchen/sheet ───────────────────────────────────────────────────
-// Returns daily tallies, exception lists, and standing alternatives
-exports.kitchenRouter.get('/sheet', async (req, res, next) => {
+// Returns daily tallies, exception lists, and standing alternatives.
+// kitchen.read: execution roles + activities + readonly. No vendor access.
+exports.kitchenRouter.get('/sheet', (0, permissions_1.requireCapability)('kitchen.read'), async (req, res, next) => {
     try {
         const { week, day, meal } = req.query;
         if (!week || !day || !meal) {
@@ -253,7 +258,7 @@ exports.kitchenRouter.get('/sheet', async (req, res, next) => {
     }
 });
 // ── GET /api/kitchen/meals ───────────────────────────────────────────────────
-exports.kitchenRouter.get('/meals', async (req, res, next) => {
+exports.kitchenRouter.get('/meals', (0, permissions_1.requireCapability)('kitchen.read'), async (req, res, next) => {
     try {
         const { week, day } = req.query;
         if (!week)
@@ -273,7 +278,8 @@ exports.kitchenRouter.get('/meals', async (req, res, next) => {
     }
 });
 // ── POST /api/kitchen/meals/batch ────────────────────────────────────────────
-exports.kitchenRouter.post('/meals/batch', async (req, res, next) => {
+// kitchen.write only. Replay after the capability gate.
+exports.kitchenRouter.post('/meals/batch', (0, permissions_1.requireCapability)('kitchen.write'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { options } = req.body;
         if (!Array.isArray(options))
@@ -331,8 +337,11 @@ function normalizeMealType(mealSlot) {
  * GET /api/kitchen/traycards-generated
  * Dynamically generates full high-contrast clinical tray cards with resident room,
  * table assignment, diet orders, bold red allergy alerts, and IDDSI texture banners.
+ * Signing cards is a kitchen execution/printing act even though the method is
+ * GET: kitchen.write or hardware.print only. Readonly, activities, frontdesk,
+ * and distributor roles are denied.
  */
-exports.kitchenRouter.get('/traycards-generated', async (req, res, next) => {
+exports.kitchenRouter.get('/traycards-generated', (0, permissions_1.requireCapability)('kitchen.write', 'hardware.print'), async (req, res, next) => {
     try {
         const { mealSlot = 'Dinner', serviceDate = new Date().toISOString().slice(0, 10), sides = 'Steamed Broccoli, Mashed Potatoes', } = req.query;
         // Explicit kitchen override — honoured only when the real-choice chain
@@ -445,9 +454,10 @@ exports.kitchenRouter.get('/traycards-generated', async (req, res, next) => {
 });
 /**
  * POST /api/kitchen/batch-scale
- * Scales a master recipe for kitchen batch worksheets
+ * Scales a master recipe for kitchen batch worksheets. Pure computation with
+ * no persistence, so kitchen.read suffices; no idempotency replay needed.
  */
-exports.kitchenRouter.post('/batch-scale', (req, res) => {
+exports.kitchenRouter.post('/batch-scale', (0, permissions_1.requireCapability)('kitchen.read'), (req, res) => {
     try {
         const { recipe, portions = 50, texture = 'Regular' } = req.body;
         if (!recipe || !recipe.ingredients) {
@@ -477,7 +487,9 @@ function isCountValue(v) {
 function toPortionCount(v, derived) {
     return isCountValue(v) ? Math.floor(v) : derived;
 }
-exports.kitchenRouter.post('/explode-recipe-variants', async (req, res, next) => {
+// Pure computation over census-derived headcounts: no persistence, so
+// kitchen.read suffices; no idempotency replay needed.
+exports.kitchenRouter.post('/explode-recipe-variants', (0, permissions_1.requireCapability)('kitchen.read'), async (req, res, next) => {
     try {
         const { recipe, headcounts, mealSlot } = req.body;
         if (!recipe || !recipe.ingredients) {
@@ -522,9 +534,10 @@ exports.kitchenRouter.post('/explode-recipe-variants', async (req, res, next) =>
 });
 /**
  * POST /api/kitchen/verify-tray-scan
- * Verifies signed tray card QR scans at assembly station, locking out superseded stale cards or NPO residents
+ * Verifies signed tray card QR scans at assembly station, locking out superseded stale cards or NPO residents.
+ * Read-only verification (no mutation), so kitchen.read suffices; no replay needed.
  */
-exports.kitchenRouter.post('/verify-tray-scan', async (req, res, next) => {
+exports.kitchenRouter.post('/verify-tray-scan', (0, permissions_1.requireCapability)('kitchen.read'), async (req, res, next) => {
     try {
         const result = await (0, traySafety_1.verifyTray)(req.body.rawQrPayload);
         const { claims, ...publicResult } = result;
@@ -563,7 +576,8 @@ function normalizeRecord(r) {
         recordedAt: r.recorded_at,
     };
 }
-exports.kitchenRouter.get('/hydration', async (req, res, next) => {
+// kitchen.read includes activities aides (hydration roster context) + readonly.
+exports.kitchenRouter.get('/hydration', (0, permissions_1.requireCapability)('kitchen.read'), async (req, res, next) => {
     try {
         const pass = String(req.query.pass ?? 'morning');
         if (!exports.HYDRATION_PASSES.includes(pass)) {
@@ -634,7 +648,9 @@ exports.kitchenRouter.get('/hydration', async (req, res, next) => {
 // resident per pass). Upserts on (resident, pass, day) so a re-logged pass is a
 // correction, not a duplicate. NPO is a hard block: never log fluids for an
 // NPO resident. Refusals are stored distinctly from zero-consumption.
-exports.kitchenRouter.post('/hydration', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// kitchen.hydrationWrite: kitchen execution + activities aides. Frontdesk,
+// readonly, and distributor cannot log passes. Replay after the gate.
+exports.kitchenRouter.post('/hydration', (0, permissions_1.requireCapability)('kitchen.hydrationWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { residentId, pass, offeredOz = 0, consumedOz = 0, refused = false, supplement = '', recordedBy } = req.body ?? {};
         if (!residentId || typeof residentId !== 'string') {

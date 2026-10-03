@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useResidentsStore } from '../../state/residentsStore'
 import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { useAuth } from '@/security/AuthContext'
 import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from './KitchenModeContext'
 import ClinicalSafetyStrip from './ClinicalSafetyStrip'
 import {
@@ -51,6 +52,8 @@ interface TrayCard {
 
 function TrayCardGeneratorPageInner() {
   const { residents } = useResidentsStore()
+  const { hasCapability } = useAuth()
+  const canPrint = hasCapability('hardware.print') || hasCapability('kitchen.write')
   const [selectedWing, setSelectedWing] = useState<string>('all')
   const [selectedMeal, setSelectedMeal] = useState<'Breakfast' | 'Lunch' | 'Dinner'>('Lunch')
   const [cards, setCards] = useState<TrayCard[]>([])
@@ -145,7 +148,8 @@ function TrayCardGeneratorPageInner() {
             className="min-h-[44px]"
             icon={<Printer className="w-4 h-4" />}
             onClick={handlePrint}
-            disabled={loading || filteredCards.length === 0}
+            disabled={loading || filteredCards.length === 0 || !canPrint}
+            title={!canPrint ? 'Print capability required (kitchen staff or manager)' : undefined}
           >
             Print 4&times;6 Thermal Tray Cards
           </AppleButton>

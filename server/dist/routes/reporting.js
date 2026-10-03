@@ -36,19 +36,87 @@ exports.reportingRouter = void 0;
 const express_1 = require("express");
 const crypto_1 = require("crypto");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
+const idempotency_1 = require("../middleware/idempotency");
 const costing_1 = require("../engine/costing");
 exports.reportingRouter = (0, express_1.Router)();
 function err(res, status, msg) {
     return res.status(status).json({ error: msg });
 }
+/**
+ * Canonical resident columns (migration 001): name, room, status ('Active'),
+ * diet_type, texture, allergies/beverages (TEXT[] on pg, JSON text on
+ * SQLite). There are no first_name/last_name/diet_order/supplements columns —
+ * legacy report keys are mapped from the canonical columns below so existing
+ * response contracts keep working.
+ */
+function normList(v) {
+    if (Array.isArray(v))
+        return v.filter((a) => typeof a === 'string');
+    if (typeof v === 'string') {
+        const t = v.trim();
+        if (!t || t === '[]')
+            return [];
+        try {
+            const p = JSON.parse(t);
+            if (Array.isArray(p))
+                return p.filter((a) => typeof a === 'string');
+        }
+        catch { /* not JSON — treat as empty */ }
+    }
+    return [];
+}
+function parseJsonObject(v) {
+    if (v && typeof v === 'object' && !Array.isArray(v))
+        return v;
+    if (typeof v === 'string') {
+        try {
+            const p = JSON.parse(v);
+            if (p && typeof p === 'object' && !Array.isArray(p))
+                return p;
+        }
+        catch { /* fall through */ }
+    }
+    return {};
+}
+function parseJsonArray(v) {
+    if (Array.isArray(v))
+        return v;
+    if (typeof v === 'string') {
+        try {
+            const p = JSON.parse(v);
+            if (Array.isArray(p))
+                return p;
+        }
+        catch { /* fall through */ }
+    }
+    return [];
+}
+/** Map a canonical resident row to the legacy risk-report entry shape. */
+function toRiskEntry(r) {
+    const name = String(r.name ?? '').trim();
+    const space = name.indexOf(' ');
+    return {
+        id: r.id,
+        first_name: space === -1 ? name : name.slice(0, space),
+        last_name: space === -1 ? '' : name.slice(space + 1),
+        name,
+        room: r.room,
+        diet_order: r.diet_type,
+        diet_type: r.diet_type,
+        texture: r.texture,
+        allergies: normList(r.allergies),
+        beverages: normList(r.beverages),
+    };
+}
 // ─── Summary (dashboard-level) ────────────────────────────────────────────
 /**
  * GET /api/reporting/summary?start=YYYY-MM-DD&end=YYYY-MM-DD
  *
- * Returns the key operational metrics for the date range.
+ * Returns the key operational metrics for the date range. Aggregate counts
+ * only (no resident-level PHI), so reporting.opsRead suffices.
  */
-exports.reportingRouter.get('/summary', async (req, res, next) => {
+exports.reportingRouter.get('/summary', (0, permissions_1.requireCapability)('reporting.opsRead'), async (req, res, next) => {
     const { start, end } = req.query;
     const startDate = start ?? new Date().toISOString().slice(0, 10);
     const endDate = end ?? new Date().toISOString().slice(0, 10);
@@ -68,29 +136,26 @@ exports.reportingRouter.get('/summary', async (req, res, next) => {
         // Substitutions count
         const { rows: subRows } = await pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM substitution_log WHERE meal_date BETWEEN $1 AND $2`, [startDate, endDate]);
         const substitutions = parseInt(subRows[0].cnt, 10);
-        // Active resident count (for context)
-        const { rows: resRows } = await pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents WHERE status = 'active'`);
+        // Active resident count (for context). Canonical status is 'Active'.
+        const { rows: resRows } = await pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents WHERE status = 'Active'`);
         const activeResidents = parseInt(resRows[0].cnt, 10);
-        // Allergy risk: count residents with at least one allergen flag
-        // (simplified: count residents who have allergens listed)
-        const { rows: allergyRows } = await pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents
-       WHERE status = 'active'
-         AND allergies IS NOT NULL
-         AND allergies != ''
-         AND allergies != '[]'`);
-        const allergyFlagCount = parseInt(allergyRows[0].cnt, 10);
-        // Diet mismatches: residents whose texture is 'puree' or 'minced'
-        // but that's more of a tray-card validation — here we count residents
-        // whose texture/diet_order fields are populated (proxy for mismatch risk)
+        // Allergy risk: count residents with at least one allergen flag.
+        // The allergies column is TEXT[] on pg / JSON text on SQLite, so the
+        // emptiness check runs in JS (portable) rather than dialect SQL.
+        const { rows: allergyRows } = await pool_1.pool.query(`SELECT allergies FROM residents WHERE status = 'Active'`);
+        const allergyFlagCount = allergyRows.filter(r => normList(r.allergies).length > 0).length;
+        // Special diets: residents with a non-Regular texture (proxy for
+        // mismatch risk; tray-card validation itself lives in the kitchen flow).
         const { rows: mismatchRows } = await pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents
-       WHERE status = 'active'
+       WHERE status = 'Active'
          AND (texture IS NOT NULL AND texture != '' AND texture != 'Regular')`);
         const specialDietCount = parseInt(mismatchRows[0].cnt, 10);
-        // Dietary labor hours and estimated spend from timecard_punches
+        // Dietary labor hours and estimated spend from timecard_punches.
+        // Canonical punch-time column is punched_at (migration 004).
         const { rows: laborRows } = await pool_1.pool.query(`SELECT
          COUNT(*) AS total_punches
        FROM timecard_punches
-       WHERE timestamp >= $1 AND timestamp <= $2`, [startDate, endDate]);
+       WHERE punched_at >= $1 AND punched_at <= $2`, [startDate, endDate]);
         const totalPunches = parseInt(laborRows[0]?.total_punches || '0', 10);
         // Estimate 8 hours per clock-in/out pair at standard $18.50/hr dietary rate
         const estimatedLaborHours = +(totalPunches * 4.0).toFixed(1);
@@ -118,8 +183,8 @@ exports.reportingRouter.get('/summary', async (req, res, next) => {
             totalResidentDays,
             costPerResidentDay: costPerResidentDay !== null ? costPerResidentDay.toFixed(2) : null,
             costSourceCounts: {
-                rolledUpDays: parseInt(srcRows[0].auto_days, 10),
-                manualDays: parseInt(srcRows[0].manual_days, 10),
+                rolledUpDays: parseInt(srcRows[0]?.auto_days ?? '0', 10),
+                manualDays: parseInt(srcRows[0]?.manual_days ?? '0', 10),
             },
             breakdown: {
                 perishableFoodCost,
@@ -142,17 +207,19 @@ exports.reportingRouter.get('/summary', async (req, res, next) => {
     }
 });
 // ─── Daily Cost Log ────────────────────────────────────────────────────────
-/** GET /api/reporting/cost-log?start=&end= */
-exports.reportingRouter.get('/cost-log', async (req, res, next) => {
+/** GET /api/reporting/cost-log?start=&end= — line-level financial detail: finance readers only. */
+exports.reportingRouter.get('/cost-log', (0, permissions_1.requireCapability)('reporting.financeRead'), async (req, res, next) => {
     const { start, end } = req.query;
     try {
+        // Portable range filter (no pg-only ::date casts): log_date is DATE on
+        // pg / TEXT on SQLite, and ISO-8601 strings compare correctly on both.
         const { rows } = await pool_1.pool.query(`SELECT dcl.*, u.name AS logged_by_name
        FROM daily_cost_log dcl
        LEFT JOIN users u ON u.id = dcl.created_by
-       WHERE ($1::date IS NULL OR dcl.log_date >= $1::date)
-         AND ($2::date IS NULL OR dcl.log_date <= $2::date)
+       WHERE ($1 IS NULL OR dcl.log_date >= $1)
+         AND ($2 IS NULL OR dcl.log_date <= $2)
        ORDER BY dcl.log_date DESC
-       LIMIT 365`, [start ?? null, end ?? null]);
+       LIMIT 365`, [typeof start === 'string' ? start : null, typeof end === 'string' ? end : null]);
         // C06: rolled-up entries carry an "[auto-rollup]" notes prefix; expose the
         // origin so $/CPD views can show rolled costs vs manual entries.
         res.json(rows.map(r => ({
@@ -164,8 +231,8 @@ exports.reportingRouter.get('/cost-log', async (req, res, next) => {
         next(e);
     }
 });
-/** POST /api/reporting/cost-log */
-exports.reportingRouter.post('/cost-log', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+/** POST /api/reporting/cost-log — manager/admin only. Replay after the gate. */
+exports.reportingRouter.post('/cost-log', (0, permissions_1.requireCapability)('reporting.costWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     const ar = req;
     const { logDate, residentCount, foodCost, notes = '' } = req.body;
     if (!logDate || residentCount == null || foodCost == null) {
@@ -195,7 +262,7 @@ exports.reportingRouter.post('/cost-log', (0, requireAuth_1.requireRole)('manage
  * per-item costs with provenance (SKU-matched vs estimated), per-resident-day
  * rollup, and the resident census used for the daily total.
  */
-exports.reportingRouter.get('/cpd-breakdown', async (req, res, next) => {
+exports.reportingRouter.get('/cpd-breakdown', (0, permissions_1.requireCapability)('reporting.financeRead'), async (req, res, next) => {
     try {
         const date = req.query.date || new Date().toISOString().slice(0, 10);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -204,7 +271,7 @@ exports.reportingRouter.get('/cpd-breakdown', async (req, res, next) => {
         const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(`${date}T12:00:00`).getDay()];
         const { weekName, slots } = await (0, costing_1.getMenuSlotCosts)(pool_1.pool, dayName);
         const perResidentDayCost = Math.round(slots.reduce((s, slot) => s + slot.slotPlateCost, 0) * 10000) / 10000;
-        const { rows: censusRows } = await pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents WHERE status = 'active'`);
+        const { rows: censusRows } = await pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents WHERE status = 'Active'`);
         const residentCount = parseInt(censusRows[0]?.cnt || '0', 10);
         res.json({
             date,
@@ -228,7 +295,7 @@ exports.reportingRouter.get('/cpd-breakdown', async (req, res, next) => {
  * same date overwrites the auto-rollup entry, never duplicates it.
  * Body: { date?: 'YYYY-MM-DD' } (defaults to today)
  */
-exports.reportingRouter.post('/cost-log/rollup', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.reportingRouter.post('/cost-log/rollup', (0, permissions_1.requireCapability)('reporting.costWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     const ar = req;
     try {
         const date = req.body?.date || new Date().toISOString().slice(0, 10);
@@ -243,29 +310,35 @@ exports.reportingRouter.post('/cost-log/rollup', (0, requireAuth_1.requireRole)(
     }
 });
 // ─── Substitution Log ─────────────────────────────────────────────────────
-/** GET /api/reporting/substitutions?start=&end= */
-exports.reportingRouter.get('/substitutions', async (req, res, next) => {
+/**
+ * GET /api/reporting/substitutions?start=&end=
+ * Full-detail rows (sl.* + resident_name/room + free-text reason that can
+ * carry diagnosis/allergy/history): clinical readers only. Response contract
+ * unchanged for clinical roles.
+ */
+exports.reportingRouter.get('/substitutions', (0, permissions_1.requireCapability)('reporting.clinicalRead'), async (req, res, next) => {
     const { start, end } = req.query;
     try {
+        // Canonical resident name column is `name` (no first_name/last_name).
         const { rows } = await pool_1.pool.query(`SELECT sl.*,
-              r.first_name || ' ' || r.last_name AS resident_name,
+              r.name AS resident_name,
               r.room,
               u.name AS logged_by_name
        FROM substitution_log sl
        LEFT JOIN residents r ON r.id = sl.resident_id
        LEFT JOIN users u ON u.id = sl.logged_by
-       WHERE ($1::date IS NULL OR sl.meal_date >= $1::date)
-         AND ($2::date IS NULL OR sl.meal_date <= $2::date)
+       WHERE ($1 IS NULL OR sl.meal_date >= $1)
+         AND ($2 IS NULL OR sl.meal_date <= $2)
        ORDER BY sl.meal_date DESC, sl.created_at DESC
-       LIMIT 500`, [start ?? null, end ?? null]);
+       LIMIT 500`, [typeof start === 'string' ? start : null, typeof end === 'string' ? end : null]);
         res.json(rows);
     }
     catch (e) {
         next(e);
     }
 });
-/** POST /api/reporting/substitutions */
-exports.reportingRouter.post('/substitutions', async (req, res, next) => {
+/** POST /api/reporting/substitutions — kitchen execution roles. Replay after the gate. */
+exports.reportingRouter.post('/substitutions', (0, permissions_1.requireCapability)('reporting.substitutionWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     const ar = req;
     const { residentId, mealDate, mealType, originalItem, substituteItem, reason = '' } = req.body;
     if (!mealDate || !originalItem || !substituteItem) {
@@ -282,8 +355,8 @@ exports.reportingRouter.post('/substitutions', async (req, res, next) => {
         next(e);
     }
 });
-/** DELETE /api/reporting/substitutions/:id */
-exports.reportingRouter.delete('/substitutions/:id', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+/** DELETE /api/reporting/substitutions/:id — manager/admin only. Replay after the gate. */
+exports.reportingRouter.delete('/substitutions/:id', (0, permissions_1.requireCapability)('reporting.substitutionDelete'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     const { id } = req.params;
     try {
         await pool_1.pool.query(`DELETE FROM substitution_log WHERE id = $1`, [id]);
@@ -296,20 +369,18 @@ exports.reportingRouter.delete('/substitutions/:id', (0, requireAuth_1.requireRo
 // ─── Allergy Risk ─────────────────────────────────────────────────────────
 /**
  * GET /api/reporting/allergy-risk
- * Lists all active residents who have allergens recorded.
+ * Lists all active residents who have allergens recorded. Resident-level
+ * clinical data, so reporting.clinicalRead only.
  * Full meal-level cross-validation is a V2 enhancement requiring
  * structured recipe ingredients with allergen tags.
  */
-exports.reportingRouter.get('/allergy-risk', async (_req, res, next) => {
+exports.reportingRouter.get('/allergy-risk', (0, permissions_1.requireCapability)('reporting.clinicalRead'), async (_req, res, next) => {
     try {
-        const { rows } = await pool_1.pool.query(`SELECT id, first_name, last_name, room, diet_order, texture, allergies, beverages
+        const { rows } = await pool_1.pool.query(`SELECT id, name, room, diet_type, texture, allergies, beverages
        FROM residents
-       WHERE status = 'active'
-         AND allergies IS NOT NULL
-         AND allergies != ''
-         AND allergies != '[]'
-       ORDER BY last_name, first_name`);
-        res.json(rows);
+       WHERE status = 'Active'
+       ORDER BY name`);
+        res.json(rows.filter(r => normList(r.allergies).length > 0).map(toRiskEntry));
     }
     catch (e) {
         next(e);
@@ -320,18 +391,31 @@ exports.reportingRouter.get('/allergy-risk', async (_req, res, next) => {
  * GET /api/reporting/diet-mismatches
  * Lists active residents with a non-regular texture or therapeutic diet order.
  * These are the residents most likely to have tray-card errors.
+ * Resident-level clinical data, so reporting.clinicalRead only.
  */
-exports.reportingRouter.get('/diet-mismatches', async (_req, res, next) => {
+exports.reportingRouter.get('/diet-mismatches', (0, permissions_1.requireCapability)('reporting.clinicalRead'), async (_req, res, next) => {
     try {
-        const { rows } = await pool_1.pool.query(`SELECT id, first_name, last_name, room, diet_order, texture, allergies, beverages, supplements
+        // Canonical diet column is diet_type; LOWER() LIKE keeps the
+        // regular-diet exclusion portable across pg and SQLite.
+        const { rows } = await pool_1.pool.query(`SELECT id, name, room, diet_type, texture, allergies, beverages, ensure_per_day
        FROM residents
-       WHERE status = 'active'
+       WHERE status = 'Active'
          AND (
            (texture IS NOT NULL AND texture != '' AND texture != 'Regular') OR
-           (diet_order IS NOT NULL AND diet_order != '' AND diet_order NOT ILIKE '%regular%')
+           (diet_type IS NOT NULL AND diet_type != '' AND LOWER(diet_type) NOT LIKE '%regular%')
          )
-       ORDER BY last_name, first_name`);
-        res.json(rows);
+       ORDER BY name`);
+        // The canonical schema has no supplements column: the entry's
+        // supplements list is derived from the recorded Ensure order, and the
+        // raw ensurePerDay count is included alongside.
+        res.json(rows.map(r => {
+            const ensurePerDay = Number(r.ensure_per_day ?? 0);
+            return {
+                ...toRiskEntry(r),
+                supplements: ensurePerDay > 0 ? [`Ensure (${ensurePerDay}/day)`] : [],
+                ensurePerDay,
+            };
+        }));
     }
     catch (e) {
         next(e);
@@ -340,27 +424,53 @@ exports.reportingRouter.get('/diet-mismatches', async (_req, res, next) => {
 // ─── Production Variance ─────────────────────────────────────────────────
 /**
  * GET /api/reporting/production-variance?start=&end=
- * Returns production sheets with planned vs produced counts.
- * Variance = (produced - planned) / planned * 100
+ * Returns one entry per scheduled production-sheet row (canonical
+ * production_sheets columns: day/slot/rows/counts — there is no
+ * date/planned_count/produced_count). The canonical schema tracks planned
+ * portions only: produced and variancePct are null until actual cooked
+ * counts are recorded, and are never fabricated.
  */
-exports.reportingRouter.get('/production-variance', async (req, res, next) => {
+exports.reportingRouter.get('/production-variance', (0, permissions_1.requireCapability)('reporting.opsRead'), async (req, res, next) => {
     const { start, end } = req.query;
     try {
-        // production_sheets table — check what columns exist by trying a safe query
+        const startDay = typeof start === 'string' ? start : null;
+        const endDay = typeof end === 'string' ? end : null;
         const { rows } = await pool_1.pool.query(`SELECT *
        FROM production_sheets
-       WHERE ($1::date IS NULL OR date >= $1::date)
-         AND ($2::date IS NULL OR date <= $2::date)
-       ORDER BY date DESC
-       LIMIT 200`, [start ?? null, end ?? null]);
-        // Calculate variance where both planned and produced counts are available
-        const withVariance = rows.map(r => {
-            const planned = parseFloat(r.planned_count ?? r.total_count ?? 0);
-            const produced = parseFloat(r.produced_count ?? r.actual_count ?? planned);
-            const variance = planned > 0 ? ((produced - planned) / planned * 100).toFixed(1) : null;
-            return { ...r, planned, produced, variancePct: variance };
-        });
-        res.json(withVariance);
+       WHERE ($1 IS NULL OR day >= $1)
+         AND ($2 IS NULL OR day <= $2)
+       ORDER BY day DESC
+       LIMIT 200`, [startDay, endDay]);
+        const entries = [];
+        for (const sheet of rows) {
+            const sheetRows = parseJsonArray(sheet.rows);
+            if (sheetRows.length === 0) {
+                const counts = parseJsonObject(sheet.counts);
+                entries.push({
+                    id: String(sheet.id),
+                    date: sheet.day,
+                    meal_type: sheet.slot,
+                    item_name: null,
+                    planned: Number(counts.total ?? 0),
+                    produced: null,
+                    variancePct: null,
+                });
+            }
+            else {
+                sheetRows.forEach((row, i) => {
+                    entries.push({
+                        id: `${sheet.id}:${row.menuItemId ?? i}`,
+                        date: sheet.day,
+                        meal_type: sheet.slot,
+                        item_name: row.menuItemName ?? null,
+                        planned: Number(row.total ?? row.projectedPortions ?? 0),
+                        produced: null,
+                        variancePct: null,
+                    });
+                });
+            }
+        }
+        res.json(entries);
     }
     catch (e) {
         next(e);
@@ -371,7 +481,7 @@ exports.reportingRouter.get('/production-variance', async (req, res, next) => {
  * GET /api/reporting/compliance-summary?start=&end=
  * Returns a structured JSON payload for printing a compliance summary report.
  */
-exports.reportingRouter.get('/compliance-summary', async (req, res, next) => {
+exports.reportingRouter.get('/compliance-summary', (0, permissions_1.requireCapability)('reporting.opsRead'), async (req, res, next) => {
     const { start, end } = req.query;
     const startDate = start ?? new Date().toISOString().slice(0, 10);
     const endDate = end ?? new Date().toISOString().slice(0, 10);
@@ -380,10 +490,10 @@ exports.reportingRouter.get('/compliance-summary', async (req, res, next) => {
             pool_1.pool.query(`SELECT COALESCE(SUM(food_cost),0) AS total, COALESCE(SUM(resident_count),0) AS days
          FROM daily_cost_log WHERE log_date BETWEEN $1 AND $2`, [startDate, endDate]),
             pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM substitution_log WHERE meal_date BETWEEN $1 AND $2`, [startDate, endDate]),
-            pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents WHERE status='active' AND allergies IS NOT NULL AND allergies != '' AND allergies != '[]'`),
-            pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents WHERE status='active' AND (
+            pool_1.pool.query(`SELECT allergies FROM residents WHERE status = 'Active'`),
+            pool_1.pool.query(`SELECT COUNT(*) AS cnt FROM residents WHERE status = 'Active' AND (
            (texture IS NOT NULL AND texture != '' AND texture != 'Regular') OR
-           (diet_order IS NOT NULL AND diet_order != '' AND diet_order NOT ILIKE '%regular%')
+           (diet_type IS NOT NULL AND diet_type != '' AND LOWER(diet_type) NOT LIKE '%regular%')
          )`),
         ]);
         const foodCost = parseFloat(costRes.rows[0].total);
@@ -399,7 +509,7 @@ exports.reportingRouter.get('/compliance-summary', async (req, res, next) => {
                 totalFoodCost: foodCost.toFixed(2),
                 totalResidentDays: residentDays,
                 substitutions: parseInt(subRes.rows[0].cnt, 10),
-                residentsWithAllergens: parseInt(allergyRes.rows[0].cnt, 10),
+                residentsWithAllergens: allergyRes.rows.filter(r => normList(r.allergies).length > 0).length,
                 residentsWithSpecialDiets: parseInt(mismatchRes.rows[0].cnt, 10),
             },
         });
@@ -415,7 +525,9 @@ const requireTier_1 = require("../middleware/requireTier");
  *
  * Generates official CMS-2567 Dietary Survey Audit Pack (Federal F-Tags F800 - F814)
  */
-exports.reportingRouter.get('/cms-survey-export', (0, requireTier_1.requireTier)('enterprise'), async (req, res, next) => {
+// Resident-level clinical survey data: clinical readers on the enterprise
+// tier (capability first, then tier — both precede any response).
+exports.reportingRouter.get('/cms-survey-export', (0, permissions_1.requireCapability)('reporting.clinicalRead'), (0, requireTier_1.requireTier)('enterprise'), async (req, res, next) => {
     try {
         const { format = 'json' } = req.query;
         const { rows: residents } = await pool_1.pool.query('SELECT id, name, diet_type as "dietType", texture, allergies FROM residents');
@@ -462,7 +574,7 @@ exports.reportingRouter.get('/cms-survey-export', (0, requireTier_1.requireTier)
 // recorded-by staff, compliance flags, and corrective actions. format=binder
 // renders a plain-text survey-binder page for printing.
 // ═══════════════════════════════════════════════════════════════════════════
-exports.reportingRouter.get('/haccp-temperature-log', async (req, res, next) => {
+exports.reportingRouter.get('/haccp-temperature-log', (0, permissions_1.requireCapability)('reporting.opsRead'), async (req, res, next) => {
     const { start, end, equipmentId, violationsOnly, format = 'json' } = req.query;
     const startDate = start ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
     const endDate = end ?? new Date().toISOString().slice(0, 10);
@@ -570,8 +682,8 @@ function toBudgetEntry(row) {
         createdAt: row.created_at,
     };
 }
-// GET /api/reporting/budget-periods
-exports.reportingRouter.get('/budget-periods', async (_req, res, next) => {
+// GET /api/reporting/budget-periods — line-level financial detail: finance readers only.
+exports.reportingRouter.get('/budget-periods', (0, permissions_1.requireCapability)('reporting.financeRead'), async (_req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT * FROM budget_periods ORDER BY year DESC, month DESC');
         res.json(rows.map(toBudgetPeriod));
@@ -580,8 +692,8 @@ exports.reportingRouter.get('/budget-periods', async (_req, res, next) => {
         next(err);
     }
 });
-// POST /api/reporting/budget-periods
-exports.reportingRouter.post('/budget-periods', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// POST /api/reporting/budget-periods — manager/admin only. Replay after the gate.
+exports.reportingRouter.post('/budget-periods', (0, permissions_1.requireCapability)('reporting.budgetWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const d = req.body;
         const id = d.id || (0, crypto_1.randomUUID)();
@@ -605,8 +717,8 @@ exports.reportingRouter.post('/budget-periods', (0, requireAuth_1.requireRole)('
         next(err);
     }
 });
-// GET /api/reporting/budget-entries[?periodId=]
-exports.reportingRouter.get('/budget-entries', async (req, res, next) => {
+// GET /api/reporting/budget-entries[?periodId=] — line-level financial detail: finance readers only.
+exports.reportingRouter.get('/budget-entries', (0, permissions_1.requireCapability)('reporting.financeRead'), async (req, res, next) => {
     try {
         const periodId = req.query.periodId;
         if (periodId) {
@@ -620,8 +732,8 @@ exports.reportingRouter.get('/budget-entries', async (req, res, next) => {
         next(err);
     }
 });
-// POST /api/reporting/budget-entries
-exports.reportingRouter.post('/budget-entries', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// POST /api/reporting/budget-entries — manager/admin only. Replay after the gate.
+exports.reportingRouter.post('/budget-entries', (0, permissions_1.requireCapability)('reporting.budgetWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const d = req.body;
         const id = d.id || (0, crypto_1.randomUUID)();
@@ -638,8 +750,8 @@ exports.reportingRouter.post('/budget-entries', (0, requireAuth_1.requireRole)('
         next(err);
     }
 });
-// PUT /api/reporting/budget-entries/:id
-exports.reportingRouter.put('/budget-entries/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// PUT /api/reporting/budget-entries/:id — manager/admin only. Replay after the gate.
+exports.reportingRouter.put('/budget-entries/:id', (0, permissions_1.requireCapability)('reporting.budgetWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const d = req.body;
         await pool_1.pool.query(`UPDATE budget_entries SET
@@ -663,8 +775,8 @@ exports.reportingRouter.put('/budget-entries/:id', (0, requireAuth_1.requireRole
         next(err);
     }
 });
-// DELETE /api/reporting/budget-entries/:id
-exports.reportingRouter.delete('/budget-entries/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// DELETE /api/reporting/budget-entries/:id — manager/admin only. Replay after the gate.
+exports.reportingRouter.delete('/budget-entries/:id', (0, permissions_1.requireCapability)('reporting.budgetWrite'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         await pool_1.pool.query('DELETE FROM budget_entries WHERE id = $1', [req.params.id]);
         res.status(204).send();

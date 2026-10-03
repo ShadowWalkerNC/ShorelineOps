@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Sparkles,
   HeartPulse,
+  Globe,
 } from 'lucide-react'
 
 interface MobileMoreSheetProps {
@@ -116,6 +117,29 @@ export default function MobileMoreSheet({ isOpen, onClose, onOpenBrandGuide }: M
                   </NavLink>
                 )
               })}
+            </div>
+          </div>
+
+          {/* Public Site Navigation */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-2 px-1">
+              Public Ecosystem
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href="/"
+                className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors text-xs font-semibold"
+              >
+                <Globe size={15} className="text-teal-600 dark:text-teal-400" />
+                <span>Public Site</span>
+              </a>
+              <a
+                href="/pricing"
+                className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors text-xs font-semibold"
+              >
+                <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400 px-1 py-0.5 rounded bg-teal-50 dark:bg-teal-950/60">$</span>
+                <span>Pricing Plans</span>
+              </a>
             </div>
           </div>
 

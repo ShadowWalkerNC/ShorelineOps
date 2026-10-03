@@ -253,3 +253,25 @@ This demo deployment exists solely for review and demonstration purposes.*
 ## Explicit server demo data (security update 2026-09-20)
 
 Server startup no longer seeds sample accounts or residents by default. For a disposable local demo only, set `SHORELINE_DEMO_SEED=true` with a non-production `NODE_ENV` and a separate empty SQLite/PostgreSQL database. Apply migrations before the seed CLI. `NODE_ENV=production` refuses fixture seeding regardless of this flag. `VITE_DEMO_MODE` alone never enables server seeding. Real facilities use protected clean setup and individually chosen owner credentials. See [security batch notes](docs/audits/SECURITY_BATCH1_IMPLEMENTATION.md) for compatibility and existing-installation handling.
+
+---
+
+## Demo network isolation (public `/demo` bundle)
+
+The demo build (`VITE_DEMO_MODE=true`, served at `/demo`) is fully
+network-isolated from the live API:
+
+- It never reads or attaches the live JWT access token or license key.
+- Every Axios request rejects **before** network dispatch with an explicit
+  `DEMO_API_UNAVAILABLE` (503) error — no fake clinical successes.
+- It never attempts token refresh and never redirects on 401, so demo
+  navigation cannot reset to `/demo/login` and bounce to the dashboard.
+
+Stores keep their existing local demo adapters (in-memory seeds and the
+`src/lib/supabase.ts` local shim), which catch the unavailable rejection and
+serve local data. Features with no local adapter surface the honest
+unavailable message. Live (`/app`) auth behavior is unchanged: credentials
+attach, the first 401 refreshes once and retries, and a failed refresh clears
+the session and redirects to login. Shared logic lives in
+`server/src/apiClientPolicy.ts` (imported by `src/api/client.ts`) and is
+covered by `server/src/api-client-policy.test.ts`.

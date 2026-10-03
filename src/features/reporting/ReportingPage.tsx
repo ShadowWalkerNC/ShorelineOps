@@ -23,8 +23,10 @@ import {
 export default function ReportingPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'substitutions' | 'allergies' | 'mismatches' | 'variance' | 'budget' | 'cms-survey'>('dashboard')
   // Budget Targets section preserves the old /budget page's manager-only access
-  const { atLeast } = useAuth()
-  const canSeeBudget = atLeast('manager')
+  const { atLeast, hasCapability } = useAuth()
+  const canSeeBudget = atLeast('manager') || hasCapability('reporting.financeRead')
+  const canSeeCost = hasCapability('reporting.financeRead')
+  const canSeeClinical = hasCapability('reporting.clinicalRead')
   
   // Date range filters
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -369,25 +371,27 @@ export default function ReportingPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: 20, gap: 8, flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setActiveTab('cost')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'cost' ? '3px solid var(--color-primary)' : '3px solid transparent',
-            color: activeTab === 'cost' ? 'var(--color-primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'cost' ? 700 : 500,
-            fontSize: 14,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6
-          }}
-        >
-          <DollarSign style={{ width: 16, height: 16 }} />
-          Daily Cost per Resident Day
-        </button>
+        {canSeeCost && (
+          <button
+            onClick={() => setActiveTab('cost')}
+            style={{
+              padding: '10px 18px',
+              border: 'none',
+              background: 'none',
+              borderBottom: activeTab === 'cost' ? '3px solid var(--color-primary)' : '3px solid transparent',
+              color: activeTab === 'cost' ? 'var(--color-primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'cost' ? 700 : 500,
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <DollarSign style={{ width: 16, height: 16 }} />
+            Daily Cost per Resident Day
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('substitutions')}
           style={{
@@ -407,25 +411,27 @@ export default function ReportingPage() {
           <RefreshCw style={{ width: 16, height: 16 }} />
           Substitution Log
         </button>
-        <button
-          onClick={() => setActiveTab('allergies')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'allergies' ? '3px solid var(--color-primary)' : '3px solid transparent',
-            color: activeTab === 'allergies' ? 'var(--color-primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'allergies' ? 700 : 500,
-            fontSize: 14,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6
-          }}
-        >
-          <AlertTriangle style={{ width: 16, height: 16 }} />
-          Allergy Risk Summary
-        </button>
+        {canSeeClinical && (
+          <button
+            onClick={() => setActiveTab('allergies')}
+            style={{
+              padding: '10px 18px',
+              border: 'none',
+              background: 'none',
+              borderBottom: activeTab === 'allergies' ? '3px solid var(--color-primary)' : '3px solid transparent',
+              color: activeTab === 'allergies' ? 'var(--color-primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'allergies' ? 700 : 500,
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <AlertTriangle style={{ width: 16, height: 16 }} />
+            Allergy Risk Summary
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('mismatches')}
           style={{

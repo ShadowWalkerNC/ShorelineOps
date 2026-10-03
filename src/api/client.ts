@@ -1,11 +1,26 @@
 /**
  * Axios-based API client.
- * Automatically attaches the JWT access token and handles 401s
+ *
+ * Live builds attach the JWT access token (plus license key) and handle 401s
  * by attempting a silent refresh before retrying the original request.
+ *
+ * Demo builds (VITE_DEMO_MODE=true) never read or attach live credentials,
+ * never issue network requests (rejecting adapter installed below), and never
+ * refresh or redirect on 401. Unsupported API-backed features reject with an
+ * honest DEMO_API_UNAVAILABLE error; stores fall back to their local adapters.
  */
 import axios from 'axios'
+import type { AxiosAdapter, AxiosRequestConfig } from 'axios'
 import { tokenManager } from '../security/tokenManager'
 import { LicenseManager } from '../security/license'
+import {
+  applyRequestPolicy,
+  createDemoUnavailableError,
+  handleResponseError,
+  isDemoBuild,
+} from '../../server/src/apiClientPolicy'
+
+const isDemo = isDemoBuild(import.meta.env)
 
 export const api = axios.create({
   // Production uses the unified origin. Vite proxies /api during local work.
@@ -13,31 +28,34 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Attach access token to every request
-api.interceptors.request.use((config) => {
-  const token = tokenManager.getAccessToken()
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  const licenseKey = LicenseManager.getLicenseKey()
-  if (licenseKey) config.headers['X-Shoreline-License-Key'] = licenseKey
-  return config
-})
+// Demo builds must not reach the network at all: reject every request before
+// dispatch with an explicit unavailable error (no fake successes).
+if (isDemo) {
+  const demoAdapter: AxiosAdapter = async (config) => {
+    throw createDemoUnavailableError({ method: config?.method, url: config?.url })
+  }
+  api.defaults.adapter = demoAdapter
+}
 
-// On 401, try silent refresh once
+// Attach access token to every request (live only; demo returns untouched)
+api.interceptors.request.use((config) =>
+  applyRequestPolicy(config, isDemo, {
+    getAccessToken: () => tokenManager.getAccessToken(),
+    getLicenseKey: () => LicenseManager.getLicenseKey(),
+  })
+)
+
+// On 401, try silent refresh once (live only; demo always rejects untouched)
 api.interceptors.response.use(
   (res) => res,
-  async (error) => {
-    const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
-      original._retry = true
-      try {
-        await tokenManager.refresh()
-        original.headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
-        return api(original)
-      } catch {
-        tokenManager.clear()
+  async (error) =>
+    handleResponseError(error, isDemo, {
+      refreshAccessToken: () => tokenManager.refresh(),
+      getAccessToken: () => tokenManager.getAccessToken(),
+      clearSession: () => tokenManager.clear(),
+      redirectToLogin: () => {
         window.location.href = `${import.meta.env.BASE_URL}login`
-      }
-    }
-    return Promise.reject(error)
-  }
+      },
+      retryRequest: (original) => api(original as unknown as AxiosRequestConfig),
+    })
 )

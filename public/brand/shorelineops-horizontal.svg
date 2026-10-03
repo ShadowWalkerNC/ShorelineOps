@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" width="520" height="120" role="img" aria-label="ShorelineOps Logo">
+  <defs>
+    <linearGradient id="hHorizonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="50%" stop-color="#0EA5E9" />
+      <stop offset="100%" stop-color="#14B8A6" />
+    </linearGradient>
+
+    <linearGradient id="hShieldBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <linearGradient id="hPulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#2DD4BF" />
+      <stop offset="100%" stop-color="#A7F3D0" />
+    </linearGradient>
+
+    <linearGradient id="hTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F1F5F9" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left Icon Mark (Centered at x=60, y=60) -->
+  <g transform="translate(6, 0)">
+    <!-- Rounded Shield Container -->
+    <rect x="12" y="12" width="96" height="96" rx="24"
+          fill="url(#hShieldBg)"
+          stroke="url(#hHorizonGrad)"
+          stroke-width="2.2" />
+
+    <!-- Inset Dash -->
+    <rect x="18" y="18" width="84" height="84" rx="18"
+          fill="none"
+          stroke="#1E293B"
+          stroke-width="1.1"
+          stroke-dasharray="2.5 2.5" />
+
+    <!-- Tidal Horizon Curve -->
+    <path d="M 24,74 C 40,64 52,62 60,66 C 68,70 80,80 96,70" 
+          fill="none" 
+          stroke="url(#hHorizonGrad)" 
+          stroke-width="2.5" 
+          stroke-linecap="round" />
+
+    <!-- Caduceus + IDDSI Inverted Triangle Center -->
+    <g transform="translate(60, 48)">
+      <polygon points="0,15 -14,-8 14,-8"
+               fill="none"
+               stroke="#0D9488"
+               stroke-width="1.8"
+               stroke-linejoin="round" />
+      <line x1="-8" y1="0" x2="8" y2="0"
+            stroke="#38BDF8"
+            stroke-width="1.5"
+            stroke-linecap="round" />
+      <line x1="0" y1="-18" x2="0" y2="24"
+            stroke="url(#hPulseGrad)"
+            stroke-width="2.2"
+            stroke-linecap="round" />
+      <!-- Caduceus Cross Arc -->
+      <path d="M -11,-11 C -6,-19 0,-14 0,-8 C 0,-2 8,-7 11,-13"
+            fill="none"
+            stroke="#38BDF8"
+            stroke-width="1.8"
+            stroke-linecap="round" />
+      <circle cx="0" cy="-18" r="2.5" fill="#F8FAFC" />
+    </g>
+
+    <!-- Corner Vital Nodes -->
+    <circle cx="28" cy="28" r="2" fill="#38BDF8" />
+    <circle cx="92" cy="28" r="2" fill="#2DD4BF" />
+    <circle cx="28" cy="92" r="2" fill="#0EA5E9" />
+    <circle cx="92" cy="92" r="2" fill="#14B8A6" />
+  </g>
+
+  <!-- Wordmark Section -->
+  <g transform="translate(136, 0)">
+    <!-- "Shoreline" -->
+    <text x="0" y="68"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          font-size="42"
+          font-weight="800"
+          letter-spacing="-0.8"
+          fill="url(#hTextGrad)">Shoreline</text>
+
+    <!-- "Ops" Clinical Badge -->
+    <text x="194" y="68"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          font-size="42"
+          font-weight="900"
+          letter-spacing="0.5"
+          fill="#14B8A6">Ops</text>
+
+    <!-- Subtitle / Clinical Standard -->
+    <text x="2" y="93"
+          font-family="'SF Mono', 'Fira Code', 'Cascadia Code', monospace"
+          font-size="11.5"
+          font-weight="600"
+          letter-spacing="2.5"
+          fill="#64748B">CLINICAL DIETARY OS · IDDSI LEVEL 4 READY</text>
+
+    <!-- Active Census Status Dot (HIPAA Secure / Live EHR) -->
+    <circle cx="288" cy="42" r="4" fill="#0EA5E9" />
+  </g>
+</svg>

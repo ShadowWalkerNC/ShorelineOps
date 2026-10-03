@@ -133,15 +133,20 @@ export default function LoginPage() {
           animation: 'fadeIn 0.3s ease',
         }}>
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <img
-              src="/logo.png"
-              alt="Shoreline"
-              style={{
-                width: '100%', maxWidth: 280, height: 'auto',
-                objectFit: 'contain', display: 'block',
-                margin: '0 auto 14px',
-              }}
-            />
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <img
+                src="/brand/shorelineops-icon.svg"
+                alt="Shoreline Care OS"
+                style={{
+                  width: 48,
+                  height: 48,
+                  objectFit: 'contain',
+                }}
+              />
+              <span className="font-display font-extrabold text-2xl tracking-tight text-slate-900 dark:text-white">
+                Shoreline<span className="text-teal-600 dark:text-teal-400">Ops</span>
+              </span>
+            </div>
             <div style={{
               fontSize: 11, color: 'var(--text-muted)',
               fontWeight: 600, letterSpacing: '0.5px',

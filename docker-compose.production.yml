@@ -1,21 +1,50 @@
 version: '3.8'
 
+# Production Compose. All credentials are required from the environment —
+# this file ships no usable default secrets. The bundled database is private
+# to the Compose network (no published ports).
+#
+# External managed database: a host DATABASE_URL export alone is IGNORED —
+# the api service below constructs DATABASE_URL from DB_USER/DB_PASSWORD/
+# DB_NAME, which overrides any host value. Instead create an explicit
+# override file (e.g. docker-compose.external-db.yml) containing:
+#   services:
+#     api:
+#       environment:
+#         DATABASE_URL: "postgresql://user:pass@host:5432/db?sslmode=require"
+# and start with:
+#   docker compose -f docker-compose.production.yml \
+#     -f docker-compose.external-db.yml up -d --no-deps api
+# (--no-deps is required: plain `up api` still starts the bundled postgres
+# via the api depends_on. Base-file ${DB_*:?...} interpolation runs before
+# the override merges, so DB_USER/DB_PASSWORD/DB_NAME (plus JWT_SECRET and
+# SHORELINE_FACILITY_ID) must still be exported even though the override
+# replaces DATABASE_URL — dummy values are fine for the unused bundled
+# service. Remote TLS verifies certificates by default.)
+#
+# Quoting note: every value containing a ${VAR:?...} expansion is
+# double-quoted. The error messages contain ": " (colon-space), which is
+# invalid in an unquoted YAML scalar — unquoted, YAML parsers fail with
+# "bad indentation of a mapping entry".
 services:
-  # ── PostgreSQL Database ───────────────────────────────────────────────────
+  # ── PostgreSQL Database (private; no published ports) ───────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: shoreline-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-shoreline}
-      POSTGRES_USER: ${DB_USER:-shoreline_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-shoreline_secure_password_2026}
+      POSTGRES_DB: "${DB_NAME:?DB_NAME is required: export the production database name.}"
+      POSTGRES_USER: "${DB_USER:?DB_USER is required: export the production database user.}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required: export the production database password.}"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-shoreline_admin} -d ${DB_NAME:-shoreline}"]
+      # $$ escapes to a literal $ inside the container: the container shell
+      # expands the container's own POSTGRES_* variables (mapped from the
+      # host's DB_* variables above). An unescaped $VAR would be interpolated
+      # by Compose from the *host* environment, where only DB_* exist — so
+      # $POSTGRES_USER would expand to empty and the probe would fail.
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,9 +59,27 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://${DB_USER:-shoreline_admin}:${DB_PASSWORD:-shoreline_secure_password_2026}@postgres:5432/${DB_NAME:-shoreline}?sslmode=disable
-      JWT_SECRET: ${JWT_SECRET:-shoreline_enterprise_jwt_secret_must_be_over_32_chars}
-      FACILITY_ID: ${FACILITY_ID:-FAC-001}
+      # Bundled private-database link. sslmode=disable is the explicit
+      # local-plaintext mode for this private Compose network only; an
+      # external managed DATABASE_URL verifies TLS by default (see
+      # server/src/db/pool.ts).
+      #
+      # The password below is used BOTH as the database's raw credential and
+      # embedded in this URL, so it must already be URL-safe: generate it with
+      # `openssl rand -hex 32` (letters/digits only, never URL-encode it here).
+      # A password containing reserved characters (: / @ ? # % &) breaks URL
+      # parsing. If such a password is unavoidable, set DATABASE_URL
+      # explicitly to a full connection string with the password
+      # percent-encoded instead of using this constructed value.
+      DATABASE_URL: "postgresql://${DB_USER:?DB_USER is required.}:${DB_PASSWORD:?DB_PASSWORD is required.}@postgres:5432/${DB_NAME:?DB_NAME is required.}?sslmode=disable"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required: export a random value of at least 32 characters.}"
+      # Canonical one-facility scope (authoritative for API tenant context).
+      SHORELINE_FACILITY_ID: "${SHORELINE_FACILITY_ID:?SHORELINE_FACILITY_ID is required: set this facility's canonical id.}"
+      # Legacy hardware webhook label, pinned to the canonical scope above.
+      # FACILITY_ID must equal SHORELINE_FACILITY_ID; the hardware fallback
+      # (FAC-001) only applies when FACILITY_ID is unset, which this Compose
+      # file never allows.
+      FACILITY_ID: "${SHORELINE_FACILITY_ID:?SHORELINE_FACILITY_ID is required: set this facility's canonical id.}"
       ENABLE_HW_PRINT_PORT: 9100
     depends_on:
       postgres:
@@ -40,21 +87,25 @@ services:
     ports:
       - "3001:3001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/ready || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
 
-  # ── Optional NGINX Reverse Proxy & SSL Termination ────────────────────────
+  # ── Optional NGINX Reverse Proxy (HTTP only; disabled by default) ──────────
+  # Enable explicitly with `docker compose --profile proxy up`. No TLS is
+  # configured in this proxy (see nginx.conf); do not publish :443 until a
+  # tested TLS setup exists.
   reverse-proxy:
     image: nginx:alpine
     container_name: shoreline-proxy
     restart: unless-stopped
+    profiles:
+      - proxy
     ports:
       - "80:80"
-      - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - api
 

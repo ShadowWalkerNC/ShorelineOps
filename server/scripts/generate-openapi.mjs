@@ -685,12 +685,56 @@ function parseRouteFile(file, src) {
 
 const ROLE_RANK = { readonly: 0, distributor: 1, staff: 2, server: 3, activities: 4, dietary: 5, dietitian: 6, frontdesk: 7, manager: 8, admin: 9 }
 
+const CLINICAL_READ = ['admin', 'manager', 'dietitian']
+const SERVICE_READ = ['admin', 'manager', 'dietitian', 'frontdesk', 'dietary', 'activities', 'server', 'staff', 'readonly']
+const RESIDENT_DEMOGRAPHIC_WRITE = ['admin', 'manager', 'dietitian', 'frontdesk']
+const FLAG_WRITE = ['admin', 'manager', 'dietitian', 'frontdesk', 'dietary', 'activities', 'server', 'staff']
+const KITCHEN_WRITE = ['admin', 'manager', 'dietitian', 'dietary', 'staff', 'server']
+const KITCHEN_READ = ['admin', 'manager', 'dietitian', 'dietary', 'activities', 'server', 'staff', 'readonly']
+const HYDRATION_WRITE = ['admin', 'manager', 'dietitian', 'dietary', 'activities', 'server', 'staff']
+const PRODUCTION_WRITE = ['admin', 'manager', 'dietitian', 'dietary', 'staff']
+const PRODUCTION_READ = ['admin', 'manager', 'dietitian', 'dietary', 'staff', 'readonly']
+const REPORTING_OPS_READ = ['admin', 'manager', 'dietitian', 'frontdesk', 'dietary', 'staff', 'readonly']
+const HACCP_READ = ['admin', 'manager', 'dietitian', 'dietary', 'server', 'staff', 'readonly']
+const MANAGER_ADMIN = ['manager', 'admin']
+
+const CAPABILITY_ROLES = {
+  'residents.read': CLINICAL_READ,
+  'residents.serviceRead': SERVICE_READ,
+  'residents.historyRead': CLINICAL_READ,
+  'residents.write': RESIDENT_DEMOGRAPHIC_WRITE,
+  'residents.clinicalWrite': ['dietitian', 'manager'],
+  'residents.flagWrite': FLAG_WRITE,
+  'residents.import': ['dietitian', 'manager'],
+  'residents.delete': ['admin'],
+  'kitchen.read': KITCHEN_READ,
+  'kitchen.write': KITCHEN_WRITE,
+  'kitchen.hydrationWrite': HYDRATION_WRITE,
+  'reporting.clinicalRead': CLINICAL_READ,
+  'reporting.opsRead': REPORTING_OPS_READ,
+  'reporting.financeRead': MANAGER_ADMIN,
+  'reporting.costWrite': MANAGER_ADMIN,
+  'reporting.substitutionWrite': KITCHEN_WRITE,
+  'reporting.substitutionDelete': MANAGER_ADMIN,
+  'reporting.budgetWrite': MANAGER_ADMIN,
+  'hardware.print': KITCHEN_WRITE,
+  'hardware.haccpRead': HACCP_READ,
+  'hardware.haccpManage': MANAGER_ADMIN,
+  'hardware.haccpLog': KITCHEN_WRITE,
+  'production.read': PRODUCTION_READ,
+  'production.write': PRODUCTION_WRITE,
+  'production.delete': ['admin'],
+  'enterprise.read': MANAGER_ADMIN,
+  'enterprise.write': MANAGER_ADMIN,
+}
+
 function authFromMiddleware(middleTokens, mountAuth) {
   const auth = {
     required: mountAuth,
     mechanism: mountAuth ? 'jwt-bearer' : 'none',
     minRole: null,
     exactRoles: null,
+    capabilities: null,
     tier: null,
     rawMiddleware: [],
     inHandlerNote: null,
@@ -702,6 +746,28 @@ function authFromMiddleware(middleTokens, mountAuth) {
       auth.required = true
       auth.mechanism = 'jwt-bearer'
       auth.minRole = m[1]
+    } else if ((m = t.match(/^requireCapability\(([\s\S]+)\)$/))) {
+      auth.required = true
+      auth.mechanism = 'jwt-bearer'
+      const caps = [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((match) => match[1])
+      if (caps.length) {
+        auth.capabilities = auth.capabilities || []
+        auth.capabilities.push(...caps)
+        const allowed = new Set(auth.exactRoles || [])
+        for (const cap of caps) {
+          const roles = CAPABILITY_ROLES[cap] || []
+          for (const r of roles) allowed.add(r)
+        }
+        auth.exactRoles = [...allowed]
+      }
+    } else if (t === 'requirePlatformAdmin') {
+      auth.required = true
+      auth.mechanism = 'jwt-bearer'
+      auth.inHandlerNote = 'Platform owner access required (platform_admin: true).'
+    } else if (t === 'requireFacilitySettingsReader') {
+      auth.required = true
+      auth.mechanism = 'jwt-bearer'
+      auth.exactRoles = ['admin', 'manager', 'frontdesk']
     } else if ((m = t.match(/^requireTier\(\s*['"]([^'"]+)['"]\s*\)$/))) {
       auth.required = true
       if (auth.mechanism === 'none') auth.mechanism = 'license-key'
@@ -716,6 +782,8 @@ function authFromMiddleware(middleTokens, mountAuth) {
     } else if (t === 'requireEhrWebhookSignature') {
       auth.required = true
       auth.mechanism = 'ehr-webhook-hmac'
+    } else if (t.startsWith('idempotencyMiddleware(')) {
+      // Handled idempotency middleware - not an auth token
     } else {
       auth.rawMiddleware.push(t.length > 80 ? t.slice(0, 80) + '…' : t)
       warn(`unrecognized middleware token: ${t.slice(0, 80)}`)
@@ -732,8 +800,11 @@ function describeAuth(auth) {
   else if (auth.mechanism === 'kiosk-secret') bits.push('Shared secret: Authorization: Bearer <KIOSK_API_SECRET>')
   else if (auth.mechanism === 'stripe-signature') bits.push('Stripe webhook signature (stripe-signature header, STRIPE_WEBHOOK_SECRET)')
   else if (auth.mechanism === 'setup-secret') bits.push('Setup bootstrap secret (x-setup-secret header, SETUP_BOOTSTRAP_SECRET)')
-  if (auth.exactRoles) bits.push(`roles: exactly ${auth.exactRoles.join(' or ')} (strict equality, not rank-based)`)
-  else if (auth.minRole) {
+  if (auth.capabilities && auth.capabilities.length) {
+    bits.push(`capabilities: ${auth.capabilities.join(' or ')} (admits: ${auth.exactRoles.join(', ')})`)
+  } else if (auth.exactRoles) {
+    bits.push(`roles: exactly ${auth.exactRoles.join(' or ')} (strict equality, not rank-based)`)
+  } else if (auth.minRole) {
     const admitted = Object.keys(ROLE_RANK).filter((r) => ROLE_RANK[r] >= ROLE_RANK[auth.minRole])
     bits.push(`minimum role: ${auth.minRole} (admits: ${admitted.join(', ')})`)
   } else if (auth.mechanism === 'jwt-bearer') bits.push('any authenticated role')
@@ -1012,6 +1083,7 @@ function handlerToOperation(h, mount, schemas, fileParked) {
   const xAuth = { required: auth.required, mechanism: auth.mechanism }
   if (auth.minRole) xAuth.minRole = auth.minRole
   if (auth.exactRoles) xAuth.exactRoles = auth.exactRoles
+  if (auth.capabilities) xAuth.capabilities = auth.capabilities
   if (auth.tier) xAuth.tier = auth.tier
   if (auth.inHandlerNote) xAuth.note = auth.inHandlerNote
   if (auth.rawMiddleware.length) xAuth.additionalMiddleware = auth.rawMiddleware

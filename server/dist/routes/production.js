@@ -5,7 +5,8 @@ const express_1 = require("express");
 const crypto_1 = require("crypto");
 const zod_1 = require("zod");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
+const idempotency_1 = require("../middleware/idempotency");
 const production_1 = require("../engine/production");
 exports.productionRouter = (0, express_1.Router)();
 // ── Zod schemas ───────────────────────────────────────────────────────────────
@@ -116,7 +117,8 @@ async function generateSheet(weekId, day, slot) {
 // SHEETS
 // ════════════════════════════════════════════════════════════════════════════
 // GET /api/production/sheets[?weekId=]
-exports.productionRouter.get('/sheets', async (req, res, next) => {
+// production.read: planning roles + readonly. Servers/frontdesk/vendors excluded.
+exports.productionRouter.get('/sheets', (0, permissions_1.requireCapability)('production.read'), async (req, res, next) => {
     try {
         const weekId = typeof req.query.weekId === 'string' ? req.query.weekId : null;
         let queryResult;
@@ -133,7 +135,8 @@ exports.productionRouter.get('/sheets', async (req, res, next) => {
     }
 });
 // POST /api/production/sheets
-exports.productionRouter.post('/sheets', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// production.write only (no servers/frontdesk/readonly). Replay after the gate.
+exports.productionRouter.post('/sheets', (0, permissions_1.requireCapability)('production.write'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const body = req.body;
         const id = body.id || (0, crypto_1.randomUUID)();
@@ -154,8 +157,10 @@ exports.productionRouter.post('/sheets', (0, requireAuth_1.requireRole)('staff')
     }
 });
 // GET /api/production/sheets/generate?weekId=&day=&slot=
-// Returns an existing sheet or auto-generates one on the fly (does NOT persist).
-exports.productionRouter.get('/sheets/generate', async (req, res, next) => {
+// Returns an existing sheet or auto-generates AND PERSISTS one on a miss.
+// It stays GET for frontend compatibility (src/api/production.ts getSheet),
+// but because a miss writes, it requires production.write — not just read.
+exports.productionRouter.get('/sheets/generate', (0, permissions_1.requireCapability)('production.write'), async (req, res, next) => {
     try {
         const weekId = req.query.weekId;
         const day = req.query.day;
@@ -186,7 +191,8 @@ exports.productionRouter.get('/sheets/generate', async (req, res, next) => {
     }
 });
 // PUT /api/production/sheets/:id
-exports.productionRouter.put('/sheets/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// production.write only. Replay after the gate.
+exports.productionRouter.put('/sheets/:id', (0, permissions_1.requireCapability)('production.write'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const data = SheetUpdateSchema.parse(req.body);
         const { rows: existing } = await pool_1.pool.query('SELECT id FROM production_sheets WHERE id = $1', [req.params.id]);
@@ -213,7 +219,8 @@ exports.productionRouter.put('/sheets/:id', (0, requireAuth_1.requireRole)('staf
     }
 });
 // POST /api/production/sheets/:id/signoff
-exports.productionRouter.post('/sheets/:id/signoff', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+// production.write only. Replay after the gate.
+exports.productionRouter.post('/sheets/:id/signoff', (0, permissions_1.requireCapability)('production.write'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { staffName } = zod_1.z.object({ staffName: zod_1.z.string().min(1) }).parse(req.body);
         const { rows: existing } = await pool_1.pool.query('SELECT id FROM production_sheets WHERE id = $1', [req.params.id]);
@@ -236,7 +243,8 @@ exports.productionRouter.post('/sheets/:id/signoff', (0, requireAuth_1.requireRo
     }
 });
 // DELETE /api/production/sheets/:id
-exports.productionRouter.delete('/sheets/:id', (0, requireAuth_1.requireRole)('admin'), async (req, res, next) => {
+// production.delete (admin only). Replay after the gate.
+exports.productionRouter.delete('/sheets/:id', (0, permissions_1.requireCapability)('production.delete'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT id FROM production_sheets WHERE id = $1', [req.params.id]);
         if (!rows[0])

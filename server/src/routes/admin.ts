@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, Response, NextFunction } from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { z } from 'zod'
@@ -594,9 +594,18 @@ async function readFacilitySettings(facilityId: string) {
   return { settings, meta }
 }
 
-// GET /api/admin/facility-settings — any authenticated device can read
-// (meal times, wings, dining rooms are needed by kitchen tablets).
-adminRouter.get('/facility-settings', async (req: AuthRequest, res, next) => {
+// GET /api/admin/facility-settings — restricted internal roles only (contacts + BAA)
+// (explicit allowlist, not rank-based: other roles are denied).
+const FACILITY_SETTINGS_READER_ROLES = ['admin', 'manager', 'frontdesk'] as const
+
+function requireFacilitySettingsReader(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.userRole || !(FACILITY_SETTINGS_READER_ROLES as readonly string[]).includes(req.userRole)) {
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+  next()
+}
+
+adminRouter.get('/facility-settings', requireFacilitySettingsReader, async (req: AuthRequest, res, next) => {
   try {
     const facilityId = req.facilityId || 'default'
     let { rows } = await pool.query(
@@ -969,7 +978,7 @@ adminRouter.get('/backup/export', requireRole('admin'), async (req: AuthRequest,
   } catch (err) { next(err) }
 })
 
-// POST /api/admin/backup/restore — safe pre-flight validated restore
+// POST /api/admin/backup/restore — DISABLED (dryRun inspects only; all other calls get 503 recovery unavailable)
 adminRouter.post('/backup/restore', requireRole('admin'), async (req: AuthRequest, res, next) => {
   try {
     const backup = req.body
@@ -984,7 +993,7 @@ adminRouter.post('/backup/restore', requireRole('admin'), async (req: AuthReques
     // If dryRun query parameter is passed, just inspect and validate
     if (req.query.dryRun === 'true') {
       return res.json({
-        valid: true,
+        valid: false, inspectionOnly: true, restorable: false,
         summary: {
           facilityName: backup.meta.facilityName,
           exportedAt: backup.meta.exportedAt,
@@ -995,47 +1004,7 @@ adminRouter.post('/backup/restore', requireRole('admin'), async (req: AuthReques
       })
     }
 
-    // Safely upsert records without wiping database blindly
-    let restoredResidents = 0
-    for (const r of residents) {
-      if (!r.name) continue
-      await pool.query(
-        `INSERT INTO residents (id, name, room, diet_type, texture, serving_location, is_npo, allergies, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-         ON CONFLICT (id) DO UPDATE SET
-           name = EXCLUDED.name,
-           room = EXCLUDED.room,
-           diet_type = EXCLUDED.diet_type,
-           texture = EXCLUDED.texture,
-           serving_location = EXCLUDED.serving_location,
-           is_npo = EXCLUDED.is_npo,
-           allergies = EXCLUDED.allergies,
-           updated_at = NOW()`,
-        [
-          r.id || crypto.randomUUID(),
-          r.name,
-          r.room || '101',
-          r.diet_type || 'Regular',
-          r.texture || 'Regular',
-          r.serving_location || 'Dining Room',
-          Boolean(r.is_npo),
-          typeof r.allergies === 'string' ? r.allergies : JSON.stringify(r.allergies || []),
-        ]
-      )
-      restoredResidents++
-    }
-
-    await pool.query(
-      `INSERT INTO audit_log (action, user_id, resource_type, outcome, details)
-       VALUES ('BACKUP_RESTORE', $1, 'database', 'success', $2)`,
-      [req.userId, JSON.stringify({ restoredResidents, sourceTimestamp: backup.meta.exportedAt })]
-    )
-
-    res.json({
-      success: true,
-      message: `Successfully restored and synchronized ${restoredResidents} resident clinical records from backup snapshot.`,
-      restoredCount: restoredResidents,
-    })
+    return res.status(503).json({ error: 'Recovery unavailable - row-level restore is disabled.', code: 'RECOVERY_UNAVAILABLE', inspectionOnly: true, restorable: false, guidance: 'Use controlled full database recovery (restore a full database backup through the documented operations procedure) instead of this endpoint.' })
   } catch (err: any) {
     res.status(500).json({ error: `Restore process encountered an error: ${err.message}` })
   }

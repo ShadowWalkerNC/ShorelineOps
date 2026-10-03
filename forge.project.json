@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "name": "ShorelineOps",
+  "repository": "ShadowWalkerNC/ShorelineOps",
+  "classification": "product",
+  "lifecycle": "supporting",
+  "priority": null,
+  "ecosystem": "CulinaryOS",
+  "visibility": "public",
+  "languages": [
+    "typescript"
+  ],
+  "capabilities": [
+    "clinical.dining",
+    "api.domain"
+  ],
+  "integrations": {
+    "models": [],
+    "codingAgents": [],
+    "muse": [],
+    "xr": [],
+    "deploymentProviders": [
+      "railway",
+      "vercel"
+    ],
+    "mcp": [],
+    "sdks": [],
+    "extensions": []
+  },
+  "notes": [
+    "Identity installed during P02 on 2026-10-03. Integration entries describe inspected source/package declarations or P00 hosting mappings, not verified operational compatibility.",
+    "Empty capability/integration arrays mean not cataloged; no SDK installation or adoption was performed.",
+    "Lifecycle is a portfolio designation; implementation, migration and production acceptance remain separate.",
+    "Provenance and checks: PORTFOLIO_HANDOFF.md and the central P02_INSTALLATION_REPORT.json."
+  ]
+}

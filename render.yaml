@@ -14,7 +14,7 @@ services:
     rootDir: server
     buildCommand: npm install && npm run build
     startCommand: npm start
-    healthCheckPath: /health
+    healthCheckPath: /ready
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
@@ -33,7 +33,9 @@ services:
           property: connectionString
 
   # ============================================================================
-  # 2. Shoreline Interactive Demo Application (React 18 + Vite PWA Static Site)
+  # 2. Shoreline Unified Static Origin (Marketing + Demo + App, one deploy)
+  # build:demo merges the Astro marketing site at / with the Vite demo shell
+  # at /demo/ and the Vite production app shell at /app/ into a single dist/.
   # ============================================================================
   - type: web
     name: shoreline-demo
@@ -42,17 +44,32 @@ services:
     staticPublishPath: dist
     autoDeploy: true
     routes:
-      # SPA fallback routing for client-side React Router
+      # Scoped SPA fallbacks, one shell per prefix. Render serves real files
+      # first, so these rewrites only catch client-side routes. There is
+      # intentionally no blanket /* rule: it served the marketing shell for
+      # every /demo/* and /app/* refresh (e.g. /demo/reporting -> homepage).
       - type: rewrite
-        source: /*
-        destination: /index.html
+        source: /demo
+        destination: /demo/index.html
+      - type: rewrite
+        source: /demo/*
+        destination: /demo/index.html
+      - type: rewrite
+        source: /app
+        destination: /app/index.html
+      - type: rewrite
+        source: /app/*
+        destination: /app/index.html
     envVars:
       - key: NODE_VERSION
         value: "20.14.0"
       - key: VITE_DEMO_MODE
         value: "true"
+      # Consumed only by the /app production bundle (the /demo shell is a
+      # serverless sandbox and never calls this API). Must keep the /api
+      # suffix: the Axios client and tokenManager append /auth/* to it.
       - key: VITE_API_URL
-        value: https://shoreline-api.onrender.com
+        value: https://shoreline-api.onrender.com/api
 
   # ============================================================================
   # 3. Shoreline Marketing & Developer Portal (Astro Static Site)

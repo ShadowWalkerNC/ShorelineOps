@@ -5,6 +5,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { UserRole, Permission } from '../types/roles'
 import { ROLE_PERMISSIONS, ROLE_RANK, hasPermission } from '../types/roles'
+import type { Capability } from './capabilities'
+import { hasCapability as checkCapability } from './capabilities'
 import { authApi } from '../api/auth'
 import { tokenManager } from './tokenManager'
 import { auditLog } from './auditLog'
@@ -35,6 +37,7 @@ interface AuthContextValue {
   beginMfaEnrollment: (mfaToken: string) => Promise<{ secret: string; otpauthUrl: string }>
   logout: (reason?: string) => Promise<void>
   can: (permission: Permission) => boolean
+  hasCapability: (capability: Capability) => boolean
   atLeast: (role: UserRole) => boolean
 }
 
@@ -262,6 +265,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return hasPermission(user.role, permission)
   }, [user])
 
+  const hasCap = useCallback((capability: Capability): boolean => {
+    if (!user) return false
+    return checkCapability(user.role, capability)
+  }, [user])
+
   const atLeast = useCallback((role: UserRole): boolean => {
     if (!user) return false
     return ROLE_RANK[user.role] >= ROLE_RANK[role]
@@ -278,6 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       beginMfaEnrollment,
       logout,
       can,
+      hasCapability: hasCap,
       atLeast,
     }}>
       {children}
@@ -302,6 +311,20 @@ export function RequireRole({
 }) {
   const { atLeast } = useAuth()
   if (!atLeast(role)) return <>{fallback}</>
+  return <>{children}</>
+}
+
+export function RequireCapability({
+  capability,
+  children,
+  fallback = null,
+}: {
+  capability: Capability
+  children: React.ReactNode
+  fallback?: React.ReactNode
+}) {
+  const { hasCapability } = useAuth()
+  if (!hasCapability(capability)) return <>{fallback}</>
   return <>{children}</>
 }
 

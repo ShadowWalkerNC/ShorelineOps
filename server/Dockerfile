@@ -12,4 +12,8 @@ COPY package*.json ./
 RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 EXPOSE 3001
+# Readiness probe: gate traffic on /ready (database + migrations verified).
+# /health is liveness only. BusyBox wget ships with Alpine; no extra packages.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3001/ready || exit 1
 CMD ["node", "dist/index.js"]

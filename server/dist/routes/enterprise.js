@@ -10,6 +10,8 @@ exports.enterpriseRouter = void 0;
  */
 const express_1 = require("express");
 const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
+const idempotency_1 = require("../middleware/idempotency");
 const requireTier_1 = require("../middleware/requireTier");
 const cache_1 = require("../middleware/cache");
 exports.enterpriseRouter = (0, express_1.Router)();
@@ -85,18 +87,21 @@ const MANAGED_FACILITIES = [
         directorOfDining: 'Chef Arthur Davis',
     },
 ];
-// GET /api/enterprise/facilities - List managed facilities
-exports.enterpriseRouter.get('/facilities', requireAuth_1.requireAuth, (0, requireTier_1.requireTier)('enterprise'), async (req, res) => {
+// GET /api/enterprise/facilities - List managed facilities (manager/admin only)
+exports.enterpriseRouter.get('/facilities', requireAuth_1.requireAuth, (0, permissions_1.requireCapability)('enterprise.read'), (0, requireTier_1.requireTier)('enterprise'), async (req, res) => {
     const cacheKey = 'enterprise_facilities_list';
     const cached = cache_1.serverCache.get(cacheKey);
     if (cached) {
-        return res.json({ facilities: cached.value, cached: true });
+        return res.json({ facilities: cached.value, cached: true, simulated: true });
     }
     cache_1.serverCache.set(cacheKey, MANAGED_FACILITIES, 60, 'enterprise');
-    return res.json({ facilities: MANAGED_FACILITIES, cached: false });
+    return res.json({ facilities: MANAGED_FACILITIES, cached: false, simulated: true });
 });
-// POST /api/enterprise/syndicate-menu - Syndicate master menu across network
-exports.enterpriseRouter.post('/syndicate-menu', requireAuth_1.requireAuth, (0, requireTier_1.requireTier)('enterprise'), async (req, res) => {
+// POST /api/enterprise/syndicate-menu - SIMULATED syndication across the parked
+// sample network. Manager/admin only. This updates in-memory sample timestamps
+// only — the response is explicitly labelled simulated and must never be
+// presented as a real production multi-site operation.
+exports.enterpriseRouter.post('/syndicate-menu', requireAuth_1.requireAuth, (0, permissions_1.requireCapability)('enterprise.write'), (0, requireTier_1.requireTier)('enterprise'), (0, idempotency_1.idempotencyMiddleware)(), async (req, res) => {
     const { menuId, targetFacilityIds } = req.body;
     if (!menuId || !Array.isArray(targetFacilityIds) || targetFacilityIds.length === 0) {
         return res.status(400).json({ error: 'menuId and non-empty targetFacilityIds array are required' });
@@ -109,18 +114,21 @@ exports.enterpriseRouter.post('/syndicate-menu', requireAuth_1.requireAuth, (0, 
     });
     cache_1.serverCache.invalidateTag('enterprise');
     return res.json({
-        status: 'SYNDICATED',
+        status: 'SIMULATED',
+        simulated: true,
+        note: 'Sample-network simulation only: no production facility was contacted or updated.',
         menuId,
         targetFacilitiesCount: targetFacilityIds.length,
         syndicatedAt: new Date().toISOString(),
     });
 });
-// GET /api/enterprise/benchmarks - Cross-facility $/CPD benchmarking
-exports.enterpriseRouter.get('/benchmarks', requireAuth_1.requireAuth, (0, requireTier_1.requireTier)('enterprise'), async (req, res) => {
+// GET /api/enterprise/benchmarks - Cross-facility $/CPD benchmarking (manager/admin only)
+exports.enterpriseRouter.get('/benchmarks', requireAuth_1.requireAuth, (0, permissions_1.requireCapability)('enterprise.read'), (0, requireTier_1.requireTier)('enterprise'), async (req, res) => {
     const totalCensus = MANAGED_FACILITIES.reduce((sum, f) => sum + f.activeCensus, 0);
     const networkAvgCpd = MANAGED_FACILITIES.reduce((sum, f) => sum + (f.currentCpd * f.activeCensus), 0) / (totalCensus || 1);
     const networkTargetCpd = MANAGED_FACILITIES.reduce((sum, f) => sum + (f.targetCpd * f.activeCensus), 0) / (totalCensus || 1);
     return res.json({
+        simulated: true,
         totalFacilities: MANAGED_FACILITIES.length,
         totalActiveCensus: totalCensus,
         networkAvgCpd: parseFloat(networkAvgCpd.toFixed(2)),

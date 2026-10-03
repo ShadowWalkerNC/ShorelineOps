@@ -9,6 +9,7 @@ import DietReviewFlags from './DietReviewFlags'
 import FeatureGate from '@/components/FeatureGate'
 import { AppleBadge, AppleButton, AppleCard, AppleSegmentedControl } from '@/apple-ui'
 import { useDevice } from '@/hooks/useDevice'
+import { useAuth } from '@/security/AuthContext'
 import type { Resident } from '@/types/resident'
 import {
   Users,
@@ -101,6 +102,9 @@ export default function ResidentsPage() {
   }, [residents, activeFilter])
 
   const { isMobile, isTablet, isDesktop } = useDevice()
+  const { hasCapability } = useAuth()
+  const canImport = hasCapability('residents.import')
+  const canAdd = hasCapability('residents.clinicalWrite')
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
@@ -122,7 +126,7 @@ export default function ResidentsPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          {!isMobile && (
+          {!isMobile && canImport && (
             <AppleButton
               variant="secondary"
               size="md"
@@ -132,14 +136,16 @@ export default function ResidentsPage() {
               Import Census CSV
             </AppleButton>
           )}
-          <AppleButton
-            variant="primary"
-            size="md"
-            icon={<Plus className="w-4 h-4" />}
-            onClick={() => setEditing(null)}
-          >
-            Add Resident
-          </AppleButton>
+          {canAdd && (
+            <AppleButton
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-4 h-4" />}
+              onClick={() => setEditing(null)}
+            >
+              Add Resident
+            </AppleButton>
+          )}
         </div>
       </div>
 

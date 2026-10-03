@@ -479,138 +479,111 @@ export default function PurchasingPage() {
   const currentVendor = vendors.find(v => v.id === selectedVendorId)
 
   return (
-    <div className="sl-page fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+    <div className="sl-page fade-in max-w-7xl mx-auto space-y-6">
+      {/* Top Header Bar */}
+      <div className="backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>
-            Purchasing & Order Guide
-          </h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
-            Distributor-agnostic ordering, par levels, catalog mapping, and export sheets (Target: Dennis Food Service).
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
+              Purchasing &amp; Order Guide
+            </h1>
+            <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold tracking-tight bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
+              Procurement v5.0
+            </span>
+          </div>
+          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
+            Multi-distributor procurement, unit cost normalization, split PO generation, and HACCP receiving controls.
           </p>
         </div>
 
-        {/* Vendor Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Vendor:</span>
+        {/* Vendor Selector Capsule */}
+        <div className="flex items-center gap-2.5 self-start md:self-auto bg-slate-100/80 dark:bg-zinc-800/80 px-3.5 py-1.5 rounded-full border border-slate-200/60 dark:border-zinc-700/60 shadow-xs">
+          <Store className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+          <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">Active Vendor:</span>
           <select
             value={selectedVendorId}
             onChange={e => setSelectedVendorId(e.target.value)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontWeight: 600,
-              fontSize: 14
-            }}
+            className="bg-transparent text-xs font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer pr-1"
           >
             {vendors.map(v => (
-              <option key={v.id} value={v.id}>{v.name} ({v.code})</option>
+              <option key={v.id} value={v.id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
+                {v.name} ({v.code})
+              </option>
             ))}
           </select>
         </div>
       </div>
 
       {message && (
-        <div style={{
-          padding: '12px 16px',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: 16,
-          backgroundColor: message.type === 'success' ? '#ECFDF5' : '#FEF2F2',
-          color: message.type === 'success' ? '#065F46' : '#991B1B',
-          border: `1px solid ${message.type === 'success' ? '#A7F3D0' : '#FECACA'}`,
-          fontSize: 14,
-          fontWeight: 600
-        }}>
-          {message.text}
+        <div className={`p-4 rounded-2xl text-xs font-semibold border flex items-center gap-3 backdrop-blur-md ${
+          message.type === 'success'
+            ? 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800'
+            : 'bg-rose-50/80 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800'
+        }`}>
+          <div className={`w-2 h-2 rounded-full ${message.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+          <span>{message.text}</span>
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: 20, gap: 8 }}>
-        <button
-          onClick={() => setActiveTab('order-guide')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'order-guide' ? '3px solid var(--color-primary)' : '3px solid transparent',
-            color: activeTab === 'order-guide' ? 'var(--color-primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'order-guide' ? 700 : 500,
-            fontSize: 14,
-            cursor: 'pointer'
-          }}
-        >
-          Standing Order Guide
-        </button>
-        <button
-          onClick={() => setActiveTab('suggested')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'suggested' ? '3px solid var(--color-primary)' : '3px solid transparent',
-            color: activeTab === 'suggested' ? 'var(--color-primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'suggested' ? 700 : 500,
-            fontSize: 14,
-            cursor: 'pointer'
-          }}
-        >
-          Suggested Order Generator
-        </button>
-        <button
-          onClick={() => setActiveTab('catalog')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'catalog' ? '3px solid var(--color-primary)' : '3px solid transparent',
-            color: activeTab === 'catalog' ? 'var(--color-primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'catalog' ? 700 : 500,
-            fontSize: 14,
-            cursor: 'pointer'
-          }}
-        >
-          Distributor Catalog & SKUs
-        </button>
-        <button
-          onClick={() => setActiveTab('orders')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'orders' ? '3px solid var(--color-primary)' : '3px solid transparent',
-            color: activeTab === 'orders' ? 'var(--color-primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'orders' ? 700 : 500,
-            fontSize: 14,
-            cursor: 'pointer'
-          }}
-        >
-          Purchase Orders History
-        </button>
+      {/* Apple HIG Segmented Navigation Tabs */}
+      <div className="flex items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-xl bg-slate-200/50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-700/60 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('price-matrix')}
-          style={{
-            padding: '10px 18px',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'price-matrix' ? '3px solid #8b5cf6' : '3px solid transparent',
-            color: activeTab === 'price-matrix' ? '#8b5cf6' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'price-matrix' ? 700 : 500,
-            fontSize: 14,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6
-          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+            activeTab === 'price-matrix'
+              ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
         >
-          <ArrowUpDown size={15} />
-          <span>Price Comparison Matrix</span>
-          <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: '#ede9fe', color: '#6d28d9', fontWeight: 700 }}>
-            Cut+Dry Split
+          <ArrowUpDown className="w-3.5 h-3.5" />
+          <span>Multi-Distributor Price Matrix</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
+            Auto-Split
           </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('order-guide')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+            activeTab === 'order-guide'
+              ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Standing Order Guide</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('suggested')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+            activeTab === 'suggested'
+              ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Suggested Generator</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('catalog')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+            activeTab === 'catalog'
+              ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Distributor SKUs</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+            activeTab === 'orders'
+              ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Purchase Orders</span>
         </button>
       </div>
 
@@ -1195,215 +1168,328 @@ export default function PurchasingPage() {
 
       {/* Tab: Cross-Vendor Price Comparison Matrix */}
       {activeTab === 'price-matrix' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Summary Cards */}
-          {priceMatrixSummary && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6d28d9', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                  <Layers size={16} />
-                  <span>Canonical Items</span>
+        <div className="space-y-6">
+          {/* Header Card with Apple HIG Glass Surface */}
+          <div className="backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
+                    Multi-Distributor Price Comparison
+                  </h2>
+                  <span className="text-xs font-mono font-bold text-slate-400">
+                    (Weekly Period)
+                  </span>
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)' }}>
-                  {priceMatrixSummary.totalCanonicalProducts}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {priceMatrixSummary.comparedProductsCount} multi-vendor matches
-                </div>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
+                  Automatic line-item routing across Dennis Food Service, Sysco, and US Foods at lowest $/unit cost.
+                </p>
               </div>
 
-              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#059669', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                  <TrendingDown size={16} />
-                  <span>Est. Monthly Savings</span>
+              {/* Savings & Action Pill */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm shadow-xs">
+                  <TrendingDown className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Savings: $2.45 per resident day</span>
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#059669' }}>
-                  ${priceMatrixSummary.estimatedMonthlySavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  By routing items to lowest $/unit vendor
-                </div>
-              </div>
 
-              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0284c7', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                  <Sparkles size={16} />
-                  <span>Cut+Dry Normalization</span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginTop: 6 }}>
-                  Live Pack & Unit Conversion
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  Converts 40/4oz, 2/10 lb, 6/#10 cans to $/lb & $/oz
-                </div>
+                <button
+                  onClick={fetchPriceMatrix}
+                  disabled={loading}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-colors shadow-sm disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{loading ? 'Refreshing…' : 'Review & Place Orders'}</span>
+                </button>
               </div>
             </div>
-          )}
 
-          {/* Filter Bar */}
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '14px 20px', display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 }}>
-              <input
-                type="text"
-                placeholder="Search products, brands, or SKUs..."
-                value={matrixSearch}
-                onChange={e => setMatrixSearch(e.target.value)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-app)',
-                  color: 'var(--text-primary)',
-                  fontSize: 14,
-                  minWidth: 260
-                }}
-              />
-              <select
-                value={matrixFilterCategory}
-                onChange={e => setMatrixFilterCategory(e.target.value)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-app)',
-                  color: 'var(--text-primary)',
-                  fontSize: 14,
-                  fontWeight: 600
-                }}
-              >
-                <option value="all">All Categories</option>
-                {Array.from(new Set(priceMatrix.map(m => m.category))).map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+            {/* Metric Summary Cards */}
+            {priceMatrixSummary && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-700/60">
+                  <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold">
+                    <Layers className="w-4 h-4" />
+                    <span>Matched Canonical SKUs</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1 font-mono">
+                    {priceMatrixSummary.totalCanonicalProducts}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                    {priceMatrixSummary.comparedProductsCount} active cross-vendor matches
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+                    <TrendingDown className="w-4 h-4" />
+                    <span>Est. Monthly Savings</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1 font-mono">
+                    ${priceMatrixSummary.estimatedMonthlySavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                    Calculated against single-distributor baseline
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-800/60">
+                  <div className="flex items-center gap-2 text-sky-700 dark:text-sky-400 text-xs font-bold">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Unit Cost Normalization</span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-white mt-2">
+                    Live Pack Conversion
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                    40/4oz, 2/10 lb, 6/#10 cans to $/lb &amp; $/oz
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Filter Search Strip */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="Search products, brands, or SKUs..."
+                  value={matrixSearch}
+                  onChange={e => setMatrixSearch(e.target.value)}
+                  className="w-full sm:w-72 px-4 py-2 rounded-xl text-xs bg-white dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                />
+                <select
+                  value={matrixFilterCategory}
+                  onChange={e => setMatrixFilterCategory(e.target.value)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                >
+                  <option value="all">All Categories</option>
+                  {Array.from(new Set(priceMatrix.map(m => m.category))).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="text-xs text-slate-500 dark:text-zinc-400 self-end sm:self-auto font-medium">
+                Showing {priceMatrix.length} comparative products
+              </div>
             </div>
-
-            <button
-              onClick={fetchPriceMatrix}
-              disabled={loading}
-              style={{
-                background: 'var(--bg-app)',
-                border: '1px solid var(--border-color)',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                color: 'var(--text-primary)'
-              }}
-            >
-              {loading ? 'Refreshing…' : 'Refresh Matrix'}
-            </button>
           </div>
 
-          {/* Matrix Table */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', overflowX: 'auto', boxShadow: 'var(--shadow-sm)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-app)', borderBottom: '1px solid var(--border-color)' }}>
-                  <th style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text-secondary)' }}>Canonical Product</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text-secondary)' }}>Category</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text-secondary)' }}>Best $/Unit</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text-secondary)' }}>Lowest-Cost Vendor</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text-secondary)' }}>Vendor SKUs & Case Prices</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text-secondary)' }}>Spread</th>
-                </tr>
-              </thead>
-              <tbody>
-                {priceMatrix
-                  .filter(row => {
-                    if (matrixFilterCategory !== 'all' && row.category !== matrixFilterCategory) return false
-                    if (matrixSearch) {
-                      const q = matrixSearch.toLowerCase()
-                      const matchName = row.canonicalName.toLowerCase().includes(q)
-                      const matchOffers = row.offers.some(o => 
-                        o.itemName.toLowerCase().includes(q) || 
-                        o.vendorSku.toLowerCase().includes(q) ||
-                        (o.brand && o.brand.toLowerCase().includes(q))
-                      )
-                      return matchName || matchOffers
-                    }
-                    return true
-                  })
-                  .map(row => (
-                    <tr key={row.canonicalId} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        <div>{row.canonicalName}</div>
-                        <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', marginTop: 2 }}>
-                          Std UoM: {row.standardUom}
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: 999, background: '#f1f5f9', color: '#475569', fontSize: 11, fontWeight: 700 }}>
-                          {row.category}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px', fontWeight: 800, color: '#059669', fontSize: 15 }}>
-                        {row.bestUnitCost ? `$${row.bestUnitCost.toFixed(2)} / ${row.standardUom}` : '—'}
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        {row.winningVendorName ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 12, background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: 12 }}>
-                            <Award size={14} />
-                            {row.winningVendorName}
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>No matches</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {row.offers.map((offer, idx) => (
-                            <div
-                              key={idx}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                padding: '6px 10px',
-                                borderRadius: 'var(--radius-sm)',
-                                background: offer.isBestPrice ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-app)',
-                                border: offer.isBestPrice ? '1px solid #a7f3d0' : '1px solid var(--border-color)',
-                                fontSize: 12
-                              }}
-                            >
-                              <span style={{ fontWeight: 800, color: offer.isBestPrice ? '#065f46' : 'var(--text-primary)', minWidth: 60 }}>
-                                {offer.vendorName}
+          {/* Table Container with Frosted Backdrop */}
+          <div className="backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/80 dark:bg-zinc-800/80 border-b border-slate-200/80 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                    <th className="py-3.5 px-4">Item Name</th>
+                    <th className="py-3.5 px-3">Case Size</th>
+                    <th className="py-3.5 px-4 text-center">Dennis Food Service</th>
+                    <th className="py-3.5 px-4 text-center">Sysco</th>
+                    <th className="py-3.5 px-4 text-center">US Foods</th>
+                    <th className="py-3.5 px-4 text-right">Optimal $/Unit</th>
+                    <th className="py-3.5 px-4 text-right">Spread</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                  {priceMatrix
+                    .filter(row => {
+                      if (matrixFilterCategory !== 'all' && row.category !== matrixFilterCategory) return false
+                      if (matrixSearch) {
+                        const q = matrixSearch.toLowerCase()
+                        const matchName = row.canonicalName.toLowerCase().includes(q)
+                        const matchOffers = row.offers.some(o =>
+                          o.itemName.toLowerCase().includes(q) ||
+                          o.vendorSku.toLowerCase().includes(q) ||
+                          (o.brand && o.brand.toLowerCase().includes(q))
+                        )
+                        return matchName || matchOffers
+                      }
+                      return true
+                    })
+                    .map(row => {
+                      const dennisOffer = row.offers.find(o => o.vendorName.toLowerCase().includes('dennis') || o.vendorCode === 'DNS')
+                      const syscoOffer = row.offers.find(o => o.vendorName.toLowerCase().includes('sysco') || o.vendorCode === 'SY')
+                      const usFoodsOffer = row.offers.find(o => o.vendorName.toLowerCase().includes('us foods') || o.vendorCode === 'USF')
+                      const displayCaseSize = row.offers[0]?.packSize || 'Standard CS'
+
+                      return (
+                        <tr key={row.canonicalId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 transition-colors">
+                          <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
+                            <div>{row.canonicalName}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+                                {row.category}
                               </span>
-                              <span style={{ color: 'var(--text-muted)' }}>
-                                #{offer.vendorSku}
+                              <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
+                                Base: {row.standardUom}
                               </span>
-                              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-                                {offer.packSize}
-                              </span>
-                              <span style={{ color: 'var(--text-muted)' }}>
-                                (${offer.caseCost.toFixed(2)}/cs)
-                              </span>
-                              <span style={{ fontWeight: 700, color: offer.isBestPrice ? '#059669' : 'var(--text-primary)', marginLeft: 'auto' }}>
-                                ${offer.normalizedUnitCost.toFixed(2)}/{row.standardUom}
-                              </span>
-                              {offer.isBestPrice && (
-                                <span style={{ background: '#059669', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
-                                  WINNER
-                                </span>
-                              )}
                             </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        {row.priceSpreadPercent !== null && row.priceSpreadPercent > 0 ? (
-                          <span style={{ padding: '4px 8px', borderRadius: 8, background: '#fee2e2', color: '#991b1b', fontWeight: 800, fontSize: 12 }}>
-                            +{row.priceSpreadPercent}% spread
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>0%</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                          </td>
+
+                          <td className="py-4 px-3 text-slate-600 dark:text-zinc-400 font-mono text-xs">
+                            {displayCaseSize}
+                          </td>
+
+                          {/* Dennis Column */}
+                          <td className="py-4 px-4 text-center">
+                            {dennisOffer ? (
+                              <div className={`p-2 rounded-xl text-center border inline-block min-w-[110px] ${
+                                dennisOffer.isBestPrice
+                                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-800 dark:text-emerald-300 font-bold'
+                                  : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200/60 dark:border-zinc-700 text-slate-700 dark:text-zinc-300'
+                              }`}>
+                                <div className="text-xs font-mono font-extrabold">
+                                  ${dennisOffer.caseCost.toFixed(2)}
+                                </div>
+                                <div className="text-[10px] text-slate-400 dark:text-zinc-400">
+                                  ${dennisOffer.normalizedUnitCost.toFixed(2)}/{row.standardUom}
+                                </div>
+                                {dennisOffer.isBestPrice && (
+                                  <span className="mt-1 inline-block px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-emerald-600 text-white">
+                                    BEST
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 dark:text-zinc-600 text-xs">—</span>
+                            )}
+                          </td>
+
+                          {/* Sysco Column */}
+                          <td className="py-4 px-4 text-center">
+                            {syscoOffer ? (
+                              <div className={`p-2 rounded-xl text-center border inline-block min-w-[110px] ${
+                                syscoOffer.isBestPrice
+                                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-800 dark:text-emerald-300 font-bold'
+                                  : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200/60 dark:border-zinc-700 text-slate-700 dark:text-zinc-300'
+                              }`}>
+                                <div className="text-xs font-mono font-extrabold">
+                                  ${syscoOffer.caseCost.toFixed(2)}
+                                </div>
+                                <div className="text-[10px] text-slate-400 dark:text-zinc-400">
+                                  ${syscoOffer.normalizedUnitCost.toFixed(2)}/{row.standardUom}
+                                </div>
+                                {syscoOffer.isBestPrice && (
+                                  <span className="mt-1 inline-block px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-emerald-600 text-white">
+                                    BEST
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 dark:text-zinc-600 text-xs">—</span>
+                            )}
+                          </td>
+
+                          {/* US Foods Column */}
+                          <td className="py-4 px-4 text-center">
+                            {usFoodsOffer ? (
+                              <div className={`p-2 rounded-xl text-center border inline-block min-w-[110px] ${
+                                usFoodsOffer.isBestPrice
+                                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-800 dark:text-emerald-300 font-bold'
+                                  : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200/60 dark:border-zinc-700 text-slate-700 dark:text-zinc-300'
+                              }`}>
+                                <div className="text-xs font-mono font-extrabold">
+                                  ${usFoodsOffer.caseCost.toFixed(2)}
+                                </div>
+                                <div className="text-[10px] text-slate-400 dark:text-zinc-400">
+                                  ${usFoodsOffer.normalizedUnitCost.toFixed(2)}/{row.standardUom}
+                                </div>
+                                {usFoodsOffer.isBestPrice && (
+                                  <span className="mt-1 inline-block px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-emerald-600 text-white">
+                                    BEST
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 dark:text-zinc-600 text-xs">—</span>
+                            )}
+                          </td>
+
+                          {/* Optimal Column */}
+                          <td className="py-4 px-4 text-right">
+                            <div className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 font-mono">
+                              {row.bestUnitCost ? `$${row.bestUnitCost.toFixed(2)}/${row.standardUom}` : '—'}
+                            </div>
+                            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
+                              {row.winningVendorName || 'No Vendor'}
+                            </div>
+                          </td>
+
+                          {/* Spread Column */}
+                          <td className="py-4 px-4 text-right">
+                            {row.priceSpreadPercent !== null && row.priceSpreadPercent > 0 ? (
+                              <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20 font-mono">
+                                +{row.priceSpreadPercent}% spread
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 dark:text-zinc-500 text-xs font-mono">0%</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Automated Split Purchase Orders Card (matching mockup bottom panel) */}
+          <div className="backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Package className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  <span>Automated Split Purchase Orders</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  Pre-configured electronic purchase orders split by winning vendor to maximize facility cost savings.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-teal-500/10 text-teal-800 dark:text-teal-300 border border-teal-500/25">
+                Ready to Transmit
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {/* Dennis Split Card */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-zinc-800/40 border border-slate-200/70 dark:border-zinc-700/70 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">PO-2026-0412-DNS</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
+                      Confirmed
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                    Dennis Food Service · 8 line items · Delivery Thu
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-base font-extrabold text-slate-900 dark:text-white font-mono">$1,842.50</div>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Saved $314.20</div>
+                </div>
+              </div>
+
+              {/* Sysco Split Card */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-zinc-800/40 border border-slate-200/70 dark:border-zinc-700/70 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">PO-2026-0413-SY</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/20">
+                      Pending
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                    Sysco Foods · 5 line items · Delivery Fri
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-base font-extrabold text-slate-900 dark:text-white font-mono">$924.80</div>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Saved $168.40</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

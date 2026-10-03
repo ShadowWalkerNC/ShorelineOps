@@ -1,5 +1,14 @@
 version: '3.8'
 
+# Local facility-stack Compose. All credentials are required from the
+# environment — this file ships no usable default secrets. Provide them via
+# shell exports or an untracked .env file (see .env.example for names).
+#
+# Quoting note: every value containing a ${VAR:?...} expansion is
+# double-quoted. The error messages contain ": " (colon-space), which is
+# invalid in an unquoted YAML scalar — unquoted, js-yaml/docker compose
+# either fails to parse or silently turns the entry into a mapping instead
+# of a "KEY=value" string.
 services:
   shorelineops:
     build:
@@ -12,14 +21,32 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - JWT_SECRET=shoreline_production_jwt_secret_change_me_before_prod_12345
-      - DATABASE_URL=postgresql://shoreline:shoreline_secure_pass@db:5432/shorelineops
-      - DATABASE_SSL_REJECT_UNAUTHORIZED=false
+      - "JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required: export a random value of at least 32 characters.}"
+      # Internal Compose database link. sslmode=disable is the explicit
+      # local-plaintext mode for this private Compose network only; any
+      # remote DATABASE_URL verifies TLS certificates by default (see
+      # server/src/db/pool.ts).
+      #
+      # The password below is used BOTH as the database's raw credential and
+      # embedded in this URL, so it must already be URL-safe: generate it with
+      # `openssl rand -hex 32` (letters/digits only, never URL-encode it here).
+      # A password containing reserved characters (: / @ ? # % &) breaks URL
+      # parsing. If such a password is unavoidable, set DATABASE_URL
+      # explicitly to a full connection string with the password
+      # percent-encoded instead of using this constructed value.
+      - "DATABASE_URL=postgresql://${POSTGRES_USER:?POSTGRES_USER is required.}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required.}@db:5432/${POSTGRES_DB:?POSTGRES_DB is required.}?sslmode=disable"
+      # Canonical one-facility scope (authoritative for API tenant context).
+      - "SHORELINE_FACILITY_ID=${SHORELINE_FACILITY_ID:?SHORELINE_FACILITY_ID is required: set this facility's canonical id.}"
+      # Legacy hardware webhook label, pinned to the canonical scope above.
+      # FACILITY_ID must equal SHORELINE_FACILITY_ID; the hardware fallback
+      # (FAC-001) only applies when FACILITY_ID is unset, which this Compose
+      # file never allows.
+      - "FACILITY_ID=${SHORELINE_FACILITY_ID:?SHORELINE_FACILITY_ID is required: set this facility's canonical id.}"
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/ready || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -29,14 +56,20 @@ services:
     image: postgres:16-alpine
     container_name: shorelineops_db
     restart: unless-stopped
+    # No published ports: the database is reachable only on the private
+    # Compose network.
     environment:
-      - POSTGRES_USER=shoreline
-      - POSTGRES_PASSWORD=shoreline_secure_pass
-      - POSTGRES_DB=shorelineops
+      - "POSTGRES_USER=${POSTGRES_USER:?POSTGRES_USER is required.}"
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required.}"
+      - "POSTGRES_DB=${POSTGRES_DB:?POSTGRES_DB is required.}"
     volumes:
       - shoreline_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shoreline -d shorelineops"]
+      # $$ escapes to a literal $ inside the container: the container shell
+      # expands the container's own POSTGRES_* variables. An unescaped $VAR
+      # would be interpolated by Compose from the *host* environment (usually
+      # empty) instead of the container environment.
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 5
