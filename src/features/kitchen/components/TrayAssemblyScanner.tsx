@@ -130,30 +130,80 @@ export default function TrayAssemblyScanner() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
 
-      const res = await fetch('/api/kitchen/verify-tray-scan', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ rawQrPayload: rawQrPayload.trim() }),
-      })
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      let result: ScanValidationResult
 
-      if (!res.ok) throw new Error('Verification unavailable. Hold tray and retry when connected.')
-      const result: ScanValidationResult = await res.json()
-      if (!['VALID', 'SUPERSEDED', 'INVALID_HASH', 'NPO_ALERT', 'HOLD_TRAY_RD_SIGNOFF'].includes(result.status)) {
-        throw new Error('Invalid verification response. Hold tray.')
-      }
-
-      if (result.status === 'VALID') {
-        if (!result.ticketId || !result.residentId || !result.mealSlot || !result.serviceDate) {
-          throw new Error('Incomplete verification. Hold tray.')
+      if (isDemo) {
+        // Safe interactive demo simulation for sandbox testing
+        const payload = rawQrPayload.trim()
+        if (payload.includes('ST1.DEMO') || payload.startsWith('tkt-') || payload.startsWith('TKT-')) {
+          result = {
+            status: 'VALID',
+            ticketId: payload.split(':')[0] || 'TKT-DEMO-01',
+            residentName: 'Harold Simmons',
+            roomBed: '104-A',
+            mealSlot: 'Lunch',
+            serviceDate: new Date().toISOString().slice(0, 10),
+            currentProfileVersion: 3,
+            ticketProfileVersion: 3,
+            message: 'Assembly recorded. Verified active clinical profile (Demo Sandbox).',
+            simulated: true,
+          }
+        } else if (payload.toLowerCase().includes('npo')) {
+          result = {
+            status: 'NPO_ALERT',
+            ticketId: 'tkt-demo-077',
+            residentName: 'Arthur Pendelton',
+            roomBed: '118-A',
+            mealSlot: 'Lunch',
+            serviceDate: new Date().toISOString().slice(0, 10),
+            currentProfileVersion: 2,
+            ticketProfileVersion: 2,
+            message: 'Physician placed resident on Strict NPO pending barium swallow evaluation.',
+            simulated: true,
+          }
+        } else {
+          result = {
+            status: 'VALID',
+            ticketId: 'TKT-LIVE-DEMO',
+            residentName: 'Eleanor Whitfield',
+            roomBed: '101',
+            mealSlot: 'Lunch',
+            serviceDate: new Date().toISOString().slice(0, 10),
+            currentProfileVersion: 1,
+            ticketProfileVersion: 1,
+            message: 'Assembly recorded. Current signed tray verified (Demo Sandbox).',
+            simulated: true,
+          }
         }
-        await recordAssembledEvent(rawQrPayload.trim(), result)
-        result.message = 'Assembly recorded. Current signed tray verified.'
+      } else {
+        const res = await fetch('/api/kitchen/verify-tray-scan', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ rawQrPayload: rawQrPayload.trim() }),
+        })
+
+        if (!res.ok) throw new Error('Verification unavailable. Hold tray and retry when connected.')
+        result = await res.json()
+        if (!['VALID', 'SUPERSEDED', 'INVALID_HASH', 'NPO_ALERT', 'HOLD_TRAY_RD_SIGNOFF'].includes(result.status)) {
+          throw new Error('Invalid verification response. Hold tray.')
+        }
+
+        if (result.status === 'VALID') {
+          if (!result.ticketId || !result.residentId || !result.mealSlot || !result.serviceDate) {
+            throw new Error('Incomplete verification. Hold tray.')
+          }
+          await recordAssembledEvent(rawQrPayload.trim(), result)
+          result.message = 'Assembly recorded. Current signed tray verified.'
+        }
       }
 
       setScanResult(result)
       setScanHistory(prev => [{ ...result, timestamp: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)])
 
       if (result.status === 'VALID' && !result.simulated) {
+        playFeedbackSound('success')
+      } else if (result.status === 'VALID' && result.simulated) {
         playFeedbackSound('success')
       } else if (result.status === 'NPO_ALERT' || result.status === 'HOLD_TRAY_RD_SIGNOFF') {
         playFeedbackSound('danger')
@@ -163,6 +213,24 @@ export default function TrayAssemblyScanner() {
         triggerHaptic()
       }
     } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        const demoResult: ScanValidationResult = {
+          status: 'VALID',
+          ticketId: 'TKT-DEMO-SIM',
+          residentName: 'Eleanor Whitfield',
+          roomBed: '101',
+          mealSlot: 'Lunch',
+          serviceDate: new Date().toISOString().slice(0, 10),
+          currentProfileVersion: 1,
+          ticketProfileVersion: 1,
+          message: 'Assembly simulated in public demo sandbox.',
+          simulated: true,
+        }
+        setScanResult(demoResult)
+        setScanHistory(prev => [{ ...demoResult, timestamp: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)])
+        playFeedbackSound('success')
+        return
+      }
       const errorResult: ScanValidationResult = {
         status: 'INVALID_HASH',
         message: `Scan verification error: ${err.message}`,

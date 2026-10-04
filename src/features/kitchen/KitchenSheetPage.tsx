@@ -392,6 +392,26 @@ function KitchenSheetPageInner() {
   const loadData = async () => {
     setLoading(true)
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        // Provide demo mock production sheet data
+        setTally({ choice1: 18, choice2: 9 })
+        setModifiers([
+          { resident_name: 'Harold Minter', room: '102', diet_type: 'Diabetic', texture: 'Regular', modifier_text: 'No added sugar' },
+          { resident_name: 'Margaret Tran', room: '106', diet_type: 'Renal', texture: 'Pureed', modifier_text: 'Low sodium / fluid restriction' },
+        ])
+        setAlternatives([])
+        setDeclined([])
+        setMealOptions([
+          { choice_number: 1, dish_name: meal === 'Breakfast' ? 'Scrambled Eggs & Toast' : meal === 'Lunch' ? 'Roast Turkey Breast' : 'Herb Salmon' },
+          { choice_number: 2, dish_name: meal === 'Breakfast' ? 'Oatmeal & Fruit' : meal === 'Lunch' ? 'Vegetarian Lasagna' : 'Beef Pot Roast' },
+        ])
+        setSummary({ total_served: 27, npo_count: 1, puree_count: 3 })
+        setDish1(meal === 'Breakfast' ? 'Scrambled Eggs & Toast' : meal === 'Lunch' ? 'Roast Turkey Breast' : 'Herb Salmon')
+        setDish2(meal === 'Breakfast' ? 'Oatmeal & Fruit' : meal === 'Lunch' ? 'Vegetarian Lasagna' : 'Beef Pot Roast')
+        return
+      }
+
       const [resSheet, resOrders] = await Promise.all([
         fetch(`/api/kitchen/sheet?week=${week}&day=${day}&meal=${meal}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -417,7 +437,17 @@ function KitchenSheetPageInner() {
       const o2 = (data.mealOptions || []).find((o: any) => o.choice_number === 2)
       setDish1(o1 ? o1.dish_name : 'Choice 1')
       setDish2(o2 ? o2.dish_name : 'Choice 2')
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        setTally({ choice1: 18, choice2: 9 })
+        setMealOptions([
+          { choice_number: 1, dish_name: 'Roast Turkey Breast' },
+          { choice_number: 2, dish_name: 'Vegetarian Lasagna' },
+        ])
+        setDish1('Roast Turkey Breast')
+        setDish2('Vegetarian Lasagna')
+        return
+      }
       console.error(err)
     } finally {
       setLoading(false)

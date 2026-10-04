@@ -372,7 +372,7 @@ function OrderEntryPageInner() {
   const [activeDay, setActiveDay] = useState(DAYS[new Date().getDay()])
   const [mobileMeal, setMobileMeal] = useState<'Lunch' | 'Supper'>('Lunch')
   const [residents, setResidents] = useState<any[]>([])
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState<any>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [initBusy, setInitBusy] = useState(false)
@@ -384,6 +384,18 @@ function OrderEntryPageInner() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        // Load demo orders and seed residents
+        const seedResidents = (await import('@/demo/seed')).SEED_RESIDENTS
+        setResidents(seedResidents)
+        setOrders([
+          { resident_id: 'r1', day_of_week: 'Monday', meal_type: 'Lunch', choice_number: 1, dish_name: 'Roast Turkey' },
+          { resident_id: 'r2', day_of_week: 'Monday', meal_type: 'Lunch', choice_number: 2, dish_name: 'Vegetarian Lasagna' },
+        ])
+        return
+      }
+
       const [resResidents, resOrders] = await Promise.all([
         fetch('/api/residents', { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`/api/kitchen/orders?week=${week}`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -392,7 +404,13 @@ function OrderEntryPageInner() {
       const oData = await resOrders.json()
       setResidents(rData.residents || rData || [])
       setOrders(oData.orders || oData || [])
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        const seedResidents = (await import('@/demo/seed')).SEED_RESIDENTS
+        setResidents(seedResidents)
+        setOrders([])
+        return
+      }
       console.error(err)
     } finally {
       setLoading(false)
@@ -423,6 +441,10 @@ function OrderEntryPageInner() {
   const handleSaveCell = async (payload: any) => {
     setSaving(true)
     try {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        // Optimistically update orders in demo mode
+        return
+      }
       await fetch('/api/kitchen/orders', {
         method: 'PUT',
         headers: {
@@ -431,8 +453,10 @@ function OrderEntryPageInner() {
         },
         body: JSON.stringify(payload),
       })
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      if (err?.code !== 'DEMO_API_UNAVAILABLE') {
+        console.error(err)
+      }
     } finally {
       setSaving(false)
     }
@@ -441,6 +465,10 @@ function OrderEntryPageInner() {
   const handleInitWeek = async () => {
     setInitBusy(true)
     try {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        await loadData()
+        return
+      }
       await fetch('/api/kitchen/orders/initialize-week', {
         method: 'POST',
         headers: {
@@ -450,8 +478,10 @@ function OrderEntryPageInner() {
         body: JSON.stringify({ week_start_date: week }),
       })
       await loadData()
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      if (err?.code !== 'DEMO_API_UNAVAILABLE') {
+        console.error(err)
+      }
     } finally {
       setInitBusy(false)
     }

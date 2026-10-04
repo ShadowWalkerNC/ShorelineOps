@@ -116,12 +116,44 @@ export default function TrayDispatchPage() {
 
   const loadRuns = useCallback(async () => {
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        const demoRuns: TrayRun[] = [
+          {
+            id: 'run-demo-1',
+            mealSlot: 'lunch',
+            serviceDate: todayString(),
+            wing: 'West Wing',
+            notes: 'Demo lunch cart run',
+            createdAt: new Date().toISOString(),
+          },
+        ]
+        setRuns(demoRuns)
+        setActiveRunId('run-demo-1')
+        return
+      }
+
       const res = await fetch(`/api/trayruns?serviceDate=${todayString()}`, { headers: authHeaders() })
       if (!res.ok) throw new Error(`Failed to load runs (${res.status})`)
       const data: TrayRun[] = await res.json()
       setRuns(data)
       setActiveRunId((prev) => prev ?? data[0]?.id ?? null)
     } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        const demoRuns: TrayRun[] = [
+          {
+            id: 'run-demo-1',
+            mealSlot: 'lunch',
+            serviceDate: todayString(),
+            wing: 'West Wing',
+            notes: 'Demo lunch cart run',
+            createdAt: new Date().toISOString(),
+          },
+        ]
+        setRuns(demoRuns)
+        setActiveRunId('run-demo-1')
+        return
+      }
       setError(err.message)
     } finally {
       setLoading(false)
@@ -130,12 +162,67 @@ export default function TrayDispatchPage() {
 
   const loadChecklist = useCallback(async (runId: string) => {
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        setChecklist({
+          run: {
+            id: runId,
+            mealSlot: 'lunch',
+            serviceDate: todayString(),
+            wing: 'West Wing',
+            notes: 'Demo lunch cart run',
+            createdAt: new Date().toISOString(),
+          },
+          slaMinutes: 45,
+          summary: { total: 4, assembled: 2, dispatched: 1, delivered: 1, missed: 0, remade: 0, overdue: 0 },
+          lines: [
+            {
+              key: 'line-1',
+              residentId: 'r1',
+              residentName: 'Eleanor Whitfield',
+              room: '101',
+              dietType: 'Regular',
+              isNpo: false,
+              ticketId: 'TKT-r1-L',
+              latestEvent: 'delivered',
+              latestAt: new Date().toLocaleTimeString(),
+              latestNote: 'Delivered to bedside',
+              isTerminal: true,
+              allowedNext: [],
+              isOverdue: false,
+              history: [],
+            },
+            {
+              key: 'line-2',
+              residentId: 'r2',
+              residentName: 'Harold Minter',
+              room: '102',
+              dietType: 'Diabetic',
+              isNpo: false,
+              ticketId: 'TKT-r2-L',
+              latestEvent: 'dispatched',
+              latestAt: new Date().toLocaleTimeString(),
+              latestNote: 'Loaded on cart 1',
+              isTerminal: false,
+              allowedNext: ['delivered', 'missed'],
+              isOverdue: false,
+              history: [],
+            },
+          ],
+          missed: [],
+        })
+        setError(null)
+        return
+      }
+
       const res = await fetch(`/api/trayruns/${runId}/checklist`, { headers: authHeaders() })
       if (!res.ok) throw new Error(`Failed to load checklist (${res.status})`)
       setChecklist(await res.json())
       setError(null)
     } catch (err: any) {
-      setError(err.message)
+      if (err?.code !== 'DEMO_API_UNAVAILABLE' && !err?.message?.includes('backend workflow unavailable in public demo')) {
+        setError(err.message)
+      }
     }
   }, [])
 

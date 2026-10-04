@@ -73,6 +73,59 @@ function TrayCardGeneratorPageInner() {
       setLoading(true)
       setError(null)
       try {
+        const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+        if (isDemo) {
+          // Generate demo tray cards locally from active residents to keep the sandbox interactive
+          const today = new Date().toISOString().slice(0, 10)
+          const demoCards: TrayCard[] = residents
+            .filter((r: any) => !r.status || r.status === 'Active')
+            .map((r: any) => {
+              const profileVersion = r.profileVersion || 1
+              let textureBannerColor = '#10b981'
+              if (r.texture === 'Pureed') textureBannerColor = '#f59e0b'
+              if (r.texture === 'Mechanical Soft' || r.texture === 'Minced & Moist') textureBannerColor = '#8b5cf6'
+
+              let entree = selectedMeal === 'Breakfast' ? 'Scrambled Eggs & Herb Toast' : selectedMeal === 'Lunch' ? 'Roast Turkey Breast' : 'Herb Baked Salmon'
+              if (r.is_npo || r.isNpo) {
+                entree = '⛔ NPO - DO NOT SERVE (ORAL INTAKE PROHIBITED)'
+              } else if (r.texture === 'Pureed') {
+                entree = `Pureed ${entree}`
+              } else if (r.texture === 'Mechanical Soft' || r.texture === 'Minced & Moist') {
+                entree = `Minced & Moist ${entree}`
+              }
+
+              const ticketId = `TKT-${r.id.slice(0, 8)}-${selectedMeal.slice(0, 1)}`
+              const mockQr = `ST1.DEMO.${ticketId}:v${profileVersion}`
+
+              return {
+                ticketId,
+                residentId: r.id,
+                residentName: r.name,
+                room: r.room || '101',
+                table: r.tableAssignment || r.table_assignment || 'Dining Room',
+                mealSlot: selectedMeal,
+                serviceDate: today,
+                dietOrder: r.dietType || r.diet_type || 'Regular',
+                iddsiTexture: r.texture || 'Regular',
+                textureBannerColor,
+                hasCriticalAllergies: Array.isArray(r.allergies) && r.allergies.length > 0,
+                allergenList: r.allergies || [],
+                portionSize: r.portionSize || r.portion_size || 'Regular',
+                isNpo: Boolean(r.is_npo || r.isNpo),
+                npoReason: r.npoReason || r.npo_reason || undefined,
+                fluidRestrictionMl: r.fluidRestrictionMl || r.fluid_restriction_ml || undefined,
+                profileVersion,
+                qrToken: mockQr,
+                selectedEntree: entree,
+                selectedSides: ['Steamed Broccoli', 'Mashed Potatoes'],
+                selectedBeverages: r.beverages || ['Water'],
+                specialNotes: r.specialInstructions || r.special_instructions || (r.is_npo || r.isNpo ? 'Hold tray at pass' : ''),
+              }
+            })
+          if (!cancelled) setCards(demoCards)
+          return
+        }
+
         const token = tokenManager.getAccessToken()
         const res = await fetch(
           `/api/kitchen/traycards-generated?mealSlot=${encodeURIComponent(selectedMeal)}`,
@@ -82,14 +135,67 @@ function TrayCardGeneratorPageInner() {
         const data = await res.json()
         if (!cancelled) setCards(Array.isArray(data.trayCards) ? data.trayCards : [])
       } catch (err: any) {
-        if (!cancelled) setError(err?.message || 'Could not load tray cards')
+        if (!cancelled) {
+          // If in demo mode or rejected by demo boundary, populate demo cards
+          if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+            const today = new Date().toISOString().slice(0, 10)
+            const demoCards: TrayCard[] = residents
+              .filter((r: any) => !r.status || r.status === 'Active')
+              .map((r: any) => {
+                const profileVersion = r.profileVersion || 1
+                let textureBannerColor = '#10b981'
+                if (r.texture === 'Pureed') textureBannerColor = '#f59e0b'
+                if (r.texture === 'Mechanical Soft' || r.texture === 'Minced & Moist') textureBannerColor = '#8b5cf6'
+
+                let entree = selectedMeal === 'Breakfast' ? 'Scrambled Eggs & Herb Toast' : selectedMeal === 'Lunch' ? 'Roast Turkey Breast' : 'Herb Baked Salmon'
+                if (r.is_npo || r.isNpo) {
+                  entree = '⛔ NPO - DO NOT SERVE (ORAL INTAKE PROHIBITED)'
+                } else if (r.texture === 'Pureed') {
+                  entree = `Pureed ${entree}`
+                } else if (r.texture === 'Mechanical Soft' || r.texture === 'Minced & Moist') {
+                  entree = `Minced & Moist ${entree}`
+                }
+
+                const ticketId = `TKT-${r.id.slice(0, 8)}-${selectedMeal.slice(0, 1)}`
+                const mockQr = `ST1.DEMO.${ticketId}:v${profileVersion}`
+
+                return {
+                  ticketId,
+                  residentId: r.id,
+                  residentName: r.name,
+                  room: r.room || '101',
+                  table: r.tableAssignment || r.table_assignment || 'Dining Room',
+                  mealSlot: selectedMeal,
+                  serviceDate: today,
+                  dietOrder: r.dietType || r.diet_type || 'Regular',
+                  iddsiTexture: r.texture || 'Regular',
+                  textureBannerColor,
+                  hasCriticalAllergies: Array.isArray(r.allergies) && r.allergies.length > 0,
+                  allergenList: r.allergies || [],
+                  portionSize: r.portionSize || r.portion_size || 'Regular',
+                  isNpo: Boolean(r.is_npo || r.isNpo),
+                  npoReason: r.npoReason || r.npo_reason || undefined,
+                  fluidRestrictionMl: r.fluidRestrictionMl || r.fluid_restriction_ml || undefined,
+                  profileVersion,
+                  qrToken: mockQr,
+                  selectedEntree: entree,
+                  selectedSides: ['Steamed Broccoli', 'Mashed Potatoes'],
+                  selectedBeverages: r.beverages || ['Water'],
+                  specialNotes: r.specialInstructions || r.special_instructions || (r.is_npo || r.isNpo ? 'Hold tray at pass' : ''),
+                }
+              })
+            setCards(demoCards)
+            return
+          }
+          setError(err?.message || 'Could not load tray cards')
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
     load()
     return () => { cancelled = true }
-  }, [selectedMeal])
+  }, [selectedMeal, residents])
 
   const filteredCards = cards.filter(c => {
     if (selectedWing !== 'all' && (wingByResidentId.get(c.residentId) || 'West Wing') !== selectedWing) return false

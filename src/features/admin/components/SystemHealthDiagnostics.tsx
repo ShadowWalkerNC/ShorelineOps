@@ -46,6 +46,26 @@ export default function SystemHealthDiagnostics() {
     setLoading(true)
     setError(null)
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        const demoReport: SelfHealingAuditReport = {
+          timestamp: new Date().toISOString(),
+          overallStatus: 'OPERATIONAL',
+          healthScorePct: 98,
+          checks: [
+            { dimension: 'Census Database Integrity', status: 'HEALTHY', details: 'All 12 resident clinical profiles pass IDDSI and allergy invariants.', remedied: false },
+            { dimension: 'HACCP Temperature Logs', status: 'HEALTHY', details: 'All hot holding line logs recorded within safe margin (>=165°F).', remedied: false },
+            { dimension: 'Memory Cache Sync', status: 'HEALTHY', details: 'LRU memory cache and local PostgREST adapter operating at 0ms latency.', remedied: false },
+            { dimension: 'Distributor Split MRP', status: 'HEALTHY', details: 'US Foods / Sysco / Dennis catalog pricing verified up to date.', remedied: false },
+          ],
+          activeResidentCount: 12,
+          autoRemediationsApplied: 0,
+        }
+        setReport(demoReport)
+        setLastChecked(new Date().toLocaleTimeString())
+        return
+      }
+
       const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/diagnostics', {
         headers: {
@@ -60,6 +80,22 @@ export default function SystemHealthDiagnostics() {
       setReport(data)
       setLastChecked(new Date().toLocaleTimeString())
     } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        const demoReport: SelfHealingAuditReport = {
+          timestamp: new Date().toISOString(),
+          overallStatus: 'OPERATIONAL',
+          healthScorePct: 98,
+          checks: [
+            { dimension: 'Census Database Integrity', status: 'HEALTHY', details: 'All resident profiles pass IDDSI invariants.', remedied: false },
+            { dimension: 'HACCP Temperature Logs', status: 'HEALTHY', details: 'Hot holding lines compliant.', remedied: false },
+          ],
+          activeResidentCount: 12,
+          autoRemediationsApplied: 0,
+        }
+        setReport(demoReport)
+        setLastChecked(new Date().toLocaleTimeString())
+        return
+      }
       setReport(null)
       setError(err?.message || 'Unable to load live diagnostics.')
     } finally {
@@ -71,6 +107,25 @@ export default function SystemHealthDiagnostics() {
     setRepairing(true)
     setError(null)
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        await new Promise(r => setTimeout(r, 600))
+        const demoReport: SelfHealingAuditReport = {
+          timestamp: new Date().toISOString(),
+          overallStatus: 'OPERATIONAL',
+          healthScorePct: 100,
+          checks: [
+            { dimension: 'Census Database Integrity', status: 'HEALTHY', details: 'All 12 resident clinical profiles verified.', remedied: true, remedyAction: 'Validated textures and allergy constraints.' },
+            { dimension: 'HACCP Temperature Logs', status: 'HEALTHY', details: 'Hot holding lines verified.', remedied: false },
+          ],
+          activeResidentCount: 12,
+          autoRemediationsApplied: 1,
+        }
+        setReport(demoReport)
+        setLastChecked(new Date().toLocaleTimeString())
+        return
+      }
+
       const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/repair', {
         method: 'POST',
@@ -86,7 +141,9 @@ export default function SystemHealthDiagnostics() {
       setReport(data)
       setLastChecked(new Date().toLocaleTimeString())
     } catch (err: any) {
-      setError(err?.message || 'Unable to run the server repair workflow.')
+      if (err?.code !== 'DEMO_API_UNAVAILABLE' && !err?.message?.includes('backend workflow unavailable in public demo')) {
+        setError(err?.message || 'Unable to run the server repair workflow.')
+      }
     } finally {
       setRepairing(false)
     }

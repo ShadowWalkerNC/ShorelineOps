@@ -43,6 +43,30 @@ export default function BackupRecoveryPanel() {
     setDownloading(true)
     setError(null)
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        // Export local demo seed data as JSON
+        const seedModule = await import('@/demo/seed')
+        const payload = {
+          facilityName: 'Shoreline Memory & Senior Living (Demo Sandbox)',
+          exportedAt: new Date().toISOString(),
+          version: '5.0.0',
+          residents: seedModule.SEED_RESIDENTS,
+          menuItems: seedModule.SEED_MENU_ITEMS,
+          recipes: seedModule.SEED_RECIPES,
+        }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `shoreline_facility_backup_${new Date().toISOString().slice(0, 10)}.json`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        return
+      }
+
       const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/backup/export', {
         headers: {
@@ -62,6 +86,10 @@ export default function BackupRecoveryPanel() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
     } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        setError('Facility backup export is disabled in public demo sandbox.')
+        return
+      }
       setError(`Failed to download backup: ${err.message}`)
     } finally {
       setDownloading(false)
@@ -83,6 +111,21 @@ export default function BackupRecoveryPanel() {
       const parsed = JSON.parse(text)
       setFileContent(parsed)
 
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        setPreview({
+          valid: true,
+          summary: {
+            facilityName: parsed.facilityName || 'Shoreline Memory Care (Demo)',
+            exportedAt: parsed.exportedAt || new Date().toISOString(),
+            residentsToRestore: Array.isArray(parsed.residents) ? parsed.residents.length : 12,
+            recipesToRestore: Array.isArray(parsed.recipes) ? parsed.recipes.length : 15,
+            inventoryToRestore: 24,
+          },
+        })
+        return
+      }
+
       const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/backup/restore?dryRun=true', {
         method: 'POST',
@@ -101,6 +144,19 @@ export default function BackupRecoveryPanel() {
       const previewData: BackupPreview = await res.json()
       setPreview(previewData)
     } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        setPreview({
+          valid: true,
+          summary: {
+            facilityName: 'Shoreline Memory Care (Demo)',
+            exportedAt: new Date().toISOString(),
+            residentsToRestore: 12,
+            recipesToRestore: 15,
+            inventoryToRestore: 24,
+          },
+        })
+        return
+      }
       setError(`Failed to parse backup snapshot: ${err.message}`)
     } finally {
       setAnalyzing(false)
@@ -115,6 +171,19 @@ export default function BackupRecoveryPanel() {
     setShowConfirmModal(false)
 
     try {
+      const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
+      if (isDemo) {
+        await new Promise(r => setTimeout(r, 600))
+        setRestoreResult({
+          success: true,
+          message: 'Public demo sandbox restored: clinical profiles and recipes re-indexed.',
+        })
+        setSelectedFile(null)
+        setPreview(null)
+        setFileContent(null)
+        return
+      }
+
       const token = tokenManager.getAccessToken()
       const res = await fetch('/api/admin/backup/restore', {
         method: 'POST',
@@ -138,6 +207,16 @@ export default function BackupRecoveryPanel() {
       setPreview(null)
       setFileContent(null)
     } catch (err: any) {
+      if (err?.code === 'DEMO_API_UNAVAILABLE' || err?.message?.includes('backend workflow unavailable in public demo')) {
+        setRestoreResult({
+          success: true,
+          message: 'Simulation completed: demo sandbox state refreshed.',
+        })
+        setSelectedFile(null)
+        setPreview(null)
+        setFileContent(null)
+        return
+      }
       setError(`Failed to execute restore: ${err.message}`)
     } finally {
       setRestoring(false)
