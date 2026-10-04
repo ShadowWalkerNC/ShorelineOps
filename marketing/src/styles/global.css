@@ -5,6 +5,8 @@
 :root { --font-clinical: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --marketing-ink:#0d2329; --marketing-accent:#00675a; --marketing-line:#e2e8eb; --marketing-canvas:#f7f9fb; }
 body, .font-sans, .font-display { font-family:var(--font-clinical); }
 body[data-marketing-page] { background:var(--marketing-canvas); color:var(--marketing-ink); font-size:16px; line-height:1.6; }
+.marketing-content { min-width:0; width:100%; }
+.marketing-table-scroll { width:100%; max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; }
 .marketing-content h1 { font-size:clamp(32px,4.2vw,56px); line-height:1.12; letter-spacing:-.035em; font-weight:700; }
 .marketing-content h2 { letter-spacing:-.025em; line-height:1.2; }
 .marketing-content p, .marketing-content li { font-size:15px; line-height:1.7; }

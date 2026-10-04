@@ -209,7 +209,7 @@ export default function ReportingPage() {
 
   return (
     <div className="sl-page fade-in space-y-6">
-      <div className="sl-page-header sl-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 p-6">
+      <div className="sl-page-header sl-card stitch-report-header">
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">Reporting workspace</p><h1 className="sl-page-title">
             Dietary Cost & Compliance Reporting
@@ -222,12 +222,12 @@ export default function ReportingPage() {
       {/* B14 demo-honesty: explicit empty state when the reporting service is
           unreachable — never fabricate figures. */}
       {summary === null && !loading && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-lg)', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="stitch-report-notice" style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-lg)', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0 }} />
           <span>Reporting service unavailable — figures show as "—" until real data loads. No sample numbers are displayed.</span>
         </div>
       )}        {/* Date Filter & Print */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div className="stitch-report-controls" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <input
             type="date"
             value={startDate}

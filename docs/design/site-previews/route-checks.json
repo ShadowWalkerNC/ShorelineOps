@@ -1,0 +1,1046 @@
+[
+  {
+    "width": 320,
+    "route": "/demo/",
+    "heading": "Good evening, Chef",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/residents",
+    "heading": "Residents & Diet Orders",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/menu",
+    "heading": "Menu Cycle Planner",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/recipes",
+    "heading": "Standardized Recipe Book",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/production",
+    "heading": "Production & Service",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/inventory",
+    "heading": "Inventory & Waste",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/staff",
+    "heading": "Staff directory",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/timecards",
+    "heading": "Time Clock & Shifts",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/kitchen/orders",
+    "heading": "Meal Tally & Selection Entry",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/kitchen/sheet",
+    "heading": "Daily Cook & Tally Sheet",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/kitchen/traycards",
+    "heading": "Clinical Tray Cards & 4×6 Meal Tickets",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/kitchen/dispatch",
+    "heading": "Tray Dispatch",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/purchasing",
+    "heading": "Purchasing & Order Guide",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/distributor",
+    "heading": "Distributor catalogs",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/reporting",
+    "heading": "Dietary Cost & Compliance Reporting",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/settings",
+    "heading": "Facility & Operations Settings",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/tasks",
+    "heading": "Shift operations",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/admin",
+    "heading": "Administration & Kitchen Console",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/legal",
+    "heading": "Legal & Compliance",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/offline",
+    "heading": "You're offline",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/demo/setup",
+    "heading": "ShorelineOps Setup Wizard",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/app/login",
+    "heading": "Welcome back",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 1,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/",
+    "heading": "The Operating System for Clinical Nutrition and Institutional Kitchens.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/pricing",
+    "heading": "Predictable Care Economics.Zero Clinical Lockout.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/distributors",
+    "heading": "Turn Healthcare Kitchens into High-Volume Standing Accounts.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/story",
+    "heading": "Why I Built ShorelineOps Inside a Real Senior Living Kitchen.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/security",
+    "heading": "Security and deployment responsibilities",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/privacy",
+    "heading": "Healthcare Privacy Policy & HIPAA BAA",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "route": "/terms",
+    "heading": "Terms of Service & Master Agreement",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/",
+    "heading": "Good evening, Chef",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/residents",
+    "heading": "Residents & Diet Orders",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/menu",
+    "heading": "Menu Cycle Planner",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/recipes",
+    "heading": "Standardized Recipe Book",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/production",
+    "heading": "Production & Service",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/inventory",
+    "heading": "Inventory & Waste",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/staff",
+    "heading": "Staff directory",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/timecards",
+    "heading": "Time Clock & Shifts",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/kitchen/orders",
+    "heading": "Meal Tally & Selection Entry",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/kitchen/sheet",
+    "heading": "Daily Cook & Tally Sheet",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/kitchen/traycards",
+    "heading": "Clinical Tray Cards & 4×6 Meal Tickets",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/kitchen/dispatch",
+    "heading": "Tray Dispatch",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/purchasing",
+    "heading": "Purchasing & Order Guide",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/distributor",
+    "heading": "Distributor catalogs",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/reporting",
+    "heading": "Dietary Cost & Compliance Reporting",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/settings",
+    "heading": "Facility & Operations Settings",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/tasks",
+    "heading": "Shift operations",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/admin",
+    "heading": "Administration & Kitchen Console",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/legal",
+    "heading": "Legal & Compliance",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/offline",
+    "heading": "You're offline",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/demo/setup",
+    "heading": "ShorelineOps Setup Wizard",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/app/login",
+    "heading": "Welcome back",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 1,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/",
+    "heading": "The Operating System for Clinical Nutrition and Institutional Kitchens.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/pricing",
+    "heading": "Predictable Care Economics.Zero Clinical Lockout.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/distributors",
+    "heading": "Turn Healthcare Kitchens into High-Volume Standing Accounts.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/story",
+    "heading": "Why I Built ShorelineOps Inside a Real Senior Living Kitchen.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/security",
+    "heading": "Security and deployment responsibilities",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/privacy",
+    "heading": "Healthcare Privacy Policy & HIPAA BAA",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "/terms",
+    "heading": "Terms of Service & Master Agreement",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/",
+    "heading": "Your shift at a glance",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/residents",
+    "heading": "Residents & Diet Orders",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/menu",
+    "heading": "Menu Cycle Planner",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/recipes",
+    "heading": "Standardized Recipe Book",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/production",
+    "heading": "Production & Service",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/inventory",
+    "heading": "Inventory & Waste",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/staff",
+    "heading": "Staff directory",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/timecards",
+    "heading": "Time Clock & Shifts",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/kitchen/orders",
+    "heading": "Meal Tally & Selection Entry",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/kitchen/sheet",
+    "heading": "Daily Cook & Tally Sheet",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/kitchen/traycards",
+    "heading": "Clinical Tray Cards & 4×6 Meal Tickets",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/kitchen/dispatch",
+    "heading": "Tray Dispatch",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/purchasing",
+    "heading": "Purchasing & Order Guide",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/distributor",
+    "heading": "Distributor catalogs",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/reporting",
+    "heading": "Dietary Cost & Compliance Reporting",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/settings",
+    "heading": "Facility & Operations Settings",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/tasks",
+    "heading": "Shift operations",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/admin",
+    "heading": "Administration & Kitchen Console",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/legal",
+    "heading": "Legal & Compliance",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/offline",
+    "heading": "You're offline",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/demo/setup",
+    "heading": "ShorelineOps Setup Wizard",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/app/login",
+    "heading": "Welcome back",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 1,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/",
+    "heading": "The Operating System for Clinical Nutrition and Institutional Kitchens.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/pricing",
+    "heading": "Predictable Care Economics.Zero Clinical Lockout.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/distributors",
+    "heading": "Turn Healthcare Kitchens into High-Volume Standing Accounts.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/story",
+    "heading": "Why I Built ShorelineOps Inside a Real Senior Living Kitchen.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/security",
+    "heading": "Security and deployment responsibilities",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/privacy",
+    "heading": "Healthcare Privacy Policy & HIPAA BAA",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 834,
+    "route": "/terms",
+    "heading": "Terms of Service & Master Agreement",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/",
+    "heading": "Good evening, Chef",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/residents",
+    "heading": "Residents & Diet Orders",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/menu",
+    "heading": "Menu Cycle Planner",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/recipes",
+    "heading": "Standardized Recipe Book",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/production",
+    "heading": "Production & Service",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/inventory",
+    "heading": "Inventory & Waste",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/staff",
+    "heading": "Staff directory",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/timecards",
+    "heading": "Time Clock & Shifts",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/kitchen/orders",
+    "heading": "Meal Tally & Selection Entry",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/kitchen/sheet",
+    "heading": "Daily Cook & Tally Sheet",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/kitchen/traycards",
+    "heading": "Clinical Tray Cards & 4×6 Meal Tickets",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/kitchen/dispatch",
+    "heading": "Tray Dispatch",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/purchasing",
+    "heading": "Purchasing & Order Guide",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/distributor",
+    "heading": "Distributor catalogs",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/reporting",
+    "heading": "Dietary Cost & Compliance Reporting",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/settings",
+    "heading": "Facility & Operations Settings",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/tasks",
+    "heading": "Shift operations",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/admin",
+    "heading": "Administration & Kitchen Console",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/legal",
+    "heading": "Legal & Compliance",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/offline",
+    "heading": "You're offline",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/demo/setup",
+    "heading": "ShorelineOps Setup Wizard",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/app/login",
+    "heading": "Welcome back",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 1,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/",
+    "heading": "The Operating System for Clinical Nutrition and Institutional Kitchens.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/pricing",
+    "heading": "Predictable Care Economics.Zero Clinical Lockout.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/distributors",
+    "heading": "Turn Healthcare Kitchens into High-Volume Standing Accounts.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/story",
+    "heading": "Why I Built ShorelineOps Inside a Real Senior Living Kitchen.",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/security",
+    "heading": "Security and deployment responsibilities",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/privacy",
+    "heading": "Healthcare Privacy Policy & HIPAA BAA",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "/terms",
+    "heading": "Terms of Service & Master Agreement",
+    "overflow": false,
+    "mainOverflow": false,
+    "api": 0,
+    "errors": []
+  }
+]

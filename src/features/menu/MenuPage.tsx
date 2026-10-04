@@ -379,7 +379,7 @@ export default function MenuPage() {
             <div className="min-w-0">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Recipes Linked</div>
               <div className="text-base font-bold text-slate-900 dark:text-white">
-                {recipes.length} Verified
+                {recipes.length} in catalog
               </div>
             </div>
           </div>
