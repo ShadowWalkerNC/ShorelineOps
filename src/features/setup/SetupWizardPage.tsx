@@ -131,6 +131,7 @@ export default function SetupWizardPage() {
 
   return (
     <div
+      className="stitch-standalone stitch-setup"
       style={{
         position: 'fixed',
         inset: 0,
@@ -152,7 +153,7 @@ export default function SetupWizardPage() {
           backgroundColor: 'var(--bg-card)',
           borderRadius: 'var(--radius-xl)',
           padding: isMobile ? '24px 16px' : '40px 48px',
-          boxShadow: 'var(--shadow-lg)',
+          boxShadow: 'var(--shadow-sm)',
           border: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',

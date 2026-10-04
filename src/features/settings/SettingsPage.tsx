@@ -172,13 +172,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto px-1 sm:px-4 py-2 animate-in fade-in duration-200">
+    <div className="sl-page space-y-6 max-w-6xl mx-auto animate-in fade-in duration-200">
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sl-page-header sl-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 p-6">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">Administration workspace</p><h1 className="sl-page-title">
               Facility & Operations Settings
             </h1>
             <AppleBadge color={license.tier === 'enterprise' ? 'purple' : license.tier === 'pro' ? 'blue' : 'green'}>
@@ -190,12 +190,12 @@ export default function SettingsPage() {
               onRetry={() => loadFromServer()}
             />
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="sl-page-subtitle">
             Configure healthcare community profile, residential wings, dining schedule, distributor accounts, and compliance parameters.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
           <AppleButton
             variant="secondary"
             size="md"
@@ -218,7 +218,7 @@ export default function SettingsPage() {
 
       {/* ── Top Telemetry Overview Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <AppleCard className="p-4">
+        <AppleCard className="sl-card p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
               <Building2 className="w-5 h-5" />
@@ -232,7 +232,7 @@ export default function SettingsPage() {
           </div>
         </AppleCard>
 
-        <AppleCard className="p-4">
+        <AppleCard className="sl-card p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
               <Truck className="w-5 h-5" />
@@ -246,7 +246,7 @@ export default function SettingsPage() {
           </div>
         </AppleCard>
 
-        <AppleCard className="p-4">
+        <AppleCard className="sl-card p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
               <DollarSign className="w-5 h-5" />
@@ -260,7 +260,7 @@ export default function SettingsPage() {
           </div>
         </AppleCard>
 
-        <AppleCard className="p-4">
+        <AppleCard className="sl-card p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5" />
@@ -303,7 +303,7 @@ export default function SettingsPage() {
 
       {/* ── TAB 1: FACILITY PROFILE ── */}
       {activeTab === 'facility' && (
-        <AppleCard className="p-6 space-y-6">
+        <AppleCard className="sl-card p-6 space-y-6">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Organization & Facility Details</h2>
             <p className="text-xs text-slate-500">Legal facility entity name, state licensing, and official contact metadata.</p>
@@ -426,7 +426,7 @@ export default function SettingsPage() {
       {/* ── TAB 2: WINGS & DINING ROOMS ── */}
       {activeTab === 'wings' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <AppleCard className="p-6 space-y-4">
+          <AppleCard className="sl-card p-6 space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-600" />
@@ -463,7 +463,7 @@ export default function SettingsPage() {
             </form>
           </AppleCard>
 
-          <AppleCard className="p-6 space-y-4">
+          <AppleCard className="sl-card p-6 space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <UtensilsCrossed className="w-4 h-4 text-emerald-600" />
@@ -504,7 +504,7 @@ export default function SettingsPage() {
 
       {/* ── TAB 3: DIETARY & CLINICAL STANDARDS ── */}
       {activeTab === 'clinical' && (
-        <AppleCard className="p-6 space-y-6">
+        <AppleCard className="sl-card p-6 space-y-6">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Clinical & Dining Operational Standards</h2>
             <p className="text-xs text-slate-500">CMS compliance parameters, meal service schedule times, and target cost metrics.</p>
@@ -604,7 +604,7 @@ export default function SettingsPage() {
 
       {/* ── TAB 4: DISTRIBUTORS & INTEGRATIONS ── */}
       {activeTab === 'integrations' && (
-        <AppleCard className="p-6 space-y-6">
+        <AppleCard className="sl-card p-6 space-y-6">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Distributors & External Systems</h2>
             <p className="text-xs text-slate-500">Configure broadline food distributors, order guide accounts, and EHR sync.</p>
@@ -651,7 +651,7 @@ export default function SettingsPage() {
 
       {/* ── TAB 5: SECURITY & LICENSING ── */}
       {activeTab === 'security' && (
-        <AppleCard className="p-6 space-y-6">
+        <AppleCard className="sl-card p-6 space-y-6">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">HIPAA Security & SaaS Licensing</h2>
             <p className="text-xs text-slate-500">Manage SaaS tier entitlement, timeout sessions, and HIPAA audit parameters.</p>

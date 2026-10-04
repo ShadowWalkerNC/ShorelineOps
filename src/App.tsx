@@ -49,12 +49,13 @@ function RoleGate({ role, children }: { role: Parameters<typeof RequireRole>[0][
 /** B13: cut routes render a real 404 instead of silently redirecting. */
 function NotFoundPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-4xl font-bold text-slate-900">404 — Page not found</h1>
-      <p className="text-slate-600 max-w-md">
+    <div className="stitch-standalone flex flex-col items-center justify-center gap-4 text-center">
+      <p className="sl-eyebrow">ShorelineOps workspace</p>
+      <h1 className="sl-page-title">404 — Page not found</h1>
+      <p className="sl-page-subtitle max-w-md">
         This page doesn't exist or was removed. Use the navigation to get back to work.
       </p>
-      <Link to="/" className="text-blue-600 underline">Go to Dashboard</Link>
+      <Link to="/" className="btn btn-primary">Go to Dashboard</Link>
     </div>
   )
 }

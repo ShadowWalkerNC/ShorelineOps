@@ -17,7 +17,7 @@ const STATUS_COLORS: Record<Resident['status'], string> = {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
+      <h2 className="sl-section-title">
         {title}
       </h2>
       <div className="space-y-3">{children}</div>
@@ -27,8 +27,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-2">
-      <span className="w-40 shrink-0 text-sm text-slate-500 dark:text-slate-400">{label}</span>
+    <div className="stitch-profile-row">
+      <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
       <span className="text-sm font-medium text-slate-800 dark:text-slate-100 flex-1">{children}</span>
     </div>
   )
@@ -89,7 +89,7 @@ export default function ResidentProfilePage() {
     return (
       <div className="text-center py-24">
         <p className="text-lg font-medium text-slate-500">Resident not found.</p>
-        <Link to="/" className="mt-3 inline-block text-sm text-primary underline">
+        <Link to="/residents" className="mt-3 inline-block text-sm text-primary underline">
           ← Back to residents list
         </Link>
       </div>
@@ -102,18 +102,19 @@ export default function ResidentProfilePage() {
       : '—'
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="sl-page max-w-4xl mx-auto">
       {/* Back link */}
       <Link
-        to="/"
-        className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-primary mb-5 transition-colors"
+        to="/residents"
+        className="inline-flex min-h-12 items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-primary mb-5 transition-colors"
       >
         <span>←</span> All Residents
       </Link>
 
       {/* Profile header card */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 mb-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className="sl-card mb-6">
+        <p className="sl-eyebrow">Clinical nutrition · Resident record</p>
+        <div className="stitch-profile-header">
           <div>
             {/* Avatar initials */}
             <div className="flex items-center gap-4 mb-3">
@@ -130,7 +131,7 @@ export default function ResidentProfilePage() {
                   .toUpperCase()}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
+                <h1 className="sl-page-title">
                   {resident.name}
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
@@ -152,8 +153,7 @@ export default function ResidentProfilePage() {
 
           <button
             onClick={() => setEditing(true)}
-            className="shrink-0 px-4 py-2 text-sm font-medium rounded bg-primary text-white
-                       hover:bg-primary/90 transition-colors"
+            className="btn btn-primary"
           >
             Edit Profile
           </button>
@@ -164,7 +164,7 @@ export default function ResidentProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* Diet Order */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-4">
+        <div className="sl-card space-y-4">
           <Section title="Diet Order">
             <Row label="Diet type">{resident.dietType}</Row>
             <Row label="Texture">
@@ -186,7 +186,7 @@ export default function ResidentProfilePage() {
         </div>
 
         {/* Allergies & Beverages */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-5">
+        <div className="sl-card space-y-5">
           <Section title="Allergies & Restrictions">
             <PillList
               items={resident.allergies}
@@ -205,7 +205,7 @@ export default function ResidentProfilePage() {
         </div>
 
         {/* Preferences & Notes — full width */}
-        <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-4">
+        <div className="md:col-span-2 sl-card space-y-4">
           <Section title="Preferences & Notes">
             <Row label="Likes">
               <span className="whitespace-pre-wrap">{resident.likes || '—'}</span>

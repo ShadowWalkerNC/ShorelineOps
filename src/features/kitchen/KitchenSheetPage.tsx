@@ -1,3 +1,4 @@
+import '@/features/kitchen/stitch-operations.css'
 import { useState, useEffect, useMemo } from 'react'
 import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
@@ -526,14 +527,17 @@ function KitchenSheetPageInner() {
   }, [sheetResidents])
 
   return (
-    <KitchenFitShell className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <KitchenFitShell className="sl-page stitch-operations">
       {/* ── Apple Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sl-page-header stitch-operation-header">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+            <div className="stitch-operation-heading">
+            <div className="sl-eyebrow stitch-operation-eyebrow">Kitchen operations / Daily production</div>
+            <h1 className="sl-page-title">
               Daily Cook &amp; Tally Sheet
             </h1>
+            </div>
             <AppleBadge color="orange" dot className="text-sm">
               {day} &middot; {meal}
             </AppleBadge>

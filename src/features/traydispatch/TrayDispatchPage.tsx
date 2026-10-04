@@ -1,3 +1,4 @@
+import '@/features/kitchen/stitch-operations.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Bell, Truck, CheckCircle2, AlertTriangle, RotateCcw, Plus } from 'lucide-react'
 import { tokenManager } from '../../security/tokenManager'
@@ -343,14 +344,19 @@ export default function TrayDispatchPage() {
   const summary = checklist?.summary
 
   return (
-    <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="sl-page stitch-operations stitch-dispatch">
+      <div className="sl-page-header stitch-operation-header">
+      <div className="stitch-dispatch-heading">
+      <div className="sl-eyebrow stitch-operation-eyebrow">Meal service / Delivery coordination</div>
+      <h1 className="sl-page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Bell className="w-6 h-6 text-teal-600" />
         <span>Tray Dispatch</span>
       </h1>
       <p style={{ color: '#64748b', margin: '0 0 16px', fontSize: 14 }}>
         Track every tray from assembly to the bedside. Today: {todayString()}
       </p>
+      </div>
+      </div>
 
       {error && (
         <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 14 }}>
@@ -359,6 +365,7 @@ export default function TrayDispatchPage() {
       )}
 
       {/* Run picker / creator */}
+      <h2 className="stitch-operation-section-title">Service runs</h2>
       <div style={{ background: 'var(--bg-card, #fff)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 12, padding: 12, marginBottom: 12 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
           {runs.map((r) => (
@@ -430,6 +437,7 @@ export default function TrayDispatchPage() {
       )}
 
       {/* Checklist */}
+      {activeRunId && <h2 className="stitch-operation-section-title">Tray delivery checklist</h2>}
       {checklist && checklist.lines.length === 0 && (
         <p style={{ color: '#64748b' }}>
           No trays on this run yet. Scan tray cards at the assembly station (they auto-attach),

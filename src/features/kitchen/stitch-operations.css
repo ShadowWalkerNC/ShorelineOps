@@ -1,0 +1,35 @@
+/* Shared operational workspace composition; clinical alerts retain their own colors. */
+.stitch-operations { width:100%; min-width:0; max-width:1440px; margin-inline:auto; }
+.stitch-operations .stitch-operation-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:24px; padding:8px 0 24px; border-bottom:1px solid var(--border-color,#dfe7e7); margin-bottom:24px; }
+.stitch-operations .stitch-operation-header > div:first-child { min-width:0; flex:1 1 420px; }
+.stitch-operations .stitch-operation-header > div:last-child:not(:first-child) { max-width:100%; }
+.stitch-operations .stitch-operation-heading { min-width:0; }
+.stitch-operations .stitch-operation-eyebrow { color:var(--text-muted,#64748b); margin-bottom:8px; font-size:12px; letter-spacing:.08em; line-height:1.5; }
+.stitch-operations .sl-page-title { font-size:clamp(26px,2.5vw,36px); line-height:1.18; letter-spacing:-.035em; color:var(--text-primary,#132a29); }
+.stitch-operations .stitch-operation-header p { max-width:760px; font-size:15px; line-height:1.65; }
+.stitch-operations .stitch-operation-heading-surface { padding:0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+.stitch-operations .stitch-operation-metrics { gap:0; background:var(--bg-card,#fff); border:1px solid var(--border-color,#dfe7e7); border-radius:12px; overflow:hidden; }
+.stitch-operations .stitch-operation-metrics > * { border:0; border-radius:0; box-shadow:none; border-right:1px solid var(--border-color,#dfe7e7); padding:20px; }
+.stitch-operations .stitch-operation-metrics > :last-child { border-right:0; }
+.stitch-operations .stitch-operation-metrics .rounded-2xl { border-radius:8px; background:var(--bg-app,#f7f9fb); color:var(--color-primary,#0d3b3a); }
+.stitch-operations .stitch-operation-metrics .text-base { font-size:18px; line-height:1.5; white-space:normal; }
+.stitch-operations .stitch-operation-tabs { border-radius:10px 10px 0 0; }
+.stitch-operation-section-title { font-size:18px; font-weight:650; letter-spacing:-.02em; margin:24px 0 12px; color:var(--text-primary,#132a29); }
+.stitch-operations input:not([type=checkbox]):not([type=radio]), .stitch-operations select, .stitch-operations textarea { max-width:100%; min-height:44px; }
+.stitch-operations button:not(.no-print button) { min-height:44px; }
+.stitch-dispatch { max-width:1200px; }
+@media(max-width:767px) {
+ .stitch-operations .stitch-operation-header { gap:16px; padding-top:0; padding-bottom:20px; }
+ .stitch-operations .stitch-operation-header > div:first-child { flex-basis:100%; }
+ .stitch-operations .stitch-operation-metrics > * { padding:16px; border-bottom:1px solid var(--border-color,#dfe7e7); }
+ .stitch-operations .stitch-operation-metrics > :nth-child(2n) { border-right:0; }
+ .stitch-operations .stitch-operation-metrics > :nth-last-child(-n+2) { border-bottom:0; }
+ .stitch-operations .stitch-operation-header > div:last-child { width:100%; flex-wrap:wrap; }
+ .stitch-operations .stitch-operation-header select { width:100%; }
+}
+@media print { .stitch-operations .stitch-operation-header { border:0; margin:0; padding:0; } .stitch-operations .stitch-operation-metrics { break-inside:avoid; } }
+.stitch-operations .stitch-recipe-library > * { border-radius:12px; box-shadow:none; border-color:var(--border-color,#dfe7e7); }
+.stitch-operations .stitch-recipe-library h3 { font-size:20px; line-height:1.35; letter-spacing:-.025em; }
+.stitch-operations .stitch-recipe-library p { font-size:14px; line-height:1.6; }
+.stitch-operations .stitch-recipe-library .text-\[10px\] { font-size:12px; line-height:1.5; }
+.stitch-operations .stitch-recipe-library > *:hover { border-color:var(--color-primary,#0d3b3a); }

@@ -1,3 +1,4 @@
+import '@/features/kitchen/stitch-operations.css'
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useMenuStore } from '@/state/menuStore'
 import { useRecipesStore } from '@/state/recipesStore'
@@ -303,15 +304,18 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <div className="sl-page stitch-operations">
 
       {/* ── Apple Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sl-page-header stitch-operation-header">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="stitch-operation-heading">
+            <div className="sl-eyebrow stitch-operation-eyebrow">Menu planning / Seasonal cycles</div>
+            <h1 className="sl-page-title">
               Menu Cycle Planner
             </h1>
+            </div>
             {selectedWeek?.active && (
               <AppleBadge color="green" dot>
                 Live Active Cycle
@@ -352,7 +356,7 @@ export default function MenuPage() {
       </div>
 
       {/* ── Clinical / Operational Telemetry Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="stitch-operation-metrics grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <AppleCard className="p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">

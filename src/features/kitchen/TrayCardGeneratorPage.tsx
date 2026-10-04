@@ -1,3 +1,4 @@
+import '@/features/kitchen/stitch-operations.css'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useResidentsStore } from '../../state/residentsStore'
 import { tokenManager } from '@/security/tokenManager'
@@ -207,14 +208,17 @@ function TrayCardGeneratorPageInner() {
   }
 
   return (
-    <KitchenFitShell className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <KitchenFitShell className="sl-page stitch-operations">
       {/* ── Apple Page Header (Hidden on Print) ── */}
-      <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sl-page-header stitch-operation-header">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="stitch-operation-heading">
+            <div className="sl-eyebrow stitch-operation-eyebrow">Point of service / Clinical meal tickets</div>
+            <h1 className="sl-page-title">
               Clinical Tray Cards &amp; 4&times;6 Meal Tickets
             </h1>
+            </div>
             <AppleBadge color="blue" dot className="text-sm">
               {filteredCards.length} Patient Trays
             </AppleBadge>

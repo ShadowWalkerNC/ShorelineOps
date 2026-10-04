@@ -21,7 +21,7 @@ const variantStyles: Record<AppleCardVariant, string> = {
 };
 
 export const AppleCard: React.FC<AppleCardProps> = ({
-  variant = "glass",
+  variant = "grouped",
   header,
   subtitle,
   footer,
@@ -31,7 +31,7 @@ export const AppleCard: React.FC<AppleCardProps> = ({
 }) => {
   return (
     <div
-      className={`rounded-2xl transition-all duration-200 overflow-hidden ${variantStyles[variant]} ${className}`}
+      className={`rounded-xl transition-colors duration-200 overflow-hidden ${variantStyles[variant]} ${className}`}
       {...props}
     >
       {(header || subtitle) && (

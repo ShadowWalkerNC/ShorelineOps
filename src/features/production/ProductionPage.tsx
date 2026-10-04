@@ -1,3 +1,4 @@
+import '@/features/kitchen/stitch-operations.css'
 import { useEffect, useMemo, useState } from 'react'
 import { useMenuStore }      from '../../state/menuStore'
 import { useResidentsStore } from '../../state/residentsStore'
@@ -614,10 +615,11 @@ function ProductionPageView() {
   useEffect(() => { fetchResidents(); fetchWeeks(); fetchItems() }, []) // eslint-disable-line
 
   return (
-    <KitchenFitShell className="sl-page fade-in">
-      <div className="sl-page-header">
+    <KitchenFitShell className="sl-page fade-in stitch-operations">
+      <div className="sl-page-header stitch-operation-header">
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'var(--space-3)', flexWrap:'wrap' }}>
           <div>
+            <div className="sl-eyebrow stitch-operation-eyebrow">Kitchen operations / Service workspace</div>
             <h1 className="sl-page-title">Production &amp; Service</h1>
             <p className="sl-page-subtitle">Worksheets, tray tickets, prep lists, shift checklists, and hydration passes.</p>
           </div>
@@ -629,6 +631,7 @@ function ProductionPageView() {
       </div>
 
       <div
+        className="stitch-operation-tabs"
         role="tablist"
         aria-label="Production sections"
         style={{
@@ -639,9 +642,9 @@ function ProductionPageView() {
           background: 'var(--bg-app)',
           borderBottom: '2px solid var(--border-color)',
           marginBottom: 'var(--space-6)',
-          marginLeft: 'calc(var(--space-6) * -1)',
-          marginRight: 'calc(var(--space-6) * -1)',
-          paddingLeft: 'var(--space-6)',
+          marginLeft: 0,
+          marginRight: 0,
+          paddingLeft: 'var(--space-2)',
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',

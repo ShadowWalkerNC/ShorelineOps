@@ -1,6 +1,6 @@
 export default function OfflinePage() {
   return (
-    <div style={{
+    <div className="stitch-standalone stitch-offline" style={{
       minHeight: '100dvh',
       display: 'flex',
       flexDirection: 'column',
@@ -11,10 +11,11 @@ export default function OfflinePage() {
       background: 'var(--bg-app)',
       textAlign: 'center',
     }}>
-      <img src="/icon-192.png" alt="Shoreline" style={{ width: 72, height: 72, borderRadius: 16, opacity: 0.7 }} />
+      <img src={`${import.meta.env.BASE_URL}brand/shorelineops-icon.svg`} alt="ShorelineOps" style={{ width: 64, height: 64 }} />
 
       <div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
+        <p className="sl-eyebrow">Connection required</p>
+        <h1 className="sl-page-title">
           You're offline
         </h1>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 10, maxWidth: 360, lineHeight: 1.6 }}>
@@ -23,6 +24,7 @@ export default function OfflinePage() {
       </div>
 
       <button
+        className="btn btn-primary"
         onClick={() => window.location.reload()}
         style={{
           padding: '12px 28px',
@@ -33,13 +35,13 @@ export default function OfflinePage() {
           fontSize: 15,
           fontWeight: 700,
           cursor: 'pointer',
-          fontFamily: 'Outfit, sans-serif',
+          fontFamily: 'var(--font-body)',
         }}
       >
         Try again
       </button>
 
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 0 }}>
+      <p className="stitch-offline-guidance" style={{ maxWidth: 520 }}>
         A cached screen does not confirm current dietary orders or a saved action. Hold unverified trays and follow your facility's documented downtime procedure. Reconnect and check recorded outcomes before retrying.
       </p>
     </div>

@@ -1,3 +1,4 @@
+import '@/features/kitchen/stitch-operations.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRecipesStore } from '@/state/recipesStore'
 import { RECIPE_CATEGORIES, RECIPE_ALLERGENS } from '@/types/recipe'
@@ -566,14 +567,17 @@ export default function RecipeBookPage() {
   const tabCategories: (RecipeCategory | 'All')[] = ['All', ...RECIPE_CATEGORIES]
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <div className="sl-page stitch-operations">
       {/* ── Apple Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sl-page-header stitch-operation-header">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="stitch-operation-heading">
+            <div className="sl-eyebrow stitch-operation-eyebrow">Recipe library / Standardized preparation</div>
+            <h1 className="sl-page-title">
               Standardized Recipe Book
             </h1>
+            </div>
             <AppleBadge color="purple" dot>
               {recipes.length} Master Recipes
             </AppleBadge>
@@ -583,7 +587,7 @@ export default function RecipeBookPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <AppleButton
             variant="secondary"
             size="md"
@@ -610,7 +614,7 @@ export default function RecipeBookPage() {
       )}
 
       {/* ── Metric Telemetry Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="stitch-operation-metrics grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <AppleCard className="p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
@@ -643,8 +647,8 @@ export default function RecipeBookPage() {
               <Layers className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">IDDSI Compliant</div>
-              <div className="text-base font-bold text-slate-900 dark:text-white">100% Tested</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Texture preparation</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white">Verify per recipe</div>
             </div>
           </div>
         </AppleCard>
@@ -655,8 +659,8 @@ export default function RecipeBookPage() {
               <Flame className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">HACCP 165°F Core</div>
-              <div className="text-base font-bold text-slate-900 dark:text-white">Enforced</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Food safety</div>
+              <div className="text-base font-bold text-slate-900 dark:text-white">Record actual temperatures</div>
             </div>
           </div>
         </AppleCard>
@@ -704,7 +708,7 @@ export default function RecipeBookPage() {
       </AppleCard>
 
       {/* Recipe Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="stitch-recipe-library grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredRecipes.map(recipe => (
           <AppleCard key={recipe.id} className="p-5 flex flex-col justify-between hover:border-blue-500/40 transition-all">
             <div className="space-y-3">
@@ -752,7 +756,7 @@ export default function RecipeBookPage() {
               </AppleButton>
               <button
                 onClick={() => setPurgeTarget(recipe)}
-                className="w-8 h-8 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
+                className="w-11 h-11 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
                 title="Delete Recipe"
               >
                 <Trash2 className="w-4 h-4" />

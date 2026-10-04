@@ -56,16 +56,18 @@ export default function Legal() {
 
       {/* ── Page header ── */}
       <div className="sl-page-header">
+        <p className="sl-eyebrow">Governance · Policies</p>
         <h1 className="sl-page-title">Legal &amp; Compliance</h1>
         <p className="sl-page-subtitle">Shoreline Operations LLC — Effective July 8, 2026</p>
       </div>
 
       {!active ? (
         /* ── Document index ── */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="stitch-legal-index">
           {DOCS.map((doc) => (
             <button
               key={doc.id}
+              className="sl-card"
               onClick={() => setActive(doc.id)}
               style={{
                 display: 'flex',
@@ -114,6 +116,7 @@ export default function Legal() {
         /* ── Document view ── */
         <div>
           <button
+            className="min-h-12"
             onClick={() => setActive(null)}
             style={{
               display: 'inline-flex',

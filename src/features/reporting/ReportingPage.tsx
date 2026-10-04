@@ -208,13 +208,13 @@ export default function ReportingPage() {
   }
 
   return (
-    <div className="sl-page fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+    <div className="sl-page fade-in space-y-6">
+      <div className="sl-page-header sl-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 p-6">
         <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">Reporting workspace</p><h1 className="sl-page-title">
             Dietary Cost & Compliance Reporting
           </h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
+          <p className="sl-page-subtitle">
             Cost per resident day, therapeutic compliance, allergy audit risk, substitutions, and production variance.
           </p>
         </div>
@@ -232,14 +232,14 @@ export default function ReportingPage() {
             type="date"
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }}
+            style={{ minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }}
           />
           <span style={{ color: 'var(--text-muted)' }}>to</span>
           <input
             type="date"
             value={endDate}
             onChange={e => setEndDate(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }}
+            style={{ minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }}
           />
           <button
             onClick={handlePrintSummary}
@@ -260,10 +260,10 @@ export default function ReportingPage() {
       </div>
 
       {/* KPI Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <section className="grid grid-cols-2 xl:grid-cols-3 gap-4" aria-label="Reporting metrics">
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Food Cost / Resident Day</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', marginTop: 4 }}>
             ${summary?.costPerResidentDay ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Target: &lt; $11.50/day</div>
@@ -271,7 +271,7 @@ export default function ReportingPage() {
 
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Total Operating / Res Day</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#2563EB', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: '#2563EB', marginTop: 4 }}>
             ${summary?.totalOperatingCostPerResidentDay ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Food + Dietary Labor</div>
@@ -279,7 +279,7 @@ export default function ReportingPage() {
 
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Substitutions Logged</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', marginTop: 4 }}>
             {summary?.substitutions ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Period total</div>
@@ -287,7 +287,7 @@ export default function ReportingPage() {
 
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Allergy Audit Flags</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#D97706', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: '#D97706', marginTop: 4 }}>
             {summary?.allergyFlagCount ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Residents with active flags</div>
@@ -295,7 +295,7 @@ export default function ReportingPage() {
 
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Special Diet Orders</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', marginTop: 4 }}>
             {summary?.specialDietCount ?? '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Textures & therapeutic</div>
@@ -303,12 +303,12 @@ export default function ReportingPage() {
 
         <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Production Variance</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#16A34A', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>
-            4.8%
+          <div style={{ fontSize: 26, fontWeight: 800, color: '#16A34A', marginTop: 4 }}>
+            —
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Planned vs. Cooked</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Production variance not available</div>
         </div>
-      </div>
+      </section>
 
       {/* Dietary Budget Category Allocation Breakdown (Perishable Food vs Dry Grocery vs Paper Goods vs Chemicals) */}
       <div style={{ background: 'var(--bg-card)', padding: 18, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', marginBottom: 24 }}>
@@ -837,7 +837,7 @@ export default function ReportingPage() {
                   type="date"
                   value={costForm.logDate}
                   onChange={e => setCostForm({ ...costForm, logDate: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                   required
                 />
               </div>
@@ -847,7 +847,7 @@ export default function ReportingPage() {
                   type="number"
                   value={costForm.residentCount}
                   onChange={e => setCostForm({ ...costForm, residentCount: Number(e.target.value) })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                   required
                 />
               </div>
@@ -858,7 +858,7 @@ export default function ReportingPage() {
                   step="0.01"
                   value={costForm.foodCost}
                   onChange={e => setCostForm({ ...costForm, foodCost: Number(e.target.value) })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                   required
                 />
               </div>
@@ -869,7 +869,7 @@ export default function ReportingPage() {
                   value={costForm.notes}
                   onChange={e => setCostForm({ ...costForm, notes: e.target.value })}
                   placeholder="e.g. Special event or holiday meal"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
@@ -904,7 +904,7 @@ export default function ReportingPage() {
                   type="date"
                   value={subForm.mealDate}
                   onChange={e => setSubForm({ ...subForm, mealDate: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                   required
                 />
               </div>
@@ -913,7 +913,7 @@ export default function ReportingPage() {
                 <select
                   value={subForm.mealType}
                   onChange={e => setSubForm({ ...subForm, mealType: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                 >
                   <option value="Breakfast">Breakfast</option>
                   <option value="Lunch">Lunch</option>
@@ -928,7 +928,7 @@ export default function ReportingPage() {
                   value={subForm.originalItem}
                   onChange={e => setSubForm({ ...subForm, originalItem: e.target.value })}
                   placeholder="e.g. Salisbury Steak"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                   required
                 />
               </div>
@@ -939,7 +939,7 @@ export default function ReportingPage() {
                   value={subForm.substituteItem}
                   onChange={e => setSubForm({ ...subForm, substituteItem: e.target.value })}
                   placeholder="e.g. Baked Haddock"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                   required
                 />
               </div>
@@ -950,7 +950,7 @@ export default function ReportingPage() {
                   value={subForm.reason}
                   onChange={e => setSubForm({ ...subForm, reason: e.target.value })}
                   placeholder="e.g. Resident preference / texture modification"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', minHeight: 48, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>

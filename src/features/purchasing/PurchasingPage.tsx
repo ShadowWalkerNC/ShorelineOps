@@ -481,17 +481,17 @@ export default function PurchasingPage() {
   return (
     <div className="sl-page fade-in max-w-7xl mx-auto space-y-6">
       {/* Top Header Bar */}
-      <div className="backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="sl-page-header sl-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 p-6">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">Procurement workspace</p><h1 className="sl-page-title">
               Purchasing &amp; Order Guide
             </h1>
             <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold tracking-tight bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
-              Procurement v5.0
+              Order planning
             </span>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
+          <p className="sl-page-subtitle">
             Multi-distributor procurement, unit cost normalization, split PO generation, and HACCP receiving controls.
           </p>
         </div>
@@ -526,10 +526,10 @@ export default function PurchasingPage() {
       )}
 
       {/* Apple HIG Segmented Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-xl bg-slate-200/50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-700/60 overflow-x-auto no-scrollbar">
+      <div className="sl-pills flex items-center gap-2 p-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('price-matrix')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+          className={`flex items-center gap-2 min-h-12 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 whitespace-nowrap select-none ${
             activeTab === 'price-matrix'
               ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -544,7 +544,7 @@ export default function PurchasingPage() {
 
         <button
           onClick={() => setActiveTab('order-guide')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+          className={`flex items-center gap-2 min-h-12 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 whitespace-nowrap select-none ${
             activeTab === 'order-guide'
               ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -555,7 +555,7 @@ export default function PurchasingPage() {
 
         <button
           onClick={() => setActiveTab('suggested')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+          className={`flex items-center gap-2 min-h-12 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 whitespace-nowrap select-none ${
             activeTab === 'suggested'
               ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -566,7 +566,7 @@ export default function PurchasingPage() {
 
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+          className={`flex items-center gap-2 min-h-12 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 whitespace-nowrap select-none ${
             activeTab === 'catalog'
               ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -577,7 +577,7 @@ export default function PurchasingPage() {
 
         <button
           onClick={() => setActiveTab('orders')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap select-none ${
+          className={`flex items-center gap-2 min-h-12 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 whitespace-nowrap select-none ${
             activeTab === 'orders'
               ? 'bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-sm border border-slate-200/80 dark:border-zinc-700'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -1170,7 +1170,7 @@ export default function PurchasingPage() {
       {activeTab === 'price-matrix' && (
         <div className="space-y-6">
           {/* Header Card with Apple HIG Glass Surface */}
-          <div className="backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-5">
+          <div className="sl-card p-6 sm:p-7 space-y-5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -1435,7 +1435,7 @@ export default function PurchasingPage() {
           </div>
 
           {/* Automated Split Purchase Orders Card (matching mockup bottom panel) */}
-          <div className="backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-4">
+          <div className="sl-card p-6 sm:p-7 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">

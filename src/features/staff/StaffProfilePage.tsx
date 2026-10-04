@@ -43,8 +43,8 @@ const CALLOUT_REASON_COLOR: Record<string, string> = {
 
 function InfoRow({ label, value }: { label: string; value?: string | React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
-      <dt style={{ width: 180, flexShrink: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingTop: 2 }}>{label}</dt>
+    <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-3 border-b border-slate-200 dark:border-slate-700">
+      <dt style={{ minWidth: 140, flexShrink: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingTop: 2 }}>{label}</dt>
       <dd style={{ flex: 1, fontSize: 14, color: 'var(--text-primary)', margin: 0 }}>{value ?? <span style={{ color: 'var(--text-muted)' }}>—</span>}</dd>
     </div>
   )
@@ -52,7 +52,7 @@ function InfoRow({ label, value }: { label: string; value?: string | React.React
 
 function SectionCard({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', marginBottom: 20, boxShadow: 'var(--shadow-sm)' }}>
+    <div className="sl-card p-6 mb-5">
       {title && <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{title}</h3>}
       {children}
     </div>
@@ -341,7 +341,7 @@ export default function StaffProfilePage() {
 
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.4px' }}>{displayName}</h1>
+              <h1 className="sl-page-title">{displayName}</h1>
               <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: badge.bg, color: badge.color }}>{profile.status}</span>
             </div>
             <div style={{ marginTop: 5, fontSize: 14, color: 'var(--text-muted)' }}>

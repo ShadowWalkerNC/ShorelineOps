@@ -1,0 +1,100 @@
+/* Shared Stitch precision language and HIG interaction patterns. Safety colors
+   represent domain states; this stylesheet never changes domain behavior. */
+:root {
+  --bg-app: #f7f9fb;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f2f4f6;
+  --bg-input: #f7f9fb;
+  --border-color: #dfe7e3;
+  --border-focus: #008272;
+  --text-primary: #191c1e;
+  --text-secondary: #40564e;
+  --text-muted: #596c64;
+  --color-primary-light: #e5f3ef;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --input-height: 48px;
+  --shadow-sm: 0 1px 3px rgb(20 45 35 / 4%);
+  --shadow-md: 0 8px 24px rgb(20 45 35 / 8%);
+}
+.dark {
+  --bg-app: #101b18;
+  --bg-card: #182522;
+  --bg-card-hover: #20322c;
+  --bg-input: #15211d;
+  --border-color: #33453f;
+  --text-primary: #e6efeb;
+  --text-secondary: #c1d1c9;
+  --text-muted: #adbfba;
+  --color-primary-light: #25483e;
+}
+.sl-page { max-width: 1600px; padding: 8px 0 24px; }
+.sl-page-header, .page-header { margin-bottom: 28px; }
+.sl-page-title, .page-title {
+  font-size: clamp(28px, 2.6vw, 36px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1.2;
+}
+.sl-page-subtitle, .page-subtitle {
+  font-size: 15px;
+  line-height: 1.65;
+  margin-top: 10px;
+  max-width: 76ch;
+}
+.sl-eyebrow { color: var(--color-primary); font-size: 11px; letter-spacing: .09em; }
+.sl-card, .sl-card-sm, .controls-bar { box-shadow: none; }
+.sl-section-title { font-size: 22px; line-height: 1.3; font-weight: 650; }
+.stitch-shell-header {
+  background: rgb(247 249 251 / 88%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.dark .stitch-shell, .dark .stitch-shell-header { background: var(--bg-app); color: var(--text-primary); }
+.dark .stitch-shell-sidebar, .dark .stitch-shell-rail,
+.dark .stitch-shell-drawer-dialog, .dark .stitch-shell-bottom { background: var(--bg-card); }
+.dark .stitch-shell .clinical-nav-item:not([aria-current=page]) { color: var(--text-secondary); }
+.stitch-shell :where(button, [role=button], [role=tab]),
+.stitch-standalone :where(button, [role=button]) { min-height: 48px; }
+.stitch-shell :where(input:not([type=checkbox]):not([type=radio]):not([type=range]), select),
+.stitch-standalone :where(input:not([type=checkbox]):not([type=radio]), select) { min-height: 48px; }
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid #008272;
+  outline-offset: 3px;
+}
+.dark :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline-color: #75d8c5; }
+.stitch-shell :where(button, input, select, textarea) { scroll-margin-block: 24px; }
+.stitch-shell :where(th, td) { font-variant-numeric: tabular-nums; }
+.stitch-profile-row { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 12px; }
+.stitch-profile-row > :last-child { min-width: 0; overflow-wrap: anywhere; }
+.stitch-profile-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.stitch-standalone { min-height: 100dvh; padding: 32px 20px; background: var(--bg-app); color: var(--text-primary); }
+.stitch-offline { display: grid; place-items: center; }
+.stitch-offline-card { width: min(100%, 520px); padding: 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+.stitch-offline-card p { color: var(--text-secondary); line-height: 1.7; }
+.stitch-offline-guidance { text-align: left; padding: 16px; background: var(--color-warning-light); color: #7b4d05 !important; border-left: 3px solid var(--color-warning); border-radius: 8px; font-size: 13px; }
+.stitch-legal-index { display: grid; gap: 12px; }
+.stitch-legal-index button { min-height: 88px; }
+.stitch-setup :where(input:not([type=checkbox]):not([type=radio]), select) { font-size: 16px; }
+.stitch-dialog { max-height: calc(100dvh - 48px); overflow-y: auto; }
+@media (max-width: 767px) {
+  .sl-page-header, .page-header { margin-bottom: 20px; }
+  .sl-page-subtitle, .page-subtitle { font-size: 14px; }
+  .sl-card { padding: 20px; }
+  .stitch-profile-row { grid-template-columns: minmax(0,1fr); gap: 4px; }
+  .stitch-offline-card { padding: 24px 20px; }
+  .stitch-shell input:not([type=checkbox]):not([type=radio]), .stitch-shell select, .stitch-shell textarea { font-size: 16px; }
+  .stitch-dialog { width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .stitch-shell-header { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg-app); }
+}
+@media print {
+  .stitch-shell { height: auto; overflow: visible; display: block; }
+  .stitch-shell-sidebar, .stitch-shell-rail, .stitch-shell-header, .stitch-shell-bottom { display: none !important; }
+  .stitch-shell-body, .stitch-shell-main { display: block; overflow: visible; height: auto; padding: 0; }
+}

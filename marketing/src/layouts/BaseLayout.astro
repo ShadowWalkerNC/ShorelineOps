@@ -115,66 +115,32 @@ const schemaJson = JSON.stringify([
     <script type="application/ld+json" set:html={schemaJson} />
 
   </head>
-  <body class="bg-[#fbfbfc] dark:bg-obsidian text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-shoreline-500 selection:text-white flex flex-col min-h-screen">
-    <!-- Precision Architectural Header Navigation -->
-    <header class="sticky top-0 z-50 border-b border-slate-200/80 dark:border-obsidian-border bg-white/95 dark:bg-obsidian/95 backdrop-blur-xl transition-colors">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
-        <a href="/" class="flex items-center gap-3 group">
-          <img
-            src="/brand/shorelineops-icon.svg"
-            alt="Shoreline Care OS"
-            class="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform"
-          />
-          <div class="flex items-center gap-2">
-            <span class="font-display font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">Shoreline<span class="text-shoreline-600 dark:text-shoreline-400">Ops</span></span>
-            <span class="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-shoreline-700 dark:text-shoreline-300 bg-shoreline-50 dark:bg-shoreline-950 px-2 py-0.5 rounded-md border border-shoreline-200/70 dark:border-shoreline-800/60 font-mono">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              CARE OS v5.0
-            </span>
-          </div>
-        </a>
-
-        <nav class="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-600 dark:text-slate-300">
-          <a href="/#features" class="hover:text-shoreline-600 dark:hover:text-white transition-colors">Platform Features</a>
-          <a href="/#split-mrp" class="hover:text-shoreline-600 dark:hover:text-white transition-colors">Split MRP</a>
-          <a href="/#clinical-safety" class="hover:text-shoreline-600 dark:hover:text-white transition-colors">Clinical IDDSI</a>
-          <a href="/pricing" class="hover:text-shoreline-600 dark:hover:text-white transition-colors">Pricing &amp; Open Core</a>
-          <a href="/distributors" class="hover:text-shoreline-600 dark:hover:text-white transition-colors">Distributors</a>
+  <body data-marketing-page={Astro.url.pathname.replaceAll('/', '') || 'home'} class="bg-[#fbfbfc] dark:bg-obsidian text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-shoreline-500 selection:text-white flex flex-col min-h-screen">
+    <a class="marketing-skip" href="#main-content">Skip to content</a>
+    <header class="marketing-header">
+      <div class="marketing-header-row">
+        <a href="/" class="marketing-brand" aria-label="ShorelineOps home"><img src="/brand/shorelineops-icon.svg" alt="" width="40" height="40" /><span>Shoreline<span>Ops</span><small>Care operations</small></span></a>
+        <nav class="marketing-desktop-nav" aria-label="Main navigation">
+          <a href="/#features">Platform</a><a href="/pricing" aria-current={Astro.url.pathname === '/pricing' ? 'page' : undefined}>Pricing</a><a href="/distributors" aria-current={Astro.url.pathname === '/distributors' ? 'page' : undefined}>Distributors</a><a href="/story" aria-current={Astro.url.pathname === '/story' ? 'page' : undefined}>Our story</a>
         </nav>
-
-        <div class="flex items-center gap-2 sm:gap-3">
-          <a
-            href="https://github.com/ShadowWalkerNC/ShorelineOps"
-            target="_blank"
-            rel="noreferrer"
-            class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-obsidian-border bg-slate-50 dark:bg-obsidian-surface text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all hidden sm:flex items-center gap-1.5 shadow-2xs active:scale-[0.98]"
-          >
-            <Icon name="github" class="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
-            <span>GitHub</span>
-          </a>
-          <a
-            href={APP_URL}
-            class="text-xs font-semibold px-3 py-1.5 sm:py-2 rounded-lg border border-slate-200 dark:border-obsidian-border bg-white dark:bg-obsidian-surface text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-[0.98]"
-          >
-            <span>Staff Portal</span>
-          </a>
-          <a
-            href={DEMO_URL}
-            class="inline-flex items-center justify-center px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 dark:bg-shoreline-600 dark:hover:bg-shoreline-500 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] gap-1.5"
-          >
-            <span>Live Sandbox</span>
-            <Icon name="arrow-right" class="w-3.5 h-3.5" />
-          </a>
-        </div>
+        <div class="marketing-header-actions"><a class="marketing-secondary marketing-staff" href={APP_URL}>Staff sign-in</a><a class="marketing-primary" href={DEMO_URL}>Explore demo <Icon name="arrow-right" class="w-4 h-4" /></a></div>
+        <details class="marketing-mobile-menu"><summary aria-label="Open navigation"><span></span><span></span><span></span></summary><nav aria-label="Mobile navigation"><a href="/#features">Platform</a><a href="/pricing">Pricing</a><a href="/distributors">Distributors</a><a href="/story">Our story</a><a href="/security">Security</a><a href={APP_URL}>Staff sign-in</a><a href={DEMO_URL}>Explore demo</a></nav></details>
       </div>
     </header>
 
-    <main class="flex-1">
+    <script>
+      const menu = document.querySelector<HTMLDetailsElement>('.marketing-mobile-menu')
+      menu?.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { menu.open = false; menu.querySelector('summary')?.focus() }
+      })
+      menu?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { menu.open = false }))
+    </script>
+    <main id="main-content" class="marketing-content flex-1">
       <slot />
     </main>
 
     <!-- Apple HIG Clean Footer -->
-    <footer class="border-t border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-950/80 py-12 text-slate-500 dark:text-slate-400 text-xs">
+    <footer class="marketing-footer border-t border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-950/80 py-12 text-slate-500 dark:text-slate-400 text-xs">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-10">
         <div>
           <div class="flex items-center gap-2 mb-2.5">

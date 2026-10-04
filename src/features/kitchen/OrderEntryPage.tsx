@@ -1,3 +1,4 @@
+import '@/features/kitchen/stitch-operations.css'
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
@@ -536,15 +537,18 @@ function OrderEntryPageInner() {
   }, [residents])
 
   return (
-    <KitchenFitShell className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+    <KitchenFitShell className="sl-page stitch-operations">
       {/* ── Apple Page Header Card ── */}
-      <AppleCard className="p-4 sm:p-6 border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <AppleCard className="stitch-operation-heading-surface">
+        <div className="sl-page-header stitch-operation-header">
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+              <div className="stitch-operation-heading">
+            <div className="sl-eyebrow stitch-operation-eyebrow">Meal planning / Resident selections</div>
+            <h1 className="sl-page-title">
                 Meal Tally &amp; Selection Entry
               </h1>
+            </div>
               <AppleBadge color="blue" dot className="text-xs">
                 {formatWeekLabel(week)}
               </AppleBadge>
@@ -563,7 +567,7 @@ function OrderEntryPageInner() {
             ) : (
               <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                Synced
+                Not saving
               </span>
             )}
             <KitchenModeToggle />

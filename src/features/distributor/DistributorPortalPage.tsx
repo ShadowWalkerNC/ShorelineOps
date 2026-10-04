@@ -240,7 +240,7 @@ export default function DistributorPortalPage() {
   const matchPercentage = items.length > 0 ? Math.round((matchedCount / items.length) * 100) : 0
 
   return (
-    <div style={{ padding: '24px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="sl-page space-y-6 max-w-7xl mx-auto">
       {/* Toast message */}
       {message && (
         <div
@@ -267,30 +267,17 @@ export default function DistributorPortalPage() {
       )}
 
       {/* Header Banner */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%)',
-          borderRadius: 'var(--radius-xl)',
-          border: '1px solid rgba(139, 92, 246, 0.2)',
-          padding: '24px 28px',
-          marginBottom: 24,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 16,
-        }}
-      >
+      <div className="sl-page-header sl-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 p-6">
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: '#EDE9FE', color: '#6D28D9', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
             <Store style={{ width: 14, height: 14 }} />
-            <span>Distributor & Vendor Partner Ecosystem</span>
+            <span>Vendor workspace</span>
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-            Distributor Operations & Product Matching Desk
+          <h1 className="sl-page-title">
+            Distributor catalogs
           </h1>
-          <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
-            Manage supplier catalogs, upload price guides, and resolve cross-vendor product matches ("Match & Crush") for CulinaryOS.
+          <p className="sl-page-subtitle">
+            Manage supplier catalogs, upload price guides and review product matches for ShorelineOps.
           </p>
         </div>
 
@@ -309,7 +296,7 @@ export default function DistributorPortalPage() {
                 fontSize: 15,
                 color: 'var(--text-primary)',
                 cursor: 'pointer',
-                outline: 'none',
+                minHeight: 48,
               }}
             >
               {vendors.map(v => (
@@ -323,7 +310,7 @@ export default function DistributorPortalPage() {
       </div>
 
       {/* KPI Highlights Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-label="Catalog overview">
         <div style={{ background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-2xs)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>TOTAL CATALOG ITEMS</span>

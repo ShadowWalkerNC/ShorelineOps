@@ -517,7 +517,7 @@ const INV_TABS: { id: InventoryTab; label: string; icon: LucideIcon }[] = [
 
 export default function InventoryPage() {
   const [tab, setTab] = useState<InventoryTab>('stock')
-  const { fetch, importLegacy, loading } = useInventoryStore()
+  const { fetch, importLegacy, loading, stockItems, getLowParItems, getZeroItems } = useInventoryStore()
 
   // Cutover: one-time import of this device's legacy localStorage rows onto
   // the server, then every tab reads the shared server state.
@@ -530,11 +530,14 @@ export default function InventoryPage() {
   }, [importLegacy, fetch])
 
   return (
-    <div className="sl-page fade-in">
-      <div className="sl-page-header">
+    <div className="sl-page fade-in space-y-6">
+      <div className="sl-page-header sl-card p-6"><p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">Supply operations</p>
         <h1 className="sl-page-title">Inventory &amp; Waste</h1>
         <p className="sl-page-subtitle">Stock, waste log, zero-balance counts, and usage trends.</p>
       </div>
+      <section aria-label="Stock overview" className="grid grid-cols-3 gap-3">
+        {[{ label: 'Stock records', value: stockItems.length }, { label: 'Below par', value: getLowParItems().length }, { label: 'Zero stock', value: getZeroItems().length }].map(metric => <div className="sl-card p-4 sm:p-5" key={metric.label}><p className="text-xs text-slate-500 dark:text-slate-300">{metric.label}</p><strong className="mt-2 block text-2xl font-semibold text-teal-700 dark:text-teal-300">{loading ? '…' : metric.value}</strong></div>)}
+      </section>
       <div className="sl-pills" style={{ marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
         {INV_TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={tab === t.id ? 'sl-pill active' : 'sl-pill'} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -543,7 +546,7 @@ export default function InventoryPage() {
           </button>
         ))}
       </div>
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)', boxShadow: 'var(--shadow-sm)', opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+      <div className="sl-card p-4 sm:p-6" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
         {tab === 'stock'  && <StockTab />}
         {tab === 'waste'  && <WasteTab />}
         {tab === 'count'  && <ZeroBalanceTab />}

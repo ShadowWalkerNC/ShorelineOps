@@ -67,15 +67,15 @@ export default function StaffPage() {
     <div className="sl-page">
 
       {/* Page header */}
-      <div className="sl-page-header flex items-center justify-between flex-wrap gap-3" style={{ marginBottom: 'var(--space-6)' }}>
+      <div className="sl-page-header sl-card p-6 flex items-center justify-between flex-wrap gap-5" style={{ marginBottom: 'var(--space-6)' }}>
         <div>
-          <h1 className="sl-page-title">Staff</h1>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">People & access</p><h1 className="sl-page-title">Staff directory</h1>
           <p className="sl-page-subtitle">
             {filtered.length} of {profiles.length} employee{profiles.length !== 1 ? 's' : ''}
           </p>
         </div>
         {user?.role === 'admin' && (
-          <button className="btn btn-primary" onClick={() => navigate('/staff/new')}>
+          <button className="sl-btn sl-btn-primary min-h-12" onClick={() => navigate('/staff/new')}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
             Add Employee
           </button>
@@ -83,23 +83,23 @@ export default function StaffPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2" style={{ marginBottom: 'var(--space-5)' }}>
+      <div className="sl-card p-4 flex flex-wrap gap-3" style={{ marginBottom: 'var(--space-5)' }}>
         <input
-          className="sl-input sl-search"
+          className="sl-input sl-search" aria-label="Search staff"
           placeholder="Search name, position, ID…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 200 }}
         />
-        <select className="sl-select" value={dept} onChange={e => setDept(e.target.value as Department | 'All')} style={{ minWidth: 160 }}>
+        <select className="sl-select" aria-label="Department" value={dept} onChange={e => setDept(e.target.value as Department | 'All')} style={{ minWidth: 160 }}>
           <option value="All">All Departments</option>
           {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
-        <select className="sl-select" value={status} onChange={e => setStatus(e.target.value as StaffStatus | 'All')} style={{ minWidth: 140 }}>
+        <select className="sl-select" aria-label="Staff status" value={status} onChange={e => setStatus(e.target.value as StaffStatus | 'All')} style={{ minWidth: 140 }}>
           <option value="All">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select className="sl-select" value={roleFilter} onChange={e => setRole(e.target.value as UserRole | 'All')} style={{ minWidth: 130 }}>
+        <select className="sl-select" aria-label="Staff role" value={roleFilter} onChange={e => setRole(e.target.value as UserRole | 'All')} style={{ minWidth: 130 }}>
           <option value="All">All Roles</option>
           {(['admin','manager','dietary','activities','server','staff','readonly'] as UserRole[]).map(r => (
             <option key={r} value={r}>{ROLE_LABEL[r]}</option>

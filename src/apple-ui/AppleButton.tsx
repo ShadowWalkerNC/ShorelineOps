@@ -1,7 +1,7 @@
 import React, { type ButtonHTMLAttributes } from "react";
 
 export type AppleButtonVariant =
-  | "primary"     // System filled blue (#0071e3)
+  | "primary"     // Shoreline clinical teal
   | "secondary"   // System filled gray
   | "tinted"      // Translucent tinted blue
   | "plain"       // Borderless text button
@@ -32,7 +32,7 @@ const variantStyles: Record<AppleButtonVariant, string> = {
   destructive:
     "bg-[#ff3b30] text-white hover:bg-[#e0352a] active:bg-[#c92f25]",
   success:
-    "bg-[#34c759] text-white hover:bg-[#2eb34f] active:bg-[#289e45]",
+    "bg-emerald-700 text-white hover:bg-emerald-800 active:bg-emerald-900",
 };
 
 const sizeStyles: Record<AppleButtonSize, string> = {
@@ -55,7 +55,7 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
   return (
     <button
       disabled={disabled}
-      className={`inline-flex items-center justify-center select-none font-[-apple-system,BlinkMacSystemFont,"SF_Pro_Text",sans-serif] tracking-tight transition-all duration-150 active:scale-[0.98] disabled:opacity-45 disabled:pointer-events-none ${
+      className={`inline-flex items-center justify-center select-none font-[-apple-system,BlinkMacSystemFont,"SF_Pro_Text",sans-serif] tracking-tight transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 active:scale-[0.98] disabled:opacity-45 disabled:pointer-events-none ${
         variantStyles[variant]
       } ${sizeStyles[size]} ${fullWidth ? "w-full" : ""} ${className}`}
       {...props}
