@@ -1,368 +1,89 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+import { Fragment, useState } from 'react'
+import { AppleButton } from '@/apple-ui'
 import { useDevice } from '@/hooks/useDevice'
 import { useAuth } from '@/security/AuthContext'
-import type { Resident } from '@/types/resident'
-import {
-  User,
-  Heart,
-  AlertTriangle,
-  MapPin,
-  Coffee,
-  Calendar,
-  ChevronRight,
-  ShieldCheck,
-  LayoutGrid,
-  List as ListIcon,
-  Flame,
-  Sparkles,
-  Stethoscope,
-  Activity,
-  FileCheck2,
-  AlertOctagon,
-  Eye,
-  Edit2,
-  Trash2,
-} from 'lucide-react'
+import { iddsiChipLabel, type Resident } from '@/types/resident'
+import { AlertOctagon, AlertTriangle, ChevronDown, LayoutGrid, List, MapPin, Trash2 } from 'lucide-react'
 
-type Props = {
-  residents: Resident[]
-  onEdit: (r: Resident) => void
-  onDelete: (id: string) => void
+type Props = { residents: Resident[]; onEdit: (r: Resident) => void; onDelete: (id: string) => void }
+
+function SafetyOrders({ resident: r }: { resident: Resident }) {
+  return <div className="census-orders">
+    {r.is_npo === true && <p className="census-npo"><AlertOctagon size={18} aria-hidden="true" /><span><strong>NPO HARD-BLOCK · No food or liquids</strong>{r.npo_reason && <span className="block">{r.npo_reason}</span>}</span></p>}
+    <div className="census-order-line"><strong>{r.dietType}</strong><span>{iddsiChipLabel(r.texture)}</span></div>
+    {r.fluidConsistency && <p className="census-secondary">Liquids: {r.fluidConsistency}</p>}
+    {r.fluid_restriction_ml != null && <p className="census-restriction">Fluid restriction: {r.fluid_restriction_ml} mL/day</p>}
+  </div>
 }
 
-const TEXTURE_COLORS: Record<string, { bg: string; color: string; border: string; iddsi: string }> = {
-  Regular:          { bg: 'rgba(15,23,42,0.06)',    color: '#334155', border: 'rgba(15,23,42,0.2)',    iddsi: 'IDDSI Level 7' },
-  'Cut-Up':         { bg: 'rgba(2,132,199,0.1)',    color: '#0284c7', border: 'rgba(2,132,199,0.3)',   iddsi: 'IDDSI Level 6' },
-  Minced:           { bg: 'rgba(245,158,11,0.12)',  color: '#b45309', border: 'rgba(245,158,11,0.35)', iddsi: 'IDDSI Level 5' },
-  'Minced & Moist': { bg: 'rgba(245,158,11,0.12)',  color: '#b45309', border: 'rgba(245,158,11,0.35)', iddsi: 'IDDSI Level 5' },
-  Pureed:           { bg: 'rgba(16,185,129,0.12)',  color: '#047857', border: 'rgba(16,185,129,0.35)', iddsi: 'IDDSI Level 4' },
+function Allergies({ resident: r }: { resident: Resident }) {
+  return r.allergies?.length > 0
+    ? <p className="census-allergies"><AlertTriangle size={16} aria-hidden="true" /><span><strong>Food exclusions</strong><span className="block">{r.allergies.join(', ')}</span></span></p>
+    : <span className="census-secondary">No food allergies recorded</span>
 }
 
-const STATUS_COLORS: Record<Resident['status'], 'green' | 'orange' | 'blue' | 'gray'> = {
-  Active: 'green',
-  Hospital: 'orange',
-  LOA: 'blue',
-  'Passed Away': 'gray',
-}
-
-function ResidentAppleCard({ r, onEdit, onDelete }: { r: Resident; onEdit: (r: Resident) => void; onDelete: (id: string) => void }) {
-  const { hasCapability } = useAuth()
-  const canEdit = hasCapability('residents.write') || hasCapability('residents.clinicalWrite')
-  const canDelete = hasCapability('residents.delete')
-  const navigate = useNavigate()
-  const [expanded, setExpanded] = useState(false)
-  const textureInfo = TEXTURE_COLORS[r.texture] || TEXTURE_COLORS.Regular
-
-  // Avatar initial color
-  const avatarColors = ['#0d9488', '#0284c7', '#8b5cf6', '#f59e0b', '#6366f1', '#10b981']
-  const colorIndex = (r.name.charCodeAt(0) + (r.room.charCodeAt(0) || 0)) % avatarColors.length
-  const avatarBg = avatarColors[colorIndex]
-
-  // B02: typed NPO flag — no more dietType string-sniffing.
-  const isNpo = r.is_npo === true
-
-  return (
-    <AppleCard
-      className={`flex flex-col justify-between transition-all duration-200 relative group overflow-hidden border ${
-        isNpo
-          ? 'border-red-500 bg-red-950/10 dark:bg-red-950/20'
-          : 'border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-slate-900/95'
-      } rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-teal-500/40`}
-    >
-      <div>
-        {/* Clinical Chart MRN & Bed Ribbon */}
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-100 dark:border-slate-800 text-[10px] font-mono font-bold text-slate-400">
-          <div className="flex items-center gap-1.5 text-teal-700 dark:text-teal-400">
-            <Activity className="w-3 h-3 text-teal-600" />
-            <span>MRN: SH-{r.id?.slice(0, 5) || '1004'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>UNIT: {r.room?.charAt(0) ? `WING ${r.room.charAt(0).toUpperCase()}` : 'MAIN'}</span>
-            <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-            <span className="text-slate-500">v{(r as any).profile_version || 1}.0</span>
-          </div>
-        </div>
-
-        {/* Card Header: Room + Patient Name + Status */}
-        <div className="flex items-start justify-between gap-3 mb-3.5">
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold text-base shadow-xs shrink-0 font-sans"
-              style={{ background: avatarBg }}
-            >
-              {r.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 dark:text-white text-base tracking-tight truncate font-sans">
-                  {r.name}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
-                  Room {r.room}
-                </span>
-                <AppleBadge color={STATUS_COLORS[r.status]} dot={r.status === 'Active'}>
-                  {r.status}
-                </AppleBadge>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* NPO HARD ALERT BANNER */}
-        {isNpo && (
-          <div className="p-2.5 rounded-xl bg-red-600 text-white font-black text-xs flex items-center gap-2 mb-3 shadow-sm animate-pulse">
-            <AlertOctagon className="w-4 h-4 shrink-0" />
-            <span>NPO HARD-BLOCK: NIL PER OS (NO FOOD/LIQUIDS){r.npo_reason ? ` — ${r.npo_reason}` : ''}</span>
-          </div>
-        )}
-
-        {/* Clinical Diet & Texture Section */}
-        <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-850 border border-slate-200/70 dark:border-slate-800 mb-3 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-              <Stethoscope className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-              Physician Diet Order
-            </span>
-            <span className="font-bold text-slate-900 dark:text-slate-100">
-              {r.dietType}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              IDDSI Texture
-            </span>
-            <span
-              className="font-bold px-2 py-0.5 rounded-md text-[11px]"
-              style={{ background: textureInfo.bg, color: textureInfo.color, border: `1px solid ${textureInfo.border}` }}
-            >
-              {r.texture} &middot; {textureInfo.iddsi}
-            </span>
-          </div>
-
-          {r.fluidConsistency && r.fluidConsistency !== 'Thin' && (
-            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50">
-              <span className="text-slate-500 font-medium">Liquid Consistency</span>
-              <span className="font-bold text-teal-700 dark:text-teal-300 font-mono text-[11px]">
-                {r.fluidConsistency}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Allergen Alerts Block */}
-        {r.allergies && r.allergies.length > 0 ? (
-          <div className="mb-3 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 mb-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>CLINICAL ALLERGY EXCLUSIONS ({r.allergies.length})</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {r.allergies.map(a => (
-                <span
-                  key={a}
-                  className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-white dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700"
-                >
-                  {a}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="mb-3 p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40 flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>No Known Drug or Food Allergies (NKDA)</span>
-          </div>
-        )}
-
-        {/* Location & Nutrition Supplement */}
-        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-slate-400" />
-            <span>{r.servingLocation}</span>
-            {r.tableAssignment && <span className="font-mono text-slate-700 dark:text-slate-300">({r.tableAssignment})</span>}
-          </div>
-          {r.ensurePerDay > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 text-[11px] font-bold">
-              {r.ensurePerDay} Ensure/day
-            </span>
-          )}
-        </div>
-
-        {/* Expanded Clinical Chart Accordion */}
-        {expanded && (
-          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 animate-fadeIn">
-            {r.beverages && r.beverages.length > 0 && (
-              <div>
-                <span className="font-bold text-slate-400 uppercase text-[10px] block">Prescribed Beverages</span>
-                <span>{r.beverages.join(', ')}</span>
-              </div>
-            )}
-            {r.likes && (
-              <div>
-                <span className="font-bold text-slate-400 uppercase text-[10px] block">Patient Preferences</span>
-                <span className="text-emerald-700 dark:text-emerald-300">{r.likes}</span>
-              </div>
-            )}
-            {r.dislikes && (
-              <div>
-                <span className="font-bold text-slate-400 uppercase text-[10px] block">Refusals / Dislikes</span>
-                <span className="text-rose-700 dark:text-rose-300">{r.dislikes}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Clinical Card Action Bar */}
-      <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs font-semibold text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
-        >
-          {expanded ? '▲ Collapse Chart' : '▼ View Chart'}
-        </button>
-
-        <div className="flex items-center gap-1.5">
-          {canEdit && (
-            <AppleButton
-              variant="secondary"
-              size="sm"
-              icon={<Edit2 className="w-3.5 h-3.5" />}
-              onClick={() => onEdit(r)}
-            >
-              Edit Order
-            </AppleButton>
-          )}
-          {canDelete && (
-            <button
-              onClick={() => onDelete(r.id)}
-              className="w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition-colors"
-              title="Archive Patient Record"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-    </AppleCard>
-  )
+function ChartDetails({ resident: r }: { resident: Resident }) {
+  const entries = [
+    ['Portion size', r.portionSize],
+    ['Birthday', r.birthdayMonth && r.birthdayDay ? ` ` : ''],
+    ['Prescribed beverages', r.beverages?.join(', ')],
+    ['Preferences', r.likes],
+    ['Dislikes', r.dislikes],
+    ['Special instructions', r.specialInstructions],
+    ['Adaptive equipment', r.adaptiveEquipment?.join(', ')],
+    ['Nutrition supplement', r.ensurePerDay > 0 ? `${r.ensurePerDay} Ensure/day` : ''],
+  ].filter(([, value]) => value)
+  return <dl className="census-chart-details">{entries.length ? entries.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>) : <div><dt>Additional chart details</dt><dd>No additional information recorded.</dd></div>}</dl>
 }
 
 export default function ResidentCardList({ residents, onEdit, onDelete }: Props) {
   const { hasCapability } = useAuth()
   const canEdit = hasCapability('residents.write') || hasCapability('residents.clinicalWrite')
+  const canDelete = hasCapability('residents.delete')
   const { isMobile } = useDevice()
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table')
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const toggleChart = (id: string) => setExpandedIds(previous => {
+    const next = new Set(previous)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+  const chartButton = (r: Resident) => <button className="census-chart-toggle" aria-expanded={expandedIds.has(r.id)} aria-controls={`chart-${r.id}`} onClick={() => toggleChart(r.id)}><ChevronDown size={16} aria-hidden="true" className={expandedIds.has(r.id) ? 'rotate-180' : ''} />{expandedIds.has(r.id) ? 'Hide details' : 'Chart details'}<span className="sr-only"> for {r.name}</span></button>
+  const actions = (r: Resident) => <div className="census-actions">
+    {canEdit && <AppleButton variant="secondary" size="sm" onClick={() => onEdit(r)}>Edit order<span className="sr-only"> for {r.name}</span></AppleButton>}
+    {canDelete && <button className="census-delete" onClick={() => onDelete(r.id)} aria-label={`Delete resident ${r.name}`}><Trash2 size={17} aria-hidden="true" /></button>}
+    {!canEdit && !canDelete && <span className="census-secondary">View only</span>}
+  </div>
 
-  return (
-    <div className="space-y-4">
-      {/* View Switcher */}
-      <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-1">
-        <span>Showing <strong className="text-slate-900 dark:text-white font-mono">{residents.length}</strong> Clinical Profiles</span>
-        {!isMobile && (
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`py-1 px-2.5 rounded-lg flex items-center gap-1.5 transition-all ${
-                viewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-xs' : 'text-slate-400'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Chart Cards</span>
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`py-1 px-2.5 rounded-lg flex items-center gap-1.5 transition-all ${
-                viewMode === 'table' ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 font-bold shadow-xs' : 'text-slate-400'
-              }`}
-            >
-              <ListIcon className="w-3.5 h-3.5" />
-              <span>EMR Census Table</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {viewMode === 'grid' || isMobile ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-          {residents.map(r => (
-            <ResidentAppleCard key={r.id} r={r} onEdit={onEdit} onDelete={onDelete} />
-          ))}
-        </div>
-      ) : (
-
-        <AppleCard className="p-0 overflow-hidden border border-slate-200 dark:border-slate-800">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs divide-y divide-slate-200 dark:divide-slate-800">
-              <thead className="bg-slate-50 dark:bg-slate-850 text-[10px] font-mono uppercase font-bold text-slate-400">
-                <tr>
-                  <th className="p-3">MRN / Room</th>
-                  <th className="p-3">Resident Patient Name</th>
-                  <th className="p-3">Physician Diet Order</th>
-                  <th className="p-3">IDDSI Texture</th>
-                  <th className="p-3">Allergy Exclusions</th>
-                  <th className="p-3">Tray Location</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {residents.map(r => {
-                  const textureInfo = TEXTURE_COLORS[r.texture] || TEXTURE_COLORS.Regular
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                      <td className="p-3 font-mono font-bold text-slate-700 dark:text-slate-300">
-                        Room {r.room}
-                      </td>
-                      <td className="p-3 font-bold text-slate-900 dark:text-white">
-                        {r.name}
-                      </td>
-                      <td className="p-3 text-slate-700 dark:text-slate-300">
-                        {r.dietType}
-                      </td>
-                      <td className="p-3">
-                        <span
-                          className="font-bold px-2 py-0.5 rounded-md text-[11px]"
-                          style={{ background: textureInfo.bg, color: textureInfo.color, border: `1px solid ${textureInfo.border}` }}
-                        >
-                          {r.texture} &middot; {textureInfo.iddsi}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        {r.allergies && r.allergies.length > 0 ? (
-                          <span className="font-bold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1">
-                            <AlertTriangle className="w-3.5 h-3.5 inline shrink-0" />
-                            {r.allergies.join(', ')}
-                          </span>
-                        ) : (
-                          <span className="text-emerald-600 dark:text-emerald-400">NKDA</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-slate-500">
-                        {r.servingLocation} {r.tableAssignment && `(${r.tableAssignment})`}
-                      </td>
-                      <td className="p-3 text-right">
-                        {canEdit ? (
-                          <AppleButton variant="secondary" size="sm" onClick={() => onEdit(r)}>
-                            Edit
-                          </AppleButton>
-                        ) : (
-                          <span className="text-xs text-slate-400 font-mono">View Only</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </AppleCard>
-      )}
+  return <section className="census-roster" aria-label="Resident census">
+    <div className="census-roster-heading">
+      <div><h2>Clinical census</h2><p>{residents.length} {residents.length === 1 ? 'resident' : 'residents'} in this view</p></div>
+      {!isMobile && <div className="census-view-switch" aria-label="Census display">
+        <button aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')}><List size={16} aria-hidden="true" />List</button>
+        <button aria-pressed={viewMode === 'grid'} onClick={() => setViewMode('grid')}><LayoutGrid size={16} aria-hidden="true" />Cards</button>
+      </div>}
     </div>
-  )
+    {residents.length === 0 ? <div className="census-empty"><h3>No residents in this view</h3><p>Adjust the search or choose a different census filter.</p></div> : viewMode === 'grid' || isMobile ? <div className="census-card-grid">
+      {residents.map(r => <article key={r.id} className={`census-resident-card ${r.is_npo === true ? 'has-npo' : ''}`}>
+        <header><span className="census-room">Room {r.room || 'Unassigned'}</span><span className={`census-status ${r.status === 'Active' ? 'is-active' : ''}`}>{r.status}</span></header>
+        <h3>{r.name}</h3>
+        <SafetyOrders resident={r} /><Allergies resident={r} />
+        <p className="census-location"><MapPin size={16} aria-hidden="true" />{r.servingLocation}{r.tableAssignment && ` · ${r.tableAssignment}`}</p>
+        {expandedIds.has(r.id) && <div id={`chart-${r.id}`}><ChartDetails resident={r} /></div>}
+        <footer>{chartButton(r)}{actions(r)}</footer>
+      </article>)}
+    </div> : <div className="census-table-scroll"><table className="census-table">
+      <caption className="sr-only">Resident rooms, nutrition orders, allergies and delivery locations</caption>
+      <thead><tr><th scope="col">Resident / room</th><th scope="col">Nutrition order</th><th scope="col">Food allergies</th><th scope="col">Delivery</th><th scope="col">Chart</th></tr></thead>
+      <tbody>{residents.map(r => <Fragment key={r.id}>
+        <tr className={r.is_npo === true ? 'has-npo' : ''}>
+          <th scope="row"><span className="census-room">Room {r.room || 'Unassigned'}</span><span className="census-resident-name">{r.name}</span><span className={`census-status ${r.status === 'Active' ? 'is-active' : ''}`}>{r.status}</span></th>
+          <td><SafetyOrders resident={r} /></td><td><Allergies resident={r} /></td>
+          <td><span>{r.servingLocation}</span>{r.tableAssignment && <span className="census-secondary block">{r.tableAssignment}</span>}{r.ensurePerDay > 0 && <span className="census-secondary block">{r.ensurePerDay} Ensure/day</span>}</td>
+          <td>{actions(r)}{chartButton(r)}</td>
+        </tr>
+        {expandedIds.has(r.id) && <tr className="census-detail-row"><td colSpan={5}><div id={`chart-${r.id}`}><ChartDetails resident={r} /></div></td></tr>}
+      </Fragment>)}</tbody>
+    </table></div>}
+  </section>
 }

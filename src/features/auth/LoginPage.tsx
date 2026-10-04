@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../security/AuthContext'
 import { safeRedirectPath } from '@/lib/safeRedirect'
 import { AppleButton } from '@/apple-ui'
+import '../../components/stitch-shell.css'
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
@@ -115,14 +116,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="clinical-sign-in" style={{
+    <div className="clinical-sign-in stitch-sign-in" style={{
       position: 'fixed', inset: 0,
       background: 'var(--bg-app)',
       backdropFilter: 'blur(8px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 16, zIndex: 10000, overflowY: 'auto',
     }}>
-      <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         <div className="clinical-sign-in-card" style={{
           background: 'var(--bg-card)',
@@ -133,7 +134,7 @@ export default function LoginPage() {
           animation: 'fadeIn 0.3s ease',
         }}>
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="stitch-sign-in-brand flex items-center justify-center gap-3 mb-3">
               <img
                 src="/brand/shorelineops-icon.svg"
                 alt="Shoreline Care OS"
@@ -158,6 +159,7 @@ export default function LoginPage() {
             </div>
           </div>
 
+          <div style={{textAlign:'center'}}><h1 className="stitch-sign-in-heading">{step === 'credentials' ? 'Welcome back' : step === 'mfa' ? 'Verify your identity' : 'Protect your account'}</h1><p className="stitch-sign-in-intro">{step === 'credentials' ? 'Sign in to your clinical nutrition workspace.' : step === 'mfa' ? 'Use your authenticator to continue your session.' : 'Complete the required authenticator setup.'}</p></div>
           <form onSubmit={handleSubmit}>
             {step === 'credentials' && (
               <>
@@ -180,6 +182,8 @@ export default function LoginPage() {
                   Enter the 6-digit code from your authenticator app.
                 </p>
                 <input
+                  aria-label="Authenticator code"
+
                   type="text"
                   inputMode="numeric"
                   pattern="\d{6}"
@@ -234,7 +238,7 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <div style={{
+              <div role="alert" style={{
                 background: '#faf1ef', border: '1px solid rgba(189,110,92,0.25)',
                 color: '#a35a49', padding: '10px 12px',
                 borderRadius: 'var(--radius-md)', fontSize: 13,
@@ -261,8 +265,8 @@ export default function LoginPage() {
         </div>
 
         {(DEMO_MODE || import.meta.env.DEV) && demoAccounts.length > 0 && step === 'credentials' && (
-          <div style={{
-            background: 'rgba(255,255,255,0.04)',
+          <div className="stitch-sign-in-demo" style={{
+            background: 'var(--bg-card)',
             border: '1px dashed rgba(255,255,255,0.15)',
             borderRadius: 'var(--radius-lg)',
             padding: '14px 16px',
@@ -289,7 +293,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: 18 }}>
+        <div className="stitch-sign-in-footer" style={{ textAlign: 'center', marginTop: 18 }}>
           <a
             href="/"
             style={{

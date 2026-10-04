@@ -18,7 +18,7 @@ import {
   ChevronRight,
   ArrowUpDown,
 } from 'lucide-react'
-import type { DashboardViewProps } from './MobileDashboardView'
+import { ClinicalSafetySummary, type DashboardViewProps } from './MobileDashboardView'
 
 export default function TabletDashboardView(props: DashboardViewProps) {
   const navigate = useNavigate()
@@ -55,65 +55,15 @@ export default function TabletDashboardView(props: DashboardViewProps) {
     user,
   } = props
 
-  const npoResidents = active.filter(r => r.is_npo === true)
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto pb-8 animate-fadeIn">
-      {/* ── Tablet Header & Clinical Census Summary ── */}
-      <div className="flex items-center justify-between p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Clinical & Kitchen Operations
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Tablet Supervisory Console &middot; {new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            to="/residents"
-            className="px-3 py-2 rounded-2xl bg-teal-50 dark:bg-teal-950/50 border border-teal-200/70 dark:border-teal-800/70 text-teal-700 dark:text-teal-300 text-xs font-bold flex items-center gap-1.5"
-          >
-            <Users className="w-4 h-4" />
-            <span>{active.length} Active Census</span>
-          </Link>
-          <Link
-            to="/kitchen/sheet"
-            className="px-3 py-2 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/70 dark:border-amber-800/70 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5"
-          >
-            <ChefHat className="w-4 h-4" />
-            <span>Cook Sheet</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* ── NPO Safety Hard-Alert (if present) ── */}
-      {npoResidents.length > 0 && (
-        <div className="p-4 rounded-2xl bg-red-600 text-white shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AlertOctagon className="w-6 h-6 shrink-0" />
-            <div>
-              <div className="text-xs font-black uppercase tracking-wider">
-                SAFETY HARD-BLOCK: {npoResidents.length} Active NPO Resident(s)
-              </div>
-              <div className="text-xs mt-0.5 font-bold">
-                Trays excluded: {npoResidents.map(r => `${r.name} (Rm ${r.room})`).join(', ')}
-              </div>
-            </div>
-          </div>
-          <Link
-            to="/residents"
-            className="px-3 py-1.5 rounded-xl bg-white text-red-600 font-bold text-xs shrink-0 shadow-xs"
-          >
-            Review Orders
-          </Link>
-        </div>
-      )}
-
+    <div className="stitch-dashboard stitch-dashboard-tablet space-y-5 max-w-5xl mx-auto pb-8 animate-fadeIn">
+      <header className="stitch-dashboard-hero"><div><p className="stitch-eyebrow">Clinical nutrition & trayline</p><h1>Your shift at a glance</h1><p className="stitch-hero-description">{new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })} · {loading ? 'Loading census…' : `${active.length} active residents`}</p></div><Link to="/kitchen/sheet" className="stitch-action-primary"><ChefHat size={18}/>Cook worksheet</Link></header>
+      <ClinicalSafetySummary active={active} loading={loading}/>
+      <section className="stitch-workflow-grid" aria-label="Operational workspaces">
+        <Link to="/purchasing" className="stitch-workflow-card"><span className="stitch-eyebrow">Procurement matrix</span><h2>Plan your next purchase</h2><p>{lowParItems.length} items below par · {zeroItems.length} at zero stock</p><span className="stitch-workflow-cta">Open purchasing<ChevronRight size={18}/></span></Link>
+        <Link to="/reporting" className="stitch-workflow-card"><span className="stitch-eyebrow">Survey readiness</span><h2>Evidence in one workspace</h2><p>Review available clinical and operational records.</p><span className="stitch-workflow-cta">Review reports<ChevronRight size={18}/></span></Link>
+      </section>
       {/* ── 4 High-Contrast Tablet KPI Cards (Touch Ergonomics >= 48px) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div
@@ -152,7 +102,7 @@ export default function TabletDashboardView(props: DashboardViewProps) {
             {prodPct}%
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {completedSheets} of {totalSheets || 1} batch sheets signed
+            {completedSheets} of {totalSheets} batch sheets signed
           </div>
         </div>
 
@@ -223,7 +173,7 @@ export default function TabletDashboardView(props: DashboardViewProps) {
                 Lunch Service
               </div>
               <div className="text-xs font-bold text-slate-900 dark:text-white">
-                Option 1: {lunchOpt1.join(', ') || 'Roast Turkey Breast with Herb Gravy'}
+                Option 1: {lunchOpt1.join(', ') || 'No lunch menu loaded'}
               </div>
               {lunchOpt2.length > 0 && (
                 <div className="text-xs text-slate-600 dark:text-slate-300 mt-1">
@@ -237,7 +187,7 @@ export default function TabletDashboardView(props: DashboardViewProps) {
                 Dinner Service
               </div>
               <div className="text-xs font-bold text-slate-900 dark:text-white">
-                Option 1: {dinnerOpt1.join(', ') || 'Baked Atlantic Cod with Lemon Herb'}
+                Option 1: {dinnerOpt1.join(', ') || 'No dinner menu loaded'}
               </div>
               {dinnerOpt2.length > 0 && (
                 <div className="text-xs text-slate-600 dark:text-slate-300 mt-1">

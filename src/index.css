@@ -51,15 +51,15 @@
      All font sizes live here. Pages reference these; nothing is hard-coded.
      Mobile-first; desktop overrides are at the bottom of this file.
   */
-  --text-xs:    11px;   /* eyebrow labels, timestamps, meta */
-  --text-sm:    12px;   /* secondary body, table cells      */
-  --text-base:  14px;   /* primary body, form fields        */
+  --text-xs:    12px;   /* eyebrow labels, timestamps, meta */
+  --text-sm:    13px;   /* secondary body, table cells      */
+  --text-base:  15px;   /* primary body, form fields        */
   --text-md:    15px;   /* slightly emphasized body         */
-  --text-lg:    16px;   /* card titles, section lead        */
+  --text-lg:    18px;   /* card titles, section lead        */
   --text-xl:    18px;   /* sub-page headings (h3)           */
-  --text-2xl:   20px;   /* page sub-headings (h2)           */
-  --text-3xl:   22px;   /* page headings (h1) — mobile      */
-  --text-4xl:   26px;   /* page headings (h1) — desktop     */
+  --text-2xl:   24px;   /* page sub-headings (h2)           */
+  --text-3xl:   28px;   /* page headings (h1) — mobile      */
+  --text-4xl:   34px;   /* page headings (h1) — desktop     */
 
   /* ── Font weights */
   --weight-normal:  400;
@@ -1489,3 +1489,16 @@ table.data-table {
 
 
 .clinical-sign-in .font-display, .shoreline-workspace .font-display { font-family: var(--font-body); }
+
+.stitch-admin { max-width: 1280px; margin-inline: auto; }
+.stitch-admin .clinical-admin-header { padding: 28px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--bg-card); }
+.stitch-admin .clinical-admin-header h1 { font-size: clamp(28px, 3vw, 40px); margin: 12px 0; line-height: 1.15; font-weight: 600; }
+.stitch-admin-eyebrow { display: flex; align-items: center; gap: 8px; color: var(--color-primary); text-transform: uppercase; font-size: 12px; letter-spacing: .08em; }
+.stitch-admin-identity { display: inline-block; margin-top: 16px; font-size: 13px; color: var(--text-secondary); padding: 8px 12px; background: var(--bg-app); border-radius: 8px; }
+.stitch-admin .clinical-admin-group h2 { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+.stitch-admin .clinical-admin-navigation { margin-block: 24px; }
+.stitch-admin .clinical-admin-tab { font-size: 14px; }
+.stitch-admin-content { min-width: 0; min-height: 240px; }
+.stitch-admin-footer { display: flex; align-items: center; gap: 12px; margin-top: 20px; padding: 18px; border-radius: 12px; background: var(--bg-app); color: var(--color-primary); }
+.stitch-admin-footer p { font-size: 13px; flex: 1; }
+@media (max-width: 640px) { .stitch-admin .clinical-admin-header { padding: 20px; } .stitch-admin-content { padding: 16px !important; } }

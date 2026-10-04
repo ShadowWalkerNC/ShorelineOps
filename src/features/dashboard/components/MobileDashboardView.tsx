@@ -1,25 +1,9 @@
-import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
-import {
-  AlertOctagon,
-  AlertTriangle,
-  CheckCircle2,
-  Circle,
-  Clock,
-  Thermometer,
-  Truck,
-  Users,
-  Utensils,
-  ChevronRight,
-  Zap,
-  Boxes,
-  HeartPulse,
-  ChefHat,
-  ShieldCheck,
-  Plus,
-} from 'lucide-react'
+import { AlertOctagon, CheckCircle2, Thermometer, Truck, Users, Utensils, ChevronRight, Boxes } from 'lucide-react'
 import type { Resident } from '@/types/resident'
+import type { StockItem } from '@/state/inventoryStore'
+import type { BudgetPeriod } from '@/state/budgetStore'
+import type { AuthUser } from '@/security/AuthContext'
 
 export interface DashboardViewProps {
   active: Resident[]
@@ -47,15 +31,15 @@ export interface DashboardViewProps {
   completedSheets: number
   totalSheets: number
   prodPct: number
-  lowParItems: any[]
-  zeroItems: any[]
+  lowParItems: StockItem[]
+  zeroItems: StockItem[]
   totalBudget: number
   totalSpent: number
   dailyPerRes: number
   budgetPct: number
-  period: any
+  period: BudgetPeriod
   isManager: boolean
-  user: any
+  user: AuthUser | null
 }
 
 export default function MobileDashboardView(props: DashboardViewProps) {
@@ -87,77 +71,17 @@ export default function MobileDashboardView(props: DashboardViewProps) {
     user,
   } = props
 
-  // NPO Hard-block residents
-  const npoResidents = active.filter(r => r.is_npo === true)
-
-  // Interactive quick checklist for mobile floor staff
-  const [checklist, setChecklist] = useState([
-    { id: '1', label: '165°F Cook & Hold Temp Log', done: true },
-    { id: '2', label: 'Check 3 NPO Tray Exclusions', done: false, alert: true },
-    { id: '3', label: 'East Wing Tray Cart Dispatch', done: false },
-    { id: '4', label: 'Dish Sanitizer Titration Test', done: false },
-  ])
-
-  const toggleCheck = (id: string) => {
-    setChecklist(prev =>
-      prev.map(item => (item.id === id ? { ...item, done: !item.done } : item))
-    )
-  }
-
-  // Determine current meal window
-  const currentHour = new Date().getHours()
-  const mealWindow = currentHour < 10
-    ? { name: 'Breakfast Service', time: '7:00 AM – 9:00 AM', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/50' }
-    : currentHour < 14
-    ? { name: 'Lunch Service', time: '11:30 AM – 1:00 PM', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50' }
-    : { name: 'Dinner Service', time: '5:00 PM – 6:30 PM', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/50' }
 
   return (
-    <div className="space-y-4 max-w-lg mx-auto pb-4 animate-fadeIn">
-      {/* ── Active Service Header Bar ── */}
-      <div className="clinical-dashboard-heading p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center justify-between mb-2">
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${mealWindow.color}`}>
-            ● {mealWindow.name}
-          </span>
-          <span className="text-[11px] font-mono text-slate-500">{mealWindow.time}</span>
-        </div>
-
-        <div className="flex items-center justify-between pt-1">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-              Shift Operations
-            </h2>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {loading ? '…' : active.length} Residents Active &middot; {roomTrays} Room Trays
-            </div>
-          </div>
-          <Link
-            to="/residents"
-            className="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-xs font-bold flex items-center gap-1"
-          >
-            <span>Census</span>
-            <ChevronRight size={12} />
-          </Link>
-        </div>
-      </div>
-
-      {/* ── Clinical NPO Hard-Alert (Deterministic Safety) ── */}
-      {npoResidents.length > 0 && (
-        <div className="p-3.5 rounded-2xl bg-red-600 text-white shadow-sm animate-pulse flex items-start gap-3">
-          <AlertOctagon className="w-5 h-5 shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-black uppercase tracking-wider">
-              Clinical Hard-Block: {npoResidents.length} NPO Order(s)
-            </div>
-            <div className="text-[11px] mt-0.5 font-bold leading-tight">
-              Zero trays or liquids may be dispatched for:{' '}
-              {npoResidents.map(r => `${r.name} (Rm ${r.room})`).join(', ')}
-            </div>
-          </div>
-        </div>
-      )}
-
+    <div className="stitch-dashboard stitch-dashboard-mobile space-y-5 max-w-lg mx-auto pb-4 animate-fadeIn">
+      <header className="stitch-dashboard-hero">
+        <div><p className="stitch-eyebrow">Clinical dashboard</p><h1>{new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, {user?.name?.split(' ')[0] ?? 'there'}</h1><p className="stitch-hero-meta">{new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</p><p className="stitch-hero-description">Your census, dietary priorities and meal service in one place.</p></div>
+        <Link to="/kitchen/orders" className="stitch-action-primary"><Utensils size={18} /> Meal tally entry</Link>
+      </header>
+      <ClinicalSafetySummary active={active} loading={loading} />
+      <section className="stitch-mobile-census" aria-label="Census summary">
+        {[{ label: 'Active census', value: loading ? '…' : active.length }, { label: 'Room trays', value: roomTrays }, { label: 'Dining room', value: diningRoom }, { label: 'Hospital / LOA', value: hospital + loa }].map(metric => <Link to="/residents" key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong></Link>)}
+      </section>
       {/* ── 4 Quick Action Touch Tiles (Thumb Friendly >= 48px) ── */}
       <div className="grid grid-cols-2 gap-2.5">
         <button
@@ -213,56 +137,11 @@ export default function MobileDashboardView(props: DashboardViewProps) {
         </button>
       </div>
 
-      {/* ── Floor Operational Checklist Card ── */}
-      <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-teal-600" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-              Shift Checklist
-            </h3>
-          </div>
-          <Link to="/tasks" className="text-[11px] font-bold text-teal-600 dark:text-teal-400">
-            View All →
-          </Link>
-        </div>
-
-        <div className="space-y-2">
-          {checklist.map(item => (
-            <div
-              key={item.id}
-              onClick={() => toggleCheck(item.id)}
-              className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors"
-            >
-              <button
-                className="w-7 h-7 flex items-center justify-center shrink-0"
-                onClick={e => {
-                  e.stopPropagation()
-                  toggleCheck(item.id)
-                }}
-              >
-                {item.done ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100 dark:fill-emerald-950/50" />
-                ) : (
-                  <Circle className="w-5 h-5 text-slate-300 dark:text-slate-600" />
-                )}
-              </button>
-              <span
-                className={`text-xs font-semibold flex-1 ${
-                  item.done
-                    ? 'line-through text-slate-400 dark:text-slate-500'
-                    : item.alert
-                    ? 'text-amber-700 dark:text-amber-400 font-bold'
-                    : 'text-slate-800 dark:text-slate-200'
-                }`}
-              >
-                {item.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
+      <section className="stitch-workflow-grid" aria-label="Shift workspaces">
+        <Link to="/production" className="stitch-workflow-card"><span className="stitch-eyebrow">Production progress</span><h2>{completedSheets} / {totalSheets} sheets signed</h2><p>{totalSheets ? `${prodPct}% of loaded production sheets signed off.` : 'No production sheets loaded.'}</p><span className="stitch-workflow-cta">Open production<ChevronRight size={18}/></span></Link>
+        <Link to="/purchasing" className="stitch-workflow-card"><span className="stitch-eyebrow">Procurement matrix</span><h2>Plan your next purchase</h2><p>{lowParItems.length} items below par · {zeroItems.length} at zero stock</p><span className="stitch-workflow-cta">Open purchasing<ChevronRight size={18}/></span></Link>
+        {props.isManager && <Link to="/reporting" className="stitch-workflow-card"><span className="stitch-eyebrow">Budget & reports</span><h2>$ {props.dailyPerRes.toFixed(2)} / resident / day</h2><p>{props.budgetPct.toFixed(0)}% of period budget used. Review source records before reporting.</p><span className="stitch-workflow-cta">Review reports<ChevronRight size={18}/></span></Link>}
+      </section>
       {/* ── Today's Glanceable Menu Card ── */}
       <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <div className="flex items-center justify-between mb-2">
@@ -283,7 +162,9 @@ export default function MobileDashboardView(props: DashboardViewProps) {
               Lunch Entrée
             </div>
             <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 truncate">
-              {lunchOpt1.join(', ') || 'Roast Turkey Breast with Herb Gravy'}
+              {lunchOpt1.join(', ') || 'No lunch menu loaded'}
+              {lunchOpt2.length > 0 && <p className="mt-2 font-normal whitespace-normal">Alternative: {lunchOpt2.join(', ')}</p>}
+              {lunchDessert && <p className="mt-2 font-normal whitespace-normal">Dessert: {lunchDessert}</p>}
             </div>
           </div>
 
@@ -292,7 +173,9 @@ export default function MobileDashboardView(props: DashboardViewProps) {
               Dinner Entrée
             </div>
             <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 truncate">
-              {dinnerOpt1.join(', ') || 'Baked Atlantic Cod with Lemon Herb'}
+              {dinnerOpt1.join(', ') || 'No dinner menu loaded'}
+              {dinnerOpt2.length > 0 && <p className="mt-2 font-normal whitespace-normal">Alternative: {dinnerOpt2.join(', ')}</p>}
+              {dinnerDessert && <p className="mt-2 font-normal whitespace-normal">Dessert: {dinnerDessert}</p>}
             </div>
           </div>
         </div>
@@ -314,6 +197,7 @@ export default function MobileDashboardView(props: DashboardViewProps) {
         </div>
       </div>
 
+      <section className="stitch-workflow-card" aria-label="Dietary preparation requirements"><span className="stitch-eyebrow">Dietary preparation</span><h2>Recorded exclusions</h2><p>{Object.entries(keyAllergyCount).map(([label, count]) => `${label}: ${count}`).join(' · ') || 'No matching exclusions in the loaded census.'}</p><p>{totalEnsure} supplement cans per day recorded.</p><Link to="/residents" className="stitch-workflow-cta">Review dietary orders<ChevronRight size={18}/></Link></section>
       {/* ── Inventory Out / Par Alert Strip ── */}
       {lowParItems.length > 0 && (
         <Link
@@ -333,4 +217,17 @@ export default function MobileDashboardView(props: DashboardViewProps) {
       )}
     </div>
   )
+}
+
+export function ClinicalSafetySummary({ active, loading }: { active: Resident[]; loading: boolean }) {
+  const npo = active.filter(resident => resident.is_npo === true)
+  const allergies = active.filter(resident => resident.allergies?.length)
+  return <section className="stitch-clinical-summary" aria-label="Clinical safety priorities">
+    <AlertOctagon size={26} className="shrink-0" />
+    <div className="min-w-0 flex-1"><h2>Clinical safety priorities</h2>
+      <p>{loading ? 'Loading resident dietary orders…' : `${npo.length} active NPO orders · ${allergies.length} residents with recorded allergy or dietary exclusions`}</p>
+      {npo.length > 0 && <p className="stitch-npo-detail"><strong>NPO hard-block:</strong> No trays or liquids for {npo.map(resident => `${resident.name} (Room ${resident.room})`).join(', ')}.</p>}
+      <p className="stitch-safety-note">Review current orders and exclusions before every tray pass. This summary does not authorize dispatch.</p>
+    </div><Link to="/residents" className="stitch-safety-action">Review orders<ChevronRight size={18}/></Link>
+  </section>
 }

@@ -7,24 +7,11 @@ import ConfirmDestructiveDialog from '@/components/ui/ConfirmDestructiveDialog'
 import EhrReconciliationQueue from './EhrReconciliationQueue'
 import DietReviewFlags from './DietReviewFlags'
 import FeatureGate from '@/components/FeatureGate'
-import { AppleBadge, AppleButton, AppleCard, AppleSegmentedControl } from '@/apple-ui'
-import { useDevice } from '@/hooks/useDevice'
+import { AppleButton, AppleCard } from '@/apple-ui'
 import { useAuth } from '@/security/AuthContext'
-import type { Resident } from '@/types/resident'
-import {
-  Users,
-  Heart,
-  AlertTriangle,
-  MapPin,
-  Search,
-  Plus,
-  Filter,
-  Sparkles,
-  ShieldCheck,
-  RefreshCw,
-  X,
-  FileSpreadsheet,
-} from 'lucide-react'
+import { iddsiForTexture, type Resident } from '@/types/resident'
+import './stitch-residents.css'
+import { AlertTriangle, Search, Plus, ShieldCheck, X, FileSpreadsheet } from 'lucide-react'
 
 // Skeleton card for loading state
 function SkeletonCard() {
@@ -101,201 +88,55 @@ export default function ResidentsPage() {
     return list
   }, [residents, activeFilter])
 
-  const { isMobile, isTablet, isDesktop } = useDevice()
+  const npoCount = residents.filter(r => r.is_npo === true).length
+  const holdCount = residents.filter(r => iddsiForTexture(r.texture).level === -1).length
+  const fluidCount = residents.filter(r => r.fluid_restriction_ml != null).length
   const { hasCapability } = useAuth()
   const canImport = hasCapability('residents.import')
   const canAdd = hasCapability('residents.clinicalWrite')
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
-
-      {/* ── Apple Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
-              Residents &amp; Diet Orders
-            </h1>
-            <AppleBadge color="blue">
-              Census: {residents.length}
-            </AppleBadge>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
-            Real-time clinical nutrition roster, IDDSI dysphagia orders, food allergies, and tray delivery locations.
-          </p>
+    <div className="stitch-census">
+      <header className="census-page-header">
+        <div><p className="census-eyebrow">Clinical nutrition · Resident care</p><h1>Residents &amp; Diet Orders</h1><p className="census-page-description">One clear view of the census, nutrition orders and meal delivery needs.</p></div>
+        <div className="census-header-actions">
+          {canImport && <AppleButton variant="secondary" size="md" icon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setShowImportModal(true)}>Import census</AppleButton>}
+          {canAdd && <AppleButton variant="primary" size="md" icon={<Plus className="w-4 h-4" />} onClick={() => setEditing(null)}>Add resident</AppleButton>}
         </div>
+      </header>
 
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          {!isMobile && canImport && (
-            <AppleButton
-              variant="secondary"
-              size="md"
-              icon={<FileSpreadsheet className="w-4 h-4" />}
-              onClick={() => setShowImportModal(true)}
-            >
-              Import Census CSV
-            </AppleButton>
-          )}
-          {canAdd && (
-            <AppleButton
-              variant="primary"
-              size="md"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={() => setEditing(null)}
-            >
-              Add Resident
-            </AppleButton>
-          )}
-        </div>
-      </div>
+      <section className="census-metric-strip" aria-label="Current census summary">
+        <button onClick={() => setActiveFilter('all')}><span>Resident census</span><strong>{residents.length}</strong><small>Records in the current search</small></button>
+        <button onClick={() => setActiveFilter('active')}><span>Active residents</span><strong>{activeCount}</strong><small>{residents.length - activeCount} with another census status</small></button>
+        <button onClick={() => setActiveFilter('texture')}><span>Modified textures</span><strong>{textureCount}</strong><small>Review individual IDDSI orders</small></button>
+        <button onClick={() => setActiveFilter('room')}><span>Room delivery</span><strong>{roomTrayCount}</strong><small>Trays served in resident rooms</small></button>
+      </section>
 
-      {/* ── Apple Clinical Stats Dashboard ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+      <div className="census-workspace">
+        <div className="census-main-column">
+          {(npoCount > 0 || holdCount > 0) && <section className="census-safety-banner" aria-label="Clinical safety priorities">
+            <AlertTriangle className="shrink-0" size={24} aria-hidden="true" />
+            <div><h2>Clinical safety priorities</h2><p>{npoCount > 0 && <span>{npoCount} NPO {npoCount === 1 ? 'order' : 'orders'}: no food or liquids. </span>}{holdCount > 0 && <span>{holdCount} unassigned {holdCount === 1 ? 'texture requires' : 'textures require'} dietary confirmation. </span>}Review the resident's recorded order before meal service.</p></div>
+          </section>}
 
-        <AppleCard
-          className="p-3.5 cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 transition-all"
-          onClick={() => setActiveFilter('active')}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">Active Census</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600">
-              <Users className="w-4 h-4" />
+          <section className="census-search-panel" aria-label="Search and filter census">
+            <div className="census-search-heading"><h2>Find a resident</h2><span>{filteredResidents.length} of {residents.length} records</span></div>
+            <div className="census-search-field"><Search size={19} aria-hidden="true" /><input aria-label="Search residents by name, room, diet or allergy" type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, room, diet or food allergy" />{query && <button onClick={() => setQuery('')} aria-label="Clear resident search"><X size={18} aria-hidden="true" /></button>}</div>
+            <div className="census-filter-tabs" aria-label="Census filters">
+              {([
+                ['all', 'All residents', residents.length],
+                ['active', 'Active', activeCount],
+                ['texture', 'Modified textures', textureCount],
+                ['cardiac', 'Cardiac / NAS', undefined],
+                ['room', 'Room delivery', roomTrayCount],
+              ] as const).map(([value, label, count]) => <button key={value} onClick={() => setActiveFilter(value)} aria-pressed={activeFilter === value}>{label}{count !== undefined && <span>{count}</span>}</button>)}
             </div>
-          </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{activeCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">{residents.length - activeCount} away (Hospital/LOA)</div>
-        </AppleCard>
+          </section>
 
-        <AppleCard
-          className="p-3.5 cursor-pointer hover:border-amber-300 dark:hover:border-amber-700 transition-all"
-          onClick={() => setActiveFilter('texture')}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">IDDSI Textures</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-600">
-              <Sparkles className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{textureCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Pureed, Minced, Cut-up</div>
-        </AppleCard>
-
-        <AppleCard className="p-3.5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">Allergens</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-rose-600">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{allergyCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Dairy, Gluten, Nuts, Seeds</div>
-        </AppleCard>
-
-        <AppleCard
-          className="p-3.5 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
-          onClick={() => setActiveFilter('room')}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">In-Room Trays</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600">
-              <MapPin className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white font-sans">{roomTrayCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">{residents.length - roomTrayCount} Dining Room</div>
-        </AppleCard>
-      </div>
-
-      {/* ── EHR Triage Exception Queue (Enterprise Tier) ── */}
-      <FeatureGate
-        requiredTier="enterprise"
-        featureName="PointClickCare Live EHR 2-Way Sync & Reconciliation Queue"
-        description="Automated bi-directional integration with PointClickCare, MatrixCare, and Epic EHR systems. Catches inbound ADT transfers, physician diet orders, and dysphagia texture modifications in real-time."
-      >
-        <EhrReconciliationQueue />
-      </FeatureGate>
-
-      {/* ── B04: RD diet review worklist (dietitian/manager see flags here) ── */}
-      <DietReviewFlags />
-
-      {/* ── Search & Cupertino Filter Controls ── */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        {/* Apple Search Field */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="search"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search by name, room number, diet, or allergy…"
-            className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Segmented Filter Pills (Touch targets >= 44px on mobile) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
-              activeFilter === 'all'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            All ({residents.length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('active')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
-              activeFilter === 'active'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Active ({activeCount})
-          </button>
-          <button
-            onClick={() => setActiveFilter('texture')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
-              activeFilter === 'texture'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Modified Textures ({textureCount})
-          </button>
-          <button
-            onClick={() => setActiveFilter('cardiac')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
-              activeFilter === 'cardiac'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Cardiac / NAS
-          </button>
-          <button
-            onClick={() => setActiveFilter('room')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap min-h-[40px] transition-all ${
-              activeFilter === 'room'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            In-Room ({roomTrayCount})
-          </button>
-        </div>
-      </div>
-
-
+          <FeatureGate requiredTier="enterprise" featureName="PointClickCare Live EHR 2-Way Sync & Reconciliation Queue" description="Review inbound EHR census and nutrition order changes before applying them to the resident record.">
+            <EhrReconciliationQueue />
+          </FeatureGate>
+          <DietReviewFlags />
       {/* ── Error Banner ── */}
       {error && (
         <AppleCard className="p-4 bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-3 text-sm text-rose-800 dark:text-rose-200">
@@ -318,6 +159,20 @@ export default function ResidentsPage() {
       ) : (
         <ResidentCardList residents={filteredResidents} onEdit={handleEdit} onDelete={handleDelete} />
       )}
+
+        </div>
+        <aside className="census-context-panel" aria-label="Meal service context">
+          <p className="census-eyebrow">Care coordination</p><h2>Before meal service</h2>
+          <p>Use the individual chart to confirm each resident's current nutrition requirements.</p>
+          <dl>
+            <div><dt>NPO orders</dt><dd>{npoCount}</dd></div>
+            <div><dt>Food allergy records</dt><dd>{allergyCount}</dd></div>
+            <div><dt>Fluid restrictions</dt><dd>{fluidCount}</dd></div>
+          </dl>
+          <div className="census-context-note"><ShieldCheck size={20} aria-hidden="true" /><p>NPO hard-blocks and allergy exclusions remain non-overridable. An empty allergy list means no food allergies are recorded.</p></div>
+          <p className="census-context-footnote">Counts reflect the current search. Census status does not certify a tray as safe to release.</p>
+        </aside>
+      </div>
 
       {/* Modal Editor */}
       {isModalOpen && (
@@ -348,9 +203,9 @@ export default function ResidentsPage() {
           resourceType="Resident Census Record"
           itemName={`${deletingResident.name} (Room ${deletingResident.room})`}
           consequences={[
-            'Permanently archives all active diet orders and texture requirements.',
-            'Voids scheduled tray delivery tickets for this resident.',
-            'Removes table assignment and allergen alerts across kitchen stations.',
+            'Permanently deletes this resident census record and its recorded nutrition requirements.',
+            'Removes this resident from the current census.',
+            'This action cannot be undone from this screen.',
           ]}
         />
       )}

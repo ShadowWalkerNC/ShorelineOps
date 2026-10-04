@@ -32,7 +32,8 @@ import {
 } from 'lucide-react'
 import type { DayOfWeek } from '@/types'
 import type { Resident } from '@/types/resident'
-import MobileDashboardView from './components/MobileDashboardView'
+import MobileDashboardView, { ClinicalSafetySummary } from './components/MobileDashboardView'
+import './stitch-dashboard.css'
 import TabletDashboardView from './components/TabletDashboardView'
 import ResidentQuickDrawer from '@/features/residents/components/ResidentQuickDrawer'
 import PageTransition from '@/components/ui/PageTransition'
@@ -444,71 +445,31 @@ export default function DashboardPage() {
   }
 
   return (
-    <PageTransition className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
-      {/* ── Page Header Card ── */}
-      <AppleCard className="clinical-dashboard-heading p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
-                {getGreeting()}, {user?.name?.split(' ')[0] ?? 'there'}
-              </h1>
-              <AppleBadge color="green" dot className="text-xs">
-                {loading ? '…' : active.length} Active Residents
-              </AppleBadge>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>{todayStr} &bull; Clinical Nutrition &amp; Production Command Center</span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <Link to="/kitchen/orders">
-              <AppleButton variant="primary" size="md" icon={<Utensils className="w-4 h-4" />}>
-                Meal Tally Entry
-              </AppleButton>
-            </Link>
-          </div>
+    <PageTransition className="stitch-dashboard space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
+      <header className="stitch-dashboard-hero">
+        <div>
+          <p className="stitch-eyebrow">Clinical nutrition & trayline command center</p>
+          <h1>{getGreeting()}, {user?.name?.split(' ')[0] ?? 'there'}</h1>
+          <p className="stitch-hero-meta">{todayStr} · {loading ? 'Loading census…' : `${active.length} active residents · ${hospital + loa} away`}</p>
+          <p className="stitch-hero-description">Review dietary orders, coordinate today's meal service and keep production moving.</p>
         </div>
-      </AppleCard>
-
-      {/* ── Precision Command Surface (Unified Grid, Zero Clutter) ── */}
-      <div className="border border-slate-200/90 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-2xs divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80 dark:divide-slate-800 grid grid-cols-1 sm:grid-cols-3">
-        <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">PROCUREMENT MATRIX</div>
-            <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Multi-Distributor Split MRP</div>
-            <div className="text-[11px] text-slate-500">Dennis vs. Sysco $/lb optimizer</div>
-          </div>
-          <Link to="/purchasing">
-            <AppleButton size="sm" variant="primary">Optimize PO</AppleButton>
-          </Link>
+        <div className="stitch-header-actions">
+          <Link to="/reporting" className="stitch-action-secondary"><ShieldCheck size={18} /> Audit & reports</Link>
+          <Link to="/kitchen/orders" className="stitch-action-primary"><Utensils size={18} /> Meal tally entry</Link>
         </div>
-
-        <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">SURVEY READINESS</div>
-            <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">CMS-2567 Defense Binder</div>
-            <div className="text-[11px] text-slate-500">90-Day HACCP &amp; F-Tag audit logs</div>
-          </div>
-          <Link to="/reporting">
-            <AppleButton size="sm" variant="tinted">Survey Pack</AppleButton>
-          </Link>
-        </div>
-
-        <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">VENDOR PORTAL</div>
-            <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Distributor SKU Matcher</div>
-            <div className="text-[11px] text-slate-500">Cut+Dry canonical pack converter</div>
-          </div>
-          <Link to="/distributor">
-            <AppleButton size="sm" variant="tinted">Open Portal</AppleButton>
-          </Link>
-        </div>
-      </div>
-
+      </header>
+      <ClinicalSafetySummary active={active} loading={loading} />
+      <section className="stitch-workflow-grid" aria-label="Operational workspaces">
+        {[
+          { to: '/purchasing', label: 'Procurement matrix', title: 'Plan your next purchase', description: 'Review distributor pricing, purchase orders and inventory requirements.', action: 'Open purchasing', icon: <Boxes size={24} /> },
+          { to: '/reporting', label: 'Survey readiness', title: 'Evidence in one workspace', description: 'Review HACCP records and available clinical and operational reports.', action: 'Review reports', icon: <ShieldCheck size={24} /> },
+          { to: '/distributor', label: 'Vendor portal', title: 'Connect your catalog', description: 'Manage distributor products, pack sizes and catalog matching.', action: 'Open vendor portal', icon: <Store size={24} /> },
+        ].map(card => <Link className="stitch-workflow-card" to={card.to} key={card.to}>
+          <div className="stitch-workflow-top"><span className="stitch-eyebrow">{card.label}</span>{card.icon}</div>
+          <h2>{card.title}</h2><p>{card.description}</p>
+          <span className="stitch-workflow-cta">{card.action}<ChevronRight size={18} /></span>
+        </Link>)}
+      </section>
       {/* ── Row 1: Clinical Census Metric Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard
@@ -547,7 +508,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Row 2: Operational & Budget Metrics ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+      <div className="stitch-secondary-metrics grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
         <MetricCard
           label="Inventory Alerts"
           value={lowParItems.length}
@@ -717,7 +678,7 @@ export default function DashboardPage() {
       </SectionCard>
 
       {/* ── Three-Column Operations Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Upcoming Birthdays Card */}
         <SectionCard
           title="Upcoming Birthdays"

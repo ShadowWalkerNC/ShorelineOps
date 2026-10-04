@@ -1,0 +1,87 @@
+.stitch-shell{display:flex;height:100dvh;overflow:hidden;background:#f7f9fb;color:#191c1e;font-size:14px}
+.stitch-shell-sidebar{width:280px;flex-shrink:0;background:#f2f4f6;border-right:1px solid #e3e8e6;padding:24px 16px 16px;display:flex;flex-direction:column;gap:20px}
+.stitch-shell-brand{display:flex;align-items:center;gap:10px}
+.stitch-shell-brand img{width:36px;height:36px;object-fit:contain}
+.stitch-shell-brand strong{font-size:22px;letter-spacing:-.7px;line-height:1.2}
+.stitch-shell-brand strong span{color:#008272}
+.stitch-shell-brand small{display:block;color:#64716f;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin-top:5px}
+.stitch-shell-search{display:flex;align-items:center;gap:10px;background:#e9edec;border:0;border-radius:8px;padding:12px;color:#596865;min-height:48px;text-align:left;font-size:13px}
+.stitch-shell-navigation{flex:1;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:18px}
+.stitch-shell-group>p{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#79847f;margin:0 12px 6px;font-weight:600}
+.stitch-shell .clinical-nav-item{min-height:48px;font-size:14px;font-weight:500;gap:10px;border-radius:8px}
+.stitch-shell .clinical-nav-item:not([aria-current=page]){color:#495853}
+.stitch-shell .clinical-nav-item>div:first-child{color:inherit!important}
+.stitch-shell .clinical-nav-item[aria-current=page]{background:#008272;color:#fff}
+.stitch-shell-session{border-top:1px solid #dce3df;padding-top:16px;display:flex;gap:10px;align-items:center}
+.stitch-shell-avatar{width:36px;height:36px;border-radius:50%;background:#cde4ec;display:grid;place-items:center;color:#354a51;flex-shrink:0}
+.stitch-shell-session>div:nth-child(2){min-width:0;flex:1}
+.stitch-shell-session strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stitch-shell-session small{font-size:10px;color:#6e7a76}
+.stitch-shell-session button{min-width:48px;min-height:48px;display:grid;place-items:center;border:0;background:transparent;color:#64716f}
+.stitch-shell-body{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.stitch-shell-header{min-height:80px;flex-shrink:0;padding:12px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e9edec;background:#f7f9fbee;gap:12px}
+.stitch-shell-context span{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#79847f}
+.stitch-shell-context strong{font-size:15px;font-weight:600;display:block;margin-top:4px}
+.stitch-shell-header-actions{display:flex;align-items:center;gap:16px}
+.stitch-shell-mode{font-size:12px;color:#00675a;background:#e8f2ef;padding:8px 12px;border-radius:20px;white-space:nowrap}
+.stitch-shell-main{flex:1;min-height:0;overflow:auto;padding:28px 32px 40px}
+.stitch-shell-tools{position:relative}
+.stitch-shell-tools summary{list-style:none;min-height:48px;display:flex;align-items:center;cursor:pointer;padding:0 12px;color:#52635e;font-size:13px}
+.stitch-shell-tools>div{position:absolute;right:0;top:52px;width:230px;background:white;padding:8px;border:1px solid #dde5e1;border-radius:10px;box-shadow:0 12px 30px #122c2015;z-index:45}
+.stitch-shell-tools a,.stitch-shell-tools button{display:flex;align-items:center;gap:8px;min-height:48px;padding:10px 12px;color:#354a43;background:none;border:0;text-align:left;width:100%;font-size:13px;text-decoration:none;border-radius:6px}
+.stitch-shell-tools a:hover,.stitch-shell-tools button:hover{background:#f2f4f6}
+.stitch-shell-rail{width:72px;flex-shrink:0;background:#f2f4f6;display:flex;align-items:center;flex-direction:column;gap:12px;padding:18px 8px}
+.stitch-shell-rail>img{width:32px;height:32px;margin-bottom:12px}
+.stitch-shell-rail a,.stitch-shell-rail button{min-width:48px;min-height:48px;display:grid;place-items:center;color:#596865;border-radius:10px}
+.stitch-shell-rail a[aria-current=page]{background:#008272;color:#fff}
+.stitch-shell-bottom{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;background:#fff;border-top:1px solid #e1e7e4;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:40}
+.stitch-shell-bottom a,.stitch-shell-bottom button{min-height:48px;min-width:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;color:#64716f}
+.stitch-shell-bottom span{font-size:10px}
+.stitch-shell-bottom a[aria-current=page]{color:#00675a;font-weight:700}
+.stitch-shell-drawer-overlay{position:fixed;inset:0;display:flex;z-index:60;background:#122c2040}
+.stitch-shell-drawer{width:min(320px,85vw);background:#f2f4f6;height:100%;display:flex;flex-direction:column;padding:24px 16px;position:relative;gap:24px}
+.stitch-shell-scrim{flex:1;background:none;border:0}
+.stitch-shell-close{position:absolute;top:12px;right:6px;min-width:48px;min-height:48px;display:grid;place-items:center}
+.stitch-shell-drawer>.stitch-shell-brand{padding-right:30px}
+.stitch-shell button:focus-visible,.stitch-shell a:focus-visible,.stitch-shell summary:focus-visible{outline:3px solid #75d8c5;outline-offset:2px}
+.stitch-shell button{cursor:pointer}
+.stitch-sign-in .clinical-sign-in-card{padding:40px!important;box-shadow:0 12px 45px #143d2910!important;border-radius:14px!important}
+.stitch-sign-in-heading{font-size:28px;letter-spacing:-.7px;line-height:1.25;color:var(--text-primary);margin:24px 0 8px;font-weight:650}
+.stitch-sign-in-intro{font-size:14px;color:var(--text-secondary);line-height:1.65;max-width:320px;margin:0 auto 30px}
+.stitch-sign-in label{font-size:13px!important;margin-bottom:8px!important}
+.stitch-sign-in .stitch-sign-in-brand{display:flex;flex-direction:column;gap:14px!important}
+.stitch-sign-in .stitch-sign-in-brand img{width:58px!important;height:58px!important}
+.stitch-sign-in input{background:#f7f9fb!important;border-color:#dfe7e3!important;border-radius:8px!important}
+.stitch-sign-in input:focus-visible{outline:3px solid #75d8c5;outline-offset:2px}
+.stitch-sign-in .stitch-sign-in-footer{font-size:12px;color:var(--text-muted);margin-top:24px;text-align:center}
+.stitch-sign-in .stitch-sign-in-demo{background:var(--bg-card)!important;border:1px dashed var(--border-color)!important}
+.stitch-sign-in .stitch-sign-in-demo button{min-height:48px;flex-wrap:wrap;color:var(--text-primary)!important;background:var(--bg-app)!important;border-color:var(--border-color)!important}
+.stitch-sign-in .stitch-sign-in-demo button span{color:var(--text-secondary)!important}
+.stitch-sign-in .stitch-sign-in-demo>div:first-child{color:var(--text-secondary)!important}
+
+@media(max-width:767px){.stitch-shell-header{min-height:72px;padding:12px 16px}
+.stitch-shell-header .stitch-shell-brand strong{font-size:18px}
+.stitch-shell-header .stitch-shell-brand small{font-size:8px;letter-spacing:.7px}
+.stitch-shell-header .stitch-shell-brand img{width:30px;height:30px}
+.stitch-shell-header-actions{gap:0}
+.stitch-shell-mode{font-size:10px;padding:6px 8px}
+.stitch-shell-tools{display:none}
+.stitch-shell-main{padding:20px 16px calc(100px + env(safe-area-inset-bottom))}
+.stitch-sign-in .clinical-sign-in-card{padding:30px 24px!important}
+.stitch-sign-in-heading{font-size:26px}
+.stitch-sign-in{align-items:flex-start!important;padding-top:max(32px,env(safe-area-inset-top))!important;padding-bottom:max(32px,env(safe-area-inset-bottom))!important}
+}
+
+@media(prefers-color-scheme:dark){.dark .stitch-shell,.dark .stitch-shell-header{background:#101b18;color:#e8efec}
+.dark .stitch-shell-sidebar,.dark .stitch-shell-rail,.dark .stitch-shell-drawer{background:#15211d}
+.dark .stitch-shell .clinical-nav-item:not([aria-current=page]){color:#b8c7c0}
+.dark .stitch-shell-tools>div,.dark .stitch-shell-bottom{background:#15211d}
+.dark .stitch-shell-tools a,.dark .stitch-shell-tools button{color:#cbd8d2}
+}
+
+.stitch-shell-mobile-drawer-button{min-width:48px;min-height:48px;display:grid;place-items:center;background:none;border:0;color:#52635e}
+.stitch-shell-drawer-dialog{position:fixed!important;left:0!important;top:0!important;transform:none!important;height:100dvh!important;width:min(320px,85vw)!important;max-width:320px!important;display:flex!important;flex-direction:column!important;gap:24px!important;border-radius:0!important;background:#f2f4f6!important;padding:24px 16px!important}
+.stitch-shell-drawer-dialog .stitch-shell-brand{padding-right:30px}
+.stitch-shell-drawer-dialog .clinical-nav-item{min-height:48px;font-size:14px}
+.stitch-shell-drawer-dialog>button:last-child{min-width:48px;min-height:48px}
+

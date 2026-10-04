@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ShieldCheck, ArrowUpRight, Building2, Users, Server } from 'lucide-react'
 import { RequireRole, useAuth } from '../../security/AuthContext'
 import StaffScheduling     from './components/StaffScheduling'
 import UserManager         from './components/UserManager'
@@ -34,11 +35,13 @@ export default function AdminPage() {
 
   return (
     <RequireRole role="admin">
-      <div className="sl-page fade-in">
+      <div className="sl-page fade-in stitch-admin">
 
         <header className="clinical-admin-header">
-          <h1>Administration &amp; Kitchen Console</h1>
+          <div className="stitch-admin-eyebrow"><ShieldCheck size={16} /> Facility governance</div>
+          <h1>Administration &amp;<br className="hidden sm:block" /> Kitchen Console</h1>
           <p>Facility readiness, staff access and operational safeguards in one workspace.</p>
+          <span className="stitch-admin-identity">Signed in as {user?.name || 'administrator'} · Administrative access</span>
         </header>
         <nav className="clinical-admin-navigation" aria-label="Administration sections">
           {[
@@ -47,7 +50,7 @@ export default function AdminPage() {
             { label: 'System infrastructure', ids: ['diagnostics', 'backup', 'data'] },
           ].map(group => (
             <section className="clinical-admin-group" key={group.label}>
-              <h2>{group.label}</h2>
+              <h2>{group.label === 'Operations' ? <Building2 size={16} /> : group.label === 'Staffing & governance' ? <Users size={16} /> : <Server size={16} />}{group.label}</h2>
               <div>{tabs.filter(t => group.ids.includes(t.id)).map(t => (
                 <button type="button" key={t.id} onClick={() => setTab(t.id)}
                   className="clinical-admin-tab" aria-pressed={tab === t.id}>
@@ -59,7 +62,7 @@ export default function AdminPage() {
         </nav>
 
         {/* Content card */}
-        <div style={{
+        <div className="stitch-admin-content" style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius-lg)',
@@ -77,6 +80,7 @@ export default function AdminPage() {
           {tab === 'data'        && <SystemSettingsPanel />}
           {tab === 'audit'       && <AuditLogViewer />}
         </div>
+        <div className="stitch-admin-footer"><ShieldCheck size={18} /><p>Clinical diet decisions remain in the resident review workflow. Administrative access does not bypass NPO or allergen safety controls.</p><ArrowUpRight size={18} aria-hidden="true" /></div>
       </div>
     </RequireRole>
   )

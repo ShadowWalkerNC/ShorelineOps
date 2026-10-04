@@ -1,0 +1,91 @@
+/* Census adaptation of Stitch's clinical command center: ordered surfaces and calm teal hierarchy. */
+.stitch-census { --census-text:#191c1e; --census-muted:#51636a; --census-surface:#fff; --census-soft:#f2f4f6; --census-line:#e3e8e7; --census-teal:#00675a; color:var(--census-text); max-width:1600px; margin:auto; padding:12px 0 28px; }
+.census-page-header { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:28px; }
+.census-eyebrow { font-size:11px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--census-teal); margin:0 0 10px; }
+.census-page-header h1 { font-size:36px; line-height:1.2; letter-spacing:-.035em; font-weight:700; }
+.census-page-description { color:var(--census-muted); margin-top:10px; font-size:15px; }
+.census-header-actions { display:flex; gap:10px; flex-shrink:0; }
+.census-metric-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); background:var(--census-surface); border:1px solid var(--census-line); border-radius:12px; margin-bottom:24px; overflow:hidden; }
+.census-metric-strip button { padding:20px 24px; text-align:left; border-right:1px solid var(--census-line); min-height:118px; }
+.census-metric-strip button:last-child { border-right:0; }
+.census-metric-strip button:hover { background:var(--census-soft); }
+.census-metric-strip span { display:block; font-size:12px; font-weight:600; color:var(--census-muted); }
+.census-metric-strip strong { display:block; font-size:32px; line-height:1.3; letter-spacing:-.04em; margin-top:4px; font-weight:700; }
+.census-metric-strip small { display:block; color:var(--census-muted); font-size:11px; margin-top:5px; }
+.census-workspace { display:grid; grid-template-columns:minmax(0,1fr) 240px; gap:24px; align-items:start; }
+.census-main-column { display:flex; flex-direction:column; gap:20px; min-width:0; }
+.census-safety-banner { display:flex; gap:14px; padding:18px 20px; border-left:4px solid #ba1a1a; background:#fff1ee; border-radius:10px; color:#7b2621; }
+.census-safety-banner h2 { font-size:16px; font-weight:700; margin-bottom:4px; }
+.census-safety-banner p { font-size:13px; line-height:1.65; }
+.census-search-panel { background:var(--census-surface); border:1px solid var(--census-line); border-radius:12px; padding:20px; }
+.census-search-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.census-search-heading h2,.census-roster-heading h2,.census-context-panel h2 { font-size:18px; font-weight:650; letter-spacing:-.02em; }
+.census-search-heading>span { font-size:12px; color:var(--census-muted); }
+.census-search-field { display:flex; gap:12px; align-items:center; background:var(--census-soft); border:1px solid var(--census-line); border-radius:8px; padding-left:14px; color:var(--census-muted); }
+.census-search-field input { flex:1; min-width:0; min-height:48px; background:transparent; border:0; outline:none; color:var(--census-text); font-size:14px; }
+.census-search-field:focus-within { outline:2px solid var(--census-teal); outline-offset:2px; }
+.census-search-field button { width:48px; height:48px; display:grid; place-items:center; }
+.census-filter-tabs { display:flex; gap:6px; overflow-x:auto; padding-top:14px; }
+.census-filter-tabs button { display:flex; align-items:center; gap:8px; min-height:48px; padding:0 12px; white-space:nowrap; font-size:12px; font-weight:600; border-radius:8px; color:var(--census-muted); }
+.census-filter-tabs button[aria-pressed=true] { background:#e5f3ef; color:var(--census-teal); }
+.census-filter-tabs span { font-size:11px; padding:2px 6px; border-radius:5px; background:var(--census-surface); }
+.census-roster { background:var(--census-surface); border:1px solid var(--census-line); border-radius:12px; overflow:hidden; }
+.census-roster-heading { padding:20px; display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid var(--census-line); }
+.census-roster-heading p { margin-top:4px; font-size:12px; color:var(--census-muted); }
+.census-view-switch { display:flex; gap:4px; background:var(--census-soft); padding:4px; border-radius:8px; }
+.census-view-switch button { display:flex; align-items:center; gap:7px; min-height:48px; padding:0 12px; color:var(--census-muted); font-size:12px; }
+.census-view-switch button[aria-pressed=true] { background:var(--census-surface); color:var(--census-teal); border-radius:6px; }
+.census-table-scroll { overflow-x:auto; }
+.census-table { width:100%; min-width:730px; border-collapse:collapse; text-align:left; font-size:13px; }
+.census-table thead { background:var(--census-soft); color:var(--census-muted); font-size:11px; }
+.census-table th,.census-table td { padding:18px 16px; vertical-align:top; }
+.census-table tbody tr { border-top:1px solid var(--census-line); }
+.census-table tbody th { font-weight:400; width:22%; }
+.census-table tbody tr:hover { background:var(--census-soft); }
+.census-table tbody tr.has-npo { background:#fff8f6; }
+.census-room { display:block; font-size:11px; color:var(--census-teal); font-weight:700; letter-spacing:.04em; margin-bottom:5px; }
+.census-resident-name { display:block; font-weight:650; font-size:15px; line-height:1.4; margin-bottom:7px; }
+.census-status { font-size:11px; color:var(--census-muted); display:inline-flex; align-items:center; gap:6px; }
+.census-status.is-active:before { content:''; width:6px; height:6px; border-radius:50%; background:var(--census-teal); }
+.census-orders { display:flex; flex-direction:column; gap:7px; }
+.census-order-line strong { display:block; font-weight:650; }
+.census-order-line>span { display:block; color:var(--census-muted); font-size:12px; margin-top:4px; }
+.census-npo { display:flex; align-items:flex-start; gap:8px; padding:10px; background:#fff0ed; color:#a51d15; border-left:3px solid #ba1a1a; border-radius:5px; font-size:12px; line-height:1.5; }
+.census-npo svg { flex-shrink:0; }
+.census-secondary { font-size:12px; color:var(--census-muted); line-height:1.5; }
+.census-restriction { font-size:12px; font-weight:600; color:#945011; }
+.census-allergies { display:flex; align-items:flex-start; gap:8px; color:#a51d15; font-size:12px; line-height:1.5; }
+.census-allergies svg { flex-shrink:0; margin-top:2px; }
+.census-actions { display:flex; align-items:center; gap:4px; }
+.census-delete { min-width:48px; min-height:48px; display:grid; place-items:center; color:#ba1a1a; border-radius:8px; }
+.census-delete:hover { background:#fff0ed; }
+.census-chart-toggle { display:flex; align-items:center; gap:5px; min-height:48px; font-size:11px; color:var(--census-teal); font-weight:600; }
+.census-chart-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; font-size:12px; padding:8px 0; }
+.census-chart-details dt { color:var(--census-muted); font-weight:600; margin-bottom:4px; }
+.census-chart-details dd { line-height:1.6; overflow-wrap:anywhere; }
+.census-detail-row { background:var(--census-soft); }
+.census-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; padding:20px; }
+.census-resident-card { border:1px solid var(--census-line); border-radius:10px; padding:18px; display:flex; flex-direction:column; gap:14px; }
+.census-resident-card.has-npo { border-color:#edbab1; }
+.census-resident-card header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.census-resident-card h3 { font-size:20px; font-weight:650; letter-spacing:-.025em; }
+.census-resident-card footer { border-top:1px solid var(--census-line); display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:10px; margin-top:auto; flex-wrap:wrap; }
+.census-location { display:flex; gap:7px; align-items:center; font-size:12px; color:var(--census-muted); }
+.census-context-panel { background:var(--census-soft); border-radius:12px; padding:20px; }
+.census-context-panel>p:not(.census-eyebrow) { color:var(--census-muted); font-size:12px; line-height:1.7; margin-top:10px; }
+.census-context-panel dl { margin:20px 0; border-top:1px solid var(--census-line); }
+.census-context-panel dl>div { display:flex; justify-content:space-between; gap:12px; border-bottom:1px solid var(--census-line); padding:13px 0; font-size:12px; }
+.census-context-panel dd { font-weight:700; color:var(--census-teal); }
+.census-context-note { display:flex; gap:9px; font-size:12px; color:var(--census-muted); line-height:1.7; }
+.census-context-note svg { flex-shrink:0; color:var(--census-teal); }
+.census-empty { padding:48px 24px; text-align:center; }
+.census-empty h3 { font-size:18px; font-weight:600; margin-bottom:8px; }
+.census-empty p { color:var(--census-muted); font-size:14px; }
+.stitch-census button:focus-visible { outline:2px solid var(--census-teal); outline-offset:3px; }
+.dark .stitch-census { --census-text:#e6efeb; --census-muted:#adbfba; --census-surface:#182522; --census-soft:#1f2e2a; --census-line:#33453f; --census-teal:#75d8c5; }
+.dark .census-safety-banner,.dark .census-npo,.dark .census-table tbody tr.has-npo { background:#342321; color:#ffb4ab; }
+.dark .census-allergies { color:#ffb4ab; }
+.dark .census-restriction { color:#f7c78b; }
+.dark .census-filter-tabs button[aria-pressed=true] { background:#25483e; }
+@media(max-width:1279px) { .census-workspace { grid-template-columns:minmax(0,1fr); } .census-context-panel { display:none; } .census-page-header h1 { font-size:32px; } }
+@media(max-width:767px) { .stitch-census { padding-top:6px; } .census-page-header { align-items:flex-start; flex-direction:column; gap:18px; margin-bottom:20px; } .census-page-header h1 { font-size:28px; } .census-page-description { font-size:14px; line-height:1.6; } .census-header-actions { width:100%; flex-wrap:wrap; } .census-header-actions>button { flex:1; } .census-metric-strip { grid-template-columns:repeat(2,minmax(0,1fr)); } .census-metric-strip button { padding:16px; min-height:108px; } .census-metric-strip button:nth-child(2) { border-right:0; } .census-metric-strip button:nth-child(-n+2) { border-bottom:1px solid var(--census-line); } .census-metric-strip strong { font-size:28px; } .census-search-panel,.census-roster-heading { padding:16px; } .census-search-heading { align-items:flex-start; } .census-card-grid { grid-template-columns:minmax(0,1fr); padding:14px; gap:12px; } .census-safety-banner { padding:16px; } .census-chart-details { grid-template-columns:minmax(0,1fr); } }
