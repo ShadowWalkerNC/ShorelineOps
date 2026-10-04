@@ -1,0 +1,16 @@
+{
+  "name": "shoreline-muse-lab",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node check.mjs",
+    "test": "node --test spark.test.mjs",
+    "spark:smoke": "node spark.mjs --live-synthetic"
+  },
+  "dependencies": {
+    "openai": "7.28.0"
+  }
+}

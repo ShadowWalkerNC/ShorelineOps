@@ -1,0 +1,3 @@
+# Experimental Linux lab only. Token terms exclude commercial use.
+# No pairing, daemon, shell execution or access to Shoreline data is configured.
+musegadget @ git+https://github.com/facebookincubator/muse-gadget-sdk.git@9f5ab2335b34b7f1017a728aa8beb9d0cf08de8f#subdirectory=linux ; sys_platform == "linux"

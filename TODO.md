@@ -1,10 +1,21 @@
 # TODO — ShorelineOps Roadmap & Active Work
 
+## Current readiness and SDK follow-up — 2026-10-04
+
+See [current project reassessment](docs/audits/PROJECT_REASSESSMENT_2026-10-04.md) for severity, evidence and acceptance criteria. Historical completed feature headings below do not close these gates.
+
+- [x] Add isolated Muse Spark SDK tooling with fixed synthetic-only transport tests.
+- [x] Add a pinned Linux Muse Gadget lab dependency manifest and document commercial/security constraints.
+- [ ] Verify Spark live connectivity with authorized `MODEL_API_KEY`; no real resident data.
+- [ ] Resolve Gadget commercial token terms and complete isolated physical-device acceptance before operational integration.
+- [ ] Verify encrypted backups and isolated full restore with measured RPO/RTO.
+- [ ] Complete packaged production desktop, real provider and multi-replica/load acceptance.
+
 ## Design adoption — 2026-10-04
 
 - [x] Apply Stitch design language and verify desktop/mobile presentation locally.
 - [x] Document unified URLs and deployment-specific metadata configuration.
-- [ ] Verify the committed release on its public host after deployment.
+- [x] Verify the committed release on its public host after deployment (`43aa0e4`, successful marketing/demo/API deployments; live phone/desktop checks).
 
 ## Decision workflow follow-up — 2026-09-24
 
