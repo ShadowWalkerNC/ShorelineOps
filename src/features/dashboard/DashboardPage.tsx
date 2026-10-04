@@ -70,6 +70,8 @@ function MetricCard({
     <div
       onClick={() => to && navigate(to)}
       role={to ? 'link' : undefined}
+      tabIndex={to ? 0 : undefined}
+      onKeyDown={e => { if (to && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); navigate(to) } }}
       className={`group p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-3.5 shadow-xs hover:shadow-md ${
         alertType === 'danger'
           ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900/60 hover:border-rose-400'
@@ -444,7 +446,7 @@ export default function DashboardPage() {
   return (
     <PageTransition className="space-y-6 max-w-7xl mx-auto px-1 sm:px-4 py-2">
       {/* ── Page Header Card ── */}
-      <AppleCard className="p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+      <AppleCard className="clinical-dashboard-heading p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
@@ -545,7 +547,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Row 2: Operational & Budget Metrics ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
         <MetricCard
           label="Inventory Alerts"
           value={lowParItems.length}

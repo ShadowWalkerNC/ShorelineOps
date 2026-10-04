@@ -110,21 +110,21 @@ export default function LoginPage() {
     border: '1px solid var(--border-color)',
     borderRadius: 'var(--radius-md)',
     fontSize: 16, color: 'var(--text-primary)',
-    outline: 'none', minHeight: 44,
+    minHeight: 52,
     boxSizing: 'border-box',
   }
 
   return (
-    <div style={{
+    <div className="clinical-sign-in" style={{
       position: 'fixed', inset: 0,
-      background: 'rgba(30,35,38,0.97)',
+      background: 'var(--bg-app)',
       backdropFilter: 'blur(8px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, zIndex: 10000,
+      padding: 16, zIndex: 10000, overflowY: 'auto',
     }}>
-      <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        <div style={{
+        <div className="clinical-sign-in-card" style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius-lg)',
@@ -152,7 +152,7 @@ export default function LoginPage() {
               fontWeight: 600, letterSpacing: '0.5px',
               textTransform: 'uppercase',
             }}>
-              {step === 'credentials' && 'Operations Platform'}
+              {step === 'credentials' && 'Clinical & Culinary Operations'}
               {step === 'mfa' && 'Multi-Factor Authentication'}
               {step === 'enroll' && 'Set Up Authenticator'}
             </div>
@@ -162,13 +162,13 @@ export default function LoginPage() {
             {step === 'credentials' && (
               <>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  <label htmlFor="clinical-email" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
+                  <input id="clinical-email" inputMode="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                     required autoComplete="email" style={inp} />
                 </div>
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  <label htmlFor="clinical-password" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
+                  <input id="clinical-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
                     required autoComplete="current-password" style={inp} />
                 </div>
               </>
@@ -294,13 +294,13 @@ export default function LoginPage() {
             href="/"
             style={{
               fontSize: 'var(--text-xs)',
-              color: 'rgba(255,255,255,0.45)',
+              color: 'var(--text-muted)',
               textDecoration: 'none',
               fontWeight: 'var(--weight-semi)',
               transition: 'color 0.2s',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseOut={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+            onMouseOver={(e) => (e.currentTarget.style.color = 'var(--color-primary)')}
+            onMouseOut={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
           >
             ← Back to ShorelineOps.com
           </a>

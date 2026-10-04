@@ -57,7 +57,7 @@ export default function PwaBanner() {
     setShowInstall(false)
   }
 
-  const visible = needRefresh || offlineReady || showInstall
+  const visible = needRefresh || showInstall
   if (!visible) return null
 
   return (
@@ -93,7 +93,7 @@ export default function PwaBanner() {
       {/* Message */}
       <div style={{ flex: 1, lineHeight: 1.4 }}>
         {needRefresh && <><strong>Update available.</strong> Reload to get the latest version.</>}
-        {offlineReady && !needRefresh && <><strong>Ready to work offline.</strong> Shoreline is installed locally.</>}
+        {offlineReady && !needRefresh && <><strong>Offline assets ready.</strong> The interface is cached on this device.</>}
         {showInstall && !needRefresh && !offlineReady && <><strong>Install Shoreline</strong> for fast, offline access from your home screen.</>}
       </div>
 

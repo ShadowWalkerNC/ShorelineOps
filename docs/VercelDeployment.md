@@ -61,7 +61,10 @@ project unless the projects must deploy independently.
      "buildCommand": "npm run build:demo",
      "outputDirectory": "dist",
      "rewrites": [
-       { "source": "/(.*)", "destination": "/index.html" }
+       { "source": "/demo", "destination": "/demo/index.html" },
+       { "source": "/demo/:path*", "destination": "/demo/index.html" },
+       { "source": "/app", "destination": "/app/index.html" },
+       { "source": "/app/:path*", "destination": "/app/index.html" }
      ]
    }
    ```

@@ -134,9 +134,9 @@ function NavItem({ to, color, label, icon: Icon, end: endProp, badge, onClick }:
       end={endProp !== undefined ? endProp : to === '/'}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group ${
+        `clinical-nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group ${
           isActive
-            ? 'bg-teal-500/10 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold border border-teal-500/30 shadow-xs'
+            ? 'bg-[#008272] text-white font-bold border border-transparent shadow-xs'
             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
         }`
       }
@@ -145,7 +145,7 @@ function NavItem({ to, color, label, icon: Icon, end: endProp, badge, onClick }:
         <>
           <div
             className={`w-6 h-6 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 ${
-              isActive ? 'bg-teal-600 text-white shadow-xs' : 'text-slate-400 dark:text-slate-400'
+              isActive ? 'text-white' : 'text-slate-400 dark:text-slate-400'
             }`}
             style={!isActive ? { color } : undefined}
           >
@@ -157,7 +157,7 @@ function NavItem({ to, color, label, icon: Icon, end: endProp, badge, onClick }:
               {badge}
             </span>
           )}
-          {isActive && <div className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400 shadow-xs" />}
+          {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
         </>
       )}
     </NavLink>
@@ -213,7 +213,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   ]
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 overflow-hidden">
+    <div className="shoreline-workspace flex h-screen bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 overflow-hidden">
       
       {/* ── MOBILE TOP APP BAR ────────────────────────────────────── */}
       {isMobile && (

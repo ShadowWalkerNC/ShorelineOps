@@ -2,7 +2,14 @@
 
 All notable changes to the ShorelineOps platform are documented in this file.
 
-## Unreleased — 2026-09-24
+## Unreleased — 2026-10-04
+
+- Adopt Stitch clinical presentation: marine teal navigation, light sign-in, grouped administration, larger touch controls and readable dashboard metrics.
+- Preserve demo isolation, clinical controls and MFA; remove passive cache notification obstruction.
+- Align current entry-point documentation and configurable canonical metadata; see [URL contract](docs/URLS.md).
+- Local validation and screenshots: [design adoption](docs/design/STITCH_ADOPTION_2026-10-04.md). No hosted release is claimed.
+
+## Prior unreleased work — 2026-09-24
 
 - Complete EHR atomic audit/version checks and honest reconciliation feedback.
 - Require signed tray cards and current safety checks when recording tray events.

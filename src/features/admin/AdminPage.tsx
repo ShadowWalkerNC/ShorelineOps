@@ -36,39 +36,27 @@ export default function AdminPage() {
     <RequireRole role="admin">
       <div className="sl-page fade-in">
 
-        {/* Header */}
-        <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.5px', marginBottom: 4 }}>
-            Administration &amp; Kitchen Console
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-            Monitor automated system health, run 1-click self-repairs, manage backups, inspect audit logs, and configure licensing.
-          </p>
-        </div>
-
-        {/* Tab buttons — pill style matching original */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 28 }}>
-          {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                background: tab === t.id ? 'var(--color-primary)' : 'var(--bg-card)',
-                color: tab === t.id ? 'white' : 'var(--text-primary)',
-                border: `1px solid ${tab === t.id ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                borderRadius: 'var(--radius-lg)',
-                padding: '9px 18px',
-                fontWeight: tab === t.id ? 700 : 500,
-                fontSize: 13, cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s',
-                boxShadow: tab === t.id ? 'var(--shadow-sm)' : 'none',
-              }}
-            >
-              {t.label}
-            </button>
+        <header className="clinical-admin-header">
+          <h1>Administration &amp; Kitchen Console</h1>
+          <p>Facility readiness, staff access and operational safeguards in one workspace.</p>
+        </header>
+        <nav className="clinical-admin-navigation" aria-label="Administration sections">
+          {[
+            { label: 'Operations', ids: ['platform', 'readiness', 'license'] },
+            { label: 'Staffing & governance', ids: ['scheduling', 'users', 'callouts', 'audit'] },
+            { label: 'System infrastructure', ids: ['diagnostics', 'backup', 'data'] },
+          ].map(group => (
+            <section className="clinical-admin-group" key={group.label}>
+              <h2>{group.label}</h2>
+              <div>{tabs.filter(t => group.ids.includes(t.id)).map(t => (
+                <button type="button" key={t.id} onClick={() => setTab(t.id)}
+                  className="clinical-admin-tab" aria-pressed={tab === t.id}>
+                  {t.label}
+                </button>
+              ))}</div>
+            </section>
           ))}
-        </div>
+        </nav>
 
         {/* Content card */}
         <div style={{

@@ -1,5 +1,9 @@
 # 🚀 ShorelineOps Production Deployment & Operations Runbook
 
+## Current entry points and design adoption — October 4, 2026
+
+See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/STITCH_ADOPTION_2026-10-04.md). Marketing uses `/`, the public sandbox `/demo/`, and real application sign-in `/app/login`. Build-time `PUBLIC_SITE_URL` controls canonical metadata. Separate marketing hosts must set absolute `PUBLIC_DEMO_URL` and `PUBLIC_APP_URL`; unified deployments use relative paths. Local verification does not establish the deployed release.
+
 This guide covers deployment options, production configuration, database management, security hardening, and operational runbooks for **ShorelineOps**.
 
 ---
@@ -35,7 +39,7 @@ The most popular option for individual senior living communities, dietary kitche
 - **Password**: `ComplexAdminPass2026!`
 - **Database File**: `server/shoreline.db` (override via `SQLITE_PATH` in `.env`)
 - **API Health Check**: `http://localhost:3001/health`
-- **Kitchen Tablet Kiosk**: `http://localhost:3001/kitchen/tablet`
+- **Kitchen Tablet Kiosk**: `http://localhost:3001/app/kitchen/tablet`
 
 ---
 

@@ -1,5 +1,9 @@
 # Shoreline — Demo Mode & Production Setup Guide
 
+## Current entry points and design adoption — October 4, 2026
+
+See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/STITCH_ADOPTION_2026-10-04.md). Marketing uses `/`, the public sandbox `/demo/`, and real application sign-in `/app/login`. Build-time `PUBLIC_SITE_URL` controls canonical metadata. Separate marketing hosts must set absolute `PUBLIC_DEMO_URL` and `PUBLIC_APP_URL`; unified deployments use relative paths. Local verification does not establish the deployed release.
+
 > **Default auth:** JWT against the Express API (`/api/auth/*`).  
 > **Demo auth:** Only when `VITE_DEMO_MODE=true` (never enable with real PHI).  
 > **Data (demo):** Resident/menu/production state is in-memory and resets on refresh.

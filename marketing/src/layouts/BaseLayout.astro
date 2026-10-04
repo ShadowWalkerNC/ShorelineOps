@@ -14,13 +14,13 @@ const {
   title, 
   description = 'Open-source kitchen operations and resident diet safety software for senior living, assisted living, and care dining.',
   canonicalPath = '',
-  ogImage = '/logo.png',
+  ogImage = '/brand/shorelineops-icon.svg',
   keywords = 'healthcare dietary operations, senior living clinical nutrition, resident diet safety, dysphagia textures, food service, cycle menu planner, kitchen temperature log'
 } = Astro.props
 
 const DEMO_URL = import.meta.env.PUBLIC_DEMO_URL || '/demo'
 const APP_URL = import.meta.env.PUBLIC_APP_URL || '/app/login'
-const SITE_URL = 'https://shorelineops.com'
+const SITE_URL = import.meta.env.PUBLIC_SITE_URL || 'https://shorelineops.up.railway.app'
 const canonicalURL = new URL(canonicalPath || Astro.url.pathname, SITE_URL).toString()
 const fullOgImageUrl = new URL(ogImage, SITE_URL).toString()
 
@@ -50,15 +50,15 @@ const schemaJson = JSON.stringify([
     'creator': {
       '@type': 'Organization',
       'name': 'Shoreline Operations LLC',
-      'url': 'https://shorelineops.com'
+      'url': SITE_URL
     }
   },
   {
     '@context': 'https://schema.org',
     '@type': 'MedicalBusiness',
     'name': 'Shoreline Operations LLC',
-    'url': 'https://shorelineops.com',
-    'logo': 'https://shorelineops.com/logo.png',
+    'url': SITE_URL,
+    'logo': new URL('/brand/shorelineops-icon.svg', SITE_URL).toString(),
     'description': 'Healthcare clinical nutrition technology and institutional dietary operations software for senior living, assisted living, and skilled nursing facilities.',
     'address': {
       '@type': 'PostalAddress',
@@ -114,9 +114,6 @@ const schemaJson = JSON.stringify([
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json" set:html={schemaJson} />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#fbfbfc] dark:bg-obsidian text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-shoreline-500 selection:text-white flex flex-col min-h-screen">
     <!-- Precision Architectural Header Navigation -->

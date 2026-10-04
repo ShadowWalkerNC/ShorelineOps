@@ -115,7 +115,7 @@ export default function MobileDashboardView(props: DashboardViewProps) {
   return (
     <div className="space-y-4 max-w-lg mx-auto pb-4 animate-fadeIn">
       {/* ── Active Service Header Bar ── */}
-      <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
+      <div className="clinical-dashboard-heading p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <div className="flex items-center justify-between mb-2">
           <span className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${mealWindow.color}`}>
             ● {mealWindow.name}

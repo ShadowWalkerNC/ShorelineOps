@@ -1,5 +1,11 @@
 # TODO — ShorelineOps Roadmap & Active Work
 
+## Design adoption — 2026-10-04
+
+- [x] Apply Stitch design language and verify desktop/mobile presentation locally.
+- [x] Document unified URLs and deployment-specific metadata configuration.
+- [ ] Verify the committed release on its public host after deployment.
+
 ## Decision workflow follow-up — 2026-09-24
 
 - [x] Complete atomic EHR decisions, signed tray event checks, purchasing approval boundaries, current unit-safe catalog comparison, and honest decision UI.

@@ -1,5 +1,9 @@
 <div align="center">
 
+## Current entry points and design adoption — October 4, 2026
+
+See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/STITCH_ADOPTION_2026-10-04.md). Marketing uses `/`, the public sandbox `/demo/`, and real application sign-in `/app/login`. Build-time `PUBLIC_SITE_URL` controls canonical metadata. Separate marketing hosts must set absolute `PUBLIC_DEMO_URL` and `PUBLIC_APP_URL`; unified deployments use relative paths. Local verification does not establish the deployed release.
+
 <img src="public/logo.png" alt="Shoreline Care OS" width="450" />
 
 ### Open-Source Healthcare Dietary Operations, Clinical Nutrition & Care Coordination Platform
@@ -13,7 +17,7 @@
 **Engineered by a healthcare executive chef, not a venture fund.**  
 *Bridging clinical resident diets, IDDSI dysphagia safety, touch tablet batch cookery, multi-distributor split MRP purchasing, and CMS-2567 federal survey readiness.*
 
-[Live Demo App](https://shoreline-demo.onrender.com/menu) • [Marketing & Pricing Portal](https://shoreline-marketing.onrender.com) • [Open Core Licensing](LICENSING.md) • [Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [TypeScript SDK](sdk/README.md)
+[Live Demo App](https://shorelineops.up.railway.app/demo/menu) • [Marketing & Pricing Portal](https://shorelineops.up.railway.app/) • [Open Core Licensing](LICENSING.md) • [Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [TypeScript SDK](sdk/README.md)
 
 </div>
 
@@ -273,8 +277,8 @@ Deploy the complete multi-service stack to Render using the official [`render.ya
 3. Connect your repository: `ShadowWalkerNC/ShorelineOps`.
 4. Render provisions and builds all 4 services automatically:
    - `shoreline-api` (Node/Express API on port 3001)
-   - `shoreline-demo` (React 18 + Vite SPA on `https://shoreline-demo.onrender.com`)
-   - `shoreline-marketing` (Astro static portal on `https://shoreline-marketing.onrender.com`)
+   - `shoreline-demo` (unified marketing root, sandbox `/demo/`, authenticated shell `/app/`; Render hostname is deployment-specific)
+   - `shoreline-marketing` (optional independently hosted Astro portal; configure absolute demo/app links when using it)
    - `shoreline-db` (Managed PostgreSQL instance)
 
 See [`docs/RenderDeployment.md`](docs/RenderDeployment.md) for complete deployment instructions and troubleshooting.
