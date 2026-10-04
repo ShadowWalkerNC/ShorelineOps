@@ -24,3 +24,4 @@ run([path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', path.joi
 run([path.join(dist, 'system.test.js')], directory)
 const cases = readdirSync(dist).filter(name => name.endsWith('.test.js') && !['system.test.js', 'compliance.test.js'].includes(name))
 run(['--test', ...cases.map(name => path.join(dist, name))], directory)
+run(['--test', path.join(root, 'desktop', 'backend.test.cjs')], directory)

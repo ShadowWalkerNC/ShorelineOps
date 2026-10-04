@@ -19,10 +19,10 @@
 # fallback (used only when the database container is not running) does not
 # require DB_USER/DB_NAME.
 #
-# NOTE: output is a plaintext dump. Encryption and the isolated restore drill
-# are a pending acceptance gate (see
+# Published output is authenticated AES-256-GCM ciphertext. The isolated restore drill
+# remains a pending acceptance gate (see
 # docs/audits/DEPLOYMENT_IMPLEMENTATION_2026-10-01.md); store artifacts
-# accordingly and do not claim otherwise.
+# accordingly; keys must be kept separately from artifacts.
 # ==============================================================================
 
 set -euo pipefail
@@ -30,14 +30,17 @@ umask 077
 
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="${BACKUP_DIR}/shorelineops_backup_${TIMESTAMP}.sql.gz"
-TMP_RAW="${BACKUP_FILE}.tmp.$$.raw"
-TMP_GZ="${BACKUP_FILE}.tmp.$$.gz"
+BACKUP_FILE="${BACKUP_DIR}/shorelineops_backup_${TIMESTAMP}.sql.gz.enc"
+TMP_RAW=""
+TMP_GZ=""
 CONTAINER_NAME="${CONTAINER_NAME:-shoreline-postgres}"
 DB_USER="${DB_USER:-}"
 DB_NAME="${DB_NAME:-}"
 
-cleanup_tmp() { rm -f "${TMP_RAW}" "${TMP_GZ}"; }
+cleanup_tmp() {
+  [ -z "${TMP_RAW}" ] || rm -f -- "${TMP_RAW}"
+  [ -z "${TMP_GZ}" ] || rm -f -- "${TMP_GZ}"
+}
 trap cleanup_tmp EXIT
 
 # Explicit DB identity for the container dump path (no stale defaults).
@@ -56,8 +59,14 @@ if [ -z "${DB_USER}" ] || [ -z "${DB_NAME}" ]; then
   fi
 fi
 
+CRYPTO_TOOL="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/backup-tool.mjs"
+: "${BACKUP_KEY_FILE:?BACKUP_KEY_FILE must reference a separate restricted key file.}"
+node "${CRYPTO_TOOL}" check --key-file "${BACKUP_KEY_FILE}"
+
 mkdir -p "${BACKUP_DIR}"
 chmod 700 "${BACKUP_DIR}"
+TMP_RAW=$(mktemp "${BACKUP_FILE}.tmp.XXXXXX.raw")
+TMP_GZ=$(mktemp "${BACKUP_FILE}.tmp.XXXXXX.gz")
 
 echo "[$(date)] Starting ShorelineOps database backup..."
 
@@ -109,10 +118,10 @@ if [ ! -s "${TMP_GZ}" ]; then
 fi
 
 chmod 600 "${TMP_GZ}"
-mv -f "${TMP_GZ}" "${BACKUP_FILE}"
+node "${CRYPTO_TOOL}" encrypt --key-file "${BACKUP_KEY_FILE}" "${TMP_GZ}" "${BACKUP_FILE}"
 chmod 600 "${BACKUP_FILE}"
 trap - EXIT
-rm -f "${TMP_RAW}"
+rm -f "${TMP_RAW}" "${TMP_GZ}"
 
 echo "[$(date)] Backup completed successfully: ${BACKUP_FILE}"
 
@@ -122,7 +131,7 @@ echo "[$(date)] Backup completed successfully: ${BACKUP_FILE}"
 BACKUP_DIR_ABS="$(cd "${BACKUP_DIR}" && pwd)"
 if [ -z "${BACKUP_DIR_ABS}" ] || [ "${BACKUP_DIR_ABS}" = "/" ]; then
   echo "[$(date)] Backup rotation skipped: refusing to prune in '${BACKUP_DIR_ABS}'." >&2
-elif ! find "${BACKUP_DIR_ABS}" -maxdepth 1 -name "shorelineops_backup_*.sql.gz" -mtime +30 -delete; then
+elif ! find "${BACKUP_DIR_ABS}" -maxdepth 1 -type f -name "shorelineops_backup_*.sql.gz.enc" -mtime +30 -delete; then
   echo "[$(date)] Backup rotation warning: pruning old backups failed (non-fatal; published artifact kept)." >&2
 else
   echo "[$(date)] Backup rotation complete (retained last 30 days)."

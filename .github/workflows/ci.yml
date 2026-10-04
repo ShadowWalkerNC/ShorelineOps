@@ -46,3 +46,32 @@ jobs:
 
       - name: Run Full Automated Test Suite
         run: npm test
+
+  postgres-acceptance:
+    name: Isolated PostgreSQL decision acceptance
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: shoreline_test
+          POSTGRES_PASSWORD: disposable_test_only
+          POSTGRES_DB: shoreline_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shoreline_test -d shoreline_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Verify migrations, stale tray rejection and concurrent EHR decisions
+        run: npm run test:postgres
+        env:
+          SHORELINE_TEST_POSTGRES_URL: postgresql://shoreline_test:disposable_test_only@127.0.0.1:5432/shoreline_acceptance

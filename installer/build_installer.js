@@ -63,6 +63,7 @@ copyDir(path.join(ROOT_DIR, 'dist'), path.join(TARGET_DIR, 'dist'))
 // Copy compiled server dist/ & migrations
 copyDir(path.join(ROOT_DIR, 'server', 'dist'), path.join(TARGET_DIR, 'server', 'dist'))
 copyDir(path.join(ROOT_DIR, 'server', 'src', 'db'), path.join(TARGET_DIR, 'server', 'src', 'db'))
+copyDir(path.join(ROOT_DIR, 'desktop'), path.join(TARGET_DIR, 'desktop'))
 
 // Copy root launcher scripts and config
 const filesToCopy = [
@@ -72,6 +73,7 @@ const filesToCopy = [
   'ShorelineOps-Launcher.vbs',
   'launcher.js',
   'package.json',
+  'package-lock.json',
   'electron-main.js',
 ]
 
@@ -88,10 +90,14 @@ if (fs.existsSync(path.join(ROOT_DIR, 'server', 'package.json'))) {
   fs.copyFileSync(path.join(ROOT_DIR, 'server', 'package.json'), path.join(TARGET_DIR, 'server', 'package.json'))
 }
 
+// npm resolves the root workspace declarations even for a runtime-only install.
+fs.mkdirSync(path.join(TARGET_DIR, 'marketing'), { recursive: true })
+fs.copyFileSync(path.join(ROOT_DIR, 'marketing', 'package.json'), path.join(TARGET_DIR, 'marketing', 'package.json'))
+
 // Create dedicated INSTALL_GUIDE.md inside the bundle
 const installGuide = `# Shoreline Care OS — One-Time Standalone Installation Guide
 
-Welcome to Shoreline Care OS (v5.0). This package installs the full healthcare dietary operations platform locally on your facility PC or kitchen workstation with zero cloud dependencies.
+This is a Node/web distribution candidate for a single-facility workstation. It is not a signed Electron installer. Installation downloads runtime dependencies and requires a supported Node.js runtime and administrator acceptance before clinical use.
 
 ---
 
@@ -99,7 +105,7 @@ Welcome to Shoreline Care OS (v5.0). This package installs the full healthcare d
 
 1. **Double-click \`Setup.bat\`**
    - The setup wizard will verify your local environment.
-   - It will automatically prepare the local SQLite database and seed your master seasonal menu cycle.
+   - Complete the authorized facility/account setup before entering real records. Production demo account seeding is disabled.
    - It will place a **"Shoreline Care OS"** desktop shortcut directly onto your Windows desktop and Start Menu.
 
 2. **Launch Shoreline Care OS**
@@ -110,8 +116,8 @@ Welcome to Shoreline Care OS (v5.0). This package installs the full healthcare d
 
 ## 🛡️ Key Features
 
-- **100% Offline Capable**: Your census, recipes, therapeutic diets, and HACCP logs are stored locally on your PC.
-- **Local Network Synchronization**: Kitchen tablets and line cooks on the same Wi-Fi can connect directly to \`http://<your-pc-ip>:3001\`.
+- **Local operations**: SQLite stores local records; provider integrations require their configured networks and services. Offline workflow and recovery acceptance remain required.
+- **Network access**: Use the loopback workstation by default. LAN deployments require an explicitly reviewed TLS, authentication, firewall, and backup configuration before tablets access sensitive records.
 - **Zero Ongoing Cloud Lock-in**: Full open-core ownership for single-facility nursing and assisted living homes.
 
 ---

@@ -18,17 +18,18 @@
 # directly via System.Diagnostics.ProcessStartInfo (no cmd.exe, no
 # string-built command line) and stdout is copied as raw bytes.
 #
-# NOTE: output is a plaintext dump. Encryption and the isolated restore drill
-# are a pending acceptance gate (see
+# Published output is authenticated AES-256-GCM ciphertext. The isolated restore drill
+# remains a pending acceptance gate (see
 # docs/audits/DEPLOYMENT_IMPLEMENTATION_2026-10-01.md); store artifacts
-# accordingly and do not claim otherwise.
+# accordingly; keys must be kept separately from artifacts.
 # ==============================================================================
 
 param (
     [string]$BackupDir = ".\backups",
     [string]$ContainerName = "shoreline-postgres",
     [string]$DbUser = "",
-    [string]$DbName = ""
+    [string]$DbName = "",
+    [string]$KeyFile = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,11 +58,12 @@ function Assert-SafeBackupToken {
     }
 }
 
-$BackupFile = Join-Path $BackupDir "shorelineops_backup_$Timestamp.sql"
+$BackupFile = Join-Path $BackupDir "shorelineops_backup_$Timestamp.sql.enc"
 $TempFile = "$BackupFile.tmp.$PID"
+$TempOwned = $false
 
 function Remove-TempOutput {
-    if (Test-Path -LiteralPath $TempFile) {
+    if ($TempOwned -and (Test-Path -LiteralPath $TempFile)) {
         Remove-Item -LiteralPath $TempFile -Force -ErrorAction SilentlyContinue
     }
 }
@@ -72,6 +74,17 @@ try {
     Assert-SafeBackupToken $ContainerName "ContainerName" "container_name"
     Assert-SafeBackupToken $DbUser "DbUser" "DB_USER / POSTGRES_USER"
     Assert-SafeBackupToken $DbName "DbName" "DB_NAME / POSTGRES_DB"
+
+    if ([string]::IsNullOrWhiteSpace($KeyFile)) { throw 'Explicit -KeyFile is required.' }
+    $KeyFile = (Resolve-Path -LiteralPath $KeyFile).Path
+    $keyAcl = [System.IO.File]::GetAccessControl($KeyFile)
+    foreach ($rule in $keyAcl.Access) {
+        $sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+        if ($rule.AccessControlType -eq 'Allow' -and $sid -notin @($OwnerSid, $AdminsSid, 'S-1-5-18')) { throw 'Key file ACL grants access outside owner, Administrators or SYSTEM.' }
+    }
+    $cryptoTool = Join-Path $PSScriptRoot 'backup-tool.mjs'
+    & node $cryptoTool check --key-file $KeyFile
+    if ($LASTEXITCODE -ne 0) { throw 'Encryption prerequisites failed; no dump started.' }
 
     $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
     if (-not $dockerCmd -or [string]::IsNullOrWhiteSpace($dockerCmd.Source)) {
@@ -101,7 +114,8 @@ try {
     # created by the dump would otherwise inherit the directory ACL
     # (potentially broadly readable) for the whole dump duration. The
     # FileStream Truncate below reuses this same file object, preserving its ACL.
-    New-Item -ItemType File -Path $TempFile -Force | Out-Null
+    New-Item -ItemType File -Path $TempFile | Out-Null
+    $TempOwned = $true
     try {
         Protect-BackupFile $TempFile
     } catch {
@@ -155,7 +169,9 @@ try {
         throw "pg_dump produced empty output. Temp output discarded; rotation skipped; no artifact published."
     }
 
-    Move-Item -LiteralPath $TempFile -Destination $BackupFile -Force
+    & node $cryptoTool encrypt --key-file $KeyFile $TempFile $BackupFile
+    if ($LASTEXITCODE -ne 0) { throw 'Encryption failed; rotation skipped.' }
+    Remove-TempOutput
 
     # Re-apply the restrictive ACL after the move (same-volume moves preserve
     # the source ACL, but do not depend on that).
@@ -176,7 +192,7 @@ try {
         if ([string]::IsNullOrWhiteSpace($BackupDirFull) -or $BackupDirFull -match '^[A-Za-z]:\\?$') {
             Write-Warning "Backup rotation skipped: refusing to prune in '$BackupDirFull'."
         } else {
-            Get-ChildItem -LiteralPath $BackupDirFull -Filter "shorelineops_backup_*.sql" -File -ErrorAction Stop | Where-Object {
+            Get-ChildItem -LiteralPath $BackupDirFull -Filter "shorelineops_backup_*.sql.enc" -File -ErrorAction Stop | Where-Object {
                 $_.LastWriteTime -lt (Get-Date).AddDays(-30)
             } | Remove-Item -Force -ErrorAction Stop
             Write-Host "[$((Get-Date))] Backup rotation complete (retained last 30 days)." -ForegroundColor Cyan

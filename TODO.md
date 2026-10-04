@@ -6,6 +6,10 @@ See [current project reassessment](docs/audits/PROJECT_REASSESSMENT_2026-10-04.m
 
 - [x] Add isolated Muse Spark SDK tooling with fixed synthetic-only transport tests.
 - [x] Add a pinned Linux Muse Gadget lab dependency manifest and document commercial/security constraints.
+- [x] Require authenticated encrypted backup artifacts and verify synthetic failure/key/tamper cases.
+- [x] Replace the Electron development server with compiled loopback runtime; verify Node and Electron subprocess lifecycle.
+- [x] Reject unsupported kitchen WebSocket upgrades and remove unsupported compliance/SLA claims.
+- [x] Add a guarded isolated PostgreSQL acceptance command and dedicated CI service.
 - [ ] Verify Spark live connectivity with authorized `MODEL_API_KEY`; no real resident data.
 - [ ] Resolve Gadget commercial token terms and complete isolated physical-device acceptance before operational integration.
 - [ ] Verify encrypted backups and isolated full restore with measured RPO/RTO.

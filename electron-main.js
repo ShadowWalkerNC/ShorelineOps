@@ -1,118 +1,37 @@
-const { app, BrowserWindow } = require('electron')
-const path = require('path')
-const { spawn } = require('child_process')
-const http = require('http')
-
-let mainWindow = null
-let backendProcess = null
-
-function startBackend() {
-  console.log('[Electron] Launching Express API Backend using npm run dev in server directory...')
-  
-  // Spawn npm run dev (npm.cmd on Windows, npm on Unix)
-  const isWindows = process.platform === 'win32'
-  const npmCmd = isWindows ? 'npm.cmd' : 'npm'
-
-  backendProcess = spawn(npmCmd, ['run', 'dev'], {
-    cwd: path.join(__dirname, 'server'),
-    shell: true,
-    env: {
-      ...process.env,
-      PORT: '4000',
-      NODE_ENV: process.env.NODE_ENV || 'development',
-      DATABASE_URL: process.env.DATABASE_URL || ''
-    }
-  })
-
-  backendProcess.stdout.on('data', (data) => {
-    console.log(`[Backend API] ${data.toString().trim()}`)
-  })
-
-  backendProcess.stderr.on('data', (data) => {
-    console.error(`[Backend ERR] ${data.toString().trim()}`)
-  })
-}
-
-// Poll until Vite dev server responds, then resolve
-function waitForVite(url, retries = 30, delay = 500) {
-  return new Promise((resolve, reject) => {
-    const attempt = (remaining) => {
-      http.get(url, (res) => {
-        console.log(`[Electron] Vite is ready (HTTP ${res.statusCode})`)
-        resolve()
-      }).on('error', () => {
-        if (remaining <= 0) {
-          reject(new Error('[Electron] Timed out waiting for Vite dev server'))
-        } else {
-          console.log(`[Electron] Waiting for Vite... (${retries - remaining + 1}/${retries})`)
-          setTimeout(() => attempt(remaining - 1), delay)
-        }
-      })
-    }
-    attempt(retries)
-  })
-}
-
+const { app, BrowserWindow, dialog } = require('electron')
+const { launchBackend } = require('./desktop/backend.cjs')
+let backend, mainWindow
+let quitting = false
 async function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-    title: 'Shoreline Care Center',
-    // Show window only once content is ready to prevent blank flash
-    show: false,
-  })
-
-  // In dev mode, wait for Vite to be ready before loading
-  const startUrl = process.env.NODE_ENV === 'production'
-    ? `file://${path.join(__dirname, 'dist', 'index.html')}`
-    : 'http://localhost:3000'
-
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      await waitForVite(startUrl)
-    } catch (err) {
-      console.error(err.message)
-    }
+  mainWindow = new BrowserWindow({ width:1280, height:800, show:false, title:'Shoreline Care OS',
+    webPreferences:{nodeIntegration:false, contextIsolation:true, sandbox:true, webSecurity:true} })
+  mainWindow.webContents.setWindowOpenHandler(() => ({action:'deny'}))
+  const enforceOrigin = (event,url) => {
+    try { if (new URL(url).origin !== backend.origin) event.preventDefault() }
+    catch { event.preventDefault() }
   }
-
-  mainWindow.loadURL(startUrl)
-
-  // Show window once page is loaded (no blank flash)
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show()
-  })
-
-  // DevTools in dev mode
-  if (process.env.NODE_ENV !== 'production') {
-    mainWindow.webContents.openDevTools()
-  }
-
-  mainWindow.on('closed', () => {
-    mainWindow = null
-  })
+  mainWindow.webContents.on('will-navigate', enforceOrigin)
+  mainWindow.webContents.on('will-redirect', enforceOrigin)
+  mainWindow.webContents.on('will-attach-webview', event => event.preventDefault())
+  mainWindow.webContents.session.setPermissionRequestHandler((_contents,_permission,callback) => callback(false))
+  mainWindow.once('ready-to-show', () => mainWindow.show())
+  mainWindow.on('closed', () => { mainWindow = null })
+  await mainWindow.loadURL(`${backend.origin}/app/login`)
 }
-
-app.on('ready', () => {
-  startBackend()
-  createWindow()
-})
-
-app.on('window-all-closed', () => {
-  console.log('[Electron] All windows closed, cleaning up child processes...')
-  if (backendProcess) {
-    backendProcess.kill()
-  }
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow()
-  }
-})
+function fail() {
+  if (quitting) return
+  dialog.showErrorBox('Shoreline startup failed', 'The local application could not start securely. Verify the production build, JWT_SECRET (at least 32 characters), and local database access. No demo account was created.')
+  app.quit()
+}
+if (!app.requestSingleInstanceLock()) app.quit()
+else {
+  app.whenReady().then(async () => {
+    backend = await launchBackend({root:__dirname,userData:app.getPath('userData'),executable:process.execPath})
+    backend.child.once('exit', fail)
+    await createWindow()
+  }).catch(fail)
+  app.on('second-instance', () => { if(mainWindow) { mainWindow.restore(); mainWindow.focus() } })
+  app.on('activate', () => { if(!mainWindow && backend) createWindow().catch(fail) })
+  app.on('window-all-closed', () => { if(process.platform !== 'darwin') app.quit() })
+  app.on('before-quit', () => { quitting = true; backend?.stop() })
+}

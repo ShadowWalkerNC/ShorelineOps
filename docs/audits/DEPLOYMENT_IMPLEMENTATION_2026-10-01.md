@@ -62,6 +62,8 @@ admin surfaces are owned by other workstreams and untouched here.
 
 ## Acceptance status: encrypted backups and restore drill (PENDING)
 
+Update 2026-10-04: scheduled scripts now require a restricted key file and publish only authenticated AES-256-GCM artifacts. Synthetic encrypted artifact and failure checks pass. The older plaintext implementation notes below describe the October 1 snapshot. Full isolated database restore, off-host retrieval, key escrow and measured RPO/RTO remain pending; see [current recovery procedure](../ENCRYPTED_BACKUP_RECOVERY.md).
+
 Backup output is currently a **plaintext** dump. Encryption at rest and an
 isolated restore drill (restore into a scratch database, verify integrity,
 document steps) are accepted as a **pending gate**: do not store artifacts as

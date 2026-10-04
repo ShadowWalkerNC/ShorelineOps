@@ -1,82 +1,23 @@
 #!/usr/bin/env node
-/**
- * CLI utility to encrypt or decrypt ShorelineOps database backups using AES-256-GCM.
- * Usage:
- *   node backup-tool.mjs encrypt <input_file> <output_file>
- *   node backup-tool.mjs decrypt <input_file> <output_file>
- * Reads passphrase from BACKUP_ENCRYPTION_KEY environment variable.
- */
+// Shares the server's existing SHOR_ENC1 format. No secret CLI arguments.
 import fs from 'node:fs'
-import path from 'node:path'
-import crypto from 'node:crypto'
-
-const SHORELINE_BACKUP_MAGIC = 'SHOR_ENC1'
-
-function getPassphrase() {
-  const key = process.env.BACKUP_ENCRYPTION_KEY?.trim()
-  if (!key || key.length < 16) {
-    console.error('ERROR: BACKUP_ENCRYPTION_KEY environment variable is required (min 16 chars).')
-    process.exit(1)
-  }
-  return key
-}
-
-function encrypt(inputPath, outputPath) {
-  const passphrase = getPassphrase()
-  const plaintext = fs.readFileSync(inputPath)
-  const salt = crypto.randomBytes(16)
-  const iv = crypto.randomBytes(12)
-  const key = crypto.pbkdf2Sync(passphrase, salt, 100_000, 32, 'sha256')
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
-  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()])
-  const tag = cipher.getAuthTag()
-  const magic = Buffer.from(SHORELINE_BACKUP_MAGIC, 'utf8')
-  const payload = Buffer.concat([magic, salt, iv, tag, ciphertext])
-  fs.writeFileSync(outputPath, payload)
-  console.log(`Successfully encrypted ${inputPath} -> ${outputPath}`)
-}
-
-function decrypt(inputPath, outputPath) {
-  const passphrase = getPassphrase()
-  const fileData = fs.readFileSync(inputPath)
-  const minLength = 9 + 16 + 12 + 16
-  if (fileData.length < minLength) {
-    console.error('ERROR: File is too small to be a valid ShorelineOps encrypted backup.')
-    process.exit(1)
-  }
-  const magic = fileData.subarray(0, 9).toString('utf8')
-  if (magic !== SHORELINE_BACKUP_MAGIC) {
-    console.error(`ERROR: Header mismatch. Expected '${SHORELINE_BACKUP_MAGIC}', got '${magic}'.`)
-    process.exit(1)
-  }
-  let offset = 9
-  const salt = fileData.subarray(offset, offset + 16)
-  offset += 16
-  const iv = fileData.subarray(offset, offset + 12)
-  offset += 12
-  const tag = fileData.subarray(offset, offset + 16)
-  offset += 16
-  const ciphertext = fileData.subarray(offset)
-
-  try {
-    const key = crypto.pbkdf2Sync(passphrase, salt, 100_000, 32, 'sha256')
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
-    decipher.setAuthTag(tag)
-    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()])
-    fs.writeFileSync(outputPath, decrypted)
-    console.log(`Successfully decrypted ${inputPath} -> ${outputPath}`)
-  } catch (err) {
-    console.error('ERROR: Decryption failed (invalid key or corrupted artifact):', err.message)
-    process.exit(1)
-  }
-}
-
-const [mode, src, dst] = process.argv.slice(2)
-if (mode === 'encrypt' && src && dst) {
-  encrypt(src, dst)
-} else if (mode === 'decrypt' && src && dst) {
-  decrypt(src, dst)
-} else {
-  console.error('Usage: node backup-tool.mjs [encrypt|decrypt] <input> <output>')
-  process.exit(1)
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
+try {
+  const [mode, flag, keyPath, input, output, ...extra] = process.argv.slice(2)
+  if (!['check', 'encrypt', 'decrypt'].includes(mode) || flag !== '--key-file' || !keyPath || extra.length || (mode !== 'check' && (!input || !output)) || (mode === 'check' && input)) throw new Error('Usage: backup-tool.mjs check|encrypt|decrypt --key-file <file> [input output]')
+  const stat = fs.lstatSync(keyPath)
+  if (!stat.isFile() || stat.size > 4096 || (process.platform !== 'win32' && (stat.mode & 0o077))) throw new Error('Key must be a restricted regular file (Unix mode 600), at most 4096 bytes.')
+  const key = fs.readFileSync(keyPath, 'utf8').trim()
+  // Existing SHOR_ENC1 artifacts accepted 16-character passphrases. Preserve
+  // recovery of those artifacts; new backups and preflight require 32.
+  const minimum = mode === 'decrypt' ? 16 : 32
+  if (key.length < minimum) throw new Error(`Key file requires at least ${minimum} characters; use a randomly generated key for new backups.`)
+  const { encryptBackupFile, decryptBackupFile } = require('../server/dist/backup-crypto.js')
+  if (mode === 'encrypt') encryptBackupFile(input, output, key)
+  if (mode === 'decrypt') decryptBackupFile(input, output, key)
+  console.log('Backup artifact operation completed.')
+} catch (error) {
+  console.error('Backup artifact operation failed: ' + (error.code === 'MODULE_NOT_FOUND' ? 'Build server first.' : error.code || error.message))
+  process.exitCode = 1
 }

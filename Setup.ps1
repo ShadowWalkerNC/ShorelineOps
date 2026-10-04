@@ -28,10 +28,12 @@ Write-Host "`n[*] Checking local runtime packages..." -ForegroundColor Yellow
 if (-not (Test-Path (Join-Path $InstallPath "node_modules"))) {
     Write-Host "    Installing frontend and root dependencies..." -ForegroundColor Gray
     npm --prefix $InstallPath install --omit=dev --silent
+    if ($LASTEXITCODE -ne 0) { throw 'Runtime dependency installation failed; shortcuts were not created.' }
 }
 if (-not (Test-Path (Join-Path $InstallPath "server/node_modules"))) {
     Write-Host "    Installing server dependencies..." -ForegroundColor Gray
     npm --prefix (Join-Path $InstallPath "server") install --omit=dev --silent
+    if ($LASTEXITCODE -ne 0) { throw 'Server dependency installation failed; shortcuts were not created.' }
 }
 
 # 3. Create Desktop and Start Menu Shortcuts

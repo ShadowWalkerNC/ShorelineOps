@@ -28,6 +28,7 @@
     "launch": "node launcher.js",
     "start": "node server/dist/index.js",
     "test": "node scripts/run-tests.mjs",
+    "test:postgres": "node scripts/run-postgres-acceptance.mjs",
     "drill:failure": "node scripts/meal_service_failure_drill.js",
     "audit:operations": "node scripts/operations_consultant_audit.js",
     "preview": "vite preview",

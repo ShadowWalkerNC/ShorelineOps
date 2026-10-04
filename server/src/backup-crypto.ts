@@ -61,12 +61,27 @@ export function decryptBackupBuffer(encryptedBuffer: Buffer, passphrase: string)
 
 export function encryptBackupFile(inputPath: string, outputPath: string, passphrase: string): void {
   const plaintext = fs.readFileSync(inputPath)
+  if (!plaintext.length) throw new Error('Refusing to encrypt empty backup.')
   const encrypted = encryptBackupBuffer(plaintext, passphrase)
-  fs.writeFileSync(outputPath, encrypted)
+  publishExclusive(outputPath, encrypted)
 }
 
 export function decryptBackupFile(inputPath: string, outputPath: string, passphrase: string): void {
   const encrypted = fs.readFileSync(inputPath)
   const decrypted = decryptBackupBuffer(encrypted, passphrase)
-  fs.writeFileSync(outputPath, decrypted)
+  if (!decrypted.length) throw new Error('Refusing to publish empty restored backup.')
+  publishExclusive(outputPath, decrypted)
+}
+
+function publishExclusive(outputPath: string, contents: Buffer): void {
+  const fd = fs.openSync(outputPath, 'wx', 0o600)
+  try {
+    fs.writeFileSync(fd, contents)
+    fs.fsyncSync(fd)
+  } catch (error) {
+    fs.closeSync(fd)
+    fs.unlinkSync(outputPath)
+    throw error
+  }
+  fs.closeSync(fd)
 }

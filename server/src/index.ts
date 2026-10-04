@@ -124,7 +124,7 @@ import { httpCacheMiddleware } from './middleware/cache'
 
 import { mcpRouter } from './routes/mcp'
 import { globalHealerBot } from './agent/healer'
-import { startNightlyForecastRollup } from './jobs/nightlyForecast'
+import { startNightlyForecastRollup, stopNightlyForecastRollup } from './jobs/nightlyForecast'
 import { webhooksRouter } from './routes/webhooks'
 import { hardwareRouter } from './routes/hardware'
 import { billingRouter } from './routes/billing'
@@ -352,22 +352,19 @@ async function initializeDatabase(): Promise<void> {
 export async function startServer() {
   await initializeDatabase()
 
-  const server = app.listen(PORT, () => {
+  const server = app.listen(Number(PORT), process.env.HOST || '0.0.0.0', () => {
     console.log(`[Shoreline API] Running on port ${PORT} (${process.env.NODE_ENV})`)
   })
 
-  // High-Frequency Real-Time WebSocket stream handler for Kitchen Telemetry (/api/ws/kitchen)
-  server.on('upgrade', (request, socket, _head) => {
-    if (request.url === '/api/ws/kitchen') {
-      socket.write('HTTP/1.1 101 Switching Protocols\r\n' +
-                   'Upgrade: websocket\r\n' +
-                   'Connection: Upgrade\r\n' +
-                   'Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n' +
-                   '\r\n')
-      console.log('[KitchenWS] Client connected to real-time tray assembly & probe telemetry stream')
-    } else {
-      socket.destroy()
-    }
+  server.once('close', () => {
+    globalHealerBot.stopDaemon()
+    stopNightlyForecastRollup()
+  })
+
+  // No streaming protocol is implemented. Reject upgrades explicitly rather
+  // than advertising an unauthenticated, non-functional telemetry channel.
+  server.on('upgrade', (_request, socket) => {
+    socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n')
   })
 
   return server

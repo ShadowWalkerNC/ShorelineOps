@@ -24,14 +24,14 @@ Severity describes consequence if a gap is ignored, not proof of an exploitable 
 |---|---|---|
 | P0 / critical before clinical expansion | Canonical allergen equivalence, restricted diets, fluid restrictions and physical texture verification remain acceptance gaps. Existing gates intentionally hold uncertain trays. | Dietitian-reviewed canonical ingredients/recipes and restricted-diet fixtures; test NPO, allergy, stale-order and ambiguous-recipe rejection with independent clinical approval. Keep hard blocks. |
 | P0 / high before Gadget commercial use | Token terms restrict commercial use; generic host commands/files would expand the trust boundary. | Obtain a suitable written commercial arrangement or use an alternative supported device protocol. Dedicated isolated non-sudo lab account; no application DB/secrets or resident data; no automatic shell daemon on clinical hosts. |
-| P1 / high | Backup scripts produce plaintext artifacts; encrypted restore and measured RPO/RTO are unproven. Partial row restore correctly remains disabled. | Encrypt protected off-host backups with separate keys; restore into isolated staging; verify completeness, signing/key recovery and measured downtime/data loss. Perform a supervised drill, never reset live data. |
-| P1 / high | SQLite regression success does not prove PostgreSQL race/locking behavior. | Disposable PostgreSQL tests for concurrent EHR decisions, order approvals/edits and tray scan versus clinical update; prove atomic audit rollback and migration compatibility. |
+| P1 / high | Scheduled backups now require a restricted key file and authenticated AES-GCM artifacts; synthetic failure/tamper cases pass. Off-host retrieval, full database restore and measured RPO/RTO remain unproven. | Provision and escrow keys separately from artifacts, retrieve off-host backups and restore into isolated staging; verify completeness, signing/key recovery and measured downtime/data loss. Never reset live data. See `docs/ENCRYPTED_BACKUP_RECOVERY.md`. |
+| P1 / high | SQLite regression success does not prove PostgreSQL race/locking behavior. A separate guarded command and fresh PostgreSQL CI service are prepared; actual PostgreSQL execution remains unverified. | Run `npm run test:postgres` against an empty loopback database named `shoreline_acceptance`; the command accepts only explicit `SHORELINE_TEST_POSTGRES_URL`, rejects URL overrides and nonempty databases, and never falls back to SQLite. Current coverage is migrations, stale tray rejection and simultaneous EHR decisions; order/audit rollback and scan/update races still need PostgreSQL evidence. |
 | P1 / high before scaling | One facility per DB is supported; idempotency uses process-local Maps. | Maintain separate facility DBs. Prove authorization scope, durable idempotency and job leasing before multiple API replicas/shared-database tenancy. Load-test meal-rush concurrency and shared-IP rate limits. |
 | P1 / high before Spark production data | API SDK imports and mocked transport work; no `MODEL_API_KEY` configured in this execution environment. Healthcare provider/data-processing suitability not assessed. | First run the fixed synthetic probe with authorized credentials. Any real advisory feature needs an explicit non-PHI schema, approved retention/contract boundary, server-only secrets, role checks, audit, bounded quotas/timeouts, and human review. AI cannot authorize clinical or purchasing actions. |
 | P1 / medium | Real PCC/vendor/USDA/provider acceptance, camera/scanner, printer and physical mobile/PWA coverage remain unverified. | Vendor-authorized synthetic sandboxes and physical-device tests including duplicates, outages, denied permissions, print fidelity, recovery and reconciliation. Do not treat simulated data as live integration proof. |
-| P1 / medium | Electron currently starts the development backend using `npm run dev`; packaged desktop acceptance is incomplete. | Launch compiled production backend with explicit port/lifecycle, packaged assets and recovery; verify Windows/macOS/Linux installers independently. |
+| P1 / medium | Electron now launches the compiled production backend on loopback and serves `/app/login`; real Node and Electron subprocess tests pass. Signed packaged desktop acceptance is incomplete. | Verify Windows/macOS/Linux installers independently, including native dependencies, secure signing-key provisioning, per-user data protection and hardware permissions. See `desktop/README.md`. |
 | P2 / medium | Application emits a large single-bundle warning; no measured meal-rush or low-end tablet performance baseline. | Measure cold/warm load, JS execution, long tasks and API tail latency on target tablets/network; then route-level code splitting and query/index work based on measurements. |
-| P2 / medium | Historical milestone and marketing compliance/SLA/integration claims exceed current acceptance evidence. | Reconcile claims to evidence and qualified contractual/clinical review. Version roadmap entries as source/local/live/device evidence rather than blanket completed labels. |
+| P2 / medium | Public compliance/SLA/BAA/backup/export promises were qualified to current evidence; historical milestone headings still need interpretation as feature history. | Version roadmap entries as source/local/live/device evidence rather than blanket completed labels; obtain actual clinical/contractual acceptance before asserting guarantees. |
 
 ## Plan reconciliation
 
@@ -45,6 +45,18 @@ Severity describes consequence if a gap is ignored, not proof of an exploitable 
 | Muse Gadget integration | Pinned Linux lab dependency preparation added. Runtime/device acceptance NOT RUN; commercial token use BLOCKED by current published terms. |
 
 ## Verification for this reassessment
+
+### Readiness remediation follow-up
+
+- PASS: `npm test`: 228 system checks, 164 regression tests and 3 compiled desktop subprocess tests, zero failures/skips.
+- PASS: `npm run build:demo` and `npm run build:marketing` after public copy corrections.
+- PASS: real installed Electron executable passed the same three desktop subprocess tests; this verifies current-machine backend/native SQLite compatibility, not a signed installer or rendered Electron UI.
+- PASS: actual HTTP upgrade rejection, backup encryption/wrong-key/tamper/empty/output-preservation and synthetic Bash/Windows dump failure checks.
+- Added: isolated PostgreSQL CI job. NOT RUN locally because PostgreSQL/Docker executables are absent. CI result is not yet acceptance evidence.
+- Removed: unused unauthenticated non-protocol kitchen streaming placeholder; existing HTTP workflows remain authoritative.
+- NOT RUN: full database recovery, off-host/key escrow retrieval, real model/provider/device and cross-platform packaged acceptance.
+
+The following initial SDK reassessment results precede these follow-up source changes:
 
 - PASS: frontend typecheck and existing suite: 228 system checks plus 160 regression tests, zero failed/skipped. Counts describe different runners, not new independent certification.
 - PASS: three SDK boundary tests: absent credentials never request; fixed synthetic request goes only to the official host without tools/storage; incomplete/unexpected responses cannot claim success.

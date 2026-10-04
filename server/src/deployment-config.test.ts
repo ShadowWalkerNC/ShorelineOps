@@ -1,3 +1,4 @@
+import { decryptBackupBuffer } from './backup-crypto'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -455,7 +456,7 @@ test('bash backup validates the raw dump before gzip and never rotates on failur
   assert.ok(!text.includes('docker exec -t'), 'no pseudo-TTY on docker exec')
   assert.ok(!text.includes('| gzip'), 'no unvalidated dump-to-gzip pipe (empty input still yields non-empty gzip)')
   assert.ok(
-    text.indexOf('find "${BACKUP_DIR_ABS}"') > text.indexOf('mv -f "${TMP_GZ}"'),
+    text.indexOf('find "${BACKUP_DIR_ABS}"') > text.indexOf('node "${CRYPTO_TOOL}" encrypt'),
     'rotation runs only after successful publish'
   )
   assert.ok(text.includes('pending acceptance gate'), 'restore gate disclosed as pending')
@@ -464,7 +465,7 @@ test('bash backup validates the raw dump before gzip and never rotates on failur
 
 test('powershell backup pre-restricts output with SID ACLs and never rotates on failure', () => {
   const text = read('scripts/backup.ps1')
-  for (const marker of ['GetCurrent().User', 'icacls', '/inheritance:r', '.tmp.', 'Move-Item', '$LASTEXITCODE', 'ProcessStartInfo', 'BaseStream', 'CopyTo', 'Assert-SafeBackupToken', 'UseShellExecute', 'RedirectStandardOutput', 'rotation skipped', 'exit 1', 'pending acceptance gate']) {
+  for (const marker of ['GetCurrent().User', 'icacls', '/inheritance:r', '.tmp.', 'encrypt --key-file', '$LASTEXITCODE', 'ProcessStartInfo', 'BaseStream', 'CopyTo', 'Assert-SafeBackupToken', 'UseShellExecute', 'RedirectStandardOutput', 'rotation skipped', 'exit 1', 'pending acceptance gate']) {
     assert.ok(text.includes(marker), `backup.ps1 contains ${marker}`)
   }
   assert.ok(!text.includes('docker exec -t'), 'no pseudo-TTY on docker exec')
@@ -481,7 +482,7 @@ test('powershell backup pre-restricts output with SID ACLs and never rotates on 
     'DB validation runs before process launch'
   )
   assert.ok(
-    text.indexOf('Get-ChildItem -LiteralPath $BackupDirFull') > text.indexOf('Move-Item -LiteralPath $TempFile'),
+    text.indexOf('Get-ChildItem -LiteralPath $BackupDirFull') > text.indexOf('& node $cryptoTool encrypt'),
     'rotation runs only after successful publish'
   )
   assert.ok(!text.includes('openssl') && !text.includes('gpg '), 'no untested encryption claim')
@@ -536,8 +537,35 @@ function findPowershell(): string | null {
 
 const bashPath = findBash()
 const powershellPath = findPowershell()
+const syntheticBackupKey = 'synthetic-test-only-random-looking-key-1234567890'
+
+test('backup scripts reject unavailable encryption before invoking a dump or rotation', () => {
+  for (const shell of ['bash', 'powershell']) {
+    if (shell === 'bash' && !bashPath || shell === 'powershell' && !powershellPath) continue
+    const work = fs.mkdtempSync(path.join(os.tmpdir(), 'shoreline-key-preflight-'))
+    const bin = path.join(work, 'bin'), backups = path.join(work, 'backups'), marker = path.join(work, 'invoked')
+    fs.mkdirSync(bin)
+    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.enc')
+    fs.writeFileSync(path.join(bin, 'docker'), `#!/usr/bin/env bash\necho invoked > '${toPosixPath(marker)}'\nexit 99\n`, { mode: 0o755 })
+    fs.writeFileSync(path.join(bin, 'docker.cmd'), `@echo off\r\necho invoked>"${marker}"\r\nexit /b 99\r\n`)
+    const missing = path.join(work, 'unavailable.key')
+    const result = shell === 'bash'
+      ? spawnSync(bashPath!, [toPosixPath(path.join(repoRoot, 'scripts', 'backup.sh'))], { cwd: work, encoding: 'utf8', timeout: 90_000, env: { ...process.env, PATH: `${toPosixPath(bin)}:${process.env.PATH}`, DB_USER: 'synthetic', DB_NAME: 'synthetic', DATABASE_URL: '', BACKUP_DIR: backups, BACKUP_KEY_FILE: missing } })
+      : spawnSync(powershellPath!, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(repoRoot, 'scripts', 'backup.ps1'), '-DbUser', 'synthetic', '-DbName', 'synthetic', '-BackupDir', backups, '-KeyFile', missing], { encoding: 'utf8', timeout: 90_000, env: powershellChildEnv({ PATH: `${bin}${path.delimiter}${process.env.PATH}` }) })
+    assert.notEqual(result.status, 0, `${shell}: missing key rejected`)
+    assert.equal(fs.existsSync(marker), false, `${shell}: docker never invoked`)
+    assert.equal(fs.existsSync(seeded), true, `${shell}: rotation skipped`)
+    assert.equal(listArtifacts(backups, /\.tmp\./).length, 0)
+  }
+})
 
 function seedOldArtifact(dir: string, fileName: string): string {
+  const keyPath = path.join(path.dirname(dir), 'backup.key')
+  fs.writeFileSync(keyPath, syntheticBackupKey, { mode: 0o600 })
+  if (process.platform === 'win32') {
+    const acl = spawnSync('powershell', ['-NoProfile', '-Command', `icacls '${keyPath}' /inheritance:r /grant:r "*$([System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value):F" | Out-Null`], { env: powershellChildEnv({}), encoding: 'utf8' })
+    assert.equal(acl.status, 0)
+  }
   fs.mkdirSync(dir, { recursive: true })
   const target = path.join(dir, fileName)
   fs.writeFileSync(target, 'seeded-old-artifact')
@@ -595,7 +623,7 @@ fi
 echo "unexpected docker args: $*" >&2; exit 99
 `)
   fs.chmodSync(path.join(bin, 'docker'), 0o755)
-  const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.gz')
+  const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.gz.enc')
   const result = spawnSync(bashPath, [toPosixPath(path.join(repoRoot, 'scripts', 'backup.sh'))], {
     encoding: 'utf8',
     timeout: 90_000,
@@ -604,6 +632,7 @@ echo "unexpected docker args: $*" >&2; exit 99
       ...process.env,
       PATH: `${toPosixPath(bin)}:${process.env.PATH}`,
       BACKUP_DIR: 'backups',
+      BACKUP_KEY_FILE: path.join(work, 'backup.key'),
       CONTAINER_NAME: 'synth-postgres',
       FAKE_CONTAINER: 'synth-postgres',
       FAKE_PGDUMP_MODE: 'ok',
@@ -613,9 +642,9 @@ echo "unexpected docker args: $*" >&2; exit 99
     },
   })
   assert.equal(result.status, 0, `backup.sh stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
-  const artifacts = listArtifacts(backups, /^shorelineops_backup_.*\.sql\.gz$/)
+  const artifacts = listArtifacts(backups, /^shorelineops_backup_.*\.sql\.gz\.enc$/)
   assert.equal(artifacts.length, 1, `exactly one artifact published, found ${artifacts}`)
-  const payload = zlib.gunzipSync(fs.readFileSync(path.join(backups, artifacts[0]))).toString('utf8')
+  const payload = zlib.gunzipSync(decryptBackupBuffer(fs.readFileSync(path.join(backups, artifacts[0])), syntheticBackupKey)).toString('utf8')
   assert.ok(payload.includes('SYNTHETIC-DUMP'), 'artifact decompresses to the synthetic dump')
   assert.ok(!fs.existsSync(seeded), 'rotation pruned the seeded old artifact after success')
   if (process.platform !== 'win32') {
@@ -642,7 +671,7 @@ fi
 echo "unexpected docker args: $*" >&2; exit 99
 `)
     fs.chmodSync(path.join(bin, 'docker'), 0o755)
-    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.gz')
+    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.gz.enc')
     const result = spawnSync(bashPath, [toPosixPath(path.join(repoRoot, 'scripts', 'backup.sh'))], {
       encoding: 'utf8',
       timeout: 90_000,
@@ -651,6 +680,7 @@ echo "unexpected docker args: $*" >&2; exit 99
         ...process.env,
         PATH: `${toPosixPath(bin)}:${process.env.PATH}`,
         BACKUP_DIR: 'backups',
+      BACKUP_KEY_FILE: path.join(work, 'backup.key'),
         CONTAINER_NAME: 'synth-postgres',
         FAKE_CONTAINER: 'synth-postgres',
         FAKE_PGDUMP_MODE: mode,
@@ -660,7 +690,7 @@ echo "unexpected docker args: $*" >&2; exit 99
       },
     })
     assert.notEqual(result.status, 0, `expected nonzero exit for ${mode} dump`)
-    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql\.gz$/), ['shorelineops_backup_20000101_000000.sql.gz'])
+    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql\.gz\.enc$/), ['shorelineops_backup_20000101_000000.sql.gz.enc'])
     assert.ok(fs.existsSync(seeded), 'rotation skipped: seeded old artifact retained')
     assert.equal(listArtifacts(backups, /\.tmp\./).length, 0, 'no temp files left behind')
   })
@@ -686,11 +716,12 @@ if [ "$1" = "exec" ]; then printf 'SYNTHETIC-DUMP ok\\n'; exit 0; fi
 echo "unexpected docker args: $*" >&2; exit 99
 `)
     fs.chmodSync(path.join(bin, 'docker'), 0o755)
-    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.gz')
+    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.gz.enc')
     const childEnv: Record<string, string | undefined> = {
       ...process.env,
       PATH: `${toPosixPath(bin)}:${process.env.PATH}`,
       BACKUP_DIR: 'backups',
+      BACKUP_KEY_FILE: path.join(work, 'backup.key'),
       CONTAINER_NAME: 'synth-postgres',
       FAKE_CONTAINER: 'synth-postgres',
       FAKE_PGDUMP_MODE: 'ok',
@@ -711,7 +742,7 @@ echo "unexpected docker args: $*" >&2; exit 99
     const output = `${result.stdout}${result.stderr}`
     assert.ok(output.includes('is required'), `${variant.name} names the missing required value`)
     assert.ok(output.includes('DB_USER') || output.includes('DB_NAME'), `${variant.name} references Compose-required values`)
-    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql\.gz$/), ['shorelineops_backup_20000101_000000.sql.gz'], `${variant.name}: no artifact published`)
+    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql\.gz\.enc$/), ['shorelineops_backup_20000101_000000.sql.gz.enc'], `${variant.name}: no artifact published`)
     assert.ok(fs.existsSync(seeded), `${variant.name}: rotation skipped`)
     assert.equal(listArtifacts(backups, /\.tmp\./).length, 0, `${variant.name}: no temp files left behind`)
     assert.equal(fs.existsSync(invocationLog), false, `${variant.name}: docker never executed (rejected before any command)`)
@@ -739,20 +770,20 @@ test('powershell backup publishes a valid artifact on success (synthetic docker)
     'exit /b 0',
     '',
   ].join('\r\n'))
-  const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql')
+  const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.enc')
   const result = spawnSync(powershellPath, [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
     '-File', path.join(repoRoot, 'scripts', 'backup.ps1'),
-    '-BackupDir', backups, '-ContainerName', 'synth-postgres', '-DbUser', 'synthetic', '-DbName', 'synthetic',
+    '-BackupDir', backups, '-ContainerName', 'synth-postgres', '-DbUser', 'synthetic', '-DbName', 'synthetic', '-KeyFile', path.join(work, 'backup.key'),
   ], {
     encoding: 'utf8',
     timeout: 120_000,
     env: powershellChildEnv({ PATH: `${bin}${path.delimiter}${process.env.PATH}`, FAKE_CONTAINER: 'synth-postgres', FAKE_PGDUMP_MODE: 'ok' }),
   })
   assert.equal(result.status, 0, `backup.ps1 stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
-  const artifacts = listArtifacts(backups, /^shorelineops_backup_.*\.sql$/)
+  const artifacts = listArtifacts(backups, /^shorelineops_backup_.*\.sql\.enc$/)
   assert.equal(artifacts.length, 1, `exactly one artifact published, found ${artifacts}`)
-  assert.ok(fs.readFileSync(path.join(backups, artifacts[0]), 'utf8').includes('SYNTHETIC-DUMP'), 'artifact holds the synthetic dump')
+  assert.ok(decryptBackupBuffer(fs.readFileSync(path.join(backups, artifacts[0])), syntheticBackupKey).toString('utf8').includes('SYNTHETIC-DUMP'), 'artifact holds the synthetic dump')
   assert.ok(!fs.existsSync(seeded), 'rotation pruned the seeded old artifact after success')
   assert.ok(!`${result.stdout}${result.stderr}`.includes('docker CLI not found'), 'fake docker resolved (no docker-not-found)')
   assert.ok(fs.existsSync(invocationLog), 'fake docker was invoked')
@@ -782,11 +813,11 @@ for (const mode of ['empty', 'fail']) {
       'exit /b 0',
       '',
     ].join('\r\n'))
-    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql')
+    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.enc')
     const result = spawnSync(powershellPath, [
       '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
       '-File', path.join(repoRoot, 'scripts', 'backup.ps1'),
-      '-BackupDir', backups, '-ContainerName', 'synth-postgres', '-DbUser', 'synthetic', '-DbName', 'synthetic',
+      '-BackupDir', backups, '-ContainerName', 'synth-postgres', '-DbUser', 'synthetic', '-DbName', 'synthetic', '-KeyFile', path.join(work, 'backup.key'),
     ], {
       encoding: 'utf8',
       timeout: 120_000,
@@ -798,7 +829,7 @@ for (const mode of ['empty', 'fail']) {
     assert.ok(output.includes(mode === 'empty' ? 'pg_dump produced empty output' : 'pg_dump exited with code'), `${mode}: actual pg_dump reason asserted:\n${output}`)
     assert.ok(fs.existsSync(invocationLog), `${mode}: fake docker exec was invoked`)
     assert.ok(fs.readFileSync(invocationLog, 'utf8').includes('exec'), `${mode}: invocation marker shows exec ran`)
-    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql$/), ['shorelineops_backup_20000101_000000.sql'])
+    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql\.enc$/), ['shorelineops_backup_20000101_000000.sql.enc'])
     assert.ok(fs.existsSync(seeded), 'rotation skipped: seeded old artifact retained')
     assert.equal(listArtifacts(backups, /\.tmp\./).length, 0, 'no temp files left behind')
   })
@@ -820,7 +851,7 @@ test('powershell backup requires explicit DbUser/DbName (synthetic, no stale def
       'exit /b 0',
       '',
     ].join('\r\n'))
-    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql')
+    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.enc')
     const result = spawnSync(powershellPath, [
       '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
       '-File', path.join(repoRoot, 'scripts', 'backup.ps1'),
@@ -833,7 +864,7 @@ test('powershell backup requires explicit DbUser/DbName (synthetic, no stale def
     assert.notEqual(result.status, 0, `missing DB identity must fail (args ${JSON.stringify(args)}):\n${result.stdout}\n${result.stderr}`)
     assert.ok(`${result.stdout}${result.stderr}`.includes('is required'), 'failure names the missing required value')
     assert.ok(`${result.stdout}${result.stderr}`.includes('DB_USER') || `${result.stdout}${result.stderr}`.includes('DB_NAME'), 'failure references Compose-required values')
-    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql$/), ['shorelineops_backup_20000101_000000.sql'])
+    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql\.enc$/), ['shorelineops_backup_20000101_000000.sql.enc'])
     assert.ok(fs.existsSync(seeded), 'rotation skipped: seeded old artifact retained')
     assert.equal(listArtifacts(backups, /\.tmp\./).length, 0, 'no temp files left behind')
     assert.equal(fs.existsSync(invocationLog), false, 'docker never executed (rejected before any command)')
@@ -856,7 +887,7 @@ for (const [param, evil] of [['-DbUser', 'evil"quote'], ['-DbUser', 'evil%PATH%'
       'exit /b 0',
       '',
     ].join('\r\n'))
-    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql')
+    const seeded = seedOldArtifact(backups, 'shorelineops_backup_20000101_000000.sql.enc')
     const baseArgs = ['-BackupDir', backups, '-ContainerName', 'synth-postgres', '-DbUser', 'synthetic', '-DbName', 'synthetic']
     const idx = baseArgs.indexOf(param)
     baseArgs[idx + 1] = evil
@@ -871,7 +902,7 @@ for (const [param, evil] of [['-DbUser', 'evil"quote'], ['-DbUser', 'evil%PATH%'
     })
     assert.notEqual(result.status, 0, `metacharacters must fail (args ${JSON.stringify(baseArgs)}):\n${result.stdout}\n${result.stderr}`)
     assert.ok(`${result.stdout}${result.stderr}`.includes('rejected'), 'failure names the rejection')
-    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql$/), ['shorelineops_backup_20000101_000000.sql'])
+    assert.deepEqual(listArtifacts(backups, /^shorelineops_backup_.*\.sql\.enc$/), ['shorelineops_backup_20000101_000000.sql.enc'])
     assert.ok(fs.existsSync(seeded), 'rotation skipped: seeded old artifact retained')
     assert.equal(listArtifacts(backups, /\.tmp\./).length, 0, 'no temp files left behind')
     assert.equal(fs.existsSync(invocationLog), false, 'docker never executed (rejected before any command)')

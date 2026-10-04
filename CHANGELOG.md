@@ -161,8 +161,8 @@ All notable changes to the ShorelineOps platform are documented in this file.
   - Corporate RD publishes master 4-week cycle menus to spoke facilities with automated 15% $/CPD local substitution tolerance checks.
 - **Dual-Transport Model Context Protocol (MCP) Server** (`server/src/routes/mcp.ts`):
   - Server-Sent Events (SSE) stream endpoint (`GET /api/mcp/sse` + `POST /api/mcp/messages`) for remote autonomous hospital bots.
-- **High-Frequency Real-Time WebSocket Server** (`server/src/index.ts`):
-  - Dedicated `/api/ws/kitchen` upgrade handler for zero-latency tray scan confirmations and probe telemetry.
+- **Kitchen streaming prototype** (withdrawn during readiness remediation):
+  - The placeholder `/api/ws/kitchen` handshake was not a functional or authenticated streaming protocol. Upgrade requests are rejected; kitchen workflows use the existing HTTP API.
 - **Interactive OpenAPI 3.1 & Swagger UI Spec** (`server/src/docs/openapi.json`, `server/src/index.ts`):
   - Complete REST API specification mounted directly at `/api/docs`.
 - **System Test Suite Expansion** (`server/src/system.test.ts`):

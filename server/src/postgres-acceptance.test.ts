@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -21,7 +21,12 @@ if (!isPg) {
 }
 process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex')
 
-test('concurrency acceptance: simultaneous tray card scans against mutating diet orders fail closed on stale tokens', async () => {
+after(async () => {
+  const { pool } = await import('./db/pool')
+  await pool.end()
+})
+
+test('database acceptance: tray dispatch after clinical update rejects stale signed card', async () => {
   const { pool } = await import('./db/pool')
   const { runMigrations } = await import('./db/migrate')
   const { signTray, verifyTray } = await import('./engine/traySafety')
@@ -36,14 +41,14 @@ test('concurrency acceptance: simultaneous tray card scans against mutating diet
   await pool.query(
     `INSERT INTO residents
        (id, name, room, status, diet_type, texture, portion_size, allergies, is_npo, profile_version)
-     VALUES ($1, 'Patient Concurrency Test', 'RM-101', 'Active', 'Regular', 'Regular', 'Regular', '[]', false, 1)`,
-    [residentId]
+     VALUES ($1, 'Patient Concurrency Test', 'RM-101', 'Active', 'Regular', 'Regular', 'Regular', $2, false, 1)`,
+    [residentId, []]
   )
 
   await pool.query(
     `INSERT INTO recipes (id, name, allergens, iddsi_level)
-     VALUES ($1, 'Roast Turkey', '[]', 7)`,
-    [crypto.randomUUID()]
+     VALUES ($1, 'Roast Turkey', $2, 7)`,
+    [crypto.randomUUID(), []]
   )
 
   await pool.query(
