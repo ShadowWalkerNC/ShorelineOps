@@ -567,8 +567,8 @@ function seedOldArtifact(dir: string, fileName: string): string {
   const keyPath = path.join(path.dirname(dir), 'backup.key')
   fs.writeFileSync(keyPath, syntheticBackupKey, { mode: 0o600 })
   if (process.platform === 'win32') {
-    const acl = spawnSync('powershell', ['-NoProfile', '-Command', `icacls '${keyPath}' /inheritance:r /grant:r "*$([System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value):F" | Out-Null`], { env: powershellChildEnv({}), encoding: 'utf8' })
-    assert.equal(acl.status, 0)
+    const acl = spawnSync('powershell', ['-NoProfile', '-Command', `icacls '${keyPath}' /inheritance:r /grant:r "*$([System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value):F" | Out-Null`], { env: powershellChildEnv({}), encoding: 'utf8', timeout: 15_000 })
+    assert.equal(acl.status, 0, `Synthetic key ACL setup failed: ${acl.error?.message ?? acl.stderr}`)
   }
   fs.mkdirSync(dir, { recursive: true })
   const target = path.join(dir, fileName)

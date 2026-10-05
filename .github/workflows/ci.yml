@@ -51,6 +51,11 @@ jobs:
       - run: npm ci
       - run: npm run build:demo
       - run: npm run build:marketing
+      - name: Diagnose native Windows backup execution
+        timeout-minutes: 10
+        run: |
+          npm --prefix server run build
+          node --test --test-isolation=none --test-reporter=spec server/dist/deployment-config.test.js
       - run: npm test
 
   postgres-acceptance:
