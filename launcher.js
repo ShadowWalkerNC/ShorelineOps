@@ -1,136 +1,34 @@
-/**
- * Shoreline Care OS — Unified Desktop & Service Launcher
- *
- * Spawns the offline Express API + SQLite database backend and opens
- * the workstation app window in the local browser or Electron wrapper.
- */
-
-const path = require('path')
-const http = require('http')
-const { spawn, exec } = require('child_process')
-const fs = require('fs')
-
-const PORT = process.env.PORT || '3001'
-const ROOT_DIR = path.resolve(__dirname)
-const SERVER_SCRIPT = path.join(ROOT_DIR, 'server', 'dist', 'index.js')
-const APP_URL = `http://localhost:${PORT}`
-
-console.log('======================================================================')
-console.log('  SHORELINE CARE OS — LAUNCHER')
-console.log('======================================================================\n')
-
-// 1. Ensure Data Directory
-const appDataRoot = process.env.APPDATA || path.join(process.env.HOME || '.', '.shoreline')
-const appDataDir = path.join(appDataRoot, 'ShorelineOps', 'data')
-if (!fs.existsSync(appDataDir)) {
-  fs.mkdirSync(appDataDir, { recursive: true })
+/** Browser workstation entry point; shares the compiled Electron backend. */
+const path = require('node:path')
+const os = require('node:os')
+const { spawn } = require('node:child_process')
+const { launchBackend } = require('./desktop/backend.cjs')
+function openBrowser(url) {
+  const command = process.platform === 'win32' ? 'rundll32.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open'
+  const args = process.platform === 'win32' ? ['url.dll,FileProtocolHandler', url] : [url]
+  const child = spawn(command, args, { shell:false, windowsHide:true, stdio:'ignore' })
+  child.once('error', () => console.error('[Launcher] Browser could not open. Use the displayed local URL.'))
 }
-
-// 2. Check if Server and Client Builds Exist
-const clientHtml = path.join(ROOT_DIR, 'dist', 'index.html')
-if (!fs.existsSync(SERVER_SCRIPT) || !fs.existsSync(clientHtml)) {
-  console.log('[Launcher] Production build assets not found. Running build...')
-  try {
-    const { execSync } = require('child_process')
-    execSync('npm run build:all', { cwd: ROOT_DIR, stdio: 'inherit' })
-  } catch (err) {
-    console.error('[Launcher] Build failed:', err.message)
-    process.exit(1)
-  }
+async function launchWorkstation({env=process.env,root=__dirname,open=openBrowser}={}) {
+  const port = Number(env.PORT || 4000)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid local port')
+  const userData = path.join(env.APPDATA || path.join(os.homedir(), '.local','share'), 'ShorelineOps','data')
+  const backend = await launchBackend({root,userData,env,port})
+  const url = `${backend.origin}/app/login`
+  try { open(url) } catch(error) { backend.stop(); throw error }
+  return {...backend,url}
 }
-
-// 3. Start Backend Process
-console.log(`[Launcher] Starting Shoreline Care OS Server on port ${PORT}...`)
-
-const defaultDbPath = path.join(ROOT_DIR, 'server', 'shoreline.db')
-const dbPath = process.env.SQLITE_PATH || defaultDbPath
-
-const serverProcess = spawn('node', [SERVER_SCRIPT], {
-  cwd: ROOT_DIR,
-  env: {
-    ...process.env,
-    PORT: String(PORT),
-    NODE_ENV: 'production',
-    SQLITE_PATH: dbPath,
-    FRONTEND_URL: APP_URL,
-  },
-  stdio: 'inherit',
-})
-
-serverProcess.on('error', (err) => {
-  console.error('[Launcher] Failed to start backend process:', err)
-  process.exit(1)
-})
-
-serverProcess.on('exit', (code) => {
-  console.log(`[Launcher] Server process exited with code ${code}`)
-  process.exit(code || 0)
-})
-
-// 4. Poll Server Health and Open Window
-function waitForServer(url, maxAttempts = 40, delay = 300) {
-  let attempts = 0
-  const check = () => {
-    attempts++
-    http.get(`${url}/health`, (res) => {
-      if (res.statusCode === 200) {
-        console.log(`[Launcher] Server is ready at ${url}`)
-        openAppWindow(url)
-      } else {
-        retry()
-      }
-    }).on('error', () => {
-      retry()
-    })
-  }
-
-  const retry = () => {
-    if (attempts >= maxAttempts) {
-      console.warn('[Launcher] Server health check timed out. Attempting to open browser anyway...')
-      openAppWindow(url)
-    } else {
-      setTimeout(check, delay)
-    }
-  }
-
-  check()
+if (require.main === module) {
+  launchWorkstation().then(backend => {
+    console.log(`[Launcher] Workstation ready: ${backend.url}. Press Ctrl+C to stop.`)
+    const stop = () => { backend.stop(); process.exit(0) }
+    process.once('SIGINT',stop)
+    process.once('SIGTERM',stop)
+    process.once('exit',()=>backend.stop())
+    backend.child.once('exit',()=>process.exit(1))
+  }).catch(() => {
+    console.error('[Launcher] Startup failed. Verify compiled builds, provisioned JWT_SECRET, local port and per-user storage. No browser was opened.')
+    process.exitCode=1
+  })
 }
-
-function openAppWindow(url) {
-  console.log(`[Launcher] Opening Shoreline Care OS Workstation: ${url}`)
-  const isWindows = process.platform === 'win32'
-  const isMac = process.platform === 'darwin'
-
-  if (isWindows) {
-    // Try opening in app window mode with Edge or Chrome, fallback to default browser
-    exec(`start msedge --app=${url}`, (err) => {
-      if (err) {
-        exec(`start chrome --app=${url}`, (err2) => {
-          if (err2) {
-            exec(`start ${url}`)
-          }
-        })
-      }
-    })
-  } else if (isMac) {
-    exec(`open "${url}"`)
-  } else {
-    exec(`xdg-open "${url}"`)
-  }
-
-  console.log('\n[Launcher] Shoreline Care OS is running. Press Ctrl+C in this window to stop.')
-}
-
-waitForServer(APP_URL)
-
-// 5. Clean Exit Handlers
-process.on('SIGINT', () => {
-  console.log('\n[Launcher] Shutting down Shoreline Care OS server...')
-  if (serverProcess) serverProcess.kill()
-  process.exit(0)
-})
-
-process.on('SIGTERM', () => {
-  if (serverProcess) serverProcess.kill()
-  process.exit(0)
-})
+module.exports = {launchWorkstation}

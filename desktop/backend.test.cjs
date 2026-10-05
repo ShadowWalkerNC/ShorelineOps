@@ -6,6 +6,27 @@ const path = require('node:path')
 const net = require('node:net')
 const {launchBackend,checkReady} = require('./backend.cjs')
 const root = path.resolve(__dirname,'..')
+
+test('browser workstation opens staff login with isolated per-user storage', async () => {
+  const {launchWorkstation} = require('../launcher.js')
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(),'shoreline-browser-launcher-'))
+  const listener = net.createServer()
+  await new Promise(resolve=>listener.listen(0,'127.0.0.1',resolve))
+  const port = listener.address().port
+  await new Promise(resolve=>listener.close(resolve))
+  let opened, runtime
+  try {
+    runtime = await launchWorkstation({root,env:{...process.env,APPDATA:directory,PORT:String(port),
+      JWT_SECRET:'synthetic-browser-launcher-key-'.repeat(3),DATABASE_URL:'postgres://unusable.invalid/never'},open:url=>{opened=url}})
+    assert.equal(opened,`${runtime.origin}/app/login`)
+    assert.equal((await fetch(opened)).status,200)
+    assert.ok(fs.existsSync(path.join(directory,'ShorelineOps','data','shoreline.db')))
+  } finally {
+    if(runtime) {const exited=new Promise(resolve=>runtime.child.once('exit',resolve));runtime.stop();await exited}
+  }
+  await assert.rejects(launchWorkstation({root,env:{PORT:'4000 & echo unsafe'},open:()=>{throw new Error('must not open')}}),/Invalid local port/)
+  await assert.rejects(launchWorkstation({root,env:{APPDATA:directory},open:()=>{throw new Error('must not open')}}),/JWT_SECRET/)
+})
 test('desktop rejects missing signing secret before creating data', async () => {
   await assert.rejects(launchBackend({root,userData:'unused',env:{}}),/JWT_SECRET/)
 })

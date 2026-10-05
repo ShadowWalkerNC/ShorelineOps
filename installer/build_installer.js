@@ -110,7 +110,7 @@ This is a Node/web distribution candidate for a single-facility workstation. It 
 
 2. **Launch Shoreline Care OS**
    - Double-click the new **Shoreline Care OS** desktop icon.
-   - The app will start the local backend server in the background and open your Care OS workstation automatically.
+   - With compiled builds and provisioned signing/setup secrets, the app starts its loopback backend and opens /app/login only after readiness. Existing server/shoreline.db files are not automatically migrated; verify backup and approved migration before using an upgraded installation.
 
 ---
 
