@@ -589,8 +589,8 @@ function toPosixPath(p: string): string {
 }
 
 /** PowerShell child env with explicit safe Windows execution variables.
- * The restricted runner keeps only PATH/SystemRoot/TEMP/TMP/NODE_ENV plus
- * synthetic DB/JWT (no PATHEXT/COMSPEC). Without PATHEXT, backup.ps1's
+ * The restricted runner keeps explicit OS paths plus synthetic DB/JWT,
+ * without inherited application credentials. Without PATHEXT, backup.ps1's
  * `Get-Command docker` cannot resolve the synthetic `docker.cmd` shim, so
  * the positive test fails and empty/fail tests falsely pass before pg_dump.
  * Provide a minimal safe PATHEXT (COM/EXE/BAT/CMD only, no script hosts)
