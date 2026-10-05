@@ -116,7 +116,7 @@ exports.setupRouter.post('/initialize', async (req, res, next) => {
                 JSON.stringify(body.diningRooms),
             ]);
             await client.query(`INSERT INTO users (id, name, email, password, role, mfa_enabled, active)
-       VALUES ($1, $2, $3, $4, 'admin', true, true)`, [crypto_1.default.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]);
+       VALUES ($1, $2, $3, $4, 'admin', false, true)`, [crypto_1.default.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]);
             // Legacy input name retained for clients; it identifies the setup representative, not a contract signature.
             await client.query(`INSERT INTO audit_log (action, resource_type, outcome, details)
        VALUES ('SETUP_INITIALIZE', 'facility_config', 'success', $1)`, [JSON.stringify({ facilityName: body.facilityName, adminEmail: body.adminEmail, mode: body.initMode,

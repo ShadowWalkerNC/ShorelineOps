@@ -92,6 +92,80 @@ test('database acceptance: concurrent refresh, account revocation and expired-to
   }
 })
 
+test('database acceptance: setup audit rollback and concurrent initialization preserve one owner', async () => {
+  const { pool } = await import('./db/pool')
+  const { runMigrations } = await import('./db/migrate')
+  const { setupRouter } = await import('./routes/setup')
+  const { authRouter } = await import('./routes/auth')
+  const OTPAuth = await import('otpauth')
+  const { errorHandler } = await import('./middleware/errorHandler')
+  await runMigrations()
+  process.env.SETUP_BOOTSTRAP_SECRET = crypto.randomBytes(32).toString('hex')
+  const app = express()
+  app.use(express.json())
+  app.use('/setup',setupRouter)
+  app.use('/auth',authRouter)
+  app.use(errorHandler)
+  const server = app.listen(0,'127.0.0.1')
+  await new Promise<void>(resolve => server.once('listening',resolve))
+  const endpoint = `http://127.0.0.1:${(server.address() as {port:number}).port}/setup/initialize`
+  const email = `setup-${crypto.randomUUID()}@example.invalid`
+  const body = {facilityName:'Synthetic setup acceptance',primaryContactEmail:'contact@example.invalid',
+    facilityType:'Assisted Living',wings:['Synthetic wing'],diningRooms:['Synthetic room'],
+    adminName:'Synthetic owner',adminEmail:email,adminPassword:'Synthetic-Setup-Password42!',
+    baaSigneeName:'Synthetic representative',deploymentReviewAcknowledged:true,initMode:'clean'}
+  const initialize = () => fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',
+    'X-Setup-Secret':process.env.SETUP_BOOTSTRAP_SECRET!},body:JSON.stringify(body)})
+  const originalConnect = pool.connect
+  try {
+    pool.connect = async () => {
+      const client = await originalConnect.call(pool)
+      const query = client.query.bind(client)
+      client.query = (sql:string,params:any[]) => {
+        if (sql.includes("VALUES ('SETUP_INITIALIZE'")) throw new Error('Synthetic setup audit outage')
+        return query(sql,params)
+      }
+      return client
+    }
+    try {assert.equal((await initialize()).status,500)} finally {pool.connect=originalConnect}
+    assert.equal((await pool.query('SELECT id FROM users WHERE email = $1',[email])).rows.length,0)
+    assert.equal((await pool.query('SELECT is_initialized FROM facility_config')).rows.some(row=>!!row.is_initialized),false)
+    const attempts = await Promise.all(Array.from({length:4},initialize))
+    assert.deepEqual(attempts.map(response=>response.status).sort(),[200,400,400,400])
+    assert.equal((await pool.query('SELECT id FROM users WHERE email = $1',[email])).rows.length,1)
+    const configuration = (await pool.query('SELECT is_initialized, baa_accepted_at, baa_signee_name FROM facility_config')).rows[0]
+    assert.equal(!!configuration.is_initialized,true)
+    assert.equal(configuration.baa_accepted_at,null)
+    assert.equal(configuration.baa_signee_name,'')
+    const audits = await pool.query("SELECT id FROM audit_log WHERE action = 'SETUP_INITIALIZE'")
+    assert.equal(audits.rows.length,1)
+    await pool.query('UPDATE system_settings SET mfa_required = true WHERE id = 1')
+    const auth = (route:string,payload:object) => fetch(endpoint.replace('/setup/initialize','/auth/')+route,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    const login = await auth('login',{email,password:body.adminPassword})
+    assert.equal(login.status,200)
+    const pending = await login.json() as {mfaEnrollmentRequired:boolean;mfaToken:string}
+    assert.equal(pending.mfaEnrollmentRequired,true)
+    const begin = await auth('mfa/setup/begin',{mfaToken:pending.mfaToken})
+    assert.equal(begin.status,200)
+    const enrollment = await begin.json() as {secret:string}
+    const code = new OTPAuth.TOTP({secret:OTPAuth.Secret.fromBase32(enrollment.secret)}).generate()
+    const confirmed = await auth('mfa/setup/confirm',{mfaToken:pending.mfaToken,code})
+    assert.equal(confirmed.status,200)
+    const authenticated = await confirmed.json() as {accessToken:string;user:{mfaVerified:boolean}}
+    assert.ok(authenticated.accessToken)
+    assert.equal(authenticated.user.mfaVerified,true)
+    const identity = await fetch(endpoint.replace('/setup/initialize','/auth/me'),
+      {headers:{Authorization:`Bearer ${authenticated.accessToken}`}})
+    assert.equal(identity.status,200)
+  } finally {
+    pool.connect=originalConnect
+    await pool.query('UPDATE system_settings SET mfa_required = false WHERE id = 1')
+    delete process.env.SETUP_BOOTSTRAP_SECRET
+    await new Promise<void>(resolve=>server.close(()=>resolve()))
+  }
+})
+
 test('database acceptance: tray dispatch after clinical update rejects stale signed card', async () => {
   const { pool } = await import('./db/pool')
   const { runMigrations } = await import('./db/migrate')

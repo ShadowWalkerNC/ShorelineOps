@@ -159,6 +159,7 @@ for (const scenario of [
         const agreement = (await pool.query('SELECT baa_accepted_at, baa_signee_name FROM facility_config')).rows[0];
         assert.equal(agreement.baa_accepted_at, null);
         assert.equal(agreement.baa_signee_name, '');
+        await pool.query('UPDATE system_settings SET mfa_required = true WHERE id = 1');
         const login = await fetch(base + '/api/auth/login', {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ email: body.adminEmail, password: body.adminPassword })
@@ -166,7 +167,23 @@ for (const scenario of [
         const session = await login.json();
         assert.equal(login.status, 200, JSON.stringify(session));
         assert.equal(session.user.id, owners[0].id);
-        assert.ok(session.accessToken || session.mfaEnrollmentRequired);
+        assert.equal(session.mfaEnrollmentRequired, true);
+        const begin = await fetch(base + '/api/auth/mfa/setup/begin', {
+          method: 'POST', headers: {'content-type':'application/json'},
+          body: JSON.stringify({mfaToken:session.mfaToken})
+        });
+        assert.equal(begin.status, 200);
+        const enrollment = await begin.json();
+        const OTPAuth = require(${JSON.stringify(require.resolve('otpauth'))});
+        const code = new OTPAuth.TOTP({secret:OTPAuth.Secret.fromBase32(enrollment.secret)}).generate();
+        const confirmed = await fetch(base + '/api/auth/mfa/setup/confirm', {
+          method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({mfaToken:session.mfaToken,code})
+        });
+        assert.equal(confirmed.status,200);
+        const authenticated = await confirmed.json();
+        assert.ok(authenticated.accessToken);
+        assert.equal(authenticated.user.mfaVerified,true);
         assert.equal((await postSetup(body)).status, 400);
         assert.equal((await pool.query('SELECT * FROM residents')).rows.length, 0);
       } finally {

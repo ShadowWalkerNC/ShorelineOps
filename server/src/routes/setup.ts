@@ -127,7 +127,7 @@ setupRouter.post('/initialize', async (req, res, next) => {
 
       await client.query(
       `INSERT INTO users (id, name, email, password, role, mfa_enabled, active)
-       VALUES ($1, $2, $3, $4, 'admin', true, true)`,
+       VALUES ($1, $2, $3, $4, 'admin', false, true)`,
       [crypto.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]
     )
 
