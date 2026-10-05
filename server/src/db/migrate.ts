@@ -1065,6 +1065,14 @@ const migrations: { name: string; sql: string }[] = [
       ALTER TABLE vendor_item_matches ADD COLUMN IF NOT EXISTS normalized_uom TEXT NOT NULL DEFAULT '';
     `,
   },
+  {
+    name: '029_live_auth_sessions',
+    sql: `
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS mfa_verified BOOLEAN NOT NULL DEFAULT false;
+    `,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.

@@ -20,6 +20,7 @@ function run(args, cwd, childEnv = env) {
   if (result.error) throw result.error
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
+run([path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', path.join(root, 'sdk', 'tsconfig.json')], root)
 run([path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', path.join(root, 'server', 'tsconfig.json')], root)
 run([path.join(dist, 'system.test.js')], directory)
 const cases = readdirSync(dist).filter(name => name.endsWith('.test.js') && !['system.test.js', 'compliance.test.js'].includes(name))

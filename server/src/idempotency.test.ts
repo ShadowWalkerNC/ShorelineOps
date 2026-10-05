@@ -1,23 +1,44 @@
-import test from 'node:test'
+import test, { before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import express from 'express'
 import http from 'node:http'
-import jwt from 'jsonwebtoken'
+import { mkdtempSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { IdempotencyStore, idempotencyMiddleware } from './middleware/idempotency'
-import { requireAuth, type ApiRole } from './middleware/requireAuth'
-import { requireCapability } from './middleware/permissions'
+import type { ApiRole } from './middleware/requireAuth'
+
+process.env.NODE_ENV = 'test'
+process.env.DATABASE_URL = ''
+process.env.SQLITE_PATH = path.join(mkdtempSync(path.join(os.tmpdir(), 'shoreline-idempotency-auth-')), 'test.sqlite')
+let requireAuth: typeof import('./middleware/requireAuth')['requireAuth']
+let requireCapability: typeof import('./middleware/permissions')['requireCapability']
+let pool: typeof import('./db/pool')['pool']
+let issueTestAccessToken: typeof import('./test-support/accessToken')['issueTestAccessToken']
+
+before(async () => {
+  ;({ pool } = await import('./db/pool'))
+  ;({ requireAuth } = await import('./middleware/requireAuth'))
+  ;({ requireCapability } = await import('./middleware/permissions'))
+  ;({ issueTestAccessToken } = await import('./test-support/accessToken'))
+  const { runMigrations } = await import('./db/migrate')
+  await runMigrations()
+})
+after(async () => { await pool.end() })
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   process.env.JWT_SECRET = 'synthetic-idempotency-test-jwt-secret-32-chars!'
 }
 
-function tokenFor(sub: string, role: ApiRole, facilityId = 'FAC-TEST'): string {
-  return jwt.sign(
-    { sub, role, purpose: 'access', mfa: false, facilityId, platformAdmin: false },
-    process.env.JWT_SECRET as string,
-    { algorithm: 'HS256', audience: 'shoreline-api', expiresIn: '1h' }
+async function tokenFor(sub: string, role: ApiRole, facilityId = 'FAC-TEST'): Promise<string> {
+  // Scope changes in this fixture are authoritative account changes, not forged
+  // JWT claims. Fresh sessions follow the updated role/facility and version.
+  await pool.query(
+    'UPDATE users SET role = $2, facility_id = $3, auth_version = auth_version + 1 WHERE id = $1 AND (role <> $2 OR facility_id <> $3)',
+    [sub, role, facilityId],
   )
+  return issueTestAccessToken({ sub, role, facilityId })
 }
 
 interface Counters {
@@ -173,7 +194,7 @@ test('IdempotencyStore stores, expires, and tracks in-progress entries', () => {
 
 test('object replay deep-equals the original over real HTTP (no double serialization)', async () => {
   await withServer(async (base, counters) => {
-    const token = tokenFor('user-1', 'manager')
+    const token = await tokenFor('user-1', 'manager')
     const body = { total: 450.5 }
     const res1 = await call(base, '/api/kitchen/__idem/obj', { key: 'obj-key-1', body, token })
     assert.equal(res1.status, 201)
@@ -191,7 +212,7 @@ test('object replay deep-equals the original over real HTTP (no double serializa
 
 test('array and JSON-string replays preserve their types without double serialization', async () => {
   await withServer(async (base, counters) => {
-    const token = tokenFor('user-1', 'manager')
+    const token = await tokenFor('user-1', 'manager')
 
     const arr1 = await call(base, '/api/kitchen/__idem/arr', { key: 'arr-key-1', body: {}, token })
     assert.equal(arr1.status, 200)
@@ -217,7 +238,7 @@ test('array and JSON-string replays preserve their types without double serializ
 
 test('res.send replay preserves raw text (not JSON) and 204 replays empty', async () => {
   await withServer(async (base, counters) => {
-    const token = tokenFor('user-1', 'manager')
+    const token = await tokenFor('user-1', 'manager')
 
     const raw1 = await call(base, '/api/kitchen/__idem/raw', { key: 'raw-key-1', body: {}, token })
     assert.equal(raw1.status, 200)
@@ -243,41 +264,41 @@ test('res.send replay preserves raw text (not JSON) and 204 replays empty', asyn
 test('cache scope binds user, facility, role, query, and body', async () => {
   await withServer(async (base, counters) => {
     const body = { total: 10 }
-    const first = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: tokenFor('user-1', 'manager', 'FAC-A') })
+    const first = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: await tokenFor('user-1', 'manager', 'FAC-A') })
     assert.equal(first.status, 201)
     assert.equal(counters.obj, 1)
 
     // Same principal replay.
-    const replay = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: tokenFor('user-1', 'manager', 'FAC-A') })
+    const replay = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: await tokenFor('user-1', 'manager', 'FAC-A') })
     assert.equal(replay.headers.get('x-idempotency-replay'), 'true')
     assert.equal(counters.obj, 1)
 
     // Different user executes fresh (no replay leak across principals).
-    const otherUser = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: tokenFor('user-2', 'manager', 'FAC-A') })
+    const otherUser = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: await tokenFor('user-2', 'manager', 'FAC-A') })
     assert.equal(otherUser.status, 201)
     assert.equal(otherUser.headers.get('x-idempotency-replay'), null)
     assert.equal(counters.obj, 2)
 
     // Different facility executes fresh.
-    const otherFacility = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: tokenFor('user-1', 'manager', 'FAC-B') })
+    const otherFacility = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: await tokenFor('user-1', 'manager', 'FAC-B') })
     assert.equal(otherFacility.status, 201)
     assert.equal(otherFacility.headers.get('x-idempotency-replay'), null)
     assert.equal(counters.obj, 3)
 
     // Different role executes fresh (dietitian also holds kitchen.write).
-    const otherRole = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: tokenFor('user-1', 'dietitian', 'FAC-A') })
+    const otherRole = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: await tokenFor('user-1', 'dietitian', 'FAC-A') })
     assert.equal(otherRole.status, 201)
     assert.equal(otherRole.headers.get('x-idempotency-replay'), null)
     assert.equal(counters.obj, 4)
 
     // Different query executes fresh.
-    const otherQuery = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: tokenFor('user-1', 'manager', 'FAC-A'), query: '?week=2026-09-21' })
+    const otherQuery = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body, token: await tokenFor('user-1', 'manager', 'FAC-A'), query: '?week=2026-09-21' })
     assert.equal(otherQuery.status, 201)
     assert.equal(otherQuery.headers.get('x-idempotency-replay'), null)
     assert.equal(counters.obj, 5)
 
     // Same key with a changed body is rejected, never replayed.
-    const reused = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body: { total: 999 }, token: tokenFor('user-1', 'manager', 'FAC-A') })
+    const reused = await call(base, '/api/kitchen/__idem/obj', { key: 'scope-key', body: { total: 999 }, token: await tokenFor('user-1', 'manager', 'FAC-A') })
     assert.equal(reused.status, 422)
     assert.equal((await reused.json() as any).code, 'IDEMPOTENCY_KEY_REUSED')
     assert.equal(counters.obj, 5)
@@ -286,7 +307,7 @@ test('cache scope binds user, facility, role, query, and body', async () => {
 
 test('concurrent duplicates conflict and the winner replays afterwards', async () => {
   await withServer(async (base, counters, gate) => {
-    const token = tokenFor('user-1', 'manager')
+    const token = await tokenFor('user-1', 'manager')
     const body = { total: 1 }
     const pending = call(base, '/api/kitchen/__idem/slow', { key: 'slow-key', body, token })
     // Wait until the first request is inside the handler (in-progress).
@@ -317,7 +338,7 @@ test('concurrent duplicates conflict and the winner replays afterwards', async (
 
 test('failures are never cached and denied roles cannot populate or observe the cache', async () => {
   await withServer(async (base, counters) => {
-    const token = tokenFor('user-1', 'manager')
+    const token = await tokenFor('user-1', 'manager')
     const body = { total: 1 }
 
     // 400 responses never populate: the retry executes again.
@@ -331,7 +352,7 @@ test('failures are never cached and denied roles cannot populate or observe the 
     // A denied role (readonly lacks kitchen.write) is rejected by the
     // capability gate before idempotency: no cache entry is created, so an
     // authorized retry with the same key executes fresh.
-    const denied = await call(base, '/api/kitchen/__idem/obj', { key: 'denied-key', body, token: tokenFor('user-9', 'readonly') })
+    const denied = await call(base, '/api/kitchen/__idem/obj', { key: 'denied-key', body, token: await tokenFor('user-9', 'readonly') })
     assert.equal(denied.status, 403)
     assert.equal(counters.obj, 0)
     const authorized = await call(base, '/api/kitchen/__idem/obj', { key: 'denied-key', body, token })
@@ -348,7 +369,7 @@ test('failures are never cached and denied roles cannot populate or observe the 
 
 test('excluded paths and methods never replay: auth flows, GET, and missing principals', async () => {
   await withServer(async (base, counters) => {
-    const token = tokenFor('user-1', 'manager')
+    const token = await tokenFor('user-1', 'manager')
 
     // Credential flow with the middleware mounted: executes every time.
     const login1 = await call(base, '/api/auth/__idem/login', { key: 'login-key', body: {}, token })

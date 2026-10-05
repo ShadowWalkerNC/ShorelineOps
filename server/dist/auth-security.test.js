@@ -148,7 +148,7 @@ void (0, node_test_1.test)('access credentials stay separate from pending MFA cr
             const newHash = node_crypto_1.default.createHash('sha256').update(refreshed.refreshToken).digest('hex');
             await pool.query('UPDATE refresh_tokens SET expires_at = $1 WHERE token_hash = $2', [new Date(Date.now() - 60_000).toISOString(), newHash]);
             strict_1.default.equal((await request('/api/auth/refresh', undefined, { refreshToken: refreshed.refreshToken })).status, 401);
-            strict_1.default.equal((await request('/api/auth/me', refreshed.accessToken)).status, 200);
+            strict_1.default.equal((await request('/api/auth/me', refreshed.accessToken)).status, 401);
         });
         await t.test('non-MFA login remains valid when MFA is not required', async () => {
             await pool.query('UPDATE system_settings SET mfa_required = false WHERE id = 1');

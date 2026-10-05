@@ -9,6 +9,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const zod_1 = require("zod");
 const pool_1 = require("../db/pool");
+const authSession_1 = require("../db/authSession");
 const requireAuth_1 = require("../middleware/requireAuth");
 const healer_1 = require("../agent/healer");
 const RoleEnum = zod_1.z.enum([
@@ -148,19 +149,32 @@ exports.adminRouter.patch('/users/:id', (0, requireAuth_1.requireRole)('admin'),
         let passwordHash = null;
         if (data.password)
             passwordHash = await bcryptjs_1.default.hash(data.password, 12);
-        const { rows } = await pool_1.pool.query(`UPDATE users SET
+        const revokeSessions = ['role', 'active', 'password', 'platformAdmin', 'facilityId'].some(field => field in data);
+        const updatedUser = await (0, authSession_1.authTransaction)(async (client) => {
+            const { rows: locked } = await client.query('SELECT u.id, u.facility_id, u.platform_admin FROM users u WHERE u.id = $1' + authSession_1.AUTH_USER_LOCK, [req.params.id]);
+            if (!locked[0])
+                throw Object.assign(new Error('User not found'), { status: 404 });
+            if (!req.platformAdmin && (locked[0].platform_admin || locked[0].facility_id !== (req.facilityId || 'default'))) {
+                throw Object.assign(new Error('Facility administrators can manage only their own facility accounts.'), { status: 403 });
+            }
+            const { rows } = await client.query(`UPDATE users SET
          name = COALESCE($1, name),
          role = COALESCE($2, role),
          active = COALESCE($3, active),
-         password = CASE WHEN $4::text IS NOT NULL THEN $4::text ELSE password END,
+         password = COALESCE($4, password),
          platform_admin = COALESCE($5, platform_admin),
          facility_id = COALESCE($6, facility_id),
+         auth_version = auth_version + $8,
          updated_at = NOW()
        WHERE id = $7
-       RETURNING id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin`, [data.name ?? null, data.role ?? null, data.active ?? null, passwordHash, data.platformAdmin ?? null, data.facilityId ?? null, req.params.id]);
-        await pool_1.pool.query(`INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       RETURNING id, name, email, role, active, created_at, last_login_at, facility_id, platform_admin`, [data.name ?? null, data.role ?? null, data.active ?? null, passwordHash, data.platformAdmin ?? null, data.facilityId ?? null, req.params.id, revokeSessions ? 1 : 0]);
+            if (revokeSessions)
+                await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [req.params.id]);
+            await client.query(`INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
        VALUES ('UPDATE_USER', $1, $2, 'user', 'success', $3)`, [req.userId, req.params.id, JSON.stringify({ changedFields: Object.keys(data).filter(k => k !== 'password') })]);
-        res.json(toUser(rows[0]));
+            return rows[0];
+        });
+        res.json(toUser(updatedUser));
     }
     catch (err) {
         next(err);

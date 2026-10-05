@@ -114,7 +114,7 @@ void test('access credentials stay separate from pending MFA credentials', async
       const newHash = crypto.createHash('sha256').update(refreshed.refreshToken).digest('hex')
       await pool.query('UPDATE refresh_tokens SET expires_at = $1 WHERE token_hash = $2', [new Date(Date.now() - 60_000).toISOString(), newHash])
       assert.equal((await request('/api/auth/refresh', undefined, { refreshToken: refreshed.refreshToken })).status, 401)
-      assert.equal((await request('/api/auth/me', refreshed.accessToken)).status, 200)
+      assert.equal((await request('/api/auth/me', refreshed.accessToken)).status, 401)
     })
     await t.test('non-MFA login remains valid when MFA is not required', async () => {
       await pool.query('UPDATE system_settings SET mfa_required = false WHERE id = 1')

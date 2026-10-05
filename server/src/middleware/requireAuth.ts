@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import { pool } from '../db/pool'
 
 /** Roles accepted by the API — aligned with frontend UserRole. */
 export const API_ROLES = [
@@ -28,6 +29,8 @@ export interface AccessTokenClaims extends jwt.JwtPayload {
   mfa: boolean
   facilityId: string
   platformAdmin: boolean
+  sessionId: string
+  authVersion: number
 }
 
 export function verifyAccessToken(token: string): AccessTokenClaims {
@@ -43,6 +46,8 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
         typeof payload.facilityId !== 'string' ||
         typeof payload.platformAdmin !== 'boolean' ||
         typeof payload.exp !== 'number' ||
+        typeof payload.sessionId !== 'string' || !payload.sessionId.trim() ||
+        !Number.isSafeInteger(payload.authVersion) || Number(payload.authVersion) < 0 ||
         !(API_ROLES as readonly unknown[]).includes(payload.role)) {
       throw new Error('Invalid access token claims')
     }
@@ -80,7 +85,32 @@ export function getJwtSecret(): string {
   return secret
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+/** Verify identity and revocable persisted session without trusting stale JWT privileges. */
+export async function validateAccessSession(token: string): Promise<AccessTokenClaims> {
+  const payload = verifyAccessToken(token)
+  let rows: any[]
+  try {
+    const result = await pool.query(
+      `SELECT u.role, u.facility_id, u.platform_admin, u.auth_version, rt.mfa_verified
+       FROM users u JOIN refresh_tokens rt ON rt.user_id = u.id
+       WHERE u.id = $1 AND u.active = true AND rt.id = $2 AND rt.expires_at > $3
+         AND rt.auth_version = u.auth_version`,
+      [payload.sub, payload.sessionId, new Date().toISOString()],
+    )
+    rows = result.rows
+  } catch {
+    throw Object.assign(new Error('Authentication service unavailable'), { status: 503 })
+  }
+  const user = rows[0]
+  if (!user || user.role !== payload.role || (user.facility_id || 'default') !== payload.facilityId ||
+      !!user.platform_admin !== payload.platformAdmin || Number(user.auth_version) !== payload.authVersion) {
+    throw Object.assign(new Error('Invalid or revoked session'), { status: 401 })
+  }
+  if (!!user.mfa_verified !== payload.mfa) throw Object.assign(new Error('Invalid or revoked session'), { status: 401 })
+  return payload
+}
+
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized' })
@@ -88,13 +118,14 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
 
   const token = header.slice(7)
   try {
-    const payload = verifyAccessToken(token)
+    const payload = await validateAccessSession(token)
     req.userId = payload.sub
     req.userRole = payload.role
     req.facilityId = payload.facilityId
     req.platformAdmin = payload.platformAdmin
     next()
-  } catch {
+  } catch (error: any) {
+    if (error.status === 503) return res.status(503).json({ error: 'Authentication service unavailable' })
     return res.status(401).json({ error: 'Invalid or expired token' })
   }
 }

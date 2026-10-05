@@ -34,18 +34,26 @@ const authModule = JSON.stringify(path.join(__dirname, 'middleware', 'requireAut
 const poolModule = JSON.stringify(path.join(__dirname, 'db', 'pool.js'))
 const migrateModule = JSON.stringify(path.join(__dirname, 'db', 'migrate.js'))
 const expressModule = JSON.stringify(require.resolve('express'))
-const jwtModule = JSON.stringify(require.resolve('jsonwebtoken'))
+const fixtureModule = JSON.stringify(path.join(__dirname, 'test-support', 'accessToken.js'))
 
 test('distributor denied EHR queue/census before querying (manager also denied)', () => {
   runIsolated(`
     const assert = require('node:assert/strict');
     const express = require(${expressModule});
-    const jwt = require(${jwtModule});
+    const { issueTestAccessToken } = require(${fixtureModule});
     const { pool } = require(${poolModule});
     const { ehrRouter } = require(${ehrModule});
+    const { runMigrations } = require(${migrateModule});
     (async () => {
+      await runMigrations();
+      const credentials = new Map();
+      for (const role of ['distributor', 'manager']) credentials.set(role, await issueTestAccessToken({ sub: 'synthetic-' + role, role }));
       const seen = [];
-      pool.query = async (sql) => { seen.push(String(sql)); return { rows: [] }; };
+      const rawQuery = pool.query.bind(pool);
+      pool.query = async (sql, params) => {
+        if (/FROM users u JOIN refresh_tokens rt/i.test(String(sql))) return rawQuery(sql, params);
+        seen.push(String(sql)); return { rows: [] };
+      };
       pool.connect = async () => { throw new Error('denied path must not open a transaction'); };
       const app = express();
       app.use(express.json());
@@ -53,10 +61,7 @@ test('distributor denied EHR queue/census before querying (manager also denied)'
       const server = app.listen(0, '127.0.0.1');
       await new Promise(resolve => server.once('listening', resolve));
       const base = 'http://127.0.0.1:' + server.address().port;
-      const tokenFor = (role) => jwt.sign(
-        { sub: 'synthetic-user', role, purpose: 'access', mfa: false, facilityId: 'default', platformAdmin: false },
-        process.env.JWT_SECRET, { algorithm: 'HS256', audience: 'shoreline-api', expiresIn: '1h' });
-      const get = (url, role) => fetch(base + url, { headers: { authorization: 'Bearer ' + tokenFor(role) } });
+      const get = (url, role) => fetch(base + url, { headers: { authorization: 'Bearer ' + credentials.get(role) } });
       try {
         assert.equal((await get('/api/ehr/reconciliation-queue', 'distributor')).status, 403);
         assert.equal((await get('/api/ehr/census', 'distributor')).status, 403);
@@ -66,6 +71,7 @@ test('distributor denied EHR queue/census before querying (manager also denied)'
         assert.deepEqual(clinical, []);
       } finally {
         await new Promise(resolve => server.close(resolve));
+        await pool.end();
       }
     })().catch(error => { console.error(error); process.exitCode = 1; });
   `)
@@ -75,7 +81,7 @@ test('admin restore disabled: 503 with no clinical write; dryRun inspection-only
   runIsolated(`
     const assert = require('node:assert/strict');
     const express = require(${expressModule});
-    const jwt = require(${jwtModule});
+    const { issueTestAccessToken } = require(${fixtureModule});
     const { pool } = require(${poolModule});
     const { runMigrations } = require(${migrateModule});
     const { requireAuth } = require(${authModule});
@@ -88,9 +94,7 @@ test('admin restore disabled: 503 with no clinical write; dryRun inspection-only
       const server = app.listen(0, '127.0.0.1');
       await new Promise(resolve => server.once('listening', resolve));
       const base = 'http://127.0.0.1:' + server.address().port;
-      const adminToken = jwt.sign(
-        { sub: 'synthetic-admin', role: 'admin', purpose: 'access', mfa: false, facilityId: 'default', platformAdmin: false },
-        process.env.JWT_SECRET, { algorithm: 'HS256', audience: 'shoreline-api', expiresIn: '1h' });
+      const adminToken = await issueTestAccessToken({ sub: 'synthetic-admin', role: 'admin' });
       const crafted = { meta: { application: 'Shoreline Care OS', facilityName: 'Synthetic', exportedAt: new Date().toISOString() },
         data: { residents: [{ id: 'synthetic-1', name: 'Synthetic Patient', is_npo: true, allergies: ['Peanut'], diet_type: 'NPO', texture: 'Minced' }],
         recipes: [], inventory: [] } };

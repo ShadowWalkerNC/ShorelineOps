@@ -2,7 +2,6 @@ import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
 import express from 'express'
 import http from 'node:http'
-import jwt from 'jsonwebtoken'
 import { mkdtempSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -11,6 +10,7 @@ import type { AddressInfo } from 'node:net'
 // Private disposable database: the pool module reads these at import time,
 // so they are set here before the dynamic imports in setup() below.
 const directory = mkdtempSync(path.join(os.tmpdir(), 'shoreline-reporting-canonical-'))
+process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = ''
 process.env.SQLITE_PATH = path.join(directory, 'reporting.sqlite')
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -119,15 +119,11 @@ async function setup(): Promise<FixtureContext> {
   const server = http.createServer(app)
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
-  const sign = (sub: string, role: string): string => jwt.sign(
-    { sub, role, purpose: 'access', mfa: false, facilityId: 'default', platformAdmin: false },
-    process.env.JWT_SECRET as string,
-    { algorithm: 'HS256', audience: 'shoreline-api', expiresIn: '1h' }
-  )
+  const { issueTestAccessToken } = await import('./test-support/accessToken')
   ctx = {
     base,
-    managerToken: sign('synthetic-manager', 'manager'),
-    distributorToken: sign('synthetic-vendor', 'distributor'),
+    managerToken: await issueTestAccessToken({ sub: 'synthetic-manager', role: 'manager' }),
+    distributorToken: await issueTestAccessToken({ sub: 'synthetic-vendor', role: 'distributor' }),
     close: async () => {
       await new Promise<void>((resolve) => server.close(() => resolve()))
       await pool.end()

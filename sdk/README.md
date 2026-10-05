@@ -1,25 +1,25 @@
 # @shoreline/sdk
 
-Official TypeScript client for the **ShorelineOps Care OS** healthcare dietary and clinical nutrition operations platform.
+Repository TypeScript client for the **ShorelineOps Care OS** REST API. This package is separate from the Muse Spark and Gadget tooling in `tools/muse`.
 
 ---
 
 ## Capabilities
 
-- **Resident Census & Diets**: Live census queries, therapeutic diet orders (NAS, NCS, Renal), IDDSI dysphagia texture verification, and bulk CSV ingestion.
+- **Resident Census & Diets**: Facility census queries, recorded diet and texture orders, and CSV ingestion. Recorded texture orders do not verify physical IDDSI preparation.
 - **EHR Triage & Clinical Reconciliation**: PointClickCare inbound webhook triage queue, audit logging, and RD approval/rejection workflows.
 - **Recipe & Nutritional Analysis**: Master recipe details, automated USDA nutrient calculation, and Big 9 allergen scanning.
 - **Purchasing & 3-Way Match**: Dennis vs. Sysco lowest-cost split MRP, 3-way invoice matching, price variance detection, and vendor credit memo proposals.
-- **Hardware & HACCP Monitoring**: Bluetooth temperature probe readings, refrigerator/hot-line HACCP logging, corrective action enforcement, and due/overdue check schedules.
+- **HACCP Monitoring**: Submitted temperature readings and equipment check schedules. The client does not connect to Bluetooth probes.
 - **Tray Line Execution**: Real-time meal slot tracking, assembly timestamps, delivery SLAs, and remake event logging.
-- **Regulatory Survey Compliance**: CMS-2567 F-Tag F800-F814 dietary survey binder retrieval and Cost per Resident Day ($/CPD) reporting.
+- **Survey Preparation**: Survey binder retrieval and Cost per Resident Day ($/CPD) reporting. Reports require facility review and do not certify compliance.
 
 ---
 
-## Installation
+## Installation from source
 
 ```bash
-npm install @shoreline/sdk
+npm install ./sdk
 ```
 
 ---
@@ -30,8 +30,8 @@ npm install @shoreline/sdk
 import { ShorelineClient } from '@shoreline/sdk'
 
 const client = new ShorelineClient({
-  baseUrl: 'https://facility.shorelineops.com',
-  apiKey: process.env.SHORELINE_API_KEY, // Optional: JWT token or API key
+  baseUrl: 'https://shoreline-api-production.up.railway.app',
+  apiKey: process.env.SHORELINE_ACCESS_TOKEN, // Access JWT from an authorized login
 })
 
 // 1. Fetch active facility census
@@ -71,7 +71,7 @@ console.log(`Disputed: $${match.report.totalCreditDisputedAmount}`)
 export interface ShorelineClientConfig {
   /** Base URL of your ShorelineOps API (no trailing slash) */
   baseUrl: string
-  /** Optional API key or JWT token for authenticated operations */
+  /** Access JWT; property name retained for compatibility. No API-key issuance is implemented. */
   apiKey?: string
 }
 ```
@@ -79,6 +79,8 @@ export interface ShorelineClientConfig {
 ---
 
 ## API Reference
+
+The capability descriptions below describe API operations, not verified physical device connections, live vendor integrations, or regulatory certification. Role, facility, license, and deterministic clinical checks still apply. The client does not acquire or refresh credentials: create a new client with the current access JWT after login/refresh. Logout and account security changes revoke sessions. Never embed credentials in public bundles or log resident data. Registry publication of this package has not been verified; build the repository SDK before installing it from source.
 
 ### Residents & Census
 - `getResidents(): Promise<Resident[]>` — Pull all resident records.

@@ -5,7 +5,7 @@
  * All methods are fully typed and return Promise-based results.
  *
  * Usage:
- *   const client = new ShorelineClient({ baseUrl: 'https://your-facility.shorelineops.com' })
+ *   const client = new ShorelineClient({ baseUrl: 'http://127.0.0.1:3001', apiKey: accessToken })
  *   const residents = await client.getResidents()
  */
 
@@ -39,7 +39,7 @@ import type {
 export interface ShorelineClientConfig {
   /** Base URL of your ShorelineOps API (no trailing slash) */
   baseUrl: string
-  /** Optional API key or JWT token for authenticated operations */
+  /** Access JWT from login/refresh. Property name retained for compatibility; no API-key issuance. */
   apiKey?: string
 }
 

@@ -43,7 +43,6 @@ const node_os_1 = require("node:os");
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const express_1 = __importDefault(require("express"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL = '';
 process.env.SQLITE_PATH = node_path_1.default.join((0, node_fs_1.mkdtempSync)(node_path_1.default.join((0, node_os_1.tmpdir)(), 'shoreline-ehr-')), 'test.sqlite');
@@ -57,7 +56,10 @@ process.env.JWT_SECRET = node_crypto_1.default.randomBytes(32).toString('hex');
     const resident = node_crypto_1.default.randomUUID();
     await pool.query('INSERT INTO users (id, name, email, password, role) VALUES ($1,$2,$3,$4,$5)', [user, 'Synthetic reviewer', 'reviewer@example.invalid', 'unused', 'dietitian']);
     await pool.query('INSERT INTO residents (id, name, room, allergies) VALUES ($1,$2,$3,$4)', [resident, 'Synthetic resident', 'TEST', ['Milk']]);
-    const credential = (role) => jsonwebtoken_1.default.sign({ sub: user, role, purpose: 'access', mfa: true, facilityId: 'default', platformAdmin: false }, process.env.JWT_SECRET, { audience: 'shoreline-api', expiresIn: '5m' });
+    const { issueTestAccessToken } = await Promise.resolve().then(() => __importStar(require('./test-support/accessToken')));
+    const credential = (role) => issueTestAccessToken({
+        sub: role === 'dietitian' ? user : `ehr-fixture-${role}`, role, mfa: true,
+    });
     const app = (0, express_1.default)();
     app.use(express_1.default.json());
     app.use('/api/ehr', ehrRouter);
@@ -69,8 +71,8 @@ process.env.JWT_SECRET = node_crypto_1.default.randomBytes(32).toString('hex');
         await pool.query('INSERT INTO ehr_reconciliation_queue (id,resident_id,resident_name,external_ehr_id,change_type,incoming_payload,conflict_reason) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, residentId, 'Synthetic resident', 'synthetic', type, JSON.stringify(payload), 'Review required']);
         return id;
     };
-    const resolve = (id, body = { action: 'APPROVED_BY_RD' }, role = 'dietitian') => fetch(`${base}/reconciliation-queue/${id}/resolve`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${credential(role)}` }, body: JSON.stringify(body),
+    const resolve = async (id, body = { action: 'APPROVED_BY_RD' }, role = 'dietitian') => fetch(`${base}/reconciliation-queue/${id}/resolve`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await credential(role)}` }, body: JSON.stringify(body),
     });
     const state = async (id) => (await pool.query('SELECT status FROM ehr_reconciliation_queue WHERE id = $1', [id])).rows[0].status;
     const profile = async () => (await pool.query('SELECT allergies, diet_type, texture, is_npo, profile_version FROM residents WHERE id = $1', [resident])).rows[0];
@@ -90,7 +92,7 @@ process.env.JWT_SECRET = node_crypto_1.default.randomBytes(32).toString('hex');
         });
         await t.test('queue exposes authoritative comparison and stale review cannot apply', async () => {
             const id = await add('DIET_ORDER', { dietOrder: 'NAS' });
-            const response = await fetch(`${base}/reconciliation-queue`, { headers: { Authorization: `Bearer ${credential('dietitian')}` } });
+            const response = await fetch(`${base}/reconciliation-queue`, { headers: { Authorization: `Bearer ${await credential('dietitian')}` } });
             const data = await response.json();
             strict_1.default.equal(data.items.find(item => item.id === id)?.current_profile.profile_version, 2);
             strict_1.default.equal((await resolve(id, { action: 'APPROVED_BY_RD', expectedProfileVersion: 1 })).status, 409);

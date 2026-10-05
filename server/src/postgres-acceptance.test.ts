@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import express from 'express'
-import jwt from 'jsonwebtoken'
 
 // Multi-client and concurrency acceptance suite.
 // Exercises concurrent EHR triage decisions, simultaneous tray card scans against mutating profiles,
@@ -84,14 +83,12 @@ test('database acceptance: tray dispatch after clinical update rejects stale sig
   )
 
   // Setup Express app
+  const { requireAuth } = await import('./middleware/requireAuth')
+  const { issueTestAccessToken } = await import('./test-support/accessToken')
+  const staffToken = await issueTestAccessToken({ sub: staffUserId, role: 'staff' })
   const app = express()
   app.use(express.json())
-  app.use((req: any, _res, next) => {
-    req.userRole = 'staff'
-    req.userId = staffUserId
-    next()
-  })
-  app.use('/api/trayruns', trayrunsRouter)
+  app.use('/api/trayruns', requireAuth, trayrunsRouter)
   app.use((err: any, _req: any, res: any, _next: any) => {
     console.error('[TEST APP ERROR]', err)
     res.status(err.status || 500).json({ error: err.message })
@@ -106,7 +103,7 @@ test('database acceptance: tray dispatch after clinical update rejects stale sig
     // 1. First event: assemble tray with V1 card
     const resAssemble = await fetch(`${base}/${runId}/events`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${staffToken}` },
       body: JSON.stringify({ rawQrPayload: rawQrPayloadV1, event: 'assembled' }),
     })
     assert.equal(resAssemble.status, 201)
@@ -122,7 +119,7 @@ test('database acceptance: tray dispatch after clinical update rejects stale sig
     // 3. Concurrent dispatch attempt with stale V1 QR code: MUST fail closed with 409 Conflict
     const resDispatch = await fetch(`${base}/${runId}/events`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${staffToken}` },
       body: JSON.stringify({ rawQrPayload: rawQrPayloadV1, event: 'dispatched' }),
     })
     assert.equal(resDispatch.status, 409)
@@ -162,16 +159,9 @@ test('concurrency acceptance: multi-client race on EHR reconciliation queue reso
     [resident, 'Concurrent Resident', '102-B', ['Fish']]
   )
 
-  const token1 = jwt.sign(
-    { sub: user1, role: 'dietitian', purpose: 'access', mfa: true, facilityId: 'default', platformAdmin: false },
-    process.env.JWT_SECRET!,
-    { audience: 'shoreline-api', expiresIn: '5m' }
-  )
-  const token2 = jwt.sign(
-    { sub: user2, role: 'dietitian', purpose: 'access', mfa: true, facilityId: 'default', platformAdmin: false },
-    process.env.JWT_SECRET!,
-    { audience: 'shoreline-api', expiresIn: '5m' }
-  )
+  const { issueTestAccessToken } = await import('./test-support/accessToken')
+  const token1 = await issueTestAccessToken({ sub: user1, role: 'dietitian', mfa: true })
+  const token2 = await issueTestAccessToken({ sub: user2, role: 'dietitian', mfa: true })
 
   const app = express()
   app.use(express.json())

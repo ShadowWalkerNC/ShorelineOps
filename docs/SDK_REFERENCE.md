@@ -9,8 +9,10 @@
 
 ## Installation
 
+Build `sdk/` before installing from repository source. Registry publication is unverified. The compatibility property `apiKey` contains an access JWT, not a machine API key; the server does not issue API keys. This client does not refresh tokens. Recreate it with the current token after an authorized login/refresh. Server roles, facility scope and clinical safety checks apply to every operation. These API examples do not prove physical hardware, provider connectivity or regulatory compliance. Muse model/device tooling is separately documented in `tools/muse/README.md`.
+
 ```bash
-npm install @shoreline/sdk
+npm install ./sdk
 ```
 
 ---
@@ -21,8 +23,8 @@ npm install @shoreline/sdk
 import { ShorelineClient } from '@shoreline/sdk'
 
 const client = new ShorelineClient({
-  baseUrl: 'https://facility.shorelineops.com',
-  apiKey: process.env.SHORELINE_API_KEY, // optional
+  baseUrl: 'https://shoreline-api-production.up.railway.app',
+  apiKey: process.env.SHORELINE_ACCESS_TOKEN, // JWT from authorized login/refresh
 })
 
 // 1. Get all active residents

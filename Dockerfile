@@ -11,10 +11,11 @@ RUN npm run build
 # Stage 2: Build Backend API (TypeScript compilation)
 FROM node:24-slim AS server-builder
 WORKDIR /app/server
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY server/package*.json ./
-RUN npm ci
+RUN npm ci && npm_config_build_from_source=true npm rebuild sqlite3
 COPY server/ ./
-RUN npm run build
+RUN npm run build && npm prune --omit=dev
 
 # Stage 3: Production Runtime (Unified Single-Port Container)
 FROM node:24-slim AS runner
@@ -34,7 +35,9 @@ COPY --from=client-builder --chown=node:node /app/dist /app/dist
 # Copy backend built files and dependencies
 WORKDIR /app/server
 COPY --from=server-builder --chown=node:node /app/server/package*.json ./
-RUN npm ci --omit=dev
+# Retain SQLite built against this same base image's libc rather than fetching
+# a prebuilt native addon that may require a newer GLIBC at runtime.
+COPY --from=server-builder --chown=node:node /app/server/node_modules ./node_modules
 COPY --from=server-builder --chown=node:node /app/server/dist ./dist
 
 USER node

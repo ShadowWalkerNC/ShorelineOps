@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import express from 'express'
-import jwt from 'jsonwebtoken'
+import type { ApiRole } from './middleware/requireAuth'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = ''
@@ -23,8 +23,10 @@ test('EHR decisions apply atomically and retain unresolved work on failure', asy
     [user, 'Synthetic reviewer', 'reviewer@example.invalid', 'unused', 'dietitian'])
   await pool.query('INSERT INTO residents (id, name, room, allergies) VALUES ($1,$2,$3,$4)',
     [resident, 'Synthetic resident', 'TEST', ['Milk']])
-  const credential = (role: string) => jwt.sign({ sub: user, role, purpose: 'access', mfa: true, facilityId: 'default', platformAdmin: false },
-    process.env.JWT_SECRET!, { audience: 'shoreline-api', expiresIn: '5m' })
+  const { issueTestAccessToken } = await import('./test-support/accessToken')
+  const credential = (role: ApiRole) => issueTestAccessToken({
+    sub: role === 'dietitian' ? user : `ehr-fixture-${role}`, role, mfa: true,
+  })
   const app = express()
   app.use(express.json())
   app.use('/api/ehr', ehrRouter)
@@ -37,8 +39,8 @@ test('EHR decisions apply atomically and retain unresolved work on failure', asy
       [id, residentId, 'Synthetic resident', 'synthetic', type, JSON.stringify(payload), 'Review required'])
     return id
   }
-  const resolve = (id: string, body: object = { action: 'APPROVED_BY_RD' }, role = 'dietitian') => fetch(`${base}/reconciliation-queue/${id}/resolve`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${credential(role)}` }, body: JSON.stringify(body),
+  const resolve = async (id: string, body: object = { action: 'APPROVED_BY_RD' }, role: ApiRole = 'dietitian') => fetch(`${base}/reconciliation-queue/${id}/resolve`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await credential(role)}` }, body: JSON.stringify(body),
   })
   const state = async (id: string) => (await pool.query('SELECT status FROM ehr_reconciliation_queue WHERE id = $1', [id])).rows[0].status
   const profile = async () => (await pool.query('SELECT allergies, diet_type, texture, is_npo, profile_version FROM residents WHERE id = $1', [resident])).rows[0]
@@ -58,7 +60,7 @@ test('EHR decisions apply atomically and retain unresolved work on failure', asy
     })
     await t.test('queue exposes authoritative comparison and stale review cannot apply', async () => {
       const id = await add('DIET_ORDER', { dietOrder: 'NAS' })
-      const response = await fetch(`${base}/reconciliation-queue`, { headers: { Authorization: `Bearer ${credential('dietitian')}` } })
+      const response = await fetch(`${base}/reconciliation-queue`, { headers: { Authorization: `Bearer ${await credential('dietitian')}` } })
       const data = await response.json() as { items: { id: string; current_profile: { profile_version: number } }[] }
       assert.equal(data.items.find(item => item.id === id)?.current_profile.profile_version, 2)
       assert.equal((await resolve(id, { action: 'APPROVED_BY_RD', expectedProfileVersion: 1 })).status, 409)

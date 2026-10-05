@@ -2,37 +2,31 @@ import test, { before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import express from 'express'
 import http from 'node:http'
-import jwt from 'jsonwebtoken'
+import { mkdtempSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import type { AddressInfo } from 'node:net'
-import { pool } from './db/pool'
-import { requireAuth, type ApiRole } from './middleware/requireAuth'
-import { residentsRouter } from './routes/residents'
-import { kitchenRouter } from './routes/kitchen'
-import { reportingRouter } from './routes/reporting'
-import { hardwareRouter } from './routes/hardware'
-import { productionRouter } from './routes/production'
+import type { ApiRole } from './middleware/requireAuth'
+
+process.env.NODE_ENV = 'test'
+process.env.DATABASE_URL = ''
+process.env.SQLITE_PATH = path.join(mkdtempSync(path.join(os.tmpdir(), 'shoreline-security-permissions-')), 'test.sqlite')
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   process.env.JWT_SECRET = 'synthetic-security-remediation-test-secret-32!'
 }
 
-function tokenFor(role: ApiRole, sub = 'synthetic-user', facilityId = 'FAC-TEST'): string {
-  return jwt.sign(
-    { sub, role, purpose: 'access', mfa: false, facilityId, platformAdmin: false },
-    process.env.JWT_SECRET as string,
-    { algorithm: 'HS256', audience: 'shoreline-api', expiresIn: '1h' }
-  )
-}
-
-// The pool is fully mocked: denied requests must fail before any database
-// access, and allowed requests run against synthetic rows. No real facility
-// data is touched; the real database driver is never reached.
+// Application queries are mocked; authentication is verified against real synthetic
+// users and persisted sessions in a disposable database. Denied requests must
+// not read clinical data or perform operational writes.
+const tokens = new Map<ApiRole, string>()
 let seen: string[] = []
 let writes = 0
 let respond: (sql: string, params: any[]) => { rows: any[] } = () => ({ rows: [] })
 
-const originalQuery = pool.query
-const originalConnect = pool.connect
+let pool: typeof import('./db/pool')['pool']
+let originalQuery: typeof pool.query
+let originalConnect: typeof pool.connect
 
 function resetMock(impl?: (sql: string, params: any[]) => { rows: any[] }): void {
   seen = []
@@ -44,7 +38,21 @@ let base = ''
 let server: http.Server | null = null
 
 before(async () => {
+  ;({ pool } = await import('./db/pool'))
+  const { runMigrations } = await import('./db/migrate')
+  const { issueTestAccessToken } = await import('./test-support/accessToken')
+  const { requireAuth, API_ROLES } = await import('./middleware/requireAuth')
+  const { residentsRouter } = await import('./routes/residents')
+  const { kitchenRouter } = await import('./routes/kitchen')
+  const { reportingRouter } = await import('./routes/reporting')
+  const { hardwareRouter } = await import('./routes/hardware')
+  const { productionRouter } = await import('./routes/production')
+  await runMigrations()
+  for (const role of API_ROLES) tokens.set(role, await issueTestAccessToken({ sub: `synthetic-${role}`, role, facilityId: 'FAC-TEST' }))
+  originalQuery = pool.query
+  originalConnect = pool.connect
   pool.query = (async (sql: string, params: any[] = []) => {
+    if (/FROM users u JOIN refresh_tokens rt/i.test(String(sql))) return originalQuery(sql, params)
     seen.push(String(sql))
     if (/^\s*(INSERT|UPDATE|DELETE)/i.test(String(sql))) writes++
     return respond(String(sql), params)
@@ -72,11 +80,12 @@ after(async () => {
   pool.query = originalQuery
   pool.connect = originalConnect
   if (server) await new Promise<void>((resolve) => server!.close(() => resolve()))
+  await pool.end()
 })
 
 async function request(method: string, path: string, role: ApiRole | null, body?: unknown, extraHeaders?: Record<string, string>): Promise<Response> {
   const headers: Record<string, string> = { ...(extraHeaders ?? {}) }
-  if (role) headers['authorization'] = `Bearer ${tokenFor(role)}`
+  if (role) headers['authorization'] = `Bearer ${tokens.get(role)}`
   if (body !== undefined) headers['content-type'] = 'application/json'
   return fetch(base + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
 }
