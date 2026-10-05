@@ -20,7 +20,12 @@ if %errorlevel% neq 0 (
     if %errorlevel% equ 0 (
         echo [*] Installing runtime packages automatically...
         winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent
-        echo [*] Runtime packages installed successfully.
+        if !errorlevel! neq 0 (
+            echo [X] Runtime installation failed. Setup has stopped.
+            exit /b 1
+        )
+        echo [*] Runtime installed. Open a new terminal and rerun Setup.bat to refresh PATH.
+        exit /b 0
     ) else (
         echo [!] Note: Node.js LTS is required for the local offline database server.
         echo [*] Opening official Node.js installer: https://nodejs.org/
@@ -40,11 +45,10 @@ if %errorlevel% equ 0 (
     echo  [OK] SETUP COMPLETE!
     echo.
     echo  - Desktop Icon Created: 'Shoreline Care OS'
-    echo  - Local Database Initialized: %%APPDATA%%\ShorelineOps\data
-    echo  - Starting Shoreline Care OS automatically in 3 seconds...
+    echo  - Data directory prepared: %%APPDATA%%\ShorelineOps\data
+    echo  - Provision JWT_SECRET and SETUP_BOOTSTRAP_SECRET before launch.
+    echo  - Complete facility/account setup; existing databases are not migrated.
     echo ======================================================================
-    timeout /t 3 >nul
-    start "" "%~dp0ShorelineOps-Launcher.bat"
     exit /b 0
 ) else (
     echo.
