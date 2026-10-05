@@ -444,8 +444,16 @@ authRouter.post('/logout', async (req, res, next) => {
     const { refreshToken } = z.object({ refreshToken: z.string() }).parse(req.body)
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
     const authorization = req.headers.authorization
+    let session: Awaited<ReturnType<typeof validateAccessSession>> | undefined
     if (authorization?.startsWith('Bearer ')) {
-      const session = await validateAccessSession(authorization.slice(7))
+      try { session = await validateAccessSession(authorization.slice(7)) }
+      catch (error: any) {
+        // An expired access JWT must not prevent revocation of the possessed refresh token.
+        // Identity service failures still fail closed instead of claiming logout success.
+        if (error.status !== 401) throw error
+      }
+    }
+    if (session) {
       // Stable id also revokes if a concurrent refresh already rotated the body token.
       await pool.query('DELETE FROM refresh_tokens WHERE id = $1 AND user_id = $2', [session.sessionId, session.sub])
     } else {

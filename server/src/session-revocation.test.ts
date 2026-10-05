@@ -187,6 +187,14 @@ void test('persisted access sessions revoke immediately and refresh rotates atom
       assert.equal((await request('/api/auth/mfa/setup/begin',undefined,{mfaToken:enrollment.mfaToken})).status,401)
       await pool.query('UPDATE system_settings SET mfa_required = false WHERE id = 1')
     })
+    await t.test('expired bearer does not prevent revocation of a valid refresh credential', async () => {
+      const user = await createUser()
+      const session = await login(user.email)
+      const claims = jwt.decode(session.accessToken) as jwt.JwtPayload
+      const expired = jwt.sign({...claims,exp:Math.floor(Date.now()/1000)-30}, process.env.JWT_SECRET!, {algorithm:'HS256'})
+      assert.equal((await request('/api/auth/logout',expired,{refreshToken:session.refreshToken})).status,204)
+      await isRevoked(session)
+    })
     await t.test('logged-out access cannot begin MFA enrollment via the direct-token path', async () => {
       const user = await createUser()
       const session = await login(user.email)
