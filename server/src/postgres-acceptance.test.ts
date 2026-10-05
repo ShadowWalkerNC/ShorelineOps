@@ -286,6 +286,50 @@ test('database acceptance: tray dispatch after clinical update rejects stale sig
   }
 })
 
+test('database acceptance: purchasing approvals have one winner and freeze parent-scoped lines', async () => {
+  const { pool } = await import('./db/pool')
+  const { purchasingRouter } = await import('./routes/purchasing')
+  const { requireAuth } = await import('./middleware/requireAuth')
+  const { issueTestAccessToken } = await import('./test-support/accessToken')
+  const { errorHandler } = await import('./middleware/errorHandler')
+  const manager = crypto.randomUUID(), readonly = crypto.randomUUID()
+  for (const [id,role] of [[manager,'manager'],[readonly,'readonly']]) {
+    await pool.query('INSERT INTO users(id,name,email,password,role) VALUES ($1,$2,$3,$4,$5)',
+      [id,'Synthetic purchasing acceptance',`${id}@example.invalid`,'unused',role])
+  }
+  const token = await issueTestAccessToken({sub:manager,role:'manager',mfa:true})
+  const deniedToken = await issueTestAccessToken({sub:readonly,role:'readonly'})
+  const vendor = crypto.randomUUID()
+  await pool.query('INSERT INTO vendors(id,name,code) VALUES ($1,$2,$3)',[vendor,'Synthetic acceptance vendor',vendor])
+  const item = crypto.randomUUID(), order = crypto.randomUUID(), other = crypto.randomUUID(), line = crypto.randomUUID()
+  await pool.query('INSERT INTO vendor_items(id,vendor_id,vendor_sku,name) VALUES ($1,$2,$3,$4)',
+    [item,vendor,item,'Synthetic item'])
+  for (const id of [order,other]) await pool.query("INSERT INTO purchase_orders(id,vendor_id,status) VALUES ($1,$2,'draft')",[id,vendor])
+  await pool.query('INSERT INTO purchase_order_lines(id,purchase_order_id,vendor_item_id,qty_ordered) VALUES ($1,$2,$3,1)',[line,order,item])
+  const app = express()
+  app.use(express.json())
+  app.use('/purchasing',requireAuth,purchasingRouter)
+  app.use(errorHandler)
+  const server = app.listen(0,'127.0.0.1')
+  await new Promise<void>(resolve=>server.once('listening',resolve))
+  const base = `http://127.0.0.1:${(server.address() as {port:number}).port}/purchasing/orders`
+  const request = (route:string,method='POST',accessToken=token,body={}) => fetch(base+route,
+    {method,headers:{'Content-Type':'application/json',Authorization:`Bearer ${accessToken}`},body:JSON.stringify(body)})
+  try {
+    assert.equal((await request(`/${order}/approve`,'POST',deniedToken)).status,403)
+    assert.equal((await request(`/${other}/lines/${line}`,'PUT',token,{qtyOrdered:2})).status,404)
+    const attempts = await Promise.all(Array.from({length:4},()=>request(`/${order}/approve`)))
+    assert.deepEqual(attempts.map(response=>response.status).sort(),[200,409,409,409])
+    assert.equal((await request(`/${order}/lines/${line}`,'PUT',token,{qtyOrdered:2})).status,409)
+    assert.equal((await request(`/${order}/lines/${line}`,'DELETE')).status,409)
+    assert.equal(Number((await pool.query('SELECT qty_ordered FROM purchase_order_lines WHERE id=$1',[line])).rows[0].qty_ordered),1)
+    assert.equal((await pool.query("SELECT id FROM audit_log WHERE action='PO_APPROVE' AND resource_id=$1",[order])).rows.length,1)
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>(resolve=>server.close(()=>resolve()))
+  }
+})
+
 test('concurrency acceptance: multi-client race on EHR reconciliation queue resolves atomically', async () => {
   const { pool } = await import('./db/pool')
   const { ehrRouter } = await import('./routes/ehr')
