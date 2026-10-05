@@ -1,5 +1,6 @@
 import '@/features/kitchen/stitch-operations.css'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useRecipesStore } from '@/state/recipesStore'
 import { RECIPE_CATEGORIES, RECIPE_ALLERGENS } from '@/types/recipe'
 import type { Recipe, RecipeCategory, RecipeAllergen, RecipeIngredient, RecipeStep, CostProvenance } from '@/types/recipe'
@@ -13,7 +14,6 @@ import {
   Scale,
   Edit2,
   Trash2,
-  X,
   ChefHat,
   ShieldAlert,
   Layers,
@@ -88,6 +88,20 @@ function CostBadge({ recipe, large = false }: { recipe: Recipe; large?: boolean 
 // ────────────────────────────────────────────────────────────────────────────
 const STEP = 10
 
+function RecipeDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const returnFocus = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null)
+  return (
+    <Dialog open onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent aria-describedby={undefined}
+        onCloseAutoFocus={event => { event.preventDefault(); returnFocus.current?.focus() }}
+        className="block max-w-2xl max-h-[90dvh] overflow-y-auto bg-slate-900 text-white p-6 sm:p-8 border-slate-800">
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        {children}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void }) {
   const snap = (n: number) => Math.max(STEP, Math.ceil(n / STEP) * STEP)
   const [servings, setServings] = useState(() => snap(recipe.baseServings))
@@ -107,11 +121,7 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
   const inc = () => setServings(s => s + STEP)
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
-      <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-200"
-        onClick={e => e.stopPropagation()}
-      >
+    <RecipeDialog title={recipe.name} onClose={onClose}>
         <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
@@ -122,12 +132,6 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
               <h2 className="text-xl font-bold tracking-tight text-white">{recipe.name}</h2>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {recipe.allergens.length > 0 && (
@@ -221,8 +225,7 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
             Close Scaler
           </AppleButton>
         </div>
-      </div>
-    </div>
+    </RecipeDialog>
   )
 }
 
@@ -314,19 +317,9 @@ function RecipeFormModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
-      <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-200"
-        onClick={e => e.stopPropagation()}
-      >
+    <RecipeDialog title={initial ? 'Edit Recipe' : 'New Standardized Recipe'} onClose={onClose}>
         <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
           <h3 className="text-xl font-bold tracking-tight">{initial ? 'Edit Recipe' : 'New Standardized Recipe'}</h3>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         <div className="space-y-5">
@@ -493,8 +486,7 @@ function RecipeFormModal({
             {saving ? 'Saving…' : 'Save Recipe'}
           </AppleButton>
         </div>
-      </div>
-    </div>
+    </RecipeDialog>
   )
 }
 
