@@ -236,13 +236,13 @@ See [the decision workflow handoff](docs/DECISION_WORKFLOW_HANDOFF.md) for scope
 - [x] **J01: Multi-Device Responsive Breakpoints & Preview Engine (`src/hooks/useDevice.tsx`, `src/main.tsx`)**: Created unified device engine detecting mobile ($< 768\text{px}$), tablet ($768\text{px} \le w < 1024\text{px}$), and desktop ($\ge 1024\text{px}$) viewports, with interactive preview mode switcher (`Auto`, `Desk`, `Tab`, `Mobile`) for instant QA across devices.
 - [x] **J02: Device-Tailored App Shell & Jakob's Law Thumb-Zone Navigation (`src/components/Layout.tsx`, `src/components/MobileMoreSheet.tsx`)**: Desktop 260px administrative sidebar, tablet 72px compact touch rail, and mobile thumb-zone sticky bottom navigation (`Dashboard`, `Residents`, `Kitchen`, `Tasks`, `More`) with slide-up action sheet and safe-area inset support.
 - [x] **J03: Specialized Multi-Device Dashboards & Operational Tasks**: Created executive Desktop command center, touch-optimized Tablet console (`TabletDashboardView.tsx`), and shift-first Mobile operations hub (`MobileDashboardView.tsx`, `MobileTasksPage.tsx`) featuring real-time meal service window countdowns, deterministic NPO safety alerts, and touch shortcuts.
-- [x] **J04: Guided First-Run Onboarding Flow (`src/features/setup/SetupWizardPage.tsx`, `server/src/routes/setup.ts`)**: Pre-populated sensible defaults (facility name, NPI, wings, dining rooms, admin roles), 1-click starter configuration (`Sample Demo Data` vs. `Clean Production Slate`), default bootstrap secret helper, and plain-language validation alerts.
+- [x] **J04: Guided First-Run Onboarding Flow (`src/features/setup/SetupWizardPage.tsx`, `server/src/routes/setup.ts`)**: Blank facility and owner inputs, explicit clean-production versus restricted sample-data selection, externally supplied bootstrap secret, unchecked deployment-review acknowledgment, and plain-language validation alerts. Setup does not execute a BAA; MFA enrollment follows owner creation when the deployment requires it.
 - [x] **J05: Autonomous System Health & Safe 1-Click Repair (`src/features/admin/components/SystemHealthDiagnostics.tsx`, `server/src/routes/admin.ts`)**: Integrated live subsystem diagnostics and 1-click self-repair powered by `OperationsHealerBot` into Administration and Facility Settings.
 - [x] **J06: Community Backup Export, Dry-Run Preview & Safe Restoration (`src/features/admin/components/BackupRecoveryPanel.tsx`, `server/src/routes/admin.ts`)**: 1-click complete JSON backup export, pre-flight inspection preview, and safe confirmation-guarded record upserting.
 
 ---
 
-## 🏆 Project Status: All Milestones & Stages 100% Complete & Production Ready
+## Historical implemented feature inventory — acceptance gates remain open
 - [x] Core Clinical Care & Resident Operations (`/residents`, `/api/residents`)
 - [x] Bulk Census & Diet Order CSV Importer with Audit Provenance (`/residents`, `/api/residents/import-csv`)
 - [x] 4-Week Seasonal Cycle Menu Planning (`/menu`, `/api/menu`)
