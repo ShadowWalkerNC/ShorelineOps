@@ -5,7 +5,19 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import zlib from 'node:zlib'
-import { spawnSync } from 'node:child_process'
+import { spawnSync as nativeSpawnSync, type SpawnSyncOptionsWithStringEncoding } from 'node:child_process'
+
+function spawnSync(command: string, args: string[], options: SpawnSyncOptionsWithStringEncoding) {
+  const diagnostic = process.env.SHORELINE_BACKUP_DIAGNOSTICS === 'true'
+  const label = path.basename(command)
+  const started = Date.now()
+  // Synchronous writes remain visible while a native child blocks the Node event loop.
+  // Never log arguments, environment values, key paths or captured dump contents.
+  if (diagnostic) fs.writeSync(2, `[backup diagnostic] START ${label}\n`)
+  const result = nativeSpawnSync(command, args, options)
+  if (diagnostic) fs.writeSync(2, `[backup diagnostic] END ${label} milliseconds=${Date.now()-started} status=${result.status} error=${result.error?.name ?? 'none'}\n`)
+  return result
+}
 
 // Isolated deployment-configuration tests. No database, network, container,
 // or secret access: TLS policy is exercised through the pure resolver plus
