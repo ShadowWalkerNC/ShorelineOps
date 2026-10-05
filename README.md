@@ -203,23 +203,23 @@ ShorelineOps includes an autonomous **Dietary Operations Consultant Agent** (`di
 
 ## Turnkey Installation & Deployment
 
-Shoreline Care OS is engineered for zero-friction turnkey deployment across workstations, kitchen tablets, bare-metal servers, and cloud infrastructure.
+ShorelineOps supports source-built browser workstations and container/server deployments. Clinical, physical-device, recovery and signed-installer acceptance remain separate requirements.
 
-### Option A: Turnkey Linux / macOS / Cloud Script (Recommended for Unix)
+### Option A: Linux / macOS workstation source build
 ```bash
 git clone https://github.com/ShadowWalkerNC/ShorelineOps.git
 cd ShorelineOps
 chmod +x install.sh
 ./install.sh
 ```
-*Auto-verifies Node 20+, creates local data directories, generates high-entropy `JWT_SECRET`, compiles client/server assets, and installs a persistent `systemd` service.*
+Requires Node 22.19+ (24 recommended), installs the pinned root workspace once and compiles the application. It prepares private per-user directories. Provision JWT_SECRET and SETUP_BOOTSTRAP_SECRET through the launching account before `node launcher.js`; use `/app/login` on loopback port 4000 by default. No default admin, repository environment file, automatic data migration or system-wide service unit is created.
 
 ### Option B: Turnkey Windows 1-Click Desktop Setup
 In PowerShell (as Administrator or standard user):
 ```powershell
 .\Setup.ps1
 ```
-*Provisions `%APPDATA%\ShorelineOps\data`, installs dependencies, and pins desktop and Start Menu shortcuts. Launch instantly via `ShorelineOps-Launcher.bat`.*
+Requires compiled production assets and a supported Node runtime. Prepares `%APPDATA%\ShorelineOps\data`, verifies pinned dependencies and creates desktop/Start Menu shortcuts. Provision signing/bootstrap secrets and complete facility/account setup before use. Launch via `ShorelineOps-Launcher.bat`; legacy databases require verified backup and explicit migration.
 
 ### Option C: Turnkey Multi-Container Docker Stack
 ```bash
