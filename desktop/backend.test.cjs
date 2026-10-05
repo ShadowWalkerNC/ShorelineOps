@@ -21,7 +21,16 @@ test('compiled desktop backend serves app, isolated blank SQLite, and shuts down
     assert.equal(await checkReady(runtime.origin),true)
     const response = await fetch(`${runtime.origin}/app/login`)
     assert.equal(response.status,200)
-    assert.match(await response.text(),/app\/assets/)
+    const html = await response.text()
+    assert.match(html,/app\/assets/)
+    const scripts = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map(match=>match[1])
+    assert.ok(scripts.length >= 2)
+    for (const asset of scripts) {
+      const loaded = await fetch(runtime.origin+asset,{headers:{Origin:runtime.origin}})
+      assert.equal(loaded.status,200,`same-origin browser asset must load: ${asset}`)
+      assert.equal(loaded.headers.get('access-control-allow-origin'),runtime.origin)
+      assert.match(loaded.headers.get('content-type'),asset.endsWith('.css') ? /text\/css/ : /javascript/)
+    }
     assert.equal(fs.existsSync(path.join(userData,'shoreline.db')),true)
     const sqlite3 = require('sqlite3')
     const db = new sqlite3.Database(path.join(userData,'shoreline.db'))

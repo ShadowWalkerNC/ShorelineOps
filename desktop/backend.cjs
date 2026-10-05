@@ -34,7 +34,7 @@ async function launchBackend({root,userData,executable=process.execPath,env=proc
   fs.mkdirSync(userData,{recursive:true,mode:0o700})
   const child = spawn(executable,[entry],{cwd:userData,windowsHide:true,shell:false,stdio:'ignore',
     env:{...env,ELECTRON_RUN_AS_NODE:'1',NODE_ENV:'production',HOST:'127.0.0.1',PORT:String(port),
-      DATABASE_URL:'',SQLITE_PATH:path.join(userData,'shoreline.db'),SHORELINE_DEMO_SEED:'false',VITE_DEMO_MODE:'false'}})
+      FRONTEND_URL:`http://127.0.0.1:${port}`,DATABASE_URL:'',SQLITE_PATH:path.join(userData,'shoreline.db'),SHORELINE_DEMO_SEED:'false',VITE_DEMO_MODE:'false'}})
   let failed = false
   child.once('error', () => {failed=true})
   child.once('exit', () => {failed=true})

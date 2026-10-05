@@ -156,6 +156,9 @@ for (const scenario of [
         assert.equal(owners.length, 1);
         assert.match(owners[0].id, /^[0-9a-f-]{36}$/i);
         assert.equal(owners[0].role, 'admin');
+        const agreement = (await pool.query('SELECT baa_accepted_at, baa_signee_name FROM facility_config')).rows[0];
+        assert.equal(agreement.baa_accepted_at, null);
+        assert.equal(agreement.baa_signee_name, '');
         const login = await fetch(base + '/api/auth/login', {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ email: body.adminEmail, password: body.adminPassword })

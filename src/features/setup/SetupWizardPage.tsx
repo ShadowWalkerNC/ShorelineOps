@@ -22,20 +22,20 @@ export default function SetupWizardPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    facilityName: 'Shoreline Healthcare & Rehabilitation',
-    npiLicense: '1942857102',
-    address: '100 Shoreline Parkway, Portland, ME 04101',
-    primaryContactEmail: 'operations@shorelinecare.com',
+    facilityName: '',
+    npiLicense: '',
+    address: '',
+    primaryContactEmail: '',
     facilityType: 'Skilled Nursing' as 'Assisted Living' | 'Skilled Nursing' | 'Memory Care' | 'Continuing Care',
-    wings: ['North Wing (Skilled Rehab)', 'South Wing (Memory Care)', 'East Wing (Long-Term Care)'],
-    diningRooms: ['Main Dining Hall', 'Memory Care Dining Room', 'Tray Delivery Line'],
-    adminName: 'Operations Director',
-    adminEmail: 'admin@shorelineops.local',
+    wings: [] as string[],
+    diningRooms: [] as string[],
+    adminName: '',
+    adminEmail: '',
     adminPassword: import.meta.env.DEV ? 'ShorelineAdmin2026!' : '',
     adminPasswordConfirm: import.meta.env.DEV ? 'ShorelineAdmin2026!' : '',
     setupSecret: import.meta.env.DEV ? 'shoreline-bootstrap-dev-secret-2026' : '',
-    baaSigneeName: 'Operations Director',
-    baaAccepted: true,
+    baaSigneeName: '',
+    baaAccepted: false,
     initMode: 'clean' as 'clean' | 'sample',
   })
 
@@ -79,7 +79,7 @@ export default function SetupWizardPage() {
       return
     }
     if (!formData.baaAccepted) {
-      setError('You must read and accept the Business Associate Agreement (BAA) to proceed.')
+      setError('Acknowledge the deployment review before continuing.')
       return
     }
 
@@ -103,6 +103,7 @@ export default function SetupWizardPage() {
           adminEmail: formData.adminEmail,
           adminPassword: formData.adminPassword,
           baaSigneeName: formData.baaSigneeName,
+          deploymentReviewAcknowledged: formData.baaAccepted,
           initMode: formData.initMode,
         }),
       })
@@ -125,7 +126,7 @@ export default function SetupWizardPage() {
     { id: 2, name: 'Admin Account' },
     { id: 3, name: 'Wings & Dining' },
     { id: 4, name: 'Security' },
-    { id: 5, name: 'HIPAA & BAA' },
+    { id: 5, name: 'Deployment Review' },
     { id: 6, name: 'Launch Mode' },
   ]
 
@@ -178,7 +179,7 @@ export default function SetupWizardPage() {
             }}
           >
             <ShieldCheck className="w-4 h-4 text-primary" />
-            <span>HIPAA & SOC 2 COMPLIANT FACILITY ONBOARDING</span>
+            <span>FACILITY ONBOARDING & DEPLOYMENT REVIEW</span>
           </div>
           <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--weight-black)', color: 'var(--text-primary)', marginBottom: 8 }}>
             ShorelineOps Setup Wizard
@@ -655,7 +656,7 @@ export default function SetupWizardPage() {
                   Step 4: Security & Safeguards Configuration
                 </h2>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-                  Review active security controls enforcing HIPAA Security Rule compliance (§164.312).
+                  Review the safeguards and deployment responsibilities before entering resident information.
                 </p>
               </div>
 
@@ -665,10 +666,10 @@ export default function SetupWizardPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
-                    AES-256 Storage & TLS 1.3 Transport Encryption
+                    Storage, Backups & Network Protection
                   </div>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 2 }}>
-                    All local SQLite databases, backup snapshots, and network communication channels enforce AES-256 and TLS 1.3 cryptographic protection.
+                    SQLite is not encrypted by the application. Protect it with OS permissions and disk encryption, configure encrypted backups, and verify HTTPS for remote access.
                   </p>
                 </div>
               </div>
@@ -679,10 +680,10 @@ export default function SetupWizardPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
-                    Automatic 15-Minute Inactivity Session Lockout
+                    Session & Workstation Access
                   </div>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 2 }}>
-                    Terminal stations automatically lock after 15 minutes of idle time to prevent unauthorized access to resident PHI.
+                    Configure and verify workstation locking and inactivity limits for your facility. Expiring access tokens do not replace an operating-system screen lock.
                   </p>
                 </div>
               </div>
@@ -693,10 +694,10 @@ export default function SetupWizardPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
-                    Immutable Audit Trail Logging (§164.312(b))
+                    Audit Trail Review
                   </div>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 2 }}>
-                    Every login, diet order change, resident record view, and timecard punch is logged with IP address and user ID.
+                    Selected authentication and operational actions are recorded. Verify event coverage, access, retention, and recovery against facility requirements.
                   </p>
                 </div>
               </div>
@@ -706,12 +707,12 @@ export default function SetupWizardPage() {
                   Setup Bootstrap Secret <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 8 }}>
-                  Initial master setup passphrase. For local development or standard turnkey single-facility deployments, use the pre-filled default key below.
+                  Enter the unique bootstrap secret provisioned by your authorized system administrator. Keep it separate from resident information.
                 </p>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <input
                     type="password"
-                    placeholder="Enter setup secret or use default"
+                    placeholder="Enter provisioned setup secret"
                     value={formData.setupSecret}
                     onChange={(e) => setFormData({ ...formData, setupSecret: e.target.value })}
                     autoComplete="off"
@@ -726,7 +727,7 @@ export default function SetupWizardPage() {
                       color: 'var(--text-primary)',
                     }}
                   />
-                  <button
+                  {import.meta.env.DEV && <button
                     type="button"
                     onClick={() => setFormData({ ...formData, setupSecret: 'shoreline-bootstrap-dev-secret-2026' })}
                     style={{
@@ -741,22 +742,22 @@ export default function SetupWizardPage() {
                       color: 'var(--color-primary)',
                     }}
                   >
-                    Use Default Key
-                  </button>
+                    Use Development Key
+                  </button>}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Step 5: HIPAA Agreement */}
+          {/* Step 5: Deployment acknowledgment; contracts are handled separately. */}
           {step === 5 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div>
                 <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 4 }}>
-                  Step 5: Business Associate Agreement (BAA) Sign-Off
+                  Step 5: Deployment Review
                 </h2>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-                  Execute the required HIPAA Business Associate Agreement to initialize compliance tracking.
+                  Confirm that you will complete facility security and contractual review before clinical use.
                 </p>
               </div>
 
@@ -773,11 +774,9 @@ export default function SetupWizardPage() {
                   lineHeight: 1.6
                 }}
               >
-                <strong style={{ color: 'var(--text-primary)' }}>HIPAA BUSINESS ASSOCIATE AGREEMENT (BAA) SUMMARY</strong><br /><br />
-                This Business Associate Agreement ("BAA") is entered into by and between Covered Entity ({formData.facilityName || 'Facility'}) and ShorelineOps. Covered Entity and Business Associate agree to:<br />
-                1. Implement administrative, physical, and technical safeguards that reasonably protect the confidentiality, integrity, and availability of PHI.<br />
-                2. Report any security incident or breach of unsecured PHI within 24 hours of discovery.<br />
-                3. Maintain immutable audit logs for a minimum of 6 years in accordance with federal healthcare compliance regulations.
+                <strong style={{ color: 'var(--text-primary)' }}>BEFORE CLINICAL USE</strong><br /><br />
+                Your authorized facility team must approve access roles, device security, encrypted recovery, clinical workflows, and any provider contracts.<br />
+                Obtain any required agreements through an approved contract process. This setup form does not execute a BAA or certify regulatory compliance.
               </div>
 
               <div>
@@ -810,7 +809,7 @@ export default function SetupWizardPage() {
                   style={{ width: 20, height: 20, marginTop: 2 }}
                 />
                 <span>
-                  I represent that I have legal authority to bind <strong>{formData.facilityName || 'this facility'}</strong> and hereby accept and digitally execute the HIPAA Business Associate Agreement.
+                  I acknowledge that <strong>{formData.facilityName || 'this facility'}</strong> requires an authorized security, clinical, and contractual review before using resident information.
                 </span>
               </label>
             </div>

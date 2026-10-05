@@ -81,6 +81,7 @@ exports.setupRouter.post('/initialize', async (req, res, next) => {
                 .regex(/[0-9]/, 'Password must contain at least one number')
                 .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
             baaSigneeName: zod_1.z.string().min(2),
+            deploymentReviewAcknowledged: zod_1.z.literal(true).optional(),
             initMode: zod_1.z.enum(['clean', 'sample']),
         }).parse(req.body);
         const hashedPassword = await bcryptjs_1.default.hash(body.adminPassword, 12);
@@ -93,8 +94,8 @@ exports.setupRouter.post('/initialize', async (req, res, next) => {
             }
             await client.query(`INSERT INTO facility_config (
         id, facility_name, npi_license, address, primary_contact_email,
-        facility_type, wings, dining_rooms, is_initialized, baa_accepted_at, baa_signee_name
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW(), $9)
+        facility_type, wings, dining_rooms, is_initialized
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
       ON CONFLICT (id) DO UPDATE SET
         facility_name = EXCLUDED.facility_name,
         npi_license = EXCLUDED.npi_license,
@@ -104,8 +105,6 @@ exports.setupRouter.post('/initialize', async (req, res, next) => {
         wings = EXCLUDED.wings,
         dining_rooms = EXCLUDED.dining_rooms,
         is_initialized = true,
-        baa_accepted_at = NOW(),
-        baa_signee_name = EXCLUDED.baa_signee_name,
         updated_at = NOW()`, [
                 'default',
                 body.facilityName,
@@ -115,12 +114,13 @@ exports.setupRouter.post('/initialize', async (req, res, next) => {
                 body.facilityType,
                 JSON.stringify(body.wings),
                 JSON.stringify(body.diningRooms),
-                body.baaSigneeName,
             ]);
             await client.query(`INSERT INTO users (id, name, email, password, role, mfa_enabled, active)
        VALUES ($1, $2, $3, $4, 'admin', true, true)`, [crypto_1.default.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]);
+            // Legacy input name retained for clients; it identifies the setup representative, not a contract signature.
             await client.query(`INSERT INTO audit_log (action, resource_type, outcome, details)
-       VALUES ('SETUP_INITIALIZE', 'facility_config', 'success', $1)`, [JSON.stringify({ facilityName: body.facilityName, adminEmail: body.adminEmail, mode: body.initMode })]);
+       VALUES ('SETUP_INITIALIZE', 'facility_config', 'success', $1)`, [JSON.stringify({ facilityName: body.facilityName, adminEmail: body.adminEmail, mode: body.initMode,
+                    setupRepresentative: body.baaSigneeName, deploymentReviewAcknowledged: body.deploymentReviewAcknowledged === true })]);
         });
         if (body.initMode === 'sample') {
             await (0, seed_1.runSeed)();
