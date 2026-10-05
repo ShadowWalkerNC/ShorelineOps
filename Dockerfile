@@ -1,23 +1,23 @@
 # Stage 1: Build Unified Static Apps (Marketing + Demo + Gatekept SaaS)
-FROM node:22-slim AS client-builder
+FROM node:24-slim AS client-builder
 WORKDIR /app
 COPY package*.json ./
 COPY server/package*.json ./server/
 COPY marketing/package*.json ./marketing/
-RUN npm install
+RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci
 COPY . .
 RUN npm run build
 
 # Stage 2: Build Backend API (TypeScript compilation)
-FROM node:22-slim AS server-builder
+FROM node:24-slim AS server-builder
 WORKDIR /app/server
 COPY server/package*.json ./
-RUN npm install
+RUN npm ci
 COPY server/ ./
 RUN npm run build
 
 # Stage 3: Production Runtime (Unified Single-Port Container)
-FROM node:22-slim AS runner
+FROM node:24-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -34,7 +34,7 @@ COPY --from=client-builder --chown=node:node /app/dist /app/dist
 # Copy backend built files and dependencies
 WORKDIR /app/server
 COPY --from=server-builder --chown=node:node /app/server/package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 COPY --from=server-builder --chown=node:node /app/server/dist ./dist
 
 USER node
@@ -47,5 +47,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3001/ready || exit 1
 
-# Automatically runs database migrations, seeds default system state, and starts Express server
+# Runs migrations and starts Express; production demo seeding stays disabled.
 CMD ["node", "dist/index.js"]

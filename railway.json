@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install && node scripts/build_unified_site.mjs && npm --prefix server run build"
+    "buildCommand": "npm ci && node scripts/build_unified_site.mjs && npm --prefix server run build"
   },
   "deploy": {
     "startCommand": "node server/dist/db/migrate.js && node server/dist/index.js",

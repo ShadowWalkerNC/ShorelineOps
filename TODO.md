@@ -11,6 +11,8 @@ See [current project reassessment](docs/audits/PROJECT_REASSESSMENT_2026-10-04.m
 - [x] Reject unsupported kitchen WebSocket upgrades and remove unsupported compliance/SLA claims.
 - [x] Add a guarded isolated PostgreSQL acceptance command and dedicated CI service.
 - [ ] Verify Spark live connectivity with authorized `MODEL_API_KEY`; no real resident data.
+- [ ] Enforce immediate stale-account/privilege rejection and password/session revocation.
+- [ ] Resolve the unpatched development braces advisory through a compatible upstream fix or reviewed build migration.
 - [ ] Resolve Gadget commercial token terms and complete isolated physical-device acceptance before operational integration.
 - [ ] Verify encrypted backups and isolated full restore with measured RPO/RTO.
 - [ ] Complete packaged production desktop, real provider and multi-replica/load acceptance.

@@ -16,4 +16,8 @@ The artifact helper currently buffers the complete dump in memory, so provision 
 
 ## Acceptance still required
 
+`scripts/restore-drill.mjs` is a bounded GitHub Linux CI drill for the disposable PostgreSQL 16 service after `npm run test:postgres`. Invoke `node scripts/restore-drill.mjs <job.services.postgres.id>` in that job. It refuses custom Docker endpoints/contexts and requires the synthetic service identity. It runs the scheduled Bash backup, authenticated decryption and a real logical restore into a newly created random database; compares every public table's full-row fingerprints/counts, column/constraint/trigger definitions, resident NPO/allergen versions, EHR approval, tray events and audit records; and exercises restored audit immutability. It deletes only its own newly created restore database and temporary lab files. No production data or provider account is involved.
+
+The emitted duration measures this tiny CI fixture only. It does not establish production recovery time, recovery point, off-host durability, signing-key escrow or clinical acceptance. A source or restore invariant failure fails the job. Current true-run evidence must come from the CI job, not this script's presence or its negative guard check.
+
 Restore into a dedicated disposable PostgreSQL instance using the appropriate PostgreSQL version. Never point a drill at production. Verify schema, representative synthetic records, audit ordering, constraints and application startup; document measured RPO/RTO. Exercise off-host retrieval and separate-key escrow recovery, then verify failed restores cannot replace the running database. Clinical restoration acceptance requires authorized operational review. Passing artifact tests alone does not close these gates.

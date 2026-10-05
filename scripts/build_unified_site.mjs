@@ -56,6 +56,18 @@ function copyRecursive(src, dest) {
   }
 }
 
+// Windows scanners may briefly hold freshly generated files after Vite exits.
+// A persistent lock still fails the build; never merge a partially moved tree.
+async function moveBuild(source, destination) {
+  for (let attempt = 0; ; attempt++) {
+    try { fs.renameSync(source, destination); return }
+    catch (error) {
+      if (process.platform !== 'win32' || !['EPERM', 'EBUSY', 'EACCES'].includes(error.code) || attempt >= 3) throw error
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
+}
+
 // Clean up any stale build directories
 if (fs.existsSync(tempDemoDir)) fs.rmSync(tempDemoDir, { recursive: true, force: true })
 if (fs.existsSync(tempAppDir)) fs.rmSync(tempAppDir, { recursive: true, force: true })
@@ -83,7 +95,7 @@ execSync('npx vite build --mode production --base=/demo/', {
 
 // Move the demo build out of dist/ temporarily
 if (fs.existsSync(tempDemoDir)) fs.rmSync(tempDemoDir, { recursive: true, force: true })
-fs.renameSync(outDistDir, tempDemoDir)
+await moveBuild(outDistDir, tempDemoDir)
 
 console.log('\n🚀 [Build 3/4] Compiling Vite SaaS Production App (base: /app/, demoMode: false)...')
 execSync('npx vite build --mode production --base=/app/', {
@@ -97,7 +109,7 @@ execSync('npx vite build --mode production --base=/app/', {
 
 // Move the SaaS app build out of dist/ temporarily
 if (fs.existsSync(tempAppDir)) fs.rmSync(tempAppDir, { recursive: true, force: true })
-fs.renameSync(outDistDir, tempAppDir)
+await moveBuild(outDistDir, tempAppDir)
 
 console.log('\n🚀 [Build 4/4] Merging Marketing Site, SaaS App, and Demo App into final dist/...')
 // Recreate dist/ and copy marketing site into root
@@ -106,11 +118,11 @@ copyRecursive(marketingDistDir, outDistDir)
 
 // Move temp demo directory into dist/demo/
 const finalDemoDir = path.join(outDistDir, 'demo')
-fs.renameSync(tempDemoDir, finalDemoDir)
+await moveBuild(tempDemoDir, finalDemoDir)
 
 // Move temp SaaS app directory into dist/app/
 const finalAppDir = path.join(outDistDir, 'app')
-fs.renameSync(tempAppDir, finalAppDir)
+await moveBuild(tempAppDir, finalAppDir)
 
 // Clean up temp directories if any left
 if (fs.existsSync(tempDemoDir)) fs.rmSync(tempDemoDir, { recursive: true, force: true })
