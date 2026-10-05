@@ -64,6 +64,7 @@ copyDir(path.join(ROOT_DIR, 'dist'), path.join(TARGET_DIR, 'dist'))
 copyDir(path.join(ROOT_DIR, 'server', 'dist'), path.join(TARGET_DIR, 'server', 'dist'))
 copyDir(path.join(ROOT_DIR, 'server', 'src', 'db'), path.join(TARGET_DIR, 'server', 'src', 'db'))
 copyDir(path.join(ROOT_DIR, 'desktop'), path.join(TARGET_DIR, 'desktop'))
+copyDir(path.join(ROOT_DIR, 'bin'), path.join(TARGET_DIR, 'bin'))
 
 // Copy root launcher scripts and config
 const filesToCopy = [
