@@ -1,32 +1,33 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Link } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
 import { RequireRole } from './security/AuthContext'
-import LoginPage from './features/auth/LoginPage'
-import DashboardPage from './features/dashboard/DashboardPage'
-import ResidentsPage from './features/residents/ResidentsPage'
-import ResidentProfilePage from './features/residents/ResidentProfilePage'
-import MenuPage from './features/menu/MenuPage'
-import ProductionPage from './features/production/ProductionPage'
-import AdminPage from './features/admin/AdminPage'
-import RecipeBookPage from './features/recipes/RecipeBookPage'
-import InventoryPage from './features/inventory/InventoryPage'
-import StaffPage from './features/staff/StaffPage'
-import StaffProfilePage from './features/staff/StaffProfilePage'
-import TimecardPage from './features/timecard/TimecardPage'
-import OfflinePage from './features/offline/OfflinePage'
-import SetupWizardPage from './features/setup/SetupWizardPage'
-import LegalPage from './pages/Legal'
+const LoginPage = lazy(() => import('./features/auth/LoginPage'))
+const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage'))
+const ResidentsPage = lazy(() => import('./features/residents/ResidentsPage'))
+const ResidentProfilePage = lazy(() => import('./features/residents/ResidentProfilePage'))
+const MenuPage = lazy(() => import('./features/menu/MenuPage'))
+const ProductionPage = lazy(() => import('./features/production/ProductionPage'))
+const AdminPage = lazy(() => import('./features/admin/AdminPage'))
+const RecipeBookPage = lazy(() => import('./features/recipes/RecipeBookPage'))
+const InventoryPage = lazy(() => import('./features/inventory/InventoryPage'))
+const StaffPage = lazy(() => import('./features/staff/StaffPage'))
+const StaffProfilePage = lazy(() => import('./features/staff/StaffProfilePage'))
+const TimecardPage = lazy(() => import('./features/timecard/TimecardPage'))
+const OfflinePage = lazy(() => import('./features/offline/OfflinePage'))
+const SetupWizardPage = lazy(() => import('./features/setup/SetupWizardPage'))
+const LegalPage = lazy(() => import('./pages/Legal'))
 import Layout from './components/Layout'
 import PwaBanner from './components/PwaBanner'
-import OrderEntryPage from './features/kitchen/OrderEntryPage'
-import KitchenSheetPage from './features/kitchen/KitchenSheetPage'
-import TrayCardGeneratorPage from './features/kitchen/TrayCardGeneratorPage'
-import TrayDispatchPage from './features/traydispatch/TrayDispatchPage'
-import PurchasingPage from './features/purchasing/PurchasingPage'
-import DistributorPortalPage from './features/distributor/DistributorPortalPage'
-import ReportingPage from './features/reporting/ReportingPage'
-import SettingsPage from './features/settings/SettingsPage'
-import MobileTasksPage from './features/tasks/MobileTasksPage'
+const OrderEntryPage = lazy(() => import('./features/kitchen/OrderEntryPage'))
+const KitchenSheetPage = lazy(() => import('./features/kitchen/KitchenSheetPage'))
+const TrayCardGeneratorPage = lazy(() => import('./features/kitchen/TrayCardGeneratorPage'))
+const TrayDispatchPage = lazy(() => import('./features/traydispatch/TrayDispatchPage'))
+const PurchasingPage = lazy(() => import('./features/purchasing/PurchasingPage'))
+const DistributorPortalPage = lazy(() => import('./features/distributor/DistributorPortalPage'))
+const ReportingPage = lazy(() => import('./features/reporting/ReportingPage'))
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage'))
+const MobileTasksPage = lazy(() => import('./features/tasks/MobileTasksPage'))
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -66,6 +67,7 @@ export default function App() {
       {/* PWA install / update / offline-ready toast — rendered outside router outlets */}
       <PwaBanner />
 
+      <Suspense fallback={<div role="status" aria-live="polite" className="stitch-standalone flex items-center justify-center">Loading workspace…</div>}>
       <Routes>
         <Route path="/setup"   element={<SetupWizardPage />} />
         <Route path="/login"   element={<LoginPage />} />
@@ -123,6 +125,7 @@ export default function App() {
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>
     </>
   )
 }
