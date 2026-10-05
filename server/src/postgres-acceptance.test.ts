@@ -120,7 +120,14 @@ test('database acceptance: setup audit rollback and concurrent initialization pr
   try {
     pool.connect = async () => {
       const client = await originalConnect.call(pool)
-      const query = client.query.bind(client)
+      const originalQuery = client.query
+      const originalRelease = client.release
+      const query = originalQuery.bind(client)
+      client.release = (...args: any[]) => {
+        client.query = originalQuery
+        client.release = originalRelease
+        return originalRelease.apply(client, args)
+      }
       client.query = (sql:string,params:any[]) => {
         if (sql.includes("VALUES ('SETUP_INITIALIZE'")) throw new Error('Synthetic setup audit outage')
         return query(sql,params)
