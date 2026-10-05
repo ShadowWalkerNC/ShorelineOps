@@ -35,6 +35,11 @@ param (
 $ErrorActionPreference = "Stop"
 $Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 
+if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+    Write-Error 'backup.ps1 requires Windows file ACLs. Use scripts/backup.sh on Linux or macOS.'
+    exit 1
+}
+
 # Locale-independent owner identity: the current user's SID, not $env:USERNAME
 # (bare usernames are not valid icacls grantees in all locales/configs).
 $OwnerSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value

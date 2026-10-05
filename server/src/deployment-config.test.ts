@@ -536,7 +536,9 @@ function findPowershell(): string | null {
 }
 
 const bashPath = findBash()
-const powershellPath = findPowershell()
+// backup.ps1 uses Windows ACLs and these fixtures use native .cmd shims.
+// PowerShell installed on Linux does not supply either contract; CI runs this suite on Windows too.
+const powershellPath = process.platform === 'win32' ? findPowershell() : undefined
 const syntheticBackupKey = 'synthetic-test-only-random-looking-key-1234567890'
 
 test('backup scripts reject unavailable encryption before invoking a dump or rotation', () => {
