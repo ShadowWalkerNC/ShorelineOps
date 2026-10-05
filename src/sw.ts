@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 import { clientsClaim } from 'workbox-core'
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
-import { NetworkFirst, CacheFirst, NetworkOnly } from 'workbox-strategies'
+import { CacheFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
 declare const self: ServiceWorkerGlobalScope
@@ -16,7 +16,7 @@ const cacheName = (kind: string) => `shoreline-${scopeName}-${kind}`
 // Auth requests must be registered before the general API route because the
 // first matching Workbox route wins.
 registerRoute(
-  ({ url }) => url.pathname.includes('/auth/') || url.pathname.includes('/token'),
+  ({ url }) => /(?:^|\/)auth(?:\/|$)/.test(url.pathname) || /(?:^|\/)token(?:\/|$)/.test(url.pathname),
   new NetworkOnly()
 )
 
@@ -54,18 +54,10 @@ registerRoute(
   })
 )
 
-// ── App-shell navigation — network first, fall back to cached shell ─────────
-// When offline and the shell isn't cached yet, the browser shows the
-// built-in offline page; we add a NavigationRoute so at minimum the
-// cached shell serves repeated visits.
+// All client routes use this build's precached shell, including routes not
+// visited before going offline. API/auth registrations above remain network-only.
 registerRoute(
   new NavigationRoute(
-    new NetworkFirst({
-      cacheName: cacheName('pages'),
-      networkTimeoutSeconds: 4,
-      plugins: [
-        new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 24 * 60 * 60 }),
-      ],
-    })
+    createHandlerBoundToURL(`${scopePath}index.html`)
   )
 )
