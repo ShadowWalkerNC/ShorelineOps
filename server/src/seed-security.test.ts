@@ -101,7 +101,7 @@ test('explicit demo seeding still populates a disposable SQLite database without
   assert.doesNotMatch(output, /default password|password:/i)
 })
 
-test('protected production setup rejects sample flags without writes and creates a usable clean owner', () => {
+test('protected production setup rejects sample flags, rolls back failures and creates one owner under concurrency', () => {
   runIsolated(`
     const assert = require('node:assert/strict');
     const express = require(${expressModule});
@@ -138,8 +138,22 @@ test('protected production setup rejects sample flags without writes and creates
         assert.equal((await pool.query('SELECT * FROM residents')).rows.length, 0);
         const configs = (await pool.query('SELECT is_initialized FROM facility_config')).rows;
         assert.equal(configs.some(row => !!row.is_initialized), false);
-        const created = await postSetup(body);
-        assert.equal(created.status, 200, await created.text());
+        const originalConnect = pool.connect;
+        pool.connect = async () => {
+          const client = await originalConnect.call(pool);
+          const originalQuery = client.query.bind(client);
+          client.query = (sql, params) => {
+            if (sql.includes("VALUES ('SETUP_INITIALIZE'")) throw new Error('Synthetic setup audit failure');
+            return originalQuery(sql, params);
+          };
+          return client;
+        };
+        try { assert.equal((await postSetup(body)).status, 500); }
+        finally { pool.connect = originalConnect; }
+        assert.equal((await pool.query('SELECT * FROM users')).rows.length, 0);
+        assert.equal((await pool.query('SELECT is_initialized FROM facility_config')).rows.some(row => !!row.is_initialized), false);
+        const attempts = await Promise.all(Array.from({length:4}, () => postSetup(body)));
+        assert.deepEqual(attempts.map(response => response.status).sort(), [200,400,400,400]);
         const owners = (await pool.query('SELECT id, email, role FROM users')).rows;
         assert.equal(owners.length, 1);
         assert.match(owners[0].id, /^[0-9a-f-]{36}$/i);

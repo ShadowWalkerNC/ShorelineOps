@@ -17,6 +17,7 @@ See [current project reassessment](docs/audits/PROJECT_REASSESSMENT_2026-10-04.m
 - [ ] Verify encrypted backups and isolated full restore with measured RPO/RTO.
 - [x] Restore a synthetic encrypted PostgreSQL 16 backup and verify all 45 tables, schema and clinical/audit invariants in isolated CI. This does not close off-host recovery or facility RPO/RTO.
 - [ ] Complete packaged production desktop, real provider and multi-replica/load acceptance.
+- [ ] Verify atomic first-owner setup on PostgreSQL and remove preaccepted BAA/compliance language from the onboarding wizard. SQLite rollback and four-way initialization checks passed.
 
 ## Design adoption — 2026-10-04
 

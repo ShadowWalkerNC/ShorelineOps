@@ -2,7 +2,8 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { z } from 'zod'
-import { pool } from '../db/pool'
+import { pool, databaseDialect } from '../db/pool'
+import { authTransaction } from '../db/authSession'
 import { assertDemoSeedAllowed, runSeed } from '../db/seed'
 
 export const setupRouter = Router()
@@ -84,7 +85,19 @@ setupRouter.post('/initialize', async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(body.adminPassword, 12)
 
-    await pool.query(
+    await authTransaction(async client => {
+      await client.query(
+        `INSERT INTO facility_config (id, facility_name, primary_contact_email, is_initialized)
+         VALUES ('default', '', '', false) ON CONFLICT(id) DO NOTHING`,
+      )
+      const { rows: locked } = await client.query(
+        `SELECT is_initialized FROM facility_config WHERE id = $1${databaseDialect === 'postgres' ? ' FOR UPDATE' : ''}`,
+        ['default'],
+      )
+      if (locked[0]?.is_initialized) {
+        throw Object.assign(new Error('Facility setup has already been completed and locked.'), {status:400})
+      }
+      await client.query(
       `INSERT INTO facility_config (
         id, facility_name, npi_license, address, primary_contact_email,
         facility_type, wings, dining_rooms, is_initialized, baa_accepted_at, baa_signee_name
@@ -114,22 +127,18 @@ setupRouter.post('/initialize', async (req, res, next) => {
       ]
     )
 
-    await pool.query(
+      await client.query(
       `INSERT INTO users (id, name, email, password, role, mfa_enabled, active)
-       VALUES ($1, $2, $3, $4, 'admin', true, true)
-       ON CONFLICT (email) DO UPDATE SET
-         name = EXCLUDED.name,
-         password = EXCLUDED.password,
-         role = 'admin',
-         active = true`,
+       VALUES ($1, $2, $3, $4, 'admin', true, true)`,
       [crypto.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]
     )
 
-    await pool.query(
+      await client.query(
       `INSERT INTO audit_log (action, resource_type, outcome, details)
        VALUES ('SETUP_INITIALIZE', 'facility_config', 'success', $1)`,
       [JSON.stringify({ facilityName: body.facilityName, adminEmail: body.adminEmail, mode: body.initMode })]
-    )
+      )
+    })
 
     if (body.initMode === 'sample') {
       await runSeed()

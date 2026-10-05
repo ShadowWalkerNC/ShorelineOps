@@ -18,6 +18,8 @@ Primary references: [Meta quickstart](https://dev.meta.ai/docs/quickstart), [Gad
 
 ## Severity and completion criteria
 
+Additional onboarding finding: first-time setup previously committed facility initialization before owner creation and audit insertion, and could overwrite a matching existing account. Those writes now share a locked transaction and owner insertion cannot replace an existing account. Local production-mode tests passed audit-failure rollback, four-way initialization with one winner and usable-owner login; PostgreSQL setup-race acceptance remains pending. The wizard also prepopulates facility details and preaccepts a purported BAA. That is an unresolved P1 readiness issue: replace the purported agreement with explicit deployment acknowledgment and an actual approved contract process before clinical onboarding; preserve historical agreement records.
+
 Severity describes consequence if a gap is ignored, not proof of an exploitable production vulnerability.
 
 | Priority | Current evidence / issue | Proposed solution and completion gate |

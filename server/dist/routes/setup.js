@@ -9,6 +9,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const zod_1 = require("zod");
 const pool_1 = require("../db/pool");
+const authSession_1 = require("../db/authSession");
 const seed_1 = require("../db/seed");
 exports.setupRouter = (0, express_1.Router)();
 function requireSetupSecret(req, res) {
@@ -83,7 +84,14 @@ exports.setupRouter.post('/initialize', async (req, res, next) => {
             initMode: zod_1.z.enum(['clean', 'sample']),
         }).parse(req.body);
         const hashedPassword = await bcryptjs_1.default.hash(body.adminPassword, 12);
-        await pool_1.pool.query(`INSERT INTO facility_config (
+        await (0, authSession_1.authTransaction)(async (client) => {
+            await client.query(`INSERT INTO facility_config (id, facility_name, primary_contact_email, is_initialized)
+         VALUES ('default', '', '', false) ON CONFLICT(id) DO NOTHING`);
+            const { rows: locked } = await client.query(`SELECT is_initialized FROM facility_config WHERE id = $1${pool_1.databaseDialect === 'postgres' ? ' FOR UPDATE' : ''}`, ['default']);
+            if (locked[0]?.is_initialized) {
+                throw Object.assign(new Error('Facility setup has already been completed and locked.'), { status: 400 });
+            }
+            await client.query(`INSERT INTO facility_config (
         id, facility_name, npi_license, address, primary_contact_email,
         facility_type, wings, dining_rooms, is_initialized, baa_accepted_at, baa_signee_name
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW(), $9)
@@ -99,25 +107,22 @@ exports.setupRouter.post('/initialize', async (req, res, next) => {
         baa_accepted_at = NOW(),
         baa_signee_name = EXCLUDED.baa_signee_name,
         updated_at = NOW()`, [
-            'default',
-            body.facilityName,
-            body.npiLicense || '',
-            body.address || '',
-            body.primaryContactEmail,
-            body.facilityType,
-            JSON.stringify(body.wings),
-            JSON.stringify(body.diningRooms),
-            body.baaSigneeName,
-        ]);
-        await pool_1.pool.query(`INSERT INTO users (id, name, email, password, role, mfa_enabled, active)
+                'default',
+                body.facilityName,
+                body.npiLicense || '',
+                body.address || '',
+                body.primaryContactEmail,
+                body.facilityType,
+                JSON.stringify(body.wings),
+                JSON.stringify(body.diningRooms),
+                body.baaSigneeName,
+            ]);
+            await client.query(`INSERT INTO users (id, name, email, password, role, mfa_enabled, active)
        VALUES ($1, $2, $3, $4, 'admin', true, true)
-       ON CONFLICT (email) DO UPDATE SET
-         name = EXCLUDED.name,
-         password = EXCLUDED.password,
-         role = 'admin',
-         active = true`, [crypto_1.default.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]);
-        await pool_1.pool.query(`INSERT INTO audit_log (action, resource_type, outcome, details)
+       `, [crypto_1.default.randomUUID(), body.adminName, body.adminEmail.toLowerCase(), hashedPassword]);
+            await client.query(`INSERT INTO audit_log (action, resource_type, outcome, details)
        VALUES ('SETUP_INITIALIZE', 'facility_config', 'success', $1)`, [JSON.stringify({ facilityName: body.facilityName, adminEmail: body.adminEmail, mode: body.initMode })]);
+        });
         if (body.initMode === 'sample') {
             await (0, seed_1.runSeed)();
         }
