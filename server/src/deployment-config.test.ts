@@ -522,12 +522,14 @@ function findExecutableOnPath(command: string, args: string[]): string | null {
 }
 
 function findBash(): string | null {
-  const onPath = findExecutableOnPath('bash', ['--version'])
-  if (onPath) return onPath
-  for (const candidate of ['C:/Program Files/Git/bin/bash.exe', 'C:/Program Files/Git/usr/bin/bash.exe']) {
-    if (fs.existsSync(candidate)) return candidate
+  if (process.platform === 'win32') {
+    // PATH may resolve the WSL launcher; these fixtures require Git Bash/MSYS path semantics.
+    for (const candidate of ['C:/Program Files/Git/bin/bash.exe', 'C:/Program Files/Git/usr/bin/bash.exe']) {
+      if (fs.existsSync(candidate)) return candidate
+    }
+    return null
   }
-  return null
+  return findExecutableOnPath('bash', ['--version'])
 }
 
 function findPowershell(): string | null {

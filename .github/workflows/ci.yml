@@ -77,7 +77,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Verify migrations, stale tray rejection and concurrent EHR decisions
+      - name: Verify migrations, clinical decision races and auth session revocation
         run: npm run test:postgres
         env:
           SHORELINE_TEST_POSTGRES_URL: postgresql://shoreline_test:disposable_test_only@127.0.0.1:5432/shoreline_acceptance

@@ -5,10 +5,12 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import express from 'express'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 
 // Multi-client and concurrency acceptance suite.
-// Exercises concurrent EHR triage decisions, simultaneous tray card scans against mutating profiles,
-// and database version bumps under high contention.
+// Exercises concurrent EHR decisions, stale tray rejection after a clinical update,
+// concurrent refresh rotation, account revocation and expired-bearer logout.
 // Runs against isolated SQLite in local/CI environments, and respects DATABASE_URL when a live PostgreSQL instance is configured.
 
 const isPg = Boolean(process.env.DATABASE_URL && /^(postgres|postgresql):\/\//i.test(process.env.DATABASE_URL))
@@ -23,6 +25,71 @@ process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex')
 after(async () => {
   const { pool } = await import('./db/pool')
   await pool.end()
+})
+
+test('database acceptance: concurrent refresh, account revocation and expired-token logout', async () => {
+  const { pool } = await import('./db/pool')
+  const { runMigrations } = await import('./db/migrate')
+  const { authRouter } = await import('./routes/auth')
+  const { adminRouter } = await import('./routes/admin')
+  const { requireAuth } = await import('./middleware/requireAuth')
+  const { requireCapability } = await import('./middleware/permissions')
+  const { errorHandler } = await import('./middleware/errorHandler')
+  await runMigrations()
+  await pool.query('UPDATE system_settings SET mfa_required = false WHERE id = 1')
+  const password = 'Synthetic-Postgres-Auth-Password!'
+  const hash = await bcrypt.hash(password, 4)
+  const createUser = async (owner = false) => {
+    const id = crypto.randomUUID()
+    const email = `${id}@example.invalid`
+    await pool.query('INSERT INTO users (id,name,email,password,role,active,platform_admin) VALUES ($1,$2,$3,$4,$5,true,$6)',
+      [id,'Synthetic auth acceptance',email,hash,'admin',owner])
+    return {id,email}
+  }
+  const app = express()
+  app.use(express.json())
+  app.use('/auth',authRouter)
+  app.use('/admin',requireAuth,adminRouter)
+  app.get('/protected',requireAuth,(_req,res) => res.json({ok:true}))
+  app.post('/clinical-write',requireAuth,requireCapability('residents.write'),(_req,res) => res.sendStatus(204))
+  app.use(errorHandler)
+  const server = app.listen(0,'127.0.0.1')
+  await new Promise<void>(resolve => server.once('listening',resolve))
+  const base = `http://127.0.0.1:${(server.address() as {port:number}).port}`
+  const request = (route:string,body?:object,token?:string,method = body ? 'POST' : 'GET') => fetch(base+route,{
+    method,headers:{'Content-Type':'application/json',...(token ? {Authorization:`Bearer ${token}`} : {})},
+    ...(body ? {body:JSON.stringify(body)} : {}),
+  })
+  const login = async (email:string) => {
+    const response = await request('/auth/login',{email,password})
+    assert.equal(response.status,200)
+    return response.json() as Promise<{accessToken:string;refreshToken:string}>
+  }
+  try {
+    const owner = await createUser(true)
+    const ownerSession = await login(owner.email)
+    const user = await createUser()
+    const session = await login(user.email)
+    const replies = await Promise.all(Array.from({length:4},() => request('/auth/refresh',{refreshToken:session.refreshToken})))
+    assert.deepEqual(replies.map(response => response.status).sort(),[200,401,401,401])
+    const winner = await replies.find(response => response.status === 200)!.json() as typeof session
+    assert.equal((jwt.decode(winner.accessToken) as jwt.JwtPayload).sessionId,
+      (jwt.decode(session.accessToken) as jwt.JwtPayload).sessionId)
+    assert.equal((await request('/protected',undefined,session.accessToken)).status,200)
+    assert.equal((await request(`/admin/users/${user.id}`,{role:'readonly'},ownerSession.accessToken,'PATCH')).status,200)
+    assert.equal((await request('/protected',undefined,session.accessToken)).status,401)
+    assert.equal((await request('/protected',undefined,winner.accessToken)).status,401)
+    assert.equal((await request('/auth/refresh',{refreshToken:winner.refreshToken})).status,401)
+    const limited = await login(user.email)
+    assert.equal((await request('/clinical-write',{},limited.accessToken)).status,403)
+    const expired = jwt.sign({...jwt.decode(limited.accessToken) as jwt.JwtPayload,exp:Math.floor(Date.now()/1000)-30},
+      process.env.JWT_SECRET!,{algorithm:'HS256'})
+    assert.equal((await request('/auth/logout',{refreshToken:limited.refreshToken},expired)).status,204)
+    assert.equal((await request('/protected',undefined,limited.accessToken)).status,401)
+    assert.equal((await request('/auth/refresh',{refreshToken:limited.refreshToken})).status,401)
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()))
+  }
 })
 
 test('database acceptance: tray dispatch after clinical update rejects stale signed card', async () => {
