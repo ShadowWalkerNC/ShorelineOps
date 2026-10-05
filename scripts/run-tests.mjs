@@ -22,6 +22,11 @@ function run(args, cwd, childEnv = env) {
 }
 run([path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', path.join(root, 'sdk', 'tsconfig.json')], root)
 run([path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', path.join(root, 'server', 'tsconfig.json')], root)
+if (process.argv.includes('--backup-diagnostics')) {
+  // Match the real runner's credential-free environment while streaming individual operations.
+  run(['--test', '--test-isolation=none', '--test-reporter=spec', path.join(dist, 'deployment-config.test.js')], directory)
+  process.exit(0)
+}
 run([path.join(dist, 'system.test.js')], directory)
 const cases = readdirSync(dist).filter(name => name.endsWith('.test.js') && !['system.test.js', 'compliance.test.js'].includes(name))
 run(['--test', ...cases.map(name => path.join(dist, name))], directory)

@@ -53,9 +53,7 @@ jobs:
       - run: npm run build:marketing
       - name: Diagnose native Windows backup execution
         timeout-minutes: 10
-        run: |
-          npm --prefix server run build
-          node --test --test-isolation=none --test-reporter=spec server/dist/deployment-config.test.js
+        run: node scripts/run-tests.mjs --backup-diagnostics
       - run: npm test
 
   postgres-acceptance:
