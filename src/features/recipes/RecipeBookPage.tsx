@@ -150,6 +150,7 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
           <div className="flex items-center gap-6">
             <button
               onClick={dec}
+              aria-label="Decrease portions"
               disabled={servings <= STEP}
               className="w-12 h-12 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white font-bold text-2xl flex items-center justify-center transition-all"
             >
@@ -161,6 +162,7 @@ function ScalerModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
             </div>
             <button
               onClick={inc}
+              aria-label="Increase portions"
               className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 transition-all"
             >
               +
@@ -330,9 +332,10 @@ function RecipeFormModal({
           )}
 
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Recipe Name *</label>
+            <label htmlFor="recipe-name" className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Recipe Name *</label>
             <input
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
+              id="recipe-name" required
+              className="min-h-12 w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Classic Roast Turkey Breast with Pan Gravy"
@@ -341,9 +344,10 @@ function RecipeFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Category</label>
+              <label htmlFor="recipe-category" className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Category</label>
               <select
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
+                id="recipe-category"
+                className="min-h-12 w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
                 value={category}
                 onChange={e => setCategory(e.target.value as RecipeCategory)}
               >
@@ -351,11 +355,12 @@ function RecipeFormModal({
               </select>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Base Yield (Servings)</label>
+              <label htmlFor="recipe-yield" className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Base Yield (Servings)</label>
               <input
+                id="recipe-yield" inputMode="numeric"
                 type="number"
                 min={1}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
+                className="min-h-12 w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-medium focus:ring-2 focus:ring-blue-500"
                 value={baseServings}
                 onChange={e => setBaseServings(+e.target.value)}
               />
@@ -371,8 +376,9 @@ function RecipeFormModal({
                   <button
                     key={a}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => toggleAllergen(a)}
-                    className={`py-1.5 px-3 rounded-xl font-bold text-xs transition-all ${
+                    className={`min-h-12 py-1.5 px-3 rounded-xl font-bold text-xs transition-all ${
                       active ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
                     }`}
                   >
@@ -390,41 +396,46 @@ function RecipeFormModal({
                 <div key={i} className="space-y-1.5">
                   <div className="flex gap-2">
                     <input
+                      aria-label={`Ingredient ${i + 1} quantity`}
                       placeholder="Qty (e.g. 5 lbs)"
-                      className="w-32 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                      className="min-h-12 w-32 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
                       value={ing.qty}
                       onChange={e => updateIngredient(i, 'qty', e.target.value)}
                     />
                     <input
+                      aria-label={`Ingredient ${i + 1} name`}
                       placeholder="Ingredient Name"
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                      className="min-h-12 min-w-0 flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
                       value={ing.item}
                       onChange={e => updateIngredient(i, 'item', e.target.value)}
                     />
                     <button
                       type="button"
+                      aria-label={`Remove ingredient ${i + 1}`}
                       onClick={() => setIngredients(prev => prev.filter((_, idx) => idx !== i))}
-                      className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
+                      className="w-12 h-12 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
                     >
                       &times;
                     </button>
                   </div>
-                  <div className="flex gap-2 pl-1">
+                  <div className="flex flex-wrap gap-2 pl-1">
                     <input
+                      aria-label={`Ingredient ${i + 1} vendor SKU`}
                       placeholder="Vendor SKU (e.g. DNS-1004)"
                       title="Vendor catalog SKU — matched against vendor_items.unit_cost for real costing"
-                      className="w-40 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 text-[11px] text-white font-mono"
+                      className="min-h-12 w-40 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 text-[11px] text-white font-mono"
                       value={ing.vendorSku ?? ing.vendorItemSku ?? ''}
                       onChange={e => updateIngredient(i, 'vendorSku', e.target.value)}
                     />
                     <input
+                      aria-label={`Ingredient ${i + 1} estimated cost`}
                       placeholder="Est. cost $ (fallback)"
                       title="Estimated cost of the listed quantity — used and flagged as estimated when no SKU match exists"
                       type="number"
                       min={0}
                       step={0.01}
                       inputMode="decimal"
-                      className="w-36 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 text-[11px] text-white font-mono"
+                      className="min-h-12 w-36 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 text-[11px] text-white font-mono"
                       value={ing.estimatedCost ?? ''}
                       onChange={e => updateIngredientCost(i, e.target.value)}
                     />
@@ -437,7 +448,7 @@ function RecipeFormModal({
               <button
                 type="button"
                 onClick={() => setIngredients(prev => [...prev, blankIngredient()])}
-                className="py-2 px-3 text-xs font-bold text-blue-400 border border-dashed border-blue-500/40 rounded-xl hover:bg-blue-500/10 transition-colors"
+                className="min-h-12 py-2 px-3 text-xs font-bold text-blue-400 border border-dashed border-blue-500/40 rounded-xl hover:bg-blue-500/10 transition-colors"
               >
                 + Add Ingredient
               </button>
@@ -453,15 +464,17 @@ function RecipeFormModal({
                     {i + 1}
                   </span>
                   <input
+                    aria-label={`Step ${i + 1} instruction`}
                     placeholder={`Step ${i + 1} instruction…`}
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                    className="min-h-12 min-w-0 flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
                     value={st.instruction}
                     onChange={e => updateStep(i, e.target.value)}
                   />
                   <button
                     type="button"
+                    aria-label={`Remove step ${i + 1}`}
                     onClick={() => setSteps(prev => prev.filter((_, idx) => idx !== i))}
-                    className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
+                    className="w-12 h-12 rounded-lg text-rose-400 hover:bg-rose-950 flex items-center justify-center shrink-0"
                   >
                     &times;
                   </button>
@@ -470,7 +483,7 @@ function RecipeFormModal({
               <button
                 type="button"
                 onClick={() => setSteps(prev => [...prev, blankStep()])}
-                className="py-2 px-3 text-xs font-bold text-blue-400 border border-dashed border-blue-500/40 rounded-xl hover:bg-blue-500/10 transition-colors"
+                className="min-h-12 py-2 px-3 text-xs font-bold text-blue-400 border border-dashed border-blue-500/40 rounded-xl hover:bg-blue-500/10 transition-colors"
               >
                 + Add Step
               </button>
@@ -666,6 +679,7 @@ export default function RecipeBookPage() {
             <input
               ref={searchRef}
               type="search"
+              aria-label="Search recipes"
               placeholder="Search recipes by name, ingredient, or preparation notes…"
               value={search}
               onChange={e => setSearch(e.target.value)}

@@ -11,7 +11,7 @@ export default function OfflinePage() {
       background: 'var(--bg-app)',
       textAlign: 'center',
     }}>
-      <img src={`${import.meta.env.BASE_URL}brand/shorelineops-icon.svg`} alt="ShorelineOps" style={{ width: 64, height: 64 }} />
+      <img src={`${import.meta.env.BASE_URL}icon-192.png`} alt="ShorelineOps" style={{ width: 64, height: 64 }} />
 
       <div>
         <p className="sl-eyebrow">Connection required</p>
