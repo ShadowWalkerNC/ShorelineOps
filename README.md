@@ -6,7 +6,9 @@ See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/ST
 
 <img src="public/logo.png" alt="Shoreline Care OS" width="450" />
 
-### Open-Source Healthcare Dietary Operations, Clinical Nutrition & Care Coordination Platform
+### Senior-Living & Healthcare Dietary Operations Platform
+
+**Resident nutrition, allergens, therapeutic diets, IDDSI, compliance, documentation, purchasing, production, and foodservice workflows — in one open-source platform.**
 
 [![License: AGPL/MIT](https://img.shields.io/badge/License-AGPL%20%2F%20MIT-blue.svg)](LICENSING.md)
 [![UI: shadcn/ui + Apple HIG](https://img.shields.io/badge/UI-shadcn%2Fui%20%2B%20Apple%20HIG-black.svg)](#platform-interface-tour)
@@ -58,7 +60,7 @@ See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/ST
 
 ## What is ShorelineOps?
 
-**ShorelineOps** is an open-source clinical nutrition and dietary operations platform designed for senior living and healthcare dining (Assisted Living, Memory Care, Skilled Nursing Facilities, CCRCs, and Acute Care Hospitals).
+**ShorelineOps** is an open-source senior-living and healthcare dietary operations platform for resident nutrition, allergens, therapeutic diets, IDDSI, compliance documentation, purchasing, production, and foodservice workflows. It is designed for Assisted Living, Memory Care, Skilled Nursing Facilities, CCRCs, and other healthcare dining environments.
 
 In healthcare dining, culinary operations are clinical care:
 - **Dysphagia & Texture Modification**: Swallowing disorders require strict adherence to the **IDDSI framework** (Levels 0–7: Regular, Soft & Bite-Sized, Minced & Moist, Pureed, Liquidised, Thickened Liquids). Blank or unassigned textures automatically trigger a hard clinical hold.
@@ -217,9 +219,9 @@ Requires Node 22.19+ (24 recommended), installs the pinned root workspace once a
 ### Option B: Turnkey Windows 1-Click Desktop Setup
 In PowerShell (as Administrator or standard user):
 ```powershell
-.\Setup.ps1
+.\\Setup.ps1
 ```
-Requires compiled production assets and a supported Node runtime. Prepares `%APPDATA%\ShorelineOps\data`, verifies pinned dependencies and creates desktop/Start Menu shortcuts. Provision signing/bootstrap secrets and complete facility/account setup before use. Launch via `ShorelineOps-Launcher.bat`; legacy databases require verified backup and explicit migration.
+Requires compiled production assets and a supported Node runtime. Prepares `%APPDATA%\\ShorelineOps\\data`, verifies pinned dependencies and creates desktop/Start Menu shortcuts. Provision signing/bootstrap secrets and complete facility/account setup before use. Launch via `ShorelineOps-Launcher.bat`; legacy databases require verified backup and explicit migration.
 
 ### Option C: Turnkey Multi-Container Docker Stack
 ```bash
@@ -232,8 +234,8 @@ docker compose up -d
 ## Quickstart & Local Development
 
 ### 1. Prerequisites
-- Node.js $\ge 20.0.0$
-- npm $\ge 10.0.0$
+- Node.js $\\ge 20.0.0$
+- npm $\\ge 10.0.0$
 
 ### 2. Clone & Install
 ```bash
@@ -273,7 +275,7 @@ npm test
 Deploy the complete multi-service stack to Render using the official [`render.yaml`](render.yaml) Blueprint:
 
 1. Sign in to your [Render Dashboard](https://dashboard.render.com).
-2. Click **New +** $\to$ **Blueprint**.
+2. Click **New +** $\\to$ **Blueprint**.
 3. Connect your repository: `ShadowWalkerNC/ShorelineOps`.
 4. Render provisions and builds all 4 services automatically:
    - `shoreline-api` (Node/Express API on port 3001)
@@ -308,8 +310,8 @@ culinaryos <command>
 | `shoreline production split --census=60` | Station demand split (Steam Table, Puree L4, Minced L5, Soft L6) |
 | `shoreline production ap-ep --ep-demand=15` | AP vs EP yield loss & case-pack calculator |
 | `shoreline kitchen verify-tray --resident-id=SH-001` | Clinical tray verification with NPO hard-block & allergen check |
-| `shoreline kitchen log-temp --item="Turkey" --temp=168` | HACCP 165°F food safety temperature log |
-| `shoreline purchasing split-po --item="Turkey Breast"` | Multi-distributor lowest-cost split MRP (Dennis vs Sysco) |
+| `shoreline kitchen log-temp --item=\"Turkey\" --temp=168` | HACCP 165°F food safety temperature log |
+| `shoreline purchasing split-po --item=\"Turkey Breast\"` | Multi-distributor lowest-cost split MRP (Dennis vs Sysco) |
 | `shoreline survey cms-binder` | Generate CMS-2567 F-Tag survey compliance binder |
 | `shoreline survey cpd` | Cost per resident day ($/CPD) analytics |
 | `shoreline mcp tools` | List all MCP tools available for AI agent integration |
