@@ -3,7 +3,7 @@ import { pool, databaseDialect } from '../db/pool'
 
 const ephemeralKey = randomBytes(32).toString('hex')
 const key = () => process.env.TRAY_SIGNING_SECRET || process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('Tray signing key required') })() : ephemeralKey)
-export interface TrayClaims { ticketId: string; residentId: string; version: number; diet: string; texture: string; allergies: string[]; mealSlot: string; serviceDate: string; foods: string[]; beverages: string[] }
+export interface TrayClaims { ticketId: string; residentId: string; version: number; diet: string; texture: string; liquidConsistency?: string; allergies: string[]; mealSlot: string; serviceDate: string; foods: string[]; beverages: string[] }
 export function signTray(claims: TrayClaims): string {
   const body = Buffer.from(JSON.stringify(claims)).toString('base64url')
   return `ST1.${body}.${createHmac('sha256', key()).update(body).digest('hex')}`
@@ -17,6 +17,7 @@ export function readTray(raw: unknown): TrayClaims | null {
   try {
     const c = JSON.parse(Buffer.from(body, 'base64url').toString())
     if (!c.residentId || !c.ticketId || !Number.isSafeInteger(c.version) || c.version < 1 || !Array.isArray(c.foods) || !c.foods.length || !Array.isArray(c.allergies) || !Array.isArray(c.beverages)) return null
+    if (typeof c.liquidConsistency !== 'string') delete c.liquidConsistency
     return c
   } catch { return null }
 }
@@ -95,6 +96,36 @@ export function resolveDietContract(dietType: unknown): TherapeuticDietContract 
   return THERAPEUTIC_DIET_CONTRACTS[dietType.trim().toLowerCase()] ?? null
 }
 
+export const IDDSI_DRINK_LEVELS: Record<string, number> = {
+  thin: 0,
+  'level 0 thin': 0,
+  'level 0': 0,
+  'slightly thick': 1,
+  'level 1 slightly thick': 1,
+  'level 1': 1,
+  'mildly thick': 2,
+  'nectar-thick': 2,
+  nectar: 2,
+  'level 2 mildly thick': 2,
+  'level 2': 2,
+  'moderately thick': 3,
+  'honey-thick': 3,
+  honey: 3,
+  'level 3 moderately thick': 3,
+  'level 3': 3,
+  'extremely thick': 4,
+  'pudding-thick': 4,
+  pudding: 4,
+  'level 4 extremely thick': 4,
+  'level 4': 4,
+}
+
+export function iddsiDrinkLevelForConsistency(consistency: unknown): number {
+  if (typeof consistency !== 'string') return 0
+  const normalized = consistency.trim().toLowerCase()
+  return IDDSI_DRINK_LEVELS[normalized] ?? 0
+}
+
 function isClinicallyVerifiedRecipe(recipe: Record<string, any>): boolean {
   return Boolean(recipe.clinical_verified) && typeof recipe.verified_by === 'string' && recipe.verified_by.trim().length > 0
 }
@@ -111,7 +142,8 @@ export async function verifyTray(raw: unknown, db: Pick<typeof pool, 'query'> = 
   if (r.is_npo) return { ...hold('NPO: All oral service is prohibited.', 'NPO_ALERT'), ...details }
   const allergies = list(r.allergies)
   if (!allergies || !r.texture || !r.diet_type) return hold('Clinical data is incomplete. Hold tray.')
-  if (c.version !== details.currentProfileVersion || c.diet !== r.diet_type || c.texture !== r.texture || sorted(c.allergies) !== sorted(allergies)) return { ...hold('Orders changed. Reprint the tray card.', 'SUPERSEDED'), ...details }
+  const residentLiquidConsistency = r.liquid_consistency || 'Thin'
+  if (c.version !== details.currentProfileVersion || c.diet !== r.diet_type || c.texture !== r.texture || (c.liquidConsistency && c.liquidConsistency !== residentLiquidConsistency) || sorted(c.allergies) !== sorted(allergies)) return { ...hold('Orders changed. Reprint the tray card.', 'SUPERSEDED'), ...details }
   const pending = await db.query("SELECT id FROM ehr_reconciliation_queue WHERE resident_id = $1 AND status = 'PENDING_TRIAGE' LIMIT 1", [r.id])
   if (pending.rows.length) return { ...hold('Clinical change awaits reconciliation. Hold tray.'), ...details }
   const level: Record<string, number> = { Regular: 7, Pureed: 4, 'Mechanical Soft': 5, 'Minced & Moist': 5, 'Soft & Bite-Sized': 6 }
@@ -120,6 +152,8 @@ export async function verifyTray(raw: unknown, db: Pick<typeof pool, 'query'> = 
   const isRestrictedDiet = r.diet_type !== 'Regular'
   const fluidRestrictionMl = Number(r.fluid_restriction_ml || 0)
   const hasFluidRestriction = Number.isFinite(fluidRestrictionMl) && fluidRestrictionMl > 0
+  const targetDrinkLevel = iddsiDrinkLevelForConsistency(residentLiquidConsistency)
+  const isThickenedLiquidOrder = targetDrinkLevel > 0
   const hasNonWaterBeverage = c.beverages.some(x => x !== 'Water')
 
   const canonicalResidentAllergies: string[] = []
@@ -151,14 +185,17 @@ export async function verifyTray(raw: unknown, db: Pick<typeof pool, 'query'> = 
   }
 
   const resolvedBeverageRecipes: Array<Record<string, any>> = []
-  if (hasNonWaterBeverage || hasFluidRestriction) {
+  if (hasNonWaterBeverage || hasFluidRestriction || isThickenedLiquidOrder) {
     for (const bev of c.beverages) {
-      if (bev === 'Water' && !hasFluidRestriction) continue
+      if (bev === 'Water' && !hasFluidRestriction && !isThickenedLiquidOrder) continue
       const bevRows = await db.query('SELECT * FROM recipes WHERE name = $1', [bev])
       if (bevRows.rows.length !== 1) return hold('Restricted diet or beverage data requires verified recipe specifications. Hold tray.')
       const bevRecipe = bevRows.rows[0], contained = list(bevRecipe.allergens)
       if (!contained || !isClinicallyVerifiedRecipe(bevRecipe)) {
         return hold('Restricted diet or beverage data requires verified recipe specifications. Hold tray.')
+      }
+      if (isThickenedLiquidOrder && (bevRecipe.iddsi_level == null || Number(bevRecipe.iddsi_level) !== targetDrinkLevel)) {
+        return hold('Beverage liquid consistency does not match the order. Hold tray.')
       }
       if (allergies.some(a => contained.some(b => {
         const rawMatch = a.trim().toLowerCase() === b.trim().toLowerCase()

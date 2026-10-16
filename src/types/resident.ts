@@ -64,15 +64,30 @@ export type Resident = {
   // (residentsStore, /api/residents) normalize these with safe defaults.
   /** NPO (nil per os) hard-block flag. Non-overridable; surfaced, never edited here. */
   is_npo?: boolean
+  isNpo?: boolean
   /** Physician reason for the NPO order (e.g. pre-op, aspiration precautions). */
   npo_reason?: string
+  npoReason?: string
   /** Daily fluid restriction in mL (null = no restriction). */
   fluid_restriction_ml?: number | null
+  fluidRestrictionMl?: number | null
+  /** IDDSI drink consistency: 'Thin', 'Slightly Thick', 'Mildly Thick', 'Moderately Thick', 'Extremely Thick' */
+  liquid_consistency?: string
+  liquidConsistency?: string
   /** Legacy thickened-liquid consistency label (e.g. 'Thin', 'Nectar-Thick'). */
   fluidConsistency?: string
   /** Adaptive feeding equipment assigned by OT/ST (e.g. Plate Guard, Weighted Utensils). */
   adaptiveEquipment?: string[]
 }
+
+export const LIQUID_CONSISTENCY_OPTIONS = [
+  'Thin',
+  'Slightly Thick',
+  'Mildly Thick',
+  'Moderately Thick',
+  'Extremely Thick',
+] as const
+export type LiquidConsistency = typeof LIQUID_CONSISTENCY_OPTIONS[number]
 
 // ── IDDSI 2.0 framework (drinks: levels 0–4) ─────────────────────────────────
 export type IddsiDrinkLevel = 0 | 1 | 2 | 3 | 4

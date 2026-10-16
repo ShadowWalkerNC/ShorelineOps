@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { pool } from '../db/pool'
 import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { requireCapability } from '../middleware/permissions'
 import { UnitConversionEngine } from '../engine/units'
 
 export const inventoryRouter = Router()
@@ -164,7 +165,7 @@ async function fetchRow(table: string, id: string): Promise<any | null> {
 // ── Stock items ───────────────────────────────────────────────────────────────
 
 // GET /api/inventory/items?search=
-inventoryRouter.get('/items', async (req: AuthRequest, res, next) => {
+inventoryRouter.get('/items', requireCapability('inventory.read'), async (req: AuthRequest, res, next) => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
     const { rows } = search
@@ -180,7 +181,7 @@ inventoryRouter.get('/items', async (req: AuthRequest, res, next) => {
 })
 
 // POST /api/inventory/items
-inventoryRouter.post('/items', requireRole('staff'), async (req: AuthRequest, res, next) => {
+inventoryRouter.post('/items', requireCapability('inventory.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = ItemBodySchema.parse(req.body)
     const id = randomUUID()
@@ -214,7 +215,7 @@ inventoryRouter.post('/items', requireRole('staff'), async (req: AuthRequest, re
 })
 
 // PATCH /api/inventory/items/:id
-inventoryRouter.patch('/items/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+inventoryRouter.patch('/items/:id', requireCapability('inventory.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = ItemPatchSchema.parse(req.body)
     const { rows: existing } = await pool.query(
@@ -284,7 +285,7 @@ inventoryRouter.patch('/items/:id', requireRole('staff'), async (req: AuthReques
 })
 
 // DELETE /api/inventory/items/:id
-inventoryRouter.delete('/items/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+inventoryRouter.delete('/items/:id', requireCapability('inventory.delete'), async (req: AuthRequest, res, next) => {
   try {
     await pool.query(
       `UPDATE inventory_items SET active = false, updated_at = NOW() WHERE id = $1`,
@@ -300,7 +301,7 @@ inventoryRouter.delete('/items/:id', requireRole('staff'), async (req: AuthReque
 // ── Append-only transaction ledger ────────────────────────────────────────────
 
 // GET /api/inventory/transactions?itemId=&type=&limit=
-inventoryRouter.get('/transactions', async (req: AuthRequest, res, next) => {
+inventoryRouter.get('/transactions', requireCapability('inventory.read'), async (req: AuthRequest, res, next) => {
   try {
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '200'), 10) || 200, 1), 1000)
     const itemId = typeof req.query.itemId === 'string' ? req.query.itemId : null
@@ -329,7 +330,7 @@ inventoryRouter.get('/transactions', async (req: AuthRequest, res, next) => {
 })
 
 // POST /api/inventory/transactions — append only; applies the stock movement.
-inventoryRouter.post('/transactions', requireRole('staff'), async (req: AuthRequest, res, next) => {
+inventoryRouter.post('/transactions', requireCapability('inventory.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = TransactionBodySchema.parse(req.body)
     const unit = UnitConversionEngine.normalizeUnit(data.unit)
@@ -387,7 +388,7 @@ inventoryRouter.post('/transactions', requireRole('staff'), async (req: AuthRequ
 // ── Count-sheet sessions ──────────────────────────────────────────────────────
 
 // GET /api/inventory/counts?limit=
-inventoryRouter.get('/counts', async (req: AuthRequest, res, next) => {
+inventoryRouter.get('/counts', requireCapability('inventory.read'), async (req: AuthRequest, res, next) => {
   try {
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 200)
     const { rows } = await pool.query(
@@ -400,7 +401,7 @@ inventoryRouter.get('/counts', async (req: AuthRequest, res, next) => {
 
 // POST /api/inventory/counts — submit a count sheet; non-zero variances post
 // count_adjust ledger rows so on-hand matches the physical count.
-inventoryRouter.post('/counts', requireRole('staff'), async (req: AuthRequest, res, next) => {
+inventoryRouter.post('/counts', requireCapability('inventory.count'), async (req: AuthRequest, res, next) => {
   try {
     const data = CountBodySchema.parse(req.body)
     const id = randomUUID()
@@ -464,7 +465,7 @@ inventoryRouter.post('/counts', requireRole('staff'), async (req: AuthRequest, r
 })
 
 // PATCH /api/inventory/counts/:id — approve / resolve a count session
-inventoryRouter.patch('/counts/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+inventoryRouter.patch('/counts/:id', requireCapability('inventory.count'), async (req: AuthRequest, res, next) => {
   try {
     const data = CountPatchSchema.parse(req.body)
     const { rows: existing } = await pool.query(
@@ -490,7 +491,7 @@ inventoryRouter.patch('/counts/:id', requireRole('staff'), async (req: AuthReque
 // ── Usage trends (computed from the transaction ledger) ───────────────────────
 
 // GET /api/inventory/trends?days=90
-inventoryRouter.get('/trends', async (req: AuthRequest, res, next) => {
+inventoryRouter.get('/trends', requireCapability('inventory.read'), async (req: AuthRequest, res, next) => {
   try {
     const days = Math.min(Math.max(parseInt(String(req.query.days ?? '90'), 10) || 90, 1), 365)
     // SQLite stores created_at as 'YYYY-MM-DD HH:MM:SS' TEXT (see db/pool.ts),

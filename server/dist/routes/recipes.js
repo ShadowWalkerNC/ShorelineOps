@@ -11,7 +11,6 @@ exports.recipesRouter = void 0;
 const express_1 = require("express");
 const zod_1 = require("zod");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
 const permissions_1 = require("../middleware/permissions");
 const nutrition_1 = require("../engine/nutrition");
 const production_1 = require("../engine/production");
@@ -52,7 +51,7 @@ const RecipeClinicalVerifySchema = zod_1.z.object({
  * costProvenance is computed live from current vendor-catalog coverage so the
  * SKU-matched vs estimated flag always reflects reality, never stale data.
  */
-exports.recipesRouter.get('/', async (_req, res, next) => {
+exports.recipesRouter.get('/', (0, permissions_1.requireCapability)('recipes.read'), async (_req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query(`
       SELECT r.*, 
@@ -101,7 +100,7 @@ exports.recipesRouter.get('/', async (_req, res, next) => {
 /**
  * GET /api/recipes/:id
  */
-exports.recipesRouter.get('/:id', async (req, res, next) => {
+exports.recipesRouter.get('/:id', (0, permissions_1.requireCapability)('recipes.read'), async (req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query(`
       SELECT r.*, rn.* 
@@ -158,7 +157,7 @@ exports.recipesRouter.get('/:id', async (req, res, next) => {
  * POST /api/recipes
  * Create recipe, auto-detect allergens, and compute macro/micronutrients
  */
-exports.recipesRouter.post('/', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.recipesRouter.post('/', (0, permissions_1.requireCapability)('recipes.write'), async (req, res, next) => {
     const client = await pool_1.pool.connect();
     try {
         const data = RecipeBodySchema.parse(req.body);
@@ -239,7 +238,7 @@ exports.recipesRouter.post('/', (0, requireAuth_1.requireRole)('staff'), async (
 /**
  * PUT /api/recipes/:id
  */
-exports.recipesRouter.put('/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.recipesRouter.put('/:id', (0, permissions_1.requireCapability)('recipes.write'), async (req, res, next) => {
     const client = await pool_1.pool.connect();
     try {
         const data = RecipeBodySchema.partial().parse(req.body);
@@ -432,7 +431,7 @@ exports.recipesRouter.post('/:id/verify-clinical', (0, permissions_1.requireCapa
 /**
  * DELETE /api/recipes/:id
  */
-exports.recipesRouter.delete('/:id', (0, requireAuth_1.requireRole)('admin'), async (req, res, next) => {
+exports.recipesRouter.delete('/:id', (0, permissions_1.requireCapability)('recipes.delete'), async (req, res, next) => {
     try {
         const { rows: existing } = await pool_1.pool.query('SELECT id FROM recipes WHERE id = $1', [req.params.id]);
         if (!existing[0])
@@ -451,7 +450,7 @@ exports.recipesRouter.delete('/:id', (0, requireAuth_1.requireRole)('admin'), as
  * times — same inputs always produce the same stored values.
  * Body: { recipeIds?: string[] } (omit to recalc all)
  */
-exports.recipesRouter.post('/recalc-costs', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.recipesRouter.post('/recalc-costs', (0, permissions_1.requireCapability)('recipes.write'), async (req, res, next) => {
     try {
         const { recipeIds } = (req.body ?? {});
         if (Array.isArray(recipeIds) && recipeIds.length > 0) {
@@ -478,7 +477,7 @@ exports.recipesRouter.post('/recalc-costs', (0, requireAuth_1.requireRole)('staf
  * Cost per serving is invariant to scale; the response carries the stored
  * cost_per_serving plus batch totals and the live cost-provenance flag.
  */
-exports.recipesRouter.post('/:id/scale', async (req, res, next) => {
+exports.recipesRouter.post('/:id/scale', (0, permissions_1.requireCapability)('recipes.read'), async (req, res, next) => {
     try {
         const { portions = 50, texture = 'Regular' } = req.body;
         const { rows } = await pool_1.pool.query('SELECT * FROM recipes WHERE id = $1', [req.params.id]);
@@ -515,7 +514,7 @@ exports.recipesRouter.post('/:id/scale', async (req, res, next) => {
  * POST /api/recipes/analyze-nutrition
  * Instant preview calculation of any ingredient list
  */
-exports.recipesRouter.post('/analyze-nutrition', (req, res) => {
+exports.recipesRouter.post('/analyze-nutrition', (0, permissions_1.requireCapability)('recipes.read'), (req, res) => {
     try {
         const { ingredients = [], baseServings = 1 } = req.body;
         const analysis = nutrition_1.DietaryNutritionalEngine.calculateRecipeNutrition(ingredients, baseServings);

@@ -3,8 +3,8 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
 import { pool } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { requireCapability } from '../middleware/permissions'
 import {
   TRAY_EVENTS,
   MEAL_SLOTS,
@@ -138,7 +138,7 @@ function parseSla(req: AuthRequest): number {
 // ── Run CRUD ──────────────────────────────────────────────────────────────────
 
 // GET /api/trayruns?serviceDate=&mealSlot=
-trayrunsRouter.get('/', requireRole('staff'), async (req: AuthRequest, res, next) => {
+trayrunsRouter.get('/', requireCapability('trayruns.read'), async (req: AuthRequest, res, next) => {
   try {
     const serviceDate = typeof req.query.serviceDate === 'string' ? req.query.serviceDate : null
     const mealSlot = typeof req.query.mealSlot === 'string' ? req.query.mealSlot : null
@@ -167,7 +167,7 @@ trayrunsRouter.get('/', requireRole('staff'), async (req: AuthRequest, res, next
 
 // POST /api/trayruns/ensure — find-or-create the run for a meal (idempotent;
 // the QR assembly scanner uses this so it never needs to know run ids).
-trayrunsRouter.post('/ensure', requireRole('staff'), async (req: AuthRequest, res, next) => {
+trayrunsRouter.post('/ensure', requireCapability('trayruns.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = EnsureBodySchema.parse(req.body)
     const serviceDate = data.serviceDate ?? todayString()
@@ -191,7 +191,7 @@ trayrunsRouter.post('/ensure', requireRole('staff'), async (req: AuthRequest, re
 })
 
 // POST /api/trayruns — create a run explicitly (dispatch UI)
-trayrunsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, next) => {
+trayrunsRouter.post('/', requireCapability('trayruns.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = RunBodySchema.parse(req.body)
     const id = randomUUID()
@@ -219,7 +219,7 @@ trayrunsRouter.post('/', requireRole('staff'), async (req: AuthRequest, res, nex
 
 // GET /api/trayruns/missed?slaMinutes=30&serviceDate=YYYY-MM-DD
 // NOTE: defined before '/:id' so 'missed' is not captured as an id.
-trayrunsRouter.get('/missed', requireRole('staff'), async (req: AuthRequest, res, next) => {
+trayrunsRouter.get('/missed', requireCapability('trayruns.read'), async (req: AuthRequest, res, next) => {
   try {
     const slaMinutes = parseSla(req)
     const serviceDate = typeof req.query.serviceDate === 'string' ? req.query.serviceDate : todayString()
@@ -254,7 +254,7 @@ trayrunsRouter.get('/missed', requireRole('staff'), async (req: AuthRequest, res
 })
 
 // GET /api/trayruns/:id
-trayrunsRouter.get('/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+trayrunsRouter.get('/:id', requireCapability('trayruns.read'), async (req: AuthRequest, res, next) => {
   try {
     const run = await fetchRun(req.params.id)
     if (!run) return res.status(404).json({ error: 'Tray run not found' })
@@ -263,7 +263,7 @@ trayrunsRouter.get('/:id', requireRole('staff'), async (req: AuthRequest, res, n
 })
 
 // GET /api/trayruns/:id/checklist — residents on the run with latest event per tray line
-trayrunsRouter.get('/:id/checklist', requireRole('staff'), async (req: AuthRequest, res, next) => {
+trayrunsRouter.get('/:id/checklist', requireCapability('trayruns.read'), async (req: AuthRequest, res, next) => {
   try {
     const run = await fetchRun(req.params.id)
     if (!run) return res.status(404).json({ error: 'Tray run not found' })
@@ -318,7 +318,7 @@ trayrunsRouter.get('/:id/checklist', requireRole('staff'), async (req: AuthReque
 // ── Event append (append-only: no update/delete endpoints exist) ─────────────
 
 // POST /api/trayruns/:id/events
-trayrunsRouter.post('/:id/events', requireRole('staff'), async (req: AuthRequest, res, next) => {
+trayrunsRouter.post('/:id/events', requireCapability('trayruns.write'), async (req: AuthRequest, res, next) => {
   const client = await pool.connect()
   let committed = false
   try {

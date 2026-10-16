@@ -20,6 +20,14 @@ const DEFAULT_VALUES: ResidentFormValues = {
   likes: '',
   dislikes: '',
   specialInstructions: '',
+  isNpo: false,
+  is_npo: false,
+  npoReason: '',
+  npo_reason: '',
+  fluidRestrictionMl: null,
+  fluid_restriction_ml: null,
+  liquidConsistency: 'Thin',
+  liquid_consistency: 'Thin',
 }
 
 export function useResidentForm(initial?: Partial<ResidentFormValues>) {

@@ -368,7 +368,7 @@ kitchenRouter.get('/traycards-generated', requireCapability('kitchen.write', 'ha
     // tray cards. (servingLocation is kept for dining-room vs room-tray
     // routing; it is NOT a census filter.)
     const residentRows = await activeCensus({
-      columns: `id, name, room, table_assignment, serving_location, diet_type, texture,
+      columns: `id, name, room, table_assignment, serving_location, diet_type, texture, liquid_consistency,
              portion_size, allergies, beverages, special_instructions, dislikes,
              is_npo, npo_reason, fluid_restriction_ml, profile_version, status`,
       orderBy: 'room ASC',
@@ -382,6 +382,7 @@ kitchenRouter.get('/traycards-generated', requireCapability('kitchen.write', 'ha
       servingLocation: r.serving_location,
       dietType: r.diet_type,
       texture: r.texture,
+      liquidConsistency: r.liquid_consistency ?? 'Thin',
       portionSize: r.portion_size as any,
       allergies: r.allergies || [],
       beverages: r.beverages || [],

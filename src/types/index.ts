@@ -24,8 +24,8 @@ export type { MealSlot, MealGroup, DayOfWeek, ItemMealCategory, DietaryTag, Menu
 export { MEAL_SLOTS, MEAL_SLOT_LABELS, MEAL_GROUPS, DAYS_OF_WEEK, ITEM_MEAL_CATEGORIES, DIETARY_TAGS, emptyDayMenu, emptyWeek } from './menu'
 
 // ── Residents ─────────────────────────────────────────────────────────────────
-export type { ResidentStatus, Texture, PortionSize, ServingLocation, DietType, Allergy, Beverage, Resident, IddsiFoodLevel } from './resident'
-export { DIET_TYPES, ALLERGY_OPTIONS, BEVERAGE_OPTIONS, MONTHS, IDDSI_TEXTURE_LEVELS, iddsiForTexture, iddsiChipLabel } from './resident'
+export type { ResidentStatus, Texture, PortionSize, ServingLocation, DietType, Allergy, Beverage, Resident, IddsiFoodLevel, LiquidConsistency } from './resident'
+export { DIET_TYPES, ALLERGY_OPTIONS, BEVERAGE_OPTIONS, MONTHS, IDDSI_TEXTURE_LEVELS, iddsiForTexture, iddsiChipLabel, LIQUID_CONSISTENCY_OPTIONS } from './resident'
 
 // ── Production ────────────────────────────────────────────────────────────────
 export type { ProductionRow, MealCount, ProductionSheet } from './production'

@@ -312,8 +312,9 @@ class KitchenProductionEngine {
             else if (r.texture === 'Mechanical Soft') {
                 entree = `Minced & Moist ${mealInfo.entreeName}`;
             }
+            const liquidConsistency = r.liquidConsistency || 'Thin';
             const qrToken = (0, traySafety_1.signTray)({ ticketId, residentId: r.id, version: profileVersion,
-                diet: r.dietType, texture: r.texture, allergies: r.allergies || [],
+                diet: r.dietType, texture: r.texture, liquidConsistency, allergies: r.allergies || [],
                 mealSlot: mealInfo.mealSlot, serviceDate: mealInfo.serviceDate,
                 foods: [mealInfo.entreeName, ...mealInfo.sideNames], beverages: r.beverages || ['Water'] });
             return {
@@ -326,6 +327,7 @@ class KitchenProductionEngine {
                 serviceDate: mealInfo.serviceDate,
                 dietOrder: r.dietType,
                 iddsiTexture: r.texture,
+                liquidConsistency,
                 textureBannerColor,
                 hasCriticalAllergies: (r.allergies || []).length > 0,
                 allergenList: r.allergies || [],
@@ -340,6 +342,7 @@ class KitchenProductionEngine {
                 selectedBeverages: r.isNpo ? [] : (r.beverages || ['Water']),
                 specialNotes: [
                     r.isNpo ? '⛔ STRICT NPO' : '',
+                    liquidConsistency && liquidConsistency !== 'Thin' ? `🥤 IDDSI Liquid: ${liquidConsistency}` : '',
                     r.fluidRestrictionMl ? `💧 Fluid Limit: ${r.fluidRestrictionMl}ml/day` : '',
                     r.specialInstructions,
                     r.dislikes ? `No: ${r.dislikes}` : '',

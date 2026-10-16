@@ -3,11 +3,13 @@ import {
   ALLERGY_OPTIONS,
   BEVERAGE_OPTIONS,
   DIET_TYPES,
+  LIQUID_CONSISTENCY_OPTIONS,
   MONTHS,
   type Resident,
 } from '@/types/resident'
 import { useResidentForm } from '@/hooks/useResidentForm'
 import { useAuth } from '@/security/AuthContext'
+import { tokenManager } from '@/security/tokenManager'
 import { Flag } from 'lucide-react'
 import FormField from '@/components/FormField'
 import CheckboxGroup from '@/components/CheckboxGroup'
@@ -40,7 +42,7 @@ export default function ResidentFormModal({ resident, onSave, onClose }: Props) 
   async function submitFlag() {
     if (!resident || !flagMessage.trim()) return
     try {
-      const token = localStorage.getItem('shoreline_auth_token')
+      const token = tokenManager.getAccessToken()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`/api/residents/${resident.id}/flags`, {
@@ -223,6 +225,39 @@ export default function ResidentFormModal({ resident, onSave, onClose }: Props) 
                   >
                     {PORTIONS.map((p) => <option key={p}>{p}</option>)}
                   </select>
+                </FormField>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-3">
+                <FormField label="Liquid Consistency (IDDSI Drinks)">
+                  <select
+                    className={input()}
+                    value={values.liquidConsistency ?? values.liquid_consistency ?? 'Thin'}
+                    disabled={!canEditDiet}
+                    onChange={(e) => {
+                      set('liquidConsistency', e.target.value)
+                      set('liquid_consistency', e.target.value)
+                    }}
+                  >
+                    {LIQUID_CONSISTENCY_OPTIONS.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </FormField>
+
+                <FormField label="Daily Fluid Limit (mL)">
+                  <input
+                    type="number"
+                    className={input()}
+                    value={values.fluidRestrictionMl ?? values.fluid_restriction_ml ?? ''}
+                    disabled={!canEditDiet}
+                    min={0}
+                    step={50}
+                    placeholder="No restriction (e.g. 1500)"
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : null
+                      set('fluidRestrictionMl', val)
+                      set('fluid_restriction_ml', val)
+                    }}
+                  />
                 </FormField>
               </div>
 

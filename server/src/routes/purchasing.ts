@@ -39,8 +39,8 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { randomUUID } from 'crypto'
 import { pool, databaseDialect } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { requireCapability } from '../middleware/permissions'
 import { requireTier } from '../middleware/requireTier'
 import { MrpDemandForecastEngine, InventoryItemStock } from '../engine/mrp'
 import { KitchenProductionEngine } from '../engine/production'
@@ -60,7 +60,7 @@ function err(res: Response, status: number, msg: string) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** GET /api/purchasing/vendors */
-purchasingRouter.get('/vendors', async (_req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/vendors', requireCapability('purchasing.read'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(
       `SELECT * FROM vendors ORDER BY name ASC`
@@ -70,7 +70,7 @@ purchasingRouter.get('/vendors', async (_req: Request, res: Response, next: Next
 })
 
 /** POST /api/purchasing/vendors */
-purchasingRouter.post('/vendors', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/vendors', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { name, code, phone = '', email = '', website = '', notes = '' } = req.body
   if (!name || !code) return err(res, 400, 'name and code are required')
   try {
@@ -85,7 +85,7 @@ purchasingRouter.post('/vendors', requireRole('manager'), async (req: Request, r
 })
 
 /** PUT /api/purchasing/vendors/:id */
-purchasingRouter.put('/vendors/:id', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.put('/vendors/:id', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { name, phone, email, website, notes, active } = req.body
   try {
@@ -111,7 +111,7 @@ purchasingRouter.put('/vendors/:id', requireRole('manager'), async (req: Request
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** GET /api/purchasing/items?vendorId= */
-purchasingRouter.get('/items', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/items', requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   const { vendorId } = req.query
   try {
     const { rows } = await pool.query(
@@ -128,7 +128,7 @@ purchasingRouter.get('/items', async (req: Request, res: Response, next: NextFun
 })
 
 /** POST /api/purchasing/items */
-purchasingRouter.post('/items', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/items', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { vendorId, vendorSku, name, brand = '', packSize = '', uom = 'case', category = '', unitCost = 0 } = req.body
   if (!vendorId || !vendorSku || !name) return err(res, 400, 'vendorId, vendorSku, and name are required')
   try {
@@ -143,7 +143,7 @@ purchasingRouter.post('/items', requireRole('manager'), async (req: Request, res
 })
 
 /** PUT /api/purchasing/items/:id */
-purchasingRouter.put('/items/:id', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.put('/items/:id', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { name, brand, packSize, uom, category, unitCost, active } = req.body
   try {
@@ -166,7 +166,7 @@ purchasingRouter.put('/items/:id', requireRole('manager'), async (req: Request, 
 })
 
 /** DELETE /api/purchasing/items/:id (soft delete) */
-purchasingRouter.delete('/items/:id', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.delete('/items/:id', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   try {
     await pool.query(`UPDATE vendor_items SET active = false, updated_at = NOW() WHERE id = $1`, [id])
@@ -179,7 +179,7 @@ purchasingRouter.delete('/items/:id', requireRole('manager'), async (req: Reques
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** GET /api/purchasing/order-guide?vendorId= */
-purchasingRouter.get('/order-guide', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/order-guide', requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   const { vendorId } = req.query
   try {
     const { rows } = await pool.query(
@@ -198,7 +198,7 @@ purchasingRouter.get('/order-guide', async (req: Request, res: Response, next: N
 })
 
 /** POST /api/purchasing/order-guide */
-purchasingRouter.post('/order-guide', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/order-guide', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { vendorId, vendorItemId, parLevel = 0, onHand = 0, avgUsage, sortGroup = '' } = req.body
   if (!vendorId || !vendorItemId) return err(res, 400, 'vendorId and vendorItemId required')
   try {
@@ -219,7 +219,7 @@ purchasingRouter.post('/order-guide', requireRole('manager'), async (req: Reques
 })
 
 /** PUT /api/purchasing/order-guide/:id */
-purchasingRouter.put('/order-guide/:id', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.put('/order-guide/:id', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { parLevel, onHand, avgUsage, sortGroup } = req.body
   try {
@@ -239,7 +239,7 @@ purchasingRouter.put('/order-guide/:id', async (req: Request, res: Response, nex
 })
 
 /** DELETE /api/purchasing/order-guide/:id */
-purchasingRouter.delete('/order-guide/:id', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.delete('/order-guide/:id', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   try {
     await pool.query(`DELETE FROM order_guides WHERE id = $1`, [id])
@@ -251,7 +251,7 @@ purchasingRouter.delete('/order-guide/:id', requireRole('manager'), async (req: 
  * POST /api/purchasing/import-guide
  * Batch imports Dennis / vendor catalog items and syncs order guide par levels
  */
-purchasingRouter.post('/import-guide', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/import-guide', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { vendorId, items = [] } = req.body
   if (!vendorId || !Array.isArray(items)) return err(res, 400, 'vendorId and items array required')
 
@@ -331,7 +331,7 @@ const demandEngine = new DietaryDemandEngine()
  * Generates a suggested purchase order from the order guide.
  * Items where on_hand < par_level are included; qty = ceil(par_level - on_hand).
  */
-purchasingRouter.post('/suggested-order', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/suggested-order', requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   const { vendorId } = req.body
   if (!vendorId) return err(res, 400, 'vendorId required')
   try {
@@ -369,7 +369,7 @@ purchasingRouter.post('/suggested-order', async (req: Request, res: Response, ne
  * Dynamic clinical ordering: Combines live resident census, texture requirements (puree/thickener),
  * and special diet ratios (NAS/NCS) to produce clinically optimized order recommendations.
  */
-purchasingRouter.post('/clinical-suggested-order', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/clinical-suggested-order', requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   const { vendorId } = req.body
   if (!vendorId) return err(res, 400, 'vendorId required')
   try {
@@ -420,7 +420,7 @@ purchasingRouter.post('/clinical-suggested-order', async (req: Request, res: Res
  * Explodes active cycle menu recipes across resident census headcounts,
  * projects inventory depletion, and calculates exact distributor case-pack purchase orders.
  */
-purchasingRouter.post('/mrp-order', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/mrp-order', requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { vendorId } = req.body
 
@@ -484,7 +484,7 @@ purchasingRouter.post('/mrp-order', async (req: Request, res: Response, next: Ne
  * line, from inventory_transactions issues + waste. See the formula doc in
  * server/src/jobs/nightlyForecast.ts.
  */
-purchasingRouter.post('/rollup-usage', requireRole('staff'), async (_req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/rollup-usage', requireCapability('purchasing.write'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await rollupAvgUsage()
     res.json(result)
@@ -492,7 +492,7 @@ purchasingRouter.post('/rollup-usage', requireRole('staff'), async (_req: Reques
 })
 
 /** GET /api/purchasing/orders */
-purchasingRouter.get('/orders', async (_req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/orders', requireCapability('purchasing.read'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(
       `SELECT po.*, v.name AS vendor_name, v.code AS vendor_code,
@@ -508,7 +508,7 @@ purchasingRouter.get('/orders', async (_req: Request, res: Response, next: NextF
 })
 
 /** POST /api/purchasing/orders — always created as a draft; approval moves it forward */
-purchasingRouter.post('/orders', requireRole('staff'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/orders', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const ar = req as AuthRequest
   const { vendorId, orderDate, expectedDate, notes = '', lines = [] } = req.body
   if (!vendorId) return err(res, 400, 'vendorId required')
@@ -544,7 +544,7 @@ purchasingRouter.post('/orders', requireRole('staff'), async (req: Request, res:
 })
 
 /** GET /api/purchasing/orders/:id */
-purchasingRouter.get('/orders/:id', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/orders/:id', requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   try {
     const { rows: [order] } = await pool.query(
@@ -570,7 +570,7 @@ purchasingRouter.get('/orders/:id', async (req: Request, res: Response, next: Ne
 })
 
 /** PUT /api/purchasing/orders/:id */
-purchasingRouter.put('/orders/:id', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.put('/orders/:id', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { status, expectedDate, notes } = req.body
   if (status !== undefined) return err(res, 400, 'Use the dedicated approval, submission, or cancellation workflow')
@@ -590,7 +590,7 @@ purchasingRouter.put('/orders/:id', requireRole('manager'), async (req: Request,
 })
 
 /** DELETE /api/purchasing/orders/:id */
-purchasingRouter.delete('/orders/:id', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.delete('/orders/:id', requireCapability('purchasing.delete'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   try {
     await pool.query(`UPDATE purchase_orders SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [id])
@@ -618,7 +618,7 @@ async function findOrder(client: { query: (sql: string, params?: any[]) => Promi
  * Note: the SQLite write path returns no rows, so the transition is verified
  * with a re-read rather than RETURNING (B10 fail-closed pattern).
  */
-purchasingRouter.post('/orders/:id/approve', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/orders/:id/approve', requireCapability('purchasing.approve'), async (req: Request, res: Response, next: NextFunction) => {
   const ar = req as AuthRequest
   const { id } = req.params
   const client = await pool.connect()
@@ -663,7 +663,7 @@ purchasingRouter.post('/orders/:id/approve', requireRole('manager'), async (req:
  * Marks an approved PO as submitted to the vendor. approved → submitted only;
  * anything else → 409. Audit-logged in the same transaction.
  */
-purchasingRouter.post('/orders/:id/submit', requireRole('staff'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/orders/:id/submit', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const ar = req as AuthRequest
   const { id } = req.params
   const client = await pool.connect()
@@ -706,7 +706,7 @@ purchasingRouter.post('/orders/:id/submit', requireRole('staff'), async (req: Re
 // ─── Order lines ──────────────────────────────────────────────────────────
 
 /** POST /api/purchasing/orders/:id/lines */
-purchasingRouter.post('/orders/:id/lines', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/orders/:id/lines', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   const { vendorItemId, qtyOrdered, unitCost, notes = '' } = req.body
   if (typeof qtyOrdered !== 'number' || !Number.isFinite(qtyOrdered) || qtyOrdered <= 0 || (unitCost != null && (typeof unitCost !== 'number' || !Number.isFinite(unitCost) || unitCost < 0))) return err(res, 400, 'Invalid quantity or cost')
@@ -728,7 +728,7 @@ purchasingRouter.post('/orders/:id/lines', requireRole('manager'), async (req: R
 })
 
 /** PUT /api/purchasing/orders/:id/lines/:lineId */
-purchasingRouter.put('/orders/:id/lines/:lineId', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.put('/orders/:id/lines/:lineId', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id, lineId } = req.params
   const { qtyOrdered, unitCost, notes } = req.body
   if (qtyOrdered !== undefined && (typeof qtyOrdered !== 'number' || !Number.isFinite(qtyOrdered) || qtyOrdered <= 0)) {
@@ -756,7 +756,7 @@ purchasingRouter.put('/orders/:id/lines/:lineId', requireRole('manager'), async 
 })
 
 /** DELETE /api/purchasing/orders/:id/lines/:lineId */
-purchasingRouter.delete('/orders/:id/lines/:lineId', requireRole('manager'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.delete('/orders/:id/lines/:lineId', requireCapability('purchasing.write'), async (req: Request, res: Response, next: NextFunction) => {
   const { id, lineId } = req.params
   const client = await pool.connect()
   try {
@@ -821,7 +821,7 @@ function toGuideUnits(
  *   - Corrections: posting a lower total writes a signed 'count_adjust' ledger
  *     row — the ledger is append-only, never edited.
  */
-purchasingRouter.post('/orders/:id/lines/:lineId/receive', requireRole('staff'), async (req, res, next) => {
+purchasingRouter.post('/orders/:id/lines/:lineId/receive', requireCapability('purchasing.write'), async (req, res, next) => {
   const ar = req as AuthRequest
   const { id, lineId } = req.params
   const { qtyReceived, qtyUnit, note = '' } = req.body ?? {}
@@ -992,7 +992,7 @@ purchasingRouter.post('/orders/:id/lines/:lineId/receive', requireRole('staff'),
  * GET /api/purchasing/orders/:id/export-csv
  * Returns a Dennis-ready CSV for the purchase order lines.
  */
-purchasingRouter.get('/orders/:id/export-csv', async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/orders/:id/export-csv', requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
   try {
     const { rows: [order] } = await pool.query(
@@ -1024,7 +1024,7 @@ purchasingRouter.get('/orders/:id/export-csv', async (req: Request, res: Respons
  * GET /api/purchasing/invoices
  * Lists recent distributor invoices and their match statuses
  */
-purchasingRouter.get('/invoices', requireTier('enterprise'), async (_req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.get('/invoices', requireTier('enterprise'), requireCapability('purchasing.read'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(`
       SELECT * FROM distributor_invoices ORDER BY invoice_date DESC LIMIT 50
@@ -1038,7 +1038,7 @@ purchasingRouter.get('/invoices', requireTier('enterprise'), async (_req: Reques
  * Evaluates 3-way match across PO contract rates, receiving dock counts, and distributor invoice.
  * Flags line-by-line price variances, quantity shortages, and creates vendor credit memo proposals.
  */
-purchasingRouter.post('/invoices/evaluate', requireTier('enterprise'), async (req: Request, res: Response, next: NextFunction) => {
+purchasingRouter.post('/invoices/evaluate', requireTier('enterprise'), requireCapability('purchasing.read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { invoiceNumber, vendorName, invoiceDate, poReference, lines } = req.body
     if (!invoiceNumber || !vendorName || !Array.isArray(lines)) {

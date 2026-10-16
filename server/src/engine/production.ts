@@ -24,6 +24,7 @@ export interface ResidentServiceProfile {
   dietType: string
   texture: string
   portionSize: 'Small' | 'Regular' | 'Large'
+  liquidConsistency?: string
   profileVersion?: number
   isNpo?: boolean
   npoReason?: string
@@ -69,6 +70,7 @@ export interface PrintableTrayCard {
   serviceDate: string
   dietOrder: string
   iddsiTexture: string
+  liquidConsistency?: string
   textureBannerColor: string
   hasCriticalAllergies: boolean
   allergenList: string[]
@@ -513,8 +515,9 @@ export class KitchenProductionEngine {
           entree = `Minced & Moist ${mealInfo.entreeName}`
         }
 
+        const liquidConsistency = r.liquidConsistency || 'Thin'
         const qrToken = signTray({ ticketId, residentId: r.id, version: profileVersion,
-          diet: r.dietType, texture: r.texture, allergies: r.allergies || [],
+          diet: r.dietType, texture: r.texture, liquidConsistency, allergies: r.allergies || [],
           mealSlot: mealInfo.mealSlot, serviceDate: mealInfo.serviceDate,
           foods: [mealInfo.entreeName, ...mealInfo.sideNames], beverages: r.beverages || ['Water'] })
 
@@ -528,6 +531,7 @@ export class KitchenProductionEngine {
           serviceDate: mealInfo.serviceDate,
           dietOrder: r.dietType,
           iddsiTexture: r.texture,
+          liquidConsistency,
           textureBannerColor,
           hasCriticalAllergies: (r.allergies || []).length > 0,
           allergenList: r.allergies || [],
@@ -542,6 +546,7 @@ export class KitchenProductionEngine {
           selectedBeverages: r.isNpo ? [] : (r.beverages || ['Water']),
           specialNotes: [
             r.isNpo ? '⛔ STRICT NPO' : '',
+            liquidConsistency && liquidConsistency !== 'Thin' ? `🥤 IDDSI Liquid: ${liquidConsistency}` : '',
             r.fluidRestrictionMl ? `💧 Fluid Limit: ${r.fluidRestrictionMl}ml/day` : '',
             r.specialInstructions,
             r.dislikes ? `No: ${r.dislikes}` : '',

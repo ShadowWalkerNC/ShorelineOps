@@ -49,6 +49,22 @@ export type Capability =
   | 'production.delete'
   | 'enterprise.read'
   | 'enterprise.write'
+  | 'inventory.read'
+  | 'inventory.write'
+  | 'inventory.count'
+  | 'inventory.delete'
+  | 'purchasing.read'
+  | 'purchasing.write'
+  | 'purchasing.approve'
+  | 'purchasing.delete'
+  | 'menu.read'
+  | 'menu.write'
+  | 'menu.delete'
+  | 'recipes.read'
+  | 'recipes.write'
+  | 'recipes.delete'
+  | 'trayruns.read'
+  | 'trayruns.write'
 
 /** Full clinical resident reads: admin/manager/dietitian only. */
 const CLINICAL_READ: readonly ApiRole[] = ['admin', 'manager', 'dietitian']
@@ -192,6 +208,22 @@ export const CAPABILITY_ROLES: Record<Capability, readonly ApiRole[]> = {
   'production.delete': ['admin'],
   'enterprise.read': MANAGER_ADMIN,
   'enterprise.write': MANAGER_ADMIN,
+  'inventory.read': ['admin', 'manager', 'dietitian', 'dietary', 'staff', 'readonly'],
+  'inventory.write': ['admin', 'manager', 'dietary', 'staff'],
+  'inventory.count': ['admin', 'manager', 'dietary', 'staff'],
+  'inventory.delete': MANAGER_ADMIN,
+  'purchasing.read': ['admin', 'manager', 'dietitian', 'dietary', 'staff', 'readonly'],
+  'purchasing.write': ['admin', 'manager', 'dietary', 'staff'],
+  'purchasing.approve': MANAGER_ADMIN,
+  'purchasing.delete': ['admin'],
+  'menu.read': ['admin', 'manager', 'dietitian', 'dietary', 'server', 'staff', 'readonly'],
+  'menu.write': ['admin', 'manager', 'dietitian'],
+  'menu.delete': ['admin'],
+  'recipes.read': ['admin', 'manager', 'dietitian', 'dietary', 'server', 'staff', 'readonly'],
+  'recipes.write': ['admin', 'manager', 'dietitian', 'dietary', 'staff'],
+  'recipes.delete': ['admin'],
+  'trayruns.read': ['admin', 'manager', 'dietitian', 'dietary', 'server', 'staff', 'readonly'],
+  'trayruns.write': ['admin', 'manager', 'dietitian', 'dietary', 'server', 'staff'],
 }
 
 export function can(role: unknown, capability: unknown): boolean {

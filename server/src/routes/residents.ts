@@ -14,6 +14,7 @@ const ResidentSchema = z.object({
   status: z.enum(['Active', 'Hospital', 'LOA', 'Passed Away']).default('Active'),
   dietType: z.string().default('Regular'),
   texture: z.string().default('Regular'),
+  liquidConsistency: z.string().default('Thin'),
   portionSize: z.string().default('Regular'),
   ensurePerDay: z.number().int().min(0).default(0),
   allergies: z.array(z.string()).default([]),
@@ -49,10 +50,10 @@ function canWriteDietOrder(role?: ApiRole): boolean {
   return !!role && (DIET_WRITE_ROLES as readonly string[]).includes(role)
 }
 
-/** Fields that constitute a therapeutic diet order (B04). fluidRestrictionMl is
- * part of B01's clinical snapshot, so it gates with the clinical set too. */
+/** Fields that constitute a therapeutic diet order (B04). fluidRestrictionMl and
+ * liquidConsistency are part of B01's clinical snapshot, gating with the clinical set. */
 const CLINICAL_WRITE_FIELDS = [
-  'dietType', 'texture', 'isNpo', 'npoReason', 'allergies',
+  'dietType', 'texture', 'liquidConsistency', 'isNpo', 'npoReason', 'allergies',
   'fluidRestrictionMl', 'dietEffectiveDate',
 ] as const
 
@@ -68,30 +69,36 @@ function normAllergies(v: any): string[] {
   return []
 }
 
-/** Clinical fields tracked by resident_profile_history (migration 013). */
+/** Clinical fields tracked by resident_profile_history (migration 013 & 031). */
 interface ClinicalSnapshot {
   dietType: string
   texture: string
+  liquidConsistency: string
   isNpo: boolean
   npoReason: string
   allergies: string[]
+  fluidRestrictionMl: number | null
 }
 
 function clinicalSnapshot(row: any): ClinicalSnapshot {
   return {
     dietType: row.diet_type ?? 'Regular',
     texture: row.texture ?? 'Regular',
+    liquidConsistency: row.liquid_consistency ?? 'Thin',
     isNpo: Boolean(row.is_npo),
     npoReason: row.npo_reason ?? '',
     allergies: normAllergies(row.allergies),
+    fluidRestrictionMl: row.fluid_restriction_ml != null ? Number(row.fluid_restriction_ml) : null,
   }
 }
 
 function clinicalChanged(before: ClinicalSnapshot, after: ClinicalSnapshot) {
   return before.dietType !== after.dietType
     || before.texture !== after.texture
+    || before.liquidConsistency !== after.liquidConsistency
     || before.isNpo !== after.isNpo
     || before.npoReason !== after.npoReason
+    || before.fluidRestrictionMl !== after.fluidRestrictionMl
     || JSON.stringify(before.allergies) !== JSON.stringify(after.allergies)
 }
 
@@ -122,9 +129,9 @@ async function bumpProfileVersion(
   const newVersion: number = vRows[0].profile_version
   await pool.query(
     `INSERT INTO resident_profile_history
-       (resident_id, profile_version, diet_type, texture, is_npo, allergies)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [residentId, newVersion, after.dietType, after.texture, after.isNpo, after.allergies]
+       (resident_id, profile_version, diet_type, texture, liquid_consistency, is_npo, allergies, fluid_restriction_ml)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [residentId, newVersion, after.dietType, after.texture, after.liquidConsistency, after.isNpo, after.allergies, after.fluidRestrictionMl]
   )
   await pool.query(
     `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
@@ -143,8 +150,10 @@ function toHistoryRow(row: any) {
     profileVersion: row.profile_version,
     dietType: row.diet_type,
     texture: row.texture,
+    liquidConsistency: row.liquid_consistency ?? 'Thin',
     isNpo: Boolean(row.is_npo),
     allergies: normAllergies(row.allergies),
+    fluidRestrictionMl: row.fluid_restriction_ml != null ? Number(row.fluid_restriction_ml) : null,
     createdAt: row.created_at,
   }
 }
@@ -158,6 +167,7 @@ function toResident(row: any) {
     status: row.status,
     dietType: row.diet_type,
     texture: row.texture,
+    liquidConsistency: row.liquid_consistency ?? 'Thin',
     portionSize: row.portion_size,
     ensurePerDay: row.ensure_per_day,
     allergies: row.allergies ?? [],
@@ -192,6 +202,7 @@ export function toServiceResident(row: any) {
     status: row.status,
     dietType: row.diet_type,
     texture: row.texture,
+    liquidConsistency: row.liquid_consistency ?? 'Thin',
     portionSize: row.portion_size,
     ensurePerDay: row.ensure_per_day,
     allergies,
@@ -455,6 +466,7 @@ residentsRouter.post('/import-csv', requireCapability('residents.import'), idemp
       const isNpo = ['true', 'yes', '1', 'y'].includes(npoRaw) || dietType.toUpperCase() === 'NPO'
       const npoReason = (r.nporeason || '').trim()
       const fluidRestrictionMl = parseInt(r.fluidrestrictionml || r.fluidlimit || r.fluidrestriction || '', 10) || null
+      const liquidConsistency = (r.liquidconsistency || r.liquids || r.fluidconsistency || 'Thin').trim() || 'Thin'
 
       // Check if resident exists
       const { rows: existingRows } = await pool.query(
@@ -468,9 +480,11 @@ residentsRouter.post('/import-csv', requireCapability('residents.import'), idemp
         const after: ClinicalSnapshot = {
           dietType,
           texture,
+          liquidConsistency,
           isNpo,
           npoReason,
           allergies: normAllergies(allergies),
+          fluidRestrictionMl,
         }
 
         await pool.query(
@@ -483,8 +497,9 @@ residentsRouter.post('/import-csv', requireCapability('residents.import'), idemp
              likes = $12, dislikes = $13, special_instructions = $14,
              is_npo = $15, npo_reason = $16,
              fluid_restriction_ml = COALESCE($17, fluid_restriction_ml),
+             liquid_consistency = COALESCE($18, liquid_consistency),
              updated_at = NOW()
-           WHERE id = $18`,
+           WHERE id = $19`,
           [
             status, dietType, texture, portionSize,
             ensurePerDay, allergies, beverages,
@@ -493,6 +508,7 @@ residentsRouter.post('/import-csv', requireCapability('residents.import'), idemp
             likes, dislikes, specialInstructions,
             isNpo, npoReason,
             fluidRestrictionMl,
+            liquidConsistency,
             existing.id,
           ]
         )
@@ -503,14 +519,14 @@ residentsRouter.post('/import-csv', requireCapability('residents.import'), idemp
         const newId = randomUUID()
         await pool.query(
           `INSERT INTO residents
-             (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
+             (id, name, room, status, diet_type, texture, liquid_consistency, portion_size, ensure_per_day,
               allergies, beverages, birthday_month, birthday_day, serving_location,
               table_assignment, likes, dislikes, special_instructions,
               is_npo, npo_reason, fluid_restriction_ml, profile_version,
               diet_ordered_by, diet_order_date, diet_effective_date)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,1,$21,NOW(),NOW())`,
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,1,$22,NOW(),NOW())`,
           [
-            newId, name, room, status, dietType, texture, portionSize, ensurePerDay,
+            newId, name, room, status, dietType, texture, liquidConsistency, portionSize, ensurePerDay,
             allergies, beverages, birthdayMonth, birthdayDay, servingLocation,
             tableAssignment, likes, dislikes, specialInstructions,
             isNpo, npoReason, fluidRestrictionMl,
@@ -520,9 +536,9 @@ residentsRouter.post('/import-csv', requireCapability('residents.import'), idemp
 
         await pool.query(
           `INSERT INTO resident_profile_history
-             (resident_id, profile_version, diet_type, texture, is_npo, allergies)
-           VALUES ($1, 1, $2, $3, $4, $5)`,
-          [newId, dietType, texture, isNpo, allergies]
+             (resident_id, profile_version, diet_type, texture, liquid_consistency, is_npo, allergies, fluid_restriction_ml)
+           VALUES ($1, 1, $2, $3, $4, $5, $6, $7)`,
+          [newId, dietType, texture, liquidConsistency, isNpo, allergies, fluidRestrictionMl]
         )
 
         createdCount++
@@ -561,15 +577,15 @@ residentsRouter.post('/', requireCapability('residents.clinicalWrite'), idempote
     const id = randomUUID()
     await pool.query(`
       INSERT INTO residents
-        (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
+        (id, name, room, status, diet_type, texture, liquid_consistency, portion_size, ensure_per_day,
          allergies, beverages, birthday_month, birthday_day, serving_location,
          table_assignment, likes, dislikes, special_instructions,
          is_npo, npo_reason, fluid_restriction_ml,
          diet_ordered_by, diet_order_date, diet_effective_date, profile_version)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
-              NOW(), COALESCE($22, NOW()), 1)`,
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
+              NOW(), COALESCE($23, NOW()), 1)`,
       [
-        id, data.name, data.room, data.status, data.dietType, data.texture,
+        id, data.name, data.room, data.status, data.dietType, data.texture, data.liquidConsistency ?? 'Thin',
         data.portionSize, data.ensurePerDay, data.allergies, data.beverages,
         data.birthdayMonth ?? null, data.birthdayDay ?? null,
         data.servingLocation, data.tableAssignment,
@@ -591,9 +607,9 @@ residentsRouter.post('/', requireCapability('residents.clinicalWrite'), idempote
     )
     await pool.query(
       `INSERT INTO resident_profile_history
-         (resident_id, profile_version, diet_type, texture, is_npo, allergies)
-       VALUES ($1, 1, $2, $3, $4, $5)`,
-      [id, data.dietType, data.texture, isNpo, data.allergies]
+         (resident_id, profile_version, diet_type, texture, liquid_consistency, is_npo, allergies, fluid_restriction_ml)
+       VALUES ($1, 1, $2, $3, $4, $5, $6, $7)`,
+      [id, data.dietType, data.texture, data.liquidConsistency ?? 'Thin', isNpo, data.allergies, data.fluidRestrictionMl ?? null]
     )
     res.status(201).json(toResident(rows[0]))
   } catch (err) { next(err) }
@@ -613,7 +629,7 @@ residentsRouter.put('/:id', requireCapability('residents.write', 'residents.clin
   try {
     const data = ResidentSchema.partial().parse(req.body)
     const { rows: existing } = await pool.query(
-      `SELECT diet_type, texture, allergies, is_npo, npo_reason, profile_version
+      `SELECT diet_type, texture, liquid_consistency, allergies, is_npo, npo_reason, fluid_restriction_ml, profile_version
        FROM residents WHERE id = $1`, [req.params.id]
     )
     if (!existing[0]) return res.status(404).json({ error: 'Resident not found' })
@@ -634,7 +650,7 @@ residentsRouter.put('/:id', requireCapability('residents.write', 'residents.clin
          JSON.stringify({ role: req.userRole ?? 'unknown', fields: requestedClinical })]
       )
       return res.status(403).json({
-        error: 'Diet order changes (diet type, texture, NPO, allergies, fluid restriction) ' +
+        error: 'Diet order changes (diet type, texture, liquid consistency, NPO, allergies, fluid restriction) ' +
                'require the dietitian or manager role. Use the "Flag for RD review" action instead.',
       })
     }
@@ -657,25 +673,26 @@ residentsRouter.put('/:id', requireCapability('residents.write', 'residents.clin
         status               = COALESCE($3,  status),
         diet_type            = COALESCE($4,  diet_type),
         texture              = COALESCE($5,  texture),
-        portion_size         = COALESCE($6,  portion_size),
-        ensure_per_day       = COALESCE($7,  ensure_per_day),
-        allergies            = COALESCE($8,  allergies),
-        beverages            = COALESCE($9,  beverages),
-        birthday_month       = COALESCE($10, birthday_month),
-        birthday_day         = COALESCE($11, birthday_day),
-        serving_location     = COALESCE($12, serving_location),
-        table_assignment     = COALESCE($13, table_assignment),
-        likes                = COALESCE($14, likes),
-        dislikes             = COALESCE($15, dislikes),
-        special_instructions = COALESCE($16, special_instructions),
-        is_npo               = COALESCE($17, is_npo),
-        npo_reason           = COALESCE($18, npo_reason),
-        fluid_restriction_ml = COALESCE($19, fluid_restriction_ml),
+        liquid_consistency   = COALESCE($6,  liquid_consistency),
+        portion_size         = COALESCE($7,  portion_size),
+        ensure_per_day       = COALESCE($8,  ensure_per_day),
+        allergies            = COALESCE($9,  allergies),
+        beverages            = COALESCE($10, beverages),
+        birthday_month       = COALESCE($11, birthday_month),
+        birthday_day         = COALESCE($12, birthday_day),
+        serving_location     = COALESCE($13, serving_location),
+        table_assignment     = COALESCE($14, table_assignment),
+        likes                = COALESCE($15, likes),
+        dislikes             = COALESCE($16, dislikes),
+        special_instructions = COALESCE($17, special_instructions),
+        is_npo               = COALESCE($18, is_npo),
+        npo_reason           = COALESCE($19, npo_reason),
+        fluid_restriction_ml = COALESCE($20, fluid_restriction_ml),
         updated_at           = NOW()
-      WHERE id = $20`,
+      WHERE id = $21`,
       [
         data.name ?? null, data.room ?? null, data.status ?? null,
-        data.dietType ?? null, data.texture ?? null,
+        data.dietType ?? null, data.texture ?? null, data.liquidConsistency ?? null,
         data.portionSize ?? null, data.ensurePerDay ?? null,
         data.allergies ?? null, data.beverages ?? null,
         data.birthdayMonth ?? null, data.birthdayDay ?? null,

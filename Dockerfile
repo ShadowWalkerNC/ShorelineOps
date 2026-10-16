@@ -29,6 +29,10 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
+# Create persistent data directory and ensure node user owns /app hierarchy
+RUN mkdir -p /app/data /app/server && chown -R node:node /app
+ENV SQLITE_PATH=/app/data/shoreline.db
+
 # Copy built frontend assets
 COPY --from=client-builder --chown=node:node /app/dist /app/dist
 
@@ -48,7 +52,7 @@ EXPOSE 3001
 # migrations verified). /health is liveness only and stays 200 while /ready
 # reports 503 during startup or database outages.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:3001/ready || exit 1
+  CMD curl -f http://localhost:${PORT:-3001}/ready || exit 1
 
 # Runs migrations and starts Express; production demo seeding stays disabled.
 CMD ["node", "dist/index.js"]

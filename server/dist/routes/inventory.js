@@ -5,7 +5,7 @@ const express_1 = require("express");
 const zod_1 = require("zod");
 const crypto_1 = require("crypto");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
 const units_1 = require("../engine/units");
 exports.inventoryRouter = (0, express_1.Router)();
 // ── Zod schemas ───────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ async function fetchRow(table, id) {
 }
 // ── Stock items ───────────────────────────────────────────────────────────────
 // GET /api/inventory/items?search=
-exports.inventoryRouter.get('/items', async (req, res, next) => {
+exports.inventoryRouter.get('/items', (0, permissions_1.requireCapability)('inventory.read'), async (req, res, next) => {
     try {
         const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         const { rows } = search
@@ -165,7 +165,7 @@ exports.inventoryRouter.get('/items', async (req, res, next) => {
     }
 });
 // POST /api/inventory/items
-exports.inventoryRouter.post('/items', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.inventoryRouter.post('/items', (0, permissions_1.requireCapability)('inventory.write'), async (req, res, next) => {
     try {
         const data = ItemBodySchema.parse(req.body);
         const id = (0, crypto_1.randomUUID)();
@@ -196,7 +196,7 @@ exports.inventoryRouter.post('/items', (0, requireAuth_1.requireRole)('staff'), 
     }
 });
 // PATCH /api/inventory/items/:id
-exports.inventoryRouter.patch('/items/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.inventoryRouter.patch('/items/:id', (0, permissions_1.requireCapability)('inventory.write'), async (req, res, next) => {
     try {
         const data = ItemPatchSchema.parse(req.body);
         const { rows: existing } = await pool_1.pool.query('SELECT * FROM inventory_items WHERE id = $1', [req.params.id]);
@@ -261,7 +261,7 @@ exports.inventoryRouter.patch('/items/:id', (0, requireAuth_1.requireRole)('staf
     }
 });
 // DELETE /api/inventory/items/:id
-exports.inventoryRouter.delete('/items/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.inventoryRouter.delete('/items/:id', (0, permissions_1.requireCapability)('inventory.delete'), async (req, res, next) => {
     try {
         await pool_1.pool.query(`UPDATE inventory_items SET active = false, updated_at = NOW() WHERE id = $1`, [req.params.id]);
         const row = await fetchRow('inventory_items', req.params.id);
@@ -276,7 +276,7 @@ exports.inventoryRouter.delete('/items/:id', (0, requireAuth_1.requireRole)('sta
 });
 // ── Append-only transaction ledger ────────────────────────────────────────────
 // GET /api/inventory/transactions?itemId=&type=&limit=
-exports.inventoryRouter.get('/transactions', async (req, res, next) => {
+exports.inventoryRouter.get('/transactions', (0, permissions_1.requireCapability)('inventory.read'), async (req, res, next) => {
     try {
         const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '200'), 10) || 200, 1), 1000);
         const itemId = typeof req.query.itemId === 'string' ? req.query.itemId : null;
@@ -306,7 +306,7 @@ exports.inventoryRouter.get('/transactions', async (req, res, next) => {
     }
 });
 // POST /api/inventory/transactions — append only; applies the stock movement.
-exports.inventoryRouter.post('/transactions', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.inventoryRouter.post('/transactions', (0, permissions_1.requireCapability)('inventory.write'), async (req, res, next) => {
     try {
         const data = TransactionBodySchema.parse(req.body);
         const unit = units_1.UnitConversionEngine.normalizeUnit(data.unit);
@@ -351,7 +351,7 @@ exports.inventoryRouter.post('/transactions', (0, requireAuth_1.requireRole)('st
 });
 // ── Count-sheet sessions ──────────────────────────────────────────────────────
 // GET /api/inventory/counts?limit=
-exports.inventoryRouter.get('/counts', async (req, res, next) => {
+exports.inventoryRouter.get('/counts', (0, permissions_1.requireCapability)('inventory.read'), async (req, res, next) => {
     try {
         const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 200);
         const { rows } = await pool_1.pool.query(`SELECT * FROM inventory_counts ORDER BY count_date DESC, created_at DESC LIMIT $1`, [limit]);
@@ -363,7 +363,7 @@ exports.inventoryRouter.get('/counts', async (req, res, next) => {
 });
 // POST /api/inventory/counts — submit a count sheet; non-zero variances post
 // count_adjust ledger rows so on-hand matches the physical count.
-exports.inventoryRouter.post('/counts', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.inventoryRouter.post('/counts', (0, permissions_1.requireCapability)('inventory.count'), async (req, res, next) => {
     try {
         const data = CountBodySchema.parse(req.body);
         const id = (0, crypto_1.randomUUID)();
@@ -416,7 +416,7 @@ exports.inventoryRouter.post('/counts', (0, requireAuth_1.requireRole)('staff'),
     }
 });
 // PATCH /api/inventory/counts/:id — approve / resolve a count session
-exports.inventoryRouter.patch('/counts/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.inventoryRouter.patch('/counts/:id', (0, permissions_1.requireCapability)('inventory.count'), async (req, res, next) => {
     try {
         const data = CountPatchSchema.parse(req.body);
         const { rows: existing } = await pool_1.pool.query('SELECT id FROM inventory_counts WHERE id = $1', [req.params.id]);
@@ -438,7 +438,7 @@ exports.inventoryRouter.patch('/counts/:id', (0, requireAuth_1.requireRole)('sta
 });
 // ── Usage trends (computed from the transaction ledger) ───────────────────────
 // GET /api/inventory/trends?days=90
-exports.inventoryRouter.get('/trends', async (req, res, next) => {
+exports.inventoryRouter.get('/trends', (0, permissions_1.requireCapability)('inventory.read'), async (req, res, next) => {
     try {
         const days = Math.min(Math.max(parseInt(String(req.query.days ?? '90'), 10) || 90, 1), 365);
         // SQLite stores created_at as 'YYYY-MM-DD HH:MM:SS' TEXT (see db/pool.ts),

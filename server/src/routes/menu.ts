@@ -1,8 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { pool } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
+import { requireCapability } from '../middleware/permissions'
 
 export const menuRouter = Router()
 
@@ -66,7 +66,7 @@ function toItem(row: any) {
 // ════════════════════════════════════════════════════════════════════════════
 
 // GET /api/menu/weeks
-menuRouter.get('/weeks', async (_req: AuthRequest, res, next) => {
+menuRouter.get('/weeks', requireCapability('menu.read'), async (_req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM menu_weeks ORDER BY created_at DESC')
     res.json(rows.map(toWeek))
@@ -74,7 +74,7 @@ menuRouter.get('/weeks', async (_req: AuthRequest, res, next) => {
 })
 
 // GET /api/menu/weeks/:id
-menuRouter.get('/weeks/:id', async (req: AuthRequest, res, next) => {
+menuRouter.get('/weeks/:id', requireCapability('menu.read'), async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM menu_weeks WHERE id = $1', [req.params.id])
     if (!rows[0]) return res.status(404).json({ error: 'Menu week not found' })
@@ -83,7 +83,7 @@ menuRouter.get('/weeks/:id', async (req: AuthRequest, res, next) => {
 })
 
 // POST /api/menu/weeks
-menuRouter.post('/weeks', requireRole('staff'), async (req: AuthRequest, res, next) => {
+menuRouter.post('/weeks', requireCapability('menu.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = WeekBodySchema.parse(req.body)
     const { rows } = await pool.query(
@@ -101,7 +101,7 @@ menuRouter.post('/weeks', requireRole('staff'), async (req: AuthRequest, res, ne
 })
 
 // PUT /api/menu/weeks/:id
-menuRouter.put('/weeks/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+menuRouter.put('/weeks/:id', requireCapability('menu.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = WeekBodySchema.partial().parse(req.body)
     const { rows: existing } = await pool.query(
@@ -135,7 +135,7 @@ menuRouter.put('/weeks/:id', requireRole('staff'), async (req: AuthRequest, res,
 })
 
 // DELETE /api/menu/weeks/:id
-menuRouter.delete('/weeks/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
+menuRouter.delete('/weeks/:id', requireCapability('menu.delete'), async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query(
       'SELECT id FROM menu_weeks WHERE id = $1', [req.params.id]
@@ -153,7 +153,7 @@ menuRouter.delete('/weeks/:id', requireRole('admin'), async (req: AuthRequest, r
 
 // POST /api/menu/weeks/:id/activate
 // Atomically marks one week active and deactivates all others.
-menuRouter.post('/weeks/:id/activate', requireRole('staff'), async (req: AuthRequest, res, next) => {
+menuRouter.post('/weeks/:id/activate', requireCapability('menu.write'), async (req: AuthRequest, res, next) => {
   try {
     const { rows: existing } = await pool.query(
       'SELECT id FROM menu_weeks WHERE id = $1', [req.params.id]
@@ -179,7 +179,7 @@ menuRouter.post('/weeks/:id/activate', requireRole('staff'), async (req: AuthReq
 // ════════════════════════════════════════════════════════════════════════════
 
 // GET /api/menu/items
-menuRouter.get('/items', async (_req: AuthRequest, res, next) => {
+menuRouter.get('/items', requireCapability('menu.read'), async (_req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM menu_items ORDER BY name ASC')
     res.json(rows.map(toItem))
@@ -187,7 +187,7 @@ menuRouter.get('/items', async (_req: AuthRequest, res, next) => {
 })
 
 // POST /api/menu/items
-menuRouter.post('/items', requireRole('staff'), async (req: AuthRequest, res, next) => {
+menuRouter.post('/items', requireCapability('menu.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = ItemBodySchema.parse(req.body)
     const { rows } = await pool.query(
@@ -205,7 +205,7 @@ menuRouter.post('/items', requireRole('staff'), async (req: AuthRequest, res, ne
 })
 
 // PUT /api/menu/items/:id
-menuRouter.put('/items/:id', requireRole('staff'), async (req: AuthRequest, res, next) => {
+menuRouter.put('/items/:id', requireCapability('menu.write'), async (req: AuthRequest, res, next) => {
   try {
     const data = ItemBodySchema.partial().parse(req.body)
     const { rows: existing } = await pool.query(
@@ -232,7 +232,7 @@ menuRouter.put('/items/:id', requireRole('staff'), async (req: AuthRequest, res,
 })
 
 // DELETE /api/menu/items/:id
-menuRouter.delete('/items/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
+menuRouter.delete('/items/:id', requireCapability('menu.delete'), async (req: AuthRequest, res, next) => {
   try {
     const { rows } = await pool.query(
       'SELECT id FROM menu_items WHERE id = $1', [req.params.id]

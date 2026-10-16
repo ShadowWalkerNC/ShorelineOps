@@ -1083,6 +1083,14 @@ const migrations: { name: string; sql: string }[] = [
       ALTER TABLE recipes ADD COLUMN IF NOT EXISTS fluid_ml_per_serving INTEGER DEFAULT NULL;
     `,
   },
+  {
+    name: '031_clinical_liquid_consistency_and_fluid_history',
+    sql: `
+      ALTER TABLE residents ADD COLUMN IF NOT EXISTS liquid_consistency TEXT NOT NULL DEFAULT 'Thin';
+      ALTER TABLE resident_profile_history ADD COLUMN IF NOT EXISTS fluid_restriction_ml INTEGER DEFAULT NULL;
+      ALTER TABLE resident_profile_history ADD COLUMN IF NOT EXISTS liquid_consistency TEXT NOT NULL DEFAULT 'Thin';
+    `,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.

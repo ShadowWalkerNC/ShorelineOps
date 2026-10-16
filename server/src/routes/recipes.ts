@@ -9,7 +9,6 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { pool } from '../db/pool'
-import { requireRole } from '../middleware/requireAuth'
 import { requireCapability } from '../middleware/permissions'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { DietaryNutritionalEngine } from '../engine/nutrition'
@@ -63,7 +62,7 @@ const RecipeClinicalVerifySchema = z.object({
  * costProvenance is computed live from current vendor-catalog coverage so the
  * SKU-matched vs estimated flag always reflects reality, never stale data.
  */
-recipesRouter.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+recipesRouter.get('/', requireCapability('recipes.read'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(`
       SELECT r.*, 
@@ -114,7 +113,7 @@ recipesRouter.get('/', async (_req: Request, res: Response, next: NextFunction) 
 /**
  * GET /api/recipes/:id
  */
-recipesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+recipesRouter.get('/:id', requireCapability('recipes.read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rows } = await pool.query(`
       SELECT r.*, rn.* 
@@ -176,7 +175,7 @@ recipesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
  * POST /api/recipes
  * Create recipe, auto-detect allergens, and compute macro/micronutrients
  */
-recipesRouter.post('/', requireRole('staff'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+recipesRouter.post('/', requireCapability('recipes.write'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect()
   try {
     const data = RecipeBodySchema.parse(req.body)
@@ -268,7 +267,7 @@ recipesRouter.post('/', requireRole('staff'), async (req: AuthRequest, res: Resp
 /**
  * PUT /api/recipes/:id
  */
-recipesRouter.put('/:id', requireRole('staff'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+recipesRouter.put('/:id', requireCapability('recipes.write'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect()
   try {
     const data = RecipeBodySchema.partial().parse(req.body)
@@ -482,7 +481,7 @@ recipesRouter.post('/:id/verify-clinical', requireCapability('residents.clinical
 /**
  * DELETE /api/recipes/:id
  */
-recipesRouter.delete('/:id', requireRole('admin'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+recipesRouter.delete('/:id', requireCapability('recipes.delete'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { rows: existing } = await pool.query('SELECT id FROM recipes WHERE id = $1', [req.params.id])
     if (!existing[0]) return res.status(404).json({ error: 'Recipe not found' })
@@ -498,7 +497,7 @@ recipesRouter.delete('/:id', requireRole('admin'), async (req: AuthRequest, res:
  * times — same inputs always produce the same stored values.
  * Body: { recipeIds?: string[] } (omit to recalc all)
  */
-recipesRouter.post('/recalc-costs', requireRole('staff'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+recipesRouter.post('/recalc-costs', requireCapability('recipes.write'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { recipeIds } = (req.body ?? {}) as { recipeIds?: string[] }
     if (Array.isArray(recipeIds) && recipeIds.length > 0) {
@@ -523,7 +522,7 @@ recipesRouter.post('/recalc-costs', requireRole('staff'), async (req: AuthReques
  * Cost per serving is invariant to scale; the response carries the stored
  * cost_per_serving plus batch totals and the live cost-provenance flag.
  */
-recipesRouter.post('/:id/scale', async (req: Request, res: Response, next: NextFunction) => {
+recipesRouter.post('/:id/scale', requireCapability('recipes.read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { portions = 50, texture = 'Regular' } = req.body
     const { rows } = await pool.query('SELECT * FROM recipes WHERE id = $1', [req.params.id])
@@ -560,7 +559,7 @@ recipesRouter.post('/:id/scale', async (req: Request, res: Response, next: NextF
  * POST /api/recipes/analyze-nutrition
  * Instant preview calculation of any ingredient list
  */
-recipesRouter.post('/analyze-nutrition', (req: Request, res: Response) => {
+recipesRouter.post('/analyze-nutrition', requireCapability('recipes.read'), (req: Request, res: Response) => {
   try {
     const { ingredients = [], baseServings = 1 } = req.body
     const analysis = DietaryNutritionalEngine.calculateRecipeNutrition(ingredients, baseServings)

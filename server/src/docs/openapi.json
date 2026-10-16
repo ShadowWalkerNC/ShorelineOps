@@ -2662,13 +2662,16 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "GET /api/inventory/counts?limit=\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/inventory/counts?limit=\n\nAuthentication: JWT Bearer token; capabilities: inventory.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -2678,7 +2681,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.read"
+          ]
         }
       },
       "post": {
@@ -2687,7 +2694,7 @@
         "tags": [
           "inventory"
         ],
-        "description": "POST /api/inventory/counts — submit a count sheet; non-zero variances post\ncount_adjust ledger rows so on-hand matches the physical count.\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/inventory/counts — submit a count sheet; non-zero variances post\ncount_adjust ledger rows so on-hand matches the physical count.\n\nAuthentication: JWT Bearer token; capabilities: inventory.count (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -2717,7 +2724,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.count"
+          ]
         }
       }
     },
@@ -2738,7 +2748,7 @@
             }
           }
         ],
-        "description": "PATCH /api/inventory/counts/:id — approve / resolve a count session\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "PATCH /api/inventory/counts/:id — approve / resolve a count session\n\nAuthentication: JWT Bearer token; capabilities: inventory.count (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -2771,7 +2781,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.count"
+          ]
         }
       }
     },
@@ -2793,13 +2806,16 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "GET /api/inventory/items?search=\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/inventory/items?search=\n\nAuthentication: JWT Bearer token; capabilities: inventory.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -2809,7 +2825,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.read"
+          ]
         }
       },
       "post": {
@@ -2818,7 +2838,7 @@
         "tags": [
           "inventory"
         ],
-        "description": "POST /api/inventory/items\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/inventory/items\n\nAuthentication: JWT Bearer token; capabilities: inventory.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -2851,7 +2871,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.write"
+          ]
         }
       }
     },
@@ -2872,7 +2895,7 @@
             }
           }
         ],
-        "description": "PATCH /api/inventory/items/:id\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "PATCH /api/inventory/items/:id\n\nAuthentication: JWT Bearer token; capabilities: inventory.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -2905,7 +2928,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.write"
+          ]
         }
       },
       "delete": {
@@ -2924,7 +2950,7 @@
             }
           }
         ],
-        "description": "DELETE /api/inventory/items/:id\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "DELETE /api/inventory/items/:id\n\nAuthentication: JWT Bearer token; capabilities: inventory.delete (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -2947,7 +2973,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.delete"
+          ]
         }
       }
     },
@@ -2987,13 +3016,16 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "GET /api/inventory/transactions?itemId=&type=&limit=\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/inventory/transactions?itemId=&type=&limit=\n\nAuthentication: JWT Bearer token; capabilities: inventory.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -3003,7 +3035,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.read"
+          ]
         }
       },
       "post": {
@@ -3012,7 +3048,7 @@
         "tags": [
           "inventory"
         ],
-        "description": "POST /api/inventory/transactions — append only; applies the stock movement.\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/inventory/transactions — append only; applies the stock movement.\n\nAuthentication: JWT Bearer token; capabilities: inventory.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -3048,7 +3084,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.write"
+          ]
         }
       }
     },
@@ -3070,13 +3109,16 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "GET /api/inventory/trends?days=90\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/inventory/trends?days=90\n\nAuthentication: JWT Bearer token; capabilities: inventory.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -3086,7 +3128,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "inventory.read"
+          ]
         }
       }
     },
@@ -3905,13 +3951,16 @@
         "tags": [
           "menu"
         ],
-        "description": "GET /api/menu/items\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/menu/items\n\nAuthentication: JWT Bearer token; capabilities: menu.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -3921,7 +3970,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "menu.read"
+          ]
         }
       },
       "post": {
@@ -3930,7 +3983,7 @@
         "tags": [
           "menu"
         ],
-        "description": "POST /api/menu/items\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/menu/items\n\nAuthentication: JWT Bearer token; capabilities: menu.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -3960,7 +4013,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "menu.write"
+          ]
         }
       }
     },
@@ -3981,7 +4037,7 @@
             }
           }
         ],
-        "description": "PUT /api/menu/items/:id\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "PUT /api/menu/items/:id\n\nAuthentication: JWT Bearer token; capabilities: menu.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -4015,7 +4071,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "menu.write"
+          ]
         }
       },
       "delete": {
@@ -4034,7 +4093,7 @@
             }
           }
         ],
-        "description": "DELETE /api/menu/items/:id\n\nAuthentication: JWT Bearer token; minimum role: admin (admits: admin).",
+        "description": "DELETE /api/menu/items/:id\n\nAuthentication: JWT Bearer token; capabilities: menu.delete (admits: ).",
         "responses": {
           "204": {
             "description": "No content"
@@ -4057,7 +4116,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "admin"
+          "exactRoles": [],
+          "capabilities": [
+            "menu.delete"
+          ]
         }
       }
     },
@@ -4068,13 +4130,16 @@
         "tags": [
           "menu"
         ],
-        "description": "GET /api/menu/weeks\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/menu/weeks\n\nAuthentication: JWT Bearer token; capabilities: menu.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -4084,7 +4149,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "menu.read"
+          ]
         }
       },
       "post": {
@@ -4093,7 +4162,7 @@
         "tags": [
           "menu"
         ],
-        "description": "POST /api/menu/weeks\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/menu/weeks\n\nAuthentication: JWT Bearer token; capabilities: menu.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -4123,7 +4192,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "menu.write"
+          ]
         }
       }
     },
@@ -4144,13 +4216,16 @@
             }
           }
         ],
-        "description": "GET /api/menu/weeks/:id\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/menu/weeks/:id\n\nAuthentication: JWT Bearer token; capabilities: menu.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           },
           "404": {
             "description": "Not found"
@@ -4163,7 +4238,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "menu.read"
+          ]
         }
       },
       "put": {
@@ -4182,7 +4261,7 @@
             }
           }
         ],
-        "description": "PUT /api/menu/weeks/:id\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "PUT /api/menu/weeks/:id\n\nAuthentication: JWT Bearer token; capabilities: menu.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -4216,7 +4295,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "menu.write"
+          ]
         }
       },
       "delete": {
@@ -4235,7 +4317,7 @@
             }
           }
         ],
-        "description": "DELETE /api/menu/weeks/:id\n\nAuthentication: JWT Bearer token; minimum role: admin (admits: admin).",
+        "description": "DELETE /api/menu/weeks/:id\n\nAuthentication: JWT Bearer token; capabilities: menu.delete (admits: ).",
         "responses": {
           "204": {
             "description": "No content"
@@ -4258,7 +4340,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "admin"
+          "exactRoles": [],
+          "capabilities": [
+            "menu.delete"
+          ]
         }
       }
     },
@@ -4279,7 +4364,7 @@
             }
           }
         ],
-        "description": "POST /api/menu/weeks/:id/activate\nAtomically marks one week active and deactivates all others.\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/menu/weeks/:id/activate\nAtomically marks one week active and deactivates all others.\n\nAuthentication: JWT Bearer token; capabilities: menu.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -4302,7 +4387,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "menu.write"
+          ]
         }
       }
     },
@@ -4648,61 +4736,7 @@
         "tags": [
           "purchasing"
         ],
-        "description": "POST /api/purchasing/clinical-suggested-order\nDynamic clinical ordering: Combines live resident census, texture requirements (puree/thickener),\nand special diet ratios (NAS/NCS) to produce clinically optimized order recommendations.\n\nAuthentication: JWT Bearer token; any authenticated role.",
-        "responses": {
-          "200": {
-            "description": "Successful response"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-shoreline-auth": {
-          "required": true,
-          "mechanism": "jwt-bearer"
-        }
-      }
-    },
-    "/api/purchasing/import-guide": {
-      "post": {
-        "operationId": "post_purchasing_import_guide",
-        "summary": "POST /api/purchasing/import-guide",
-        "tags": [
-          "purchasing"
-        ],
-        "description": "POST /api/purchasing/import-guide\nBatch imports Dennis / vendor catalog items and syncs order guide par levels\n\nAuthentication: JWT Bearer token; any authenticated role.",
-        "responses": {
-          "200": {
-            "description": "Successful response"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-shoreline-auth": {
-          "required": true,
-          "mechanism": "jwt-bearer"
-        }
-      }
-    },
-    "/api/purchasing/invoices": {
-      "get": {
-        "operationId": "get_purchasing_invoices",
-        "summary": "GET /api/purchasing/invoices",
-        "tags": [
-          "purchasing"
-        ],
-        "description": "GET /api/purchasing/invoices\nLists recent distributor invoices and their match statuses\n\nAuthentication: JWT Bearer token; any authenticated role; license tier: enterprise+ (402 otherwise).",
+        "description": "POST /api/purchasing/clinical-suggested-order\nDynamic clinical ordering: Combines live resident census, texture requirements (puree/thickener),\nand special diet ratios (NAS/NCS) to produce clinically optimized order recommendations.\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -4710,8 +4744,8 @@
           "401": {
             "description": "Unauthorized"
           },
-          "402": {
-            "description": "License tier required"
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -4722,6 +4756,81 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
+        }
+      }
+    },
+    "/api/purchasing/import-guide": {
+      "post": {
+        "operationId": "post_purchasing_import_guide",
+        "summary": "POST /api/purchasing/import-guide",
+        "tags": [
+          "purchasing"
+        ],
+        "description": "POST /api/purchasing/import-guide\nBatch imports Dennis / vendor catalog items and syncs order guide par levels\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
+        }
+      }
+    },
+    "/api/purchasing/invoices": {
+      "get": {
+        "operationId": "get_purchasing_invoices",
+        "summary": "GET /api/purchasing/invoices",
+        "tags": [
+          "purchasing"
+        ],
+        "description": "GET /api/purchasing/invoices\nLists recent distributor invoices and their match statuses\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ); license tier: enterprise+ (402 otherwise).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "402": {
+            "description": "License tier required"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ],
           "tier": "enterprise"
         }
       }
@@ -4733,7 +4842,7 @@
         "tags": [
           "purchasing"
         ],
-        "description": "POST /api/purchasing/invoices/evaluate\nEvaluates 3-way match across PO contract rates, receiving dock counts, and distributor invoice.\nFlags line-by-line price variances, quantity shortages, and creates vendor credit memo proposals.\n\nAuthentication: JWT Bearer token; any authenticated role; license tier: enterprise+ (402 otherwise).",
+        "description": "POST /api/purchasing/invoices/evaluate\nEvaluates 3-way match across PO contract rates, receiving dock counts, and distributor invoice.\nFlags line-by-line price variances, quantity shortages, and creates vendor credit memo proposals.\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ); license tier: enterprise+ (402 otherwise).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -4743,6 +4852,9 @@
           },
           "402": {
             "description": "License tier required"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -4753,6 +4865,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ],
           "tier": "enterprise"
         }
       }
@@ -4775,13 +4891,16 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "VENDOR ITEMS (catalog)\n/** GET /api/purchasing/items?vendorId= */\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "VENDOR ITEMS (catalog)\n/** GET /api/purchasing/items?vendorId= */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -4791,7 +4910,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       },
       "post": {
@@ -4800,7 +4923,7 @@
         "tags": [
           "purchasing"
         ],
-        "description": "/** POST /api/purchasing/items */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** POST /api/purchasing/items */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "201": {
             "description": "Created"
@@ -4820,7 +4943,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -4841,7 +4967,7 @@
             }
           }
         ],
-        "description": "/** PUT /api/purchasing/items/:id */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** PUT /api/purchasing/items/:id */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -4861,7 +4987,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       },
       "delete": {
@@ -4880,7 +5009,7 @@
             }
           }
         ],
-        "description": "/** DELETE /api/purchasing/items/:id (soft delete) */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** DELETE /api/purchasing/items/:id (soft delete) */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -4900,7 +5029,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -4911,13 +5043,16 @@
         "tags": [
           "purchasing"
         ],
-        "description": "POST /api/purchasing/mrp-order\nFull Multi-Level MRP & Bill of Materials (BOM) Explosion:\nExplodes active cycle menu recipes across resident census headcounts,\nprojects inventory depletion, and calculates exact distributor case-pack purchase orders.\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "POST /api/purchasing/mrp-order\nFull Multi-Level MRP & Bill of Materials (BOM) Explosion:\nExplodes active cycle menu recipes across resident census headcounts,\nprojects inventory depletion, and calculates exact distributor case-pack purchase orders.\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -4927,7 +5062,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       }
     },
@@ -4949,13 +5088,16 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "ORDER GUIDE\n/** GET /api/purchasing/order-guide?vendorId= */\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "ORDER GUIDE\n/** GET /api/purchasing/order-guide?vendorId= */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -4965,7 +5107,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       },
       "post": {
@@ -4974,7 +5120,7 @@
         "tags": [
           "purchasing"
         ],
-        "description": "/** POST /api/purchasing/order-guide */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** POST /api/purchasing/order-guide */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "201": {
             "description": "Created"
@@ -4994,7 +5140,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5015,42 +5164,7 @@
             }
           }
         ],
-        "description": "/** PUT /api/purchasing/order-guide/:id */\n\nAuthentication: JWT Bearer token; any authenticated role.",
-        "responses": {
-          "200": {
-            "description": "Successful response"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-shoreline-auth": {
-          "required": true,
-          "mechanism": "jwt-bearer"
-        }
-      },
-      "delete": {
-        "operationId": "delete_purchasing_order_guide_id",
-        "summary": "/** DELETE /api/purchasing/order-guide/:id */",
-        "tags": [
-          "purchasing"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "description": "/** DELETE /api/purchasing/order-guide/:id */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** PUT /api/purchasing/order-guide/:id */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5070,7 +5184,52 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
+        }
+      },
+      "delete": {
+        "operationId": "delete_purchasing_order_guide_id",
+        "summary": "/** DELETE /api/purchasing/order-guide/:id */",
+        "tags": [
+          "purchasing"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "/** DELETE /api/purchasing/order-guide/:id */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5081,13 +5240,16 @@
         "tags": [
           "purchasing"
         ],
-        "description": "/** GET /api/purchasing/orders */\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "/** GET /api/purchasing/orders */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -5097,7 +5259,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       },
       "post": {
@@ -5106,7 +5272,7 @@
         "tags": [
           "purchasing"
         ],
-        "description": "/** POST /api/purchasing/orders — always created as a draft; approval moves it forward */\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "/** POST /api/purchasing/orders — always created as a draft; approval moves it forward */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "201": {
             "description": "Created"
@@ -5126,7 +5292,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5147,13 +5316,16 @@
             }
           }
         ],
-        "description": "/** GET /api/purchasing/orders/:id */\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "/** GET /api/purchasing/orders/:id */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -5163,7 +5335,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       },
       "put": {
@@ -5182,7 +5358,7 @@
             }
           }
         ],
-        "description": "/** PUT /api/purchasing/orders/:id */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** PUT /api/purchasing/orders/:id */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5202,7 +5378,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       },
       "delete": {
@@ -5221,7 +5400,7 @@
             }
           }
         ],
-        "description": "/** DELETE /api/purchasing/orders/:id */\n\nAuthentication: JWT Bearer token; minimum role: admin (admits: admin).",
+        "description": "/** DELETE /api/purchasing/orders/:id */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.delete (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5241,7 +5420,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "admin"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.delete"
+          ]
         }
       }
     },
@@ -5262,7 +5444,7 @@
             }
           }
         ],
-        "description": "POST /api/purchasing/orders/:id/approve\nManager-only: draft → approved. Any other current status → 409.\nAudit-logged with the approving manager's identity, in the same\ntransaction as the status change (fail closed: no audit row, no move).\nNote: the SQLite write path returns no rows, so the transition is verified\nwith a re-read rather than RETURNING (B10 fail-closed pattern).\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "POST /api/purchasing/orders/:id/approve\nManager-only: draft → approved. Any other current status → 409.\nAudit-logged with the approving manager's identity, in the same\ntransaction as the status change (fail closed: no audit row, no move).\nNote: the SQLite write path returns no rows, so the transition is verified\nwith a re-read rather than RETURNING (B10 fail-closed pattern).\n\nAuthentication: JWT Bearer token; capabilities: purchasing.approve (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5285,7 +5467,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.approve"
+          ]
         }
       }
     },
@@ -5306,13 +5491,16 @@
             }
           }
         ],
-        "description": "GET /api/purchasing/orders/:id/export-csv\nReturns a Dennis-ready CSV for the purchase order lines.\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/purchasing/orders/:id/export-csv\nReturns a Dennis-ready CSV for the purchase order lines.\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -5322,7 +5510,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       }
     },
@@ -5343,7 +5535,7 @@
             }
           }
         ],
-        "description": "/** POST /api/purchasing/orders/:id/lines */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** POST /api/purchasing/orders/:id/lines */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "201": {
             "description": "Created"
@@ -5363,7 +5555,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5392,7 +5587,7 @@
             }
           }
         ],
-        "description": "/** PUT /api/purchasing/orders/:id/lines/:lineId */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** PUT /api/purchasing/orders/:id/lines/:lineId */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5412,7 +5607,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       },
       "delete": {
@@ -5439,7 +5637,7 @@
             }
           }
         ],
-        "description": "/** DELETE /api/purchasing/orders/:id/lines/:lineId */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** DELETE /api/purchasing/orders/:id/lines/:lineId */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5459,7 +5657,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5488,7 +5689,7 @@
             }
           }
         ],
-        "description": "POST /api/purchasing/orders/:id/lines/:lineId/receive\nRecords a receipt for a PO line: sets the cumulative qty_received and,\natomically in one DB transaction, increments the matched order guide's\non_hand (unit-converted) and appends an inventory_transactions receipt row\n(user-stamped).\nMatching: line → vendor_item → order_guides via vendor_item_id (vendor SKU\nis carried through for the audit trail). An unmatched line returns\n409 { code: 'GUIDE_UNMATCHED' } so the UI shows an explicit \"assign\" state —\nmatching is never guessed.\nBody: { qtyReceived: number (cumulative total), qtyUnit?: string, note?: string }\n- Partial receives: post the new cumulative total; only the delta moves stock.\n- Corrections: posting a lower total writes a signed 'count_adjust' ledger\nrow — the ledger is append-only, never edited.\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/purchasing/orders/:id/lines/:lineId/receive\nRecords a receipt for a PO line: sets the cumulative qty_received and,\natomically in one DB transaction, increments the matched order guide's\non_hand (unit-converted) and appends an inventory_transactions receipt row\n(user-stamped).\nMatching: line → vendor_item → order_guides via vendor_item_id (vendor SKU\nis carried through for the audit trail). An unmatched line returns\n409 { code: 'GUIDE_UNMATCHED' } so the UI shows an explicit \"assign\" state —\nmatching is never guessed.\nBody: { qtyReceived: number (cumulative total), qtyUnit?: string, note?: string }\n- Partial receives: post the new cumulative total; only the delta moves stock.\n- Corrections: posting a lower total writes a signed 'count_adjust' ledger\nrow — the ledger is append-only, never edited.\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5511,7 +5712,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5532,7 +5736,7 @@
             }
           }
         ],
-        "description": "POST /api/purchasing/orders/:id/submit\nMarks an approved PO as submitted to the vendor. approved → submitted only;\nanything else → 409. Audit-logged in the same transaction.\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/purchasing/orders/:id/submit\nMarks an approved PO as submitted to the vendor. approved → submitted only;\nanything else → 409. Audit-logged in the same transaction.\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5555,7 +5759,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5566,7 +5773,7 @@
         "tags": [
           "purchasing"
         ],
-        "description": "PURCHASE ORDERS\nPOST /api/purchasing/rollup-usage (C05)\nManually trigger the nightly avg_usage rollup (same function the nightly\ndaemon runs): trailing-28-day average daily consumption per order-guide\nline, from inventory_transactions issues + waste. See the formula doc in\nserver/src/jobs/nightlyForecast.ts.\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "PURCHASE ORDERS\nPOST /api/purchasing/rollup-usage (C05)\nManually trigger the nightly avg_usage rollup (same function the nightly\ndaemon runs): trailing-28-day average daily consumption per order-guide\nline, from inventory_transactions issues + waste. See the formula doc in\nserver/src/jobs/nightlyForecast.ts.\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5586,7 +5793,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5597,13 +5807,16 @@
         "tags": [
           "purchasing"
         ],
-        "description": "POST /api/purchasing/suggested-order\nGenerates a suggested purchase order from the order guide.\nItems where on_hand < par_level are included; qty = ceil(par_level - on_hand).\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "POST /api/purchasing/suggested-order\nGenerates a suggested purchase order from the order guide.\nItems where on_hand < par_level are included; qty = ceil(par_level - on_hand).\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -5613,7 +5826,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       }
     },
@@ -5624,13 +5841,16 @@
         "tags": [
           "purchasing"
         ],
-        "description": "VENDORS\n/** GET /api/purchasing/vendors */\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "VENDORS\n/** GET /api/purchasing/vendors */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -5640,7 +5860,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.read"
+          ]
         }
       },
       "post": {
@@ -5649,7 +5873,7 @@
         "tags": [
           "purchasing"
         ],
-        "description": "/** POST /api/purchasing/vendors */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** POST /api/purchasing/vendors */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "201": {
             "description": "Created"
@@ -5669,7 +5893,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5690,7 +5917,7 @@
             }
           }
         ],
-        "description": "/** PUT /api/purchasing/vendors/:id */\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "description": "/** PUT /api/purchasing/vendors/:id */\n\nAuthentication: JWT Bearer token; capabilities: purchasing.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5710,7 +5937,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "manager"
+          "exactRoles": [],
+          "capabilities": [
+            "purchasing.write"
+          ]
         }
       }
     },
@@ -5721,13 +5951,16 @@
         "tags": [
           "recipes"
         ],
-        "description": "GET /api/recipes\nList all master recipes with allergen tags and nutritional summary.\ncostProvenance is computed live from current vendor-catalog coverage so the\nSKU-matched vs estimated flag always reflects reality, never stale data.\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/recipes\nList all master recipes with allergen tags and nutritional summary.\ncostProvenance is computed live from current vendor-catalog coverage so the\nSKU-matched vs estimated flag always reflects reality, never stale data.\n\nAuthentication: JWT Bearer token; capabilities: recipes.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -5737,7 +5970,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.read"
+          ]
         }
       },
       "post": {
@@ -5746,7 +5983,7 @@
         "tags": [
           "recipes"
         ],
-        "description": "POST /api/recipes\nCreate recipe, auto-detect allergens, and compute macro/micronutrients\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/recipes\nCreate recipe, auto-detect allergens, and compute macro/micronutrients\n\nAuthentication: JWT Bearer token; capabilities: recipes.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -5776,7 +6013,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.write"
+          ]
         }
       }
     },
@@ -5787,7 +6027,7 @@
         "tags": [
           "recipes"
         ],
-        "description": "POST /api/recipes/analyze-nutrition\nInstant preview calculation of any ingredient list\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "POST /api/recipes/analyze-nutrition\nInstant preview calculation of any ingredient list\n\nAuthentication: JWT Bearer token; capabilities: recipes.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5797,6 +6037,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           }
         },
         "security": [
@@ -5806,7 +6049,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.read"
+          ]
         }
       }
     },
@@ -5817,7 +6064,7 @@
         "tags": [
           "recipes"
         ],
-        "description": "POST /api/recipes/recalc-costs\nIdempotent backfill: recompute cost_per_serving for recipes from the current\nvendor catalog and overwrite stored values. Safe to re-run any number of\ntimes — same inputs always produce the same stored values.\nBody: { recipeIds?: string[] } (omit to recalc all)\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/recipes/recalc-costs\nIdempotent backfill: recompute cost_per_serving for recipes from the current\nvendor catalog and overwrite stored values. Safe to re-run any number of\ntimes — same inputs always produce the same stored values.\nBody: { recipeIds?: string[] } (omit to recalc all)\n\nAuthentication: JWT Bearer token; capabilities: recipes.write (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -5837,7 +6084,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.write"
+          ]
         }
       }
     },
@@ -5858,13 +6108,16 @@
             }
           }
         ],
-        "description": "GET /api/recipes/:id\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "GET /api/recipes/:id\n\nAuthentication: JWT Bearer token; capabilities: recipes.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           },
           "404": {
             "description": "Not found"
@@ -5877,7 +6130,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.read"
+          ]
         }
       },
       "put": {
@@ -5896,7 +6153,7 @@
             }
           }
         ],
-        "description": "PUT /api/recipes/:id\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "PUT /api/recipes/:id\n\nAuthentication: JWT Bearer token; capabilities: recipes.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -5930,7 +6187,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.write"
+          ]
         }
       },
       "delete": {
@@ -5949,7 +6209,7 @@
             }
           }
         ],
-        "description": "DELETE /api/recipes/:id\n\nAuthentication: JWT Bearer token; minimum role: admin (admits: admin).",
+        "description": "DELETE /api/recipes/:id\n\nAuthentication: JWT Bearer token; capabilities: recipes.delete (admits: ).",
         "responses": {
           "204": {
             "description": "No content"
@@ -5972,7 +6232,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "admin"
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.delete"
+          ]
         }
       }
     },
@@ -5993,13 +6256,16 @@
             }
           }
         ],
-        "description": "POST /api/recipes/:id/scale\nScales recipe to specified batch portion count for kitchen line cooks.\nCost per serving is invariant to scale; the response carries the stored\ncost_per_serving plus batch totals and the live cost-provenance flag.\n\nAuthentication: JWT Bearer token; any authenticated role.",
+        "description": "POST /api/recipes/:id/scale\nScales recipe to specified batch portion count for kitchen line cooks.\nCost per serving is invariant to scale; the response carries the stored\ncost_per_serving plus batch totals and the live cost-provenance flag.\n\nAuthentication: JWT Bearer token; capabilities: recipes.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
           },
           "404": {
             "description": "Not found"
@@ -6012,7 +6278,11 @@
         ],
         "x-shoreline-auth": {
           "required": true,
-          "mechanism": "jwt-bearer"
+          "mechanism": "jwt-bearer",
+          "exactRoles": [],
+          "capabilities": [
+            "recipes.read"
+          ]
         }
       }
     },
@@ -7845,7 +8115,7 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "GET /api/trayruns?serviceDate=&mealSlot=\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "GET /api/trayruns?serviceDate=&mealSlot=\n\nAuthentication: JWT Bearer token; capabilities: trayruns.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -7868,7 +8138,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "trayruns.read"
+          ]
         }
       },
       "post": {
@@ -7877,7 +8150,7 @@
         "tags": [
           "trayruns"
         ],
-        "description": "POST /api/trayruns — create a run explicitly (dispatch UI)\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/trayruns — create a run explicitly (dispatch UI)\n\nAuthentication: JWT Bearer token; capabilities: trayruns.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -7913,7 +8186,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "trayruns.write"
+          ]
         }
       }
     },
@@ -7924,7 +8200,7 @@
         "tags": [
           "trayruns"
         ],
-        "description": "POST /api/trayruns/ensure — find-or-create the run for a meal (idempotent;\nthe QR assembly scanner uses this so it never needs to know run ids).\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/trayruns/ensure — find-or-create the run for a meal (idempotent;\nthe QR assembly scanner uses this so it never needs to know run ids).\n\nAuthentication: JWT Bearer token; capabilities: trayruns.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -7954,7 +8230,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "trayruns.write"
+          ]
         }
       }
     },
@@ -7976,7 +8255,7 @@
             "description": "Query parameter read by the handler."
           }
         ],
-        "description": "GET /api/trayruns/missed?slaMinutes=30&serviceDate=YYYY-MM-DD\nNOTE: defined before '/:id' so 'missed' is not captured as an id.\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "GET /api/trayruns/missed?slaMinutes=30&serviceDate=YYYY-MM-DD\nNOTE: defined before '/:id' so 'missed' is not captured as an id.\n\nAuthentication: JWT Bearer token; capabilities: trayruns.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -7996,7 +8275,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "trayruns.read"
+          ]
         }
       }
     },
@@ -8017,7 +8299,7 @@
             }
           }
         ],
-        "description": "GET /api/trayruns/:id\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "GET /api/trayruns/:id\n\nAuthentication: JWT Bearer token; capabilities: trayruns.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -8040,7 +8322,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "trayruns.read"
+          ]
         }
       }
     },
@@ -8061,7 +8346,7 @@
             }
           }
         ],
-        "description": "GET /api/trayruns/:id/checklist — residents on the run with latest event per tray line\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "GET /api/trayruns/:id/checklist — residents on the run with latest event per tray line\n\nAuthentication: JWT Bearer token; capabilities: trayruns.read (admits: ).",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -8084,7 +8369,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "trayruns.read"
+          ]
         }
       }
     },
@@ -8105,7 +8393,7 @@
             }
           }
         ],
-        "description": "POST /api/trayruns/:id/events\n\nAuthentication: JWT Bearer token; minimum role: staff (admits: staff, server, activities, dietary, dietitian, frontdesk, manager, admin).",
+        "description": "POST /api/trayruns/:id/events\n\nAuthentication: JWT Bearer token; capabilities: trayruns.write (admits: ).",
         "requestBody": {
           "required": true,
           "content": {
@@ -8147,7 +8435,10 @@
         "x-shoreline-auth": {
           "required": true,
           "mechanism": "jwt-bearer",
-          "minRole": "staff"
+          "exactRoles": [],
+          "capabilities": [
+            "trayruns.write"
+          ]
         }
       }
     }
@@ -8810,6 +9101,10 @@
           "texture": {
             "type": "string",
             "default": "Regular"
+          },
+          "liquidConsistency": {
+            "type": "string",
+            "default": "Thin"
           },
           "portionSize": {
             "type": "string",

@@ -122,7 +122,7 @@ export default function ResidentQuickDrawer({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Liquid Consistency:</span>
                 <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  {resident.fluidConsistency || (resident as any).liquidConsistency || 'Thin'}
+                  {resident.liquidConsistency || resident.liquid_consistency || resident.fluidConsistency || 'Thin'}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">

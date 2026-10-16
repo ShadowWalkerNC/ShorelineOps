@@ -4,7 +4,7 @@ exports.menuRouter = void 0;
 const express_1 = require("express");
 const zod_1 = require("zod");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
 exports.menuRouter = (0, express_1.Router)();
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 const MealEntrySchema = zod_1.z.object({
@@ -52,7 +52,7 @@ function toItem(row) {
 // WEEKS
 // ════════════════════════════════════════════════════════════════════════════
 // GET /api/menu/weeks
-exports.menuRouter.get('/weeks', async (_req, res, next) => {
+exports.menuRouter.get('/weeks', (0, permissions_1.requireCapability)('menu.read'), async (_req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT * FROM menu_weeks ORDER BY created_at DESC');
         res.json(rows.map(toWeek));
@@ -62,7 +62,7 @@ exports.menuRouter.get('/weeks', async (_req, res, next) => {
     }
 });
 // GET /api/menu/weeks/:id
-exports.menuRouter.get('/weeks/:id', async (req, res, next) => {
+exports.menuRouter.get('/weeks/:id', (0, permissions_1.requireCapability)('menu.read'), async (req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT * FROM menu_weeks WHERE id = $1', [req.params.id]);
         if (!rows[0])
@@ -74,7 +74,7 @@ exports.menuRouter.get('/weeks/:id', async (req, res, next) => {
     }
 });
 // POST /api/menu/weeks
-exports.menuRouter.post('/weeks', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.menuRouter.post('/weeks', (0, permissions_1.requireCapability)('menu.write'), async (req, res, next) => {
     try {
         const data = WeekBodySchema.parse(req.body);
         const { rows } = await pool_1.pool.query(`INSERT INTO menu_weeks (name, effective_from, days, active)
@@ -88,7 +88,7 @@ exports.menuRouter.post('/weeks', (0, requireAuth_1.requireRole)('staff'), async
     }
 });
 // PUT /api/menu/weeks/:id
-exports.menuRouter.put('/weeks/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.menuRouter.put('/weeks/:id', (0, permissions_1.requireCapability)('menu.write'), async (req, res, next) => {
     try {
         const data = WeekBodySchema.partial().parse(req.body);
         const { rows: existing } = await pool_1.pool.query('SELECT id FROM menu_weeks WHERE id = $1', [req.params.id]);
@@ -116,7 +116,7 @@ exports.menuRouter.put('/weeks/:id', (0, requireAuth_1.requireRole)('staff'), as
     }
 });
 // DELETE /api/menu/weeks/:id
-exports.menuRouter.delete('/weeks/:id', (0, requireAuth_1.requireRole)('admin'), async (req, res, next) => {
+exports.menuRouter.delete('/weeks/:id', (0, permissions_1.requireCapability)('menu.delete'), async (req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT id FROM menu_weeks WHERE id = $1', [req.params.id]);
         if (!rows[0])
@@ -132,7 +132,7 @@ exports.menuRouter.delete('/weeks/:id', (0, requireAuth_1.requireRole)('admin'),
 });
 // POST /api/menu/weeks/:id/activate
 // Atomically marks one week active and deactivates all others.
-exports.menuRouter.post('/weeks/:id/activate', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.menuRouter.post('/weeks/:id/activate', (0, permissions_1.requireCapability)('menu.write'), async (req, res, next) => {
     try {
         const { rows: existing } = await pool_1.pool.query('SELECT id FROM menu_weeks WHERE id = $1', [req.params.id]);
         if (!existing[0])
@@ -151,7 +151,7 @@ exports.menuRouter.post('/weeks/:id/activate', (0, requireAuth_1.requireRole)('s
 // ITEMS
 // ════════════════════════════════════════════════════════════════════════════
 // GET /api/menu/items
-exports.menuRouter.get('/items', async (_req, res, next) => {
+exports.menuRouter.get('/items', (0, permissions_1.requireCapability)('menu.read'), async (_req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT * FROM menu_items ORDER BY name ASC');
         res.json(rows.map(toItem));
@@ -161,7 +161,7 @@ exports.menuRouter.get('/items', async (_req, res, next) => {
     }
 });
 // POST /api/menu/items
-exports.menuRouter.post('/items', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.menuRouter.post('/items', (0, permissions_1.requireCapability)('menu.write'), async (req, res, next) => {
     try {
         const data = ItemBodySchema.parse(req.body);
         const { rows } = await pool_1.pool.query(`INSERT INTO menu_items (name, notes, texture_modified)
@@ -175,7 +175,7 @@ exports.menuRouter.post('/items', (0, requireAuth_1.requireRole)('staff'), async
     }
 });
 // PUT /api/menu/items/:id
-exports.menuRouter.put('/items/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.menuRouter.put('/items/:id', (0, permissions_1.requireCapability)('menu.write'), async (req, res, next) => {
     try {
         const data = ItemBodySchema.partial().parse(req.body);
         const { rows: existing } = await pool_1.pool.query('SELECT id FROM menu_items WHERE id = $1', [req.params.id]);
@@ -196,7 +196,7 @@ exports.menuRouter.put('/items/:id', (0, requireAuth_1.requireRole)('staff'), as
     }
 });
 // DELETE /api/menu/items/:id
-exports.menuRouter.delete('/items/:id', (0, requireAuth_1.requireRole)('admin'), async (req, res, next) => {
+exports.menuRouter.delete('/items/:id', (0, permissions_1.requireCapability)('menu.delete'), async (req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query('SELECT id FROM menu_items WHERE id = $1', [req.params.id]);
         if (!rows[0])

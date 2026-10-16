@@ -42,7 +42,7 @@ exports.purchasingRouter = void 0;
 const express_1 = require("express");
 const crypto_1 = require("crypto");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
 const requireTier_1 = require("../middleware/requireTier");
 const mrp_1 = require("../engine/mrp");
 const production_1 = require("../engine/production");
@@ -58,7 +58,7 @@ function err(res, status, msg) {
 // VENDORS
 // ═══════════════════════════════════════════════════════════════════════════
 /** GET /api/purchasing/vendors */
-exports.purchasingRouter.get('/vendors', async (_req, res, next) => {
+exports.purchasingRouter.get('/vendors', (0, permissions_1.requireCapability)('purchasing.read'), async (_req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query(`SELECT * FROM vendors ORDER BY name ASC`);
         res.json(rows);
@@ -68,7 +68,7 @@ exports.purchasingRouter.get('/vendors', async (_req, res, next) => {
     }
 });
 /** POST /api/purchasing/vendors */
-exports.purchasingRouter.post('/vendors', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.post('/vendors', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { name, code, phone = '', email = '', website = '', notes = '' } = req.body;
     if (!name || !code)
         return err(res, 400, 'name and code are required');
@@ -83,7 +83,7 @@ exports.purchasingRouter.post('/vendors', (0, requireAuth_1.requireRole)('manage
     }
 });
 /** PUT /api/purchasing/vendors/:id */
-exports.purchasingRouter.put('/vendors/:id', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.put('/vendors/:id', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id } = req.params;
     const { name, phone, email, website, notes, active } = req.body;
     try {
@@ -108,7 +108,7 @@ exports.purchasingRouter.put('/vendors/:id', (0, requireAuth_1.requireRole)('man
 // VENDOR ITEMS (catalog)
 // ═══════════════════════════════════════════════════════════════════════════
 /** GET /api/purchasing/items?vendorId= */
-exports.purchasingRouter.get('/items', async (req, res, next) => {
+exports.purchasingRouter.get('/items', (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     const { vendorId } = req.query;
     try {
         const { rows } = await pool_1.pool.query(`SELECT vi.*, v.name AS vendor_name, v.code AS vendor_code
@@ -124,7 +124,7 @@ exports.purchasingRouter.get('/items', async (req, res, next) => {
     }
 });
 /** POST /api/purchasing/items */
-exports.purchasingRouter.post('/items', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.post('/items', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { vendorId, vendorSku, name, brand = '', packSize = '', uom = 'case', category = '', unitCost = 0 } = req.body;
     if (!vendorId || !vendorSku || !name)
         return err(res, 400, 'vendorId, vendorSku, and name are required');
@@ -139,7 +139,7 @@ exports.purchasingRouter.post('/items', (0, requireAuth_1.requireRole)('manager'
     }
 });
 /** PUT /api/purchasing/items/:id */
-exports.purchasingRouter.put('/items/:id', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.put('/items/:id', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id } = req.params;
     const { name, brand, packSize, uom, category, unitCost, active } = req.body;
     try {
@@ -162,7 +162,7 @@ exports.purchasingRouter.put('/items/:id', (0, requireAuth_1.requireRole)('manag
     }
 });
 /** DELETE /api/purchasing/items/:id (soft delete) */
-exports.purchasingRouter.delete('/items/:id', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.delete('/items/:id', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id } = req.params;
     try {
         await pool_1.pool.query(`UPDATE vendor_items SET active = false, updated_at = NOW() WHERE id = $1`, [id]);
@@ -176,7 +176,7 @@ exports.purchasingRouter.delete('/items/:id', (0, requireAuth_1.requireRole)('ma
 // ORDER GUIDE
 // ═══════════════════════════════════════════════════════════════════════════
 /** GET /api/purchasing/order-guide?vendorId= */
-exports.purchasingRouter.get('/order-guide', async (req, res, next) => {
+exports.purchasingRouter.get('/order-guide', (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     const { vendorId } = req.query;
     try {
         const { rows } = await pool_1.pool.query(`SELECT og.*,
@@ -194,7 +194,7 @@ exports.purchasingRouter.get('/order-guide', async (req, res, next) => {
     }
 });
 /** POST /api/purchasing/order-guide */
-exports.purchasingRouter.post('/order-guide', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.post('/order-guide', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { vendorId, vendorItemId, parLevel = 0, onHand = 0, avgUsage, sortGroup = '' } = req.body;
     if (!vendorId || !vendorItemId)
         return err(res, 400, 'vendorId and vendorItemId required');
@@ -215,7 +215,7 @@ exports.purchasingRouter.post('/order-guide', (0, requireAuth_1.requireRole)('ma
     }
 });
 /** PUT /api/purchasing/order-guide/:id */
-exports.purchasingRouter.put('/order-guide/:id', async (req, res, next) => {
+exports.purchasingRouter.put('/order-guide/:id', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id } = req.params;
     const { parLevel, onHand, avgUsage, sortGroup } = req.body;
     try {
@@ -235,7 +235,7 @@ exports.purchasingRouter.put('/order-guide/:id', async (req, res, next) => {
     }
 });
 /** DELETE /api/purchasing/order-guide/:id */
-exports.purchasingRouter.delete('/order-guide/:id', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.delete('/order-guide/:id', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id } = req.params;
     try {
         await pool_1.pool.query(`DELETE FROM order_guides WHERE id = $1`, [id]);
@@ -249,7 +249,7 @@ exports.purchasingRouter.delete('/order-guide/:id', (0, requireAuth_1.requireRol
  * POST /api/purchasing/import-guide
  * Batch imports Dennis / vendor catalog items and syncs order guide par levels
  */
-exports.purchasingRouter.post('/import-guide', async (req, res, next) => {
+exports.purchasingRouter.post('/import-guide', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { vendorId, items = [] } = req.body;
     if (!vendorId || !Array.isArray(items))
         return err(res, 400, 'vendorId and items array required');
@@ -319,7 +319,7 @@ const demandEngine = new dietaryDemand_1.DietaryDemandEngine();
  * Generates a suggested purchase order from the order guide.
  * Items where on_hand < par_level are included; qty = ceil(par_level - on_hand).
  */
-exports.purchasingRouter.post('/suggested-order', async (req, res, next) => {
+exports.purchasingRouter.post('/suggested-order', (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     const { vendorId } = req.body;
     if (!vendorId)
         return err(res, 400, 'vendorId required');
@@ -357,7 +357,7 @@ exports.purchasingRouter.post('/suggested-order', async (req, res, next) => {
  * Dynamic clinical ordering: Combines live resident census, texture requirements (puree/thickener),
  * and special diet ratios (NAS/NCS) to produce clinically optimized order recommendations.
  */
-exports.purchasingRouter.post('/clinical-suggested-order', async (req, res, next) => {
+exports.purchasingRouter.post('/clinical-suggested-order', (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     const { vendorId } = req.body;
     if (!vendorId)
         return err(res, 400, 'vendorId required');
@@ -402,7 +402,7 @@ exports.purchasingRouter.post('/clinical-suggested-order', async (req, res, next
  * Explodes active cycle menu recipes across resident census headcounts,
  * projects inventory depletion, and calculates exact distributor case-pack purchase orders.
  */
-exports.purchasingRouter.post('/mrp-order', async (req, res, next) => {
+exports.purchasingRouter.post('/mrp-order', (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     try {
         const { vendorId } = req.body;
         // 1. Real forecast: active menu week × active census × meal slots, with
@@ -461,7 +461,7 @@ exports.purchasingRouter.post('/mrp-order', async (req, res, next) => {
  * line, from inventory_transactions issues + waste. See the formula doc in
  * server/src/jobs/nightlyForecast.ts.
  */
-exports.purchasingRouter.post('/rollup-usage', (0, requireAuth_1.requireRole)('staff'), async (_req, res, next) => {
+exports.purchasingRouter.post('/rollup-usage', (0, permissions_1.requireCapability)('purchasing.write'), async (_req, res, next) => {
     try {
         const result = await (0, nightlyForecast_1.rollupAvgUsage)();
         res.json(result);
@@ -471,7 +471,7 @@ exports.purchasingRouter.post('/rollup-usage', (0, requireAuth_1.requireRole)('s
     }
 });
 /** GET /api/purchasing/orders */
-exports.purchasingRouter.get('/orders', async (_req, res, next) => {
+exports.purchasingRouter.get('/orders', (0, permissions_1.requireCapability)('purchasing.read'), async (_req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query(`SELECT po.*, v.name AS vendor_name, v.code AS vendor_code,
               u.name AS created_by_name
@@ -487,7 +487,7 @@ exports.purchasingRouter.get('/orders', async (_req, res, next) => {
     }
 });
 /** POST /api/purchasing/orders — always created as a draft; approval moves it forward */
-exports.purchasingRouter.post('/orders', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.purchasingRouter.post('/orders', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const ar = req;
     const { vendorId, orderDate, expectedDate, notes = '', lines = [] } = req.body;
     if (!vendorId)
@@ -516,7 +516,7 @@ exports.purchasingRouter.post('/orders', (0, requireAuth_1.requireRole)('staff')
     }
 });
 /** GET /api/purchasing/orders/:id */
-exports.purchasingRouter.get('/orders/:id', async (req, res, next) => {
+exports.purchasingRouter.get('/orders/:id', (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     const { id } = req.params;
     try {
         const { rows: [order] } = await pool_1.pool.query(`SELECT po.*, v.name AS vendor_name, v.code AS vendor_code
@@ -539,7 +539,7 @@ exports.purchasingRouter.get('/orders/:id', async (req, res, next) => {
     }
 });
 /** PUT /api/purchasing/orders/:id */
-exports.purchasingRouter.put('/orders/:id', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.put('/orders/:id', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id } = req.params;
     const { status, expectedDate, notes } = req.body;
     if (status !== undefined)
@@ -560,7 +560,7 @@ exports.purchasingRouter.put('/orders/:id', (0, requireAuth_1.requireRole)('mana
     }
 });
 /** DELETE /api/purchasing/orders/:id */
-exports.purchasingRouter.delete('/orders/:id', (0, requireAuth_1.requireRole)('admin'), async (req, res, next) => {
+exports.purchasingRouter.delete('/orders/:id', (0, permissions_1.requireCapability)('purchasing.delete'), async (req, res, next) => {
     const { id } = req.params;
     try {
         await pool_1.pool.query(`UPDATE purchase_orders SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [id]);
@@ -588,7 +588,7 @@ async function findOrder(client, id) {
  * Note: the SQLite write path returns no rows, so the transition is verified
  * with a re-read rather than RETURNING (B10 fail-closed pattern).
  */
-exports.purchasingRouter.post('/orders/:id/approve', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.post('/orders/:id/approve', (0, permissions_1.requireCapability)('purchasing.approve'), async (req, res, next) => {
     const ar = req;
     const { id } = req.params;
     const client = await pool_1.pool.connect();
@@ -628,7 +628,7 @@ exports.purchasingRouter.post('/orders/:id/approve', (0, requireAuth_1.requireRo
  * Marks an approved PO as submitted to the vendor. approved → submitted only;
  * anything else → 409. Audit-logged in the same transaction.
  */
-exports.purchasingRouter.post('/orders/:id/submit', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.purchasingRouter.post('/orders/:id/submit', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const ar = req;
     const { id } = req.params;
     const client = await pool_1.pool.connect();
@@ -665,7 +665,7 @@ exports.purchasingRouter.post('/orders/:id/submit', (0, requireAuth_1.requireRol
 });
 // ─── Order lines ──────────────────────────────────────────────────────────
 /** POST /api/purchasing/orders/:id/lines */
-exports.purchasingRouter.post('/orders/:id/lines', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.post('/orders/:id/lines', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id } = req.params;
     const { vendorItemId, qtyOrdered, unitCost, notes = '' } = req.body;
     if (typeof qtyOrdered !== 'number' || !Number.isFinite(qtyOrdered) || qtyOrdered <= 0 || (unitCost != null && (typeof unitCost !== 'number' || !Number.isFinite(unitCost) || unitCost < 0)))
@@ -698,7 +698,7 @@ exports.purchasingRouter.post('/orders/:id/lines', (0, requireAuth_1.requireRole
     }
 });
 /** PUT /api/purchasing/orders/:id/lines/:lineId */
-exports.purchasingRouter.put('/orders/:id/lines/:lineId', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.put('/orders/:id/lines/:lineId', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id, lineId } = req.params;
     const { qtyOrdered, unitCost, notes } = req.body;
     if (qtyOrdered !== undefined && (typeof qtyOrdered !== 'number' || !Number.isFinite(qtyOrdered) || qtyOrdered <= 0)) {
@@ -738,7 +738,7 @@ exports.purchasingRouter.put('/orders/:id/lines/:lineId', (0, requireAuth_1.requ
     }
 });
 /** DELETE /api/purchasing/orders/:id/lines/:lineId */
-exports.purchasingRouter.delete('/orders/:id/lines/:lineId', (0, requireAuth_1.requireRole)('manager'), async (req, res, next) => {
+exports.purchasingRouter.delete('/orders/:id/lines/:lineId', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const { id, lineId } = req.params;
     const client = await pool_1.pool.connect();
     try {
@@ -810,7 +810,7 @@ function toGuideUnits(qty, fromUnit, guideUnit, itemName) {
  *   - Corrections: posting a lower total writes a signed 'count_adjust' ledger
  *     row — the ledger is append-only, never edited.
  */
-exports.purchasingRouter.post('/orders/:id/lines/:lineId/receive', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.purchasingRouter.post('/orders/:id/lines/:lineId/receive', (0, permissions_1.requireCapability)('purchasing.write'), async (req, res, next) => {
     const ar = req;
     const { id, lineId } = req.params;
     const { qtyReceived, qtyUnit, note = '' } = req.body ?? {};
@@ -952,7 +952,7 @@ exports.purchasingRouter.post('/orders/:id/lines/:lineId/receive', (0, requireAu
  * GET /api/purchasing/orders/:id/export-csv
  * Returns a Dennis-ready CSV for the purchase order lines.
  */
-exports.purchasingRouter.get('/orders/:id/export-csv', async (req, res, next) => {
+exports.purchasingRouter.get('/orders/:id/export-csv', (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     const { id } = req.params;
     try {
         const { rows: [order] } = await pool_1.pool.query(`SELECT po.*, v.name AS vendor_name FROM purchase_orders po JOIN vendors v ON v.id = po.vendor_id WHERE po.id = $1`, [id]);
@@ -979,7 +979,7 @@ exports.purchasingRouter.get('/orders/:id/export-csv', async (req, res, next) =>
  * GET /api/purchasing/invoices
  * Lists recent distributor invoices and their match statuses
  */
-exports.purchasingRouter.get('/invoices', (0, requireTier_1.requireTier)('enterprise'), async (_req, res, next) => {
+exports.purchasingRouter.get('/invoices', (0, requireTier_1.requireTier)('enterprise'), (0, permissions_1.requireCapability)('purchasing.read'), async (_req, res, next) => {
     try {
         const { rows } = await pool_1.pool.query(`
       SELECT * FROM distributor_invoices ORDER BY invoice_date DESC LIMIT 50
@@ -995,7 +995,7 @@ exports.purchasingRouter.get('/invoices', (0, requireTier_1.requireTier)('enterp
  * Evaluates 3-way match across PO contract rates, receiving dock counts, and distributor invoice.
  * Flags line-by-line price variances, quantity shortages, and creates vendor credit memo proposals.
  */
-exports.purchasingRouter.post('/invoices/evaluate', (0, requireTier_1.requireTier)('enterprise'), async (req, res, next) => {
+exports.purchasingRouter.post('/invoices/evaluate', (0, requireTier_1.requireTier)('enterprise'), (0, permissions_1.requireCapability)('purchasing.read'), async (req, res, next) => {
     try {
         const { invoiceNumber, vendorName, invoiceDate, poReference, lines } = req.body;
         if (!invoiceNumber || !vendorName || !Array.isArray(lines)) {

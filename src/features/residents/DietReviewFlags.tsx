@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Flag, RotateCw, Check } from 'lucide-react'
 import { useAuth } from '../../security/AuthContext'
+import { tokenManager } from '../../security/tokenManager'
 
 export interface DietReviewFlag {
   id: string
@@ -31,7 +32,7 @@ export default function DietReviewFlags() {
   const fetchFlags = useCallback(async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('shoreline_auth_token')
+      const token = tokenManager.getAccessToken()
       const headers: Record<string, string> = {}
       if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch('/api/residents/flags', { headers })
@@ -56,7 +57,7 @@ export default function DietReviewFlags() {
 
   const resolveFlag = async (id: string, action: 'RESOLVED' | 'DISMISSED') => {
     try {
-      const token = localStorage.getItem('shoreline_auth_token')
+      const token = tokenManager.getAccessToken()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`/api/residents/flags/${id}/resolve`, {

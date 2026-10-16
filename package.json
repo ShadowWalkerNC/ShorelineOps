@@ -4,8 +4,7 @@
   "private": true,
   "main": "electron-main.js",
   "bin": {
-    "shoreline": "./bin/shoreline.js",
-    "culinaryos": "./bin/shoreline.js"
+    "shoreline": "./bin/shoreline.js"
   },
   "workspaces": [
     "server",

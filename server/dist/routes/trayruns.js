@@ -6,7 +6,7 @@ const express_1 = require("express");
 const zod_1 = require("zod");
 const crypto_1 = require("crypto");
 const pool_1 = require("../db/pool");
-const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
 const trayTracking_1 = require("../engine/trayTracking");
 exports.trayrunsRouter = (0, express_1.Router)();
 // ── Zod schemas ───────────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ function parseSla(req) {
 }
 // ── Run CRUD ──────────────────────────────────────────────────────────────────
 // GET /api/trayruns?serviceDate=&mealSlot=
-exports.trayrunsRouter.get('/', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.trayrunsRouter.get('/', (0, permissions_1.requireCapability)('trayruns.read'), async (req, res, next) => {
     try {
         const serviceDate = typeof req.query.serviceDate === 'string' ? req.query.serviceDate : null;
         const mealSlot = typeof req.query.mealSlot === 'string' ? req.query.mealSlot : null;
@@ -128,7 +128,7 @@ exports.trayrunsRouter.get('/', (0, requireAuth_1.requireRole)('staff'), async (
 });
 // POST /api/trayruns/ensure — find-or-create the run for a meal (idempotent;
 // the QR assembly scanner uses this so it never needs to know run ids).
-exports.trayrunsRouter.post('/ensure', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.trayrunsRouter.post('/ensure', (0, permissions_1.requireCapability)('trayruns.write'), async (req, res, next) => {
     try {
         const data = EnsureBodySchema.parse(req.body);
         const serviceDate = data.serviceDate ?? todayString();
@@ -148,7 +148,7 @@ exports.trayrunsRouter.post('/ensure', (0, requireAuth_1.requireRole)('staff'), 
     }
 });
 // POST /api/trayruns — create a run explicitly (dispatch UI)
-exports.trayrunsRouter.post('/', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.trayrunsRouter.post('/', (0, permissions_1.requireCapability)('trayruns.write'), async (req, res, next) => {
     try {
         const data = RunBodySchema.parse(req.body);
         const id = (0, crypto_1.randomUUID)();
@@ -176,7 +176,7 @@ exports.trayrunsRouter.post('/', (0, requireAuth_1.requireRole)('staff'), async 
 // ── Missed-tray alert (in-app surface; no SMS/push) ───────────────────────────
 // GET /api/trayruns/missed?slaMinutes=30&serviceDate=YYYY-MM-DD
 // NOTE: defined before '/:id' so 'missed' is not captured as an id.
-exports.trayrunsRouter.get('/missed', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.trayrunsRouter.get('/missed', (0, permissions_1.requireCapability)('trayruns.read'), async (req, res, next) => {
     try {
         const slaMinutes = parseSla(req);
         const serviceDate = typeof req.query.serviceDate === 'string' ? req.query.serviceDate : todayString();
@@ -211,7 +211,7 @@ exports.trayrunsRouter.get('/missed', (0, requireAuth_1.requireRole)('staff'), a
     }
 });
 // GET /api/trayruns/:id
-exports.trayrunsRouter.get('/:id', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.trayrunsRouter.get('/:id', (0, permissions_1.requireCapability)('trayruns.read'), async (req, res, next) => {
     try {
         const run = await fetchRun(req.params.id);
         if (!run)
@@ -223,7 +223,7 @@ exports.trayrunsRouter.get('/:id', (0, requireAuth_1.requireRole)('staff'), asyn
     }
 });
 // GET /api/trayruns/:id/checklist — residents on the run with latest event per tray line
-exports.trayrunsRouter.get('/:id/checklist', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.trayrunsRouter.get('/:id/checklist', (0, permissions_1.requireCapability)('trayruns.read'), async (req, res, next) => {
     try {
         const run = await fetchRun(req.params.id);
         if (!run)
@@ -280,7 +280,7 @@ exports.trayrunsRouter.get('/:id/checklist', (0, requireAuth_1.requireRole)('sta
 });
 // ── Event append (append-only: no update/delete endpoints exist) ─────────────
 // POST /api/trayruns/:id/events
-exports.trayrunsRouter.post('/:id/events', (0, requireAuth_1.requireRole)('staff'), async (req, res, next) => {
+exports.trayrunsRouter.post('/:id/events', (0, permissions_1.requireCapability)('trayruns.write'), async (req, res, next) => {
     const client = await pool_1.pool.connect();
     let committed = false;
     try {

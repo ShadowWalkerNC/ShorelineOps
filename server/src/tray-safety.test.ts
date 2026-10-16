@@ -18,7 +18,7 @@ test('signed trays fail closed and action boundary rechecks current safety', asy
   const { pool } = await import('./db/pool')
   const { signTray, verifyTray, readTray } = await import('./engine/traySafety')
   const { trayrunsRouter } = await import('./routes/trayruns')
-  await pool.query('CREATE TABLE residents (id TEXT PRIMARY KEY, name TEXT, room TEXT, status TEXT, profile_version INTEGER, is_npo INTEGER, allergies TEXT, texture TEXT, diet_type TEXT, fluid_restriction_ml INTEGER)')
+  await pool.query('CREATE TABLE residents (id TEXT PRIMARY KEY, name TEXT, room TEXT, status TEXT, profile_version INTEGER, is_npo INTEGER, allergies TEXT, texture TEXT, diet_type TEXT, fluid_restriction_ml INTEGER, liquid_consistency TEXT DEFAULT "Thin", npo_reason TEXT DEFAULT "", updated_at TEXT)')
   await pool.query('CREATE TABLE ehr_reconciliation_queue (id TEXT, resident_id TEXT, status TEXT)')
   await pool.query('CREATE TABLE recipes (id TEXT, name TEXT, category TEXT DEFAULT "Entree", base_servings NUMERIC DEFAULT 10, prep_time_mins INTEGER DEFAULT 15, cook_time_mins INTEGER DEFAULT 30, haccp_temp_f NUMERIC DEFAULT 165, allergens TEXT, iddsi_level INTEGER, ingredients TEXT DEFAULT "[]", steps TEXT DEFAULT "[]", notes TEXT DEFAULT "", cost_per_serving NUMERIC DEFAULT 0, clinical_verified INTEGER DEFAULT 0, verified_by TEXT, verified_at TEXT, approved_diets TEXT DEFAULT "[]", fluid_ml_per_serving INTEGER, updated_at TEXT)')
   await pool.query('CREATE TABLE recipe_nutrients (recipe_id TEXT PRIMARY KEY, calories NUMERIC DEFAULT 0, protein_g NUMERIC DEFAULT 0, carbs_g NUMERIC DEFAULT 0, fat_g NUMERIC DEFAULT 0, sat_fat_g NUMERIC DEFAULT 0, sodium_mg NUMERIC DEFAULT 0, potassium_mg NUMERIC DEFAULT 0, phosphorus_mg NUMERIC DEFAULT 0, fiber_g NUMERIC DEFAULT 0, sugar_g NUMERIC DEFAULT 0, calculated_at TEXT)')
@@ -27,7 +27,7 @@ test('signed trays fail closed and action boundary rechecks current safety', asy
   await pool.query('CREATE TABLE tray_runs (id TEXT PRIMARY KEY, meal_slot TEXT, service_date TEXT)')
   await pool.query('CREATE TABLE tray_events (id TEXT, run_id TEXT, resident_id TEXT, ticket_id TEXT, event TEXT, by TEXT, note TEXT, at TEXT DEFAULT CURRENT_TIMESTAMP, created_at TEXT DEFAULT CURRENT_TIMESTAMP)')
   await pool.query('CREATE TABLE audit_log (action TEXT, user_id TEXT, resource_id TEXT, resource_type TEXT, outcome TEXT, details TEXT)')
-  await pool.query("INSERT INTO residents VALUES ('r1','Test','1','Active',1,0,'[]','Regular','Regular',NULL)")
+  await pool.query("INSERT INTO residents (id, name, room, status, profile_version, is_npo, allergies, texture, diet_type, fluid_restriction_ml, liquid_consistency) VALUES ('r1','Test','1','Active',1,0,'[]','Regular','Regular',NULL,'Thin')")
   await pool.query("INSERT INTO recipes (id, name, allergens, iddsi_level) VALUES ('rec-rice','Rice','[]',7)")
   await pool.query("INSERT INTO tray_runs VALUES ('run1','lunch','2026-09-23')")
   const claims = { residentId: 'r1', ticketId: 'TKT-test', version: 1, diet: 'Regular', texture: 'Regular', allergies: [], foods: ['Rice'], beverages: ['Water'], mealSlot: 'lunch', serviceDate: '2026-09-23' }
@@ -75,7 +75,7 @@ test('clinical provenance: canonical allergen synonyms, restricted diet ceilings
   assert.equal(normalizeCanonicalAllergen('Shrimp'), 'crustacean shellfish')
   assert.equal(normalizeCanonicalAllergen('Unknown Exotic Fruit'), null)
 
-  await pool.query("INSERT INTO residents VALUES ('r-clin','Clinical Resident','204','Active',1,0,'[\"Dairy\"]','Regular','Low Sodium',1000)")
+  await pool.query("INSERT INTO residents (id, name, room, status, profile_version, is_npo, allergies, texture, diet_type, fluid_restriction_ml, liquid_consistency) VALUES ('r-clin','Clinical Resident','204','Active',1,0,'[\"Dairy\"]','Regular','Low Sodium',1000,'Thin')")
   await pool.query("INSERT INTO recipes (id, name, allergens, iddsi_level) VALUES ('rec-herb-chicken','Herb Chicken','[]',7)")
   await pool.query("INSERT INTO recipe_nutrients (recipe_id, calories, protein_g, sodium_mg, sat_fat_g) VALUES ('rec-herb-chicken', 320, 28, 240, 2.5)")
   await pool.query("INSERT INTO recipes (id, name, allergens, iddsi_level) VALUES ('rec-water','Water','[]',7)")
@@ -187,4 +187,280 @@ test('clinical provenance: canonical allergen synonyms, restricted diet ceilings
     await new Promise<void>(resolve => server.close(() => resolve()))
   }
 })
+
+test('IDDSI liquid consistency verification holds on mismatched beverage and supersedes outdated tickets', async () => {
+  const { pool } = await import('./db/pool')
+  const { signTray, verifyTray } = await import('./engine/traySafety')
+
+  // Create resident with Mildly Thick (Level 2) liquid order
+  await pool.query("INSERT INTO residents (id, name, room, status, profile_version, is_npo, allergies, texture, diet_type, liquid_consistency) VALUES ('r-thick', 'Thickened Resident', '101', 'Active', 1, 0, '[]', 'Regular', 'Regular', 'Mildly Thick')")
+
+  // Create beverage recipes: Thin Apple Juice (IDDSI 0) and Thickened Apple Juice (IDDSI 2)
+  await pool.query("INSERT INTO recipes (id, name, category, allergens, iddsi_level, clinical_verified, verified_by, approved_diets) VALUES ('rec-aj-thin', 'Thin Apple Juice', 'Beverage', '[]', 0, 1, 'rd-1', '[\"Regular\"]')")
+  await pool.query("INSERT INTO recipes (id, name, category, allergens, iddsi_level, clinical_verified, verified_by, approved_diets) VALUES ('rec-aj-thick', 'Thickened Apple Juice', 'Beverage', '[]', 2, 1, 'rd-1', '[\"Regular\"]')")
+
+  // Tray with Thin Apple Juice on a Mildly Thick resident order
+  const mismatchedTray = signTray({
+    residentId: 'r-thick',
+    ticketId: 'TKT-thick-1',
+    version: 1,
+    diet: 'Regular',
+    texture: 'Regular',
+    liquidConsistency: 'Mildly Thick',
+    allergies: [],
+    foods: ['Rice'],
+    beverages: ['Thin Apple Juice'],
+    mealSlot: 'lunch',
+    serviceDate: '2026-09-23',
+  })
+
+  const mismatchedCheck = await verifyTray(mismatchedTray)
+  assert.equal(mismatchedCheck.status, 'HOLD_TRAY_RD_SIGNOFF')
+  assert.match(mismatchedCheck.message, /Beverage liquid consistency does not match the order/i)
+
+  // Tray with matching Thickened Apple Juice
+  const matchedTray = signTray({
+    residentId: 'r-thick',
+    ticketId: 'TKT-thick-2',
+    version: 1,
+    diet: 'Regular',
+    texture: 'Regular',
+    liquidConsistency: 'Mildly Thick',
+    allergies: [],
+    foods: ['Rice'],
+    beverages: ['Thickened Apple Juice'],
+    mealSlot: 'lunch',
+    serviceDate: '2026-09-23',
+  })
+
+  const matchedCheck = await verifyTray(matchedTray)
+  assert.equal(matchedCheck.status, 'VALID')
+
+  // When ticket was printed before liquid consistency was changed (e.g. ticket says 'Thin' but resident is 'Mildly Thick')
+  const outdatedConsistencyTray = signTray({
+    residentId: 'r-thick',
+    ticketId: 'TKT-thick-3',
+    version: 1,
+    diet: 'Regular',
+    texture: 'Regular',
+    liquidConsistency: 'Thin',
+    allergies: [],
+    foods: ['Rice'],
+    beverages: ['Thickened Apple Juice'],
+    mealSlot: 'lunch',
+    serviceDate: '2026-09-23',
+  })
+
+  const supersededCheck = await verifyTray(outdatedConsistencyTray)
+  assert.equal(supersededCheck.status, 'SUPERSEDED')
+  assert.match(supersededCheck.message, /Orders changed/i)
+})
+
+test('resident fluid restriction and liquid consistency update bumps profile_version and logs history', async () => {
+  const { pool } = await import('./db/pool')
+  const { residentsRouter } = await import('./routes/residents')
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS resident_profile_history (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    resident_id TEXT,
+    profile_version INTEGER,
+    diet_type TEXT,
+    texture TEXT,
+    liquid_consistency TEXT,
+    is_npo INTEGER,
+    allergies TEXT,
+    fluid_restriction_ml INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`)
+
+  for (const col of ['portion_size TEXT', 'ensure_per_day INTEGER', 'beverages TEXT', 'birthday_month INTEGER', 'birthday_day INTEGER', 'serving_location TEXT', 'table_assignment TEXT', 'likes TEXT', 'dislikes TEXT', 'special_instructions TEXT', 'diet_ordered_by TEXT', 'diet_order_date TEXT', 'diet_effective_date TEXT']) {
+    try { await pool.query(`ALTER TABLE residents ADD COLUMN ${col}`) } catch {}
+  }
+
+  // Create initial resident
+  await pool.query("INSERT INTO residents (id, name, room, status, profile_version, is_npo, allergies, texture, diet_type, fluid_restriction_ml, liquid_consistency) VALUES ('r-hist', 'History Resident', '102', 'Active', 1, 0, '[]', 'Regular', 'Regular', NULL, 'Thin')")
+
+  let currentRole = 'dietitian'
+  let currentUserId = 'rd-1'
+  const app = express()
+  app.use(express.json())
+  app.use((req: any, _res, next) => {
+    req.userRole = currentRole
+    req.userId = currentUserId
+    next()
+  })
+  app.use('/residents', residentsRouter)
+  const server = app.listen(0)
+  const port = (server.address() as { port: number }).port
+  const baseUrl = `http://127.0.0.1:${port}/residents`
+
+  try {
+    // 1. Non-clinical role cannot update fluid restriction or liquid consistency (requires dietitian or manager)
+    currentRole = 'staff'
+    const deniedUpdate = await fetch(`${baseUrl}/r-hist`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fluidRestrictionMl: 1200, liquidConsistency: 'Mildly Thick' }),
+    })
+    assert.equal(deniedUpdate.status, 403)
+
+    // 2. Dietitian updates fluid limit and liquid consistency
+    currentRole = 'dietitian'
+    const updateRes = await fetch(`${baseUrl}/r-hist`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fluidRestrictionMl: 1200, liquidConsistency: 'Mildly Thick' }),
+    })
+    assert.equal(updateRes.status, 200)
+
+    // Verify resident has profile_version bumped to 2 and new clinical fields
+    const { rows: residentRows } = await pool.query("SELECT profile_version, fluid_restriction_ml, liquid_consistency FROM residents WHERE id = 'r-hist'")
+    assert.equal(residentRows[0].profile_version, 2)
+    assert.equal(residentRows[0].fluid_restriction_ml, 1200)
+    assert.equal(residentRows[0].liquid_consistency, 'Mildly Thick')
+
+    // Verify resident_profile_history has row with the new consistency and fluid limit
+    const { rows: historyRows } = await pool.query("SELECT * FROM resident_profile_history WHERE resident_id = 'r-hist' ORDER BY profile_version DESC")
+    assert.ok(historyRows.length >= 1)
+    assert.equal(historyRows[0].profile_version, 2)
+    assert.equal(historyRows[0].liquid_consistency, 'Mildly Thick')
+    assert.equal(historyRows[0].fluid_restriction_ml, 1200)
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()))
+  }
+})
+
+test('semantic capability authorization matrix enforces role boundaries across inventory, purchasing, menu, and recipes', async () => {
+  const { pool } = await import('./db/pool')
+  const { inventoryRouter } = await import('./routes/inventory')
+  const { purchasingRouter } = await import('./routes/purchasing')
+  const { menuRouter } = await import('./routes/menu')
+
+  // Create tables needed by routes
+  await pool.query(`CREATE TABLE IF NOT EXISTS inventory_items (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    category TEXT,
+    storage_area TEXT,
+    uom TEXT,
+    par_level NUMERIC,
+    on_hand NUMERIC,
+    unit_cost NUMERIC,
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`)
+  await pool.query(`CREATE TABLE IF NOT EXISTS purchase_orders (
+    id TEXT PRIMARY KEY,
+    vendor_id TEXT,
+    order_date TEXT,
+    expected_date TEXT,
+    notes TEXT,
+    created_by TEXT,
+    status TEXT DEFAULT 'draft',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`)
+  await pool.query(`CREATE TABLE IF NOT EXISTS purchase_order_lines (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    purchase_order_id TEXT,
+    vendor_item_id TEXT,
+    qty_ordered NUMERIC,
+    unit_cost NUMERIC,
+    notes TEXT
+  )`)
+  await pool.query(`CREATE TABLE IF NOT EXISTS vendors (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    code TEXT,
+    phone TEXT,
+    email TEXT,
+    website TEXT,
+    notes TEXT,
+    active INTEGER DEFAULT 1
+  )`)
+  await pool.query(`CREATE TABLE IF NOT EXISTS menu_weeks (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    name TEXT,
+    effective_from TEXT,
+    days TEXT DEFAULT '{}',
+    active INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`)
+  await pool.query("INSERT OR IGNORE INTO vendors (id, name, code) VALUES ('v1', 'Dennis', 'dennis')")
+  await pool.query("INSERT OR IGNORE INTO purchase_orders (id, vendor_id, status) VALUES ('po-test-1', 'v1', 'draft')")
+
+  let currentRole = 'server'
+  let currentUserId = 'server-1'
+  const app = express()
+  app.use(express.json())
+  app.use((req: any, _res, next) => {
+    req.userRole = currentRole
+    req.userId = currentUserId
+    next()
+  })
+  app.use('/inventory', inventoryRouter)
+  app.use('/purchasing', purchasingRouter)
+  app.use('/menu', menuRouter)
+  const server = app.listen(0)
+  const port = (server.address() as { port: number }).port
+  const baseUrl = `http://127.0.0.1:${port}`
+
+  try {
+    // 1. Server role cannot write inventory (inventory.write denied -> 403)
+    currentRole = 'server'
+    const invRes = await fetch(`${baseUrl}/inventory/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Flour', category: 'Baking', storageArea: 'Dry Storage', uom: 'lb' }),
+    })
+    assert.equal(invRes.status, 403)
+
+    // 2. Server role cannot create purchasing orders (purchasing.write denied -> 403)
+    const poRes = await fetch(`${baseUrl}/purchasing/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vendorId: 'v1' }),
+    })
+    assert.equal(poRes.status, 403)
+
+    // 3. Staff role cannot approve purchasing orders (purchasing.approve requires manager or admin -> 403)
+    currentRole = 'staff'
+    const staffApprove = await fetch(`${baseUrl}/purchasing/orders/po-test-1/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    assert.equal(staffApprove.status, 403)
+
+    // 4. Manager role can approve purchasing orders
+    currentRole = 'manager'
+    const managerApprove = await fetch(`${baseUrl}/purchasing/orders/po-test-1/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    assert.equal(managerApprove.status, 200)
+
+    // 5. Server role cannot create menu weeks (menu.write denied -> 403)
+    currentRole = 'server'
+    const menuRes = await fetch(`${baseUrl}/menu/weeks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Fall Week 1' }),
+    })
+    assert.equal(menuRes.status, 403)
+
+    // 6. Dietitian can create menu weeks (menu.write allowed -> 201)
+    currentRole = 'dietitian'
+    const rdMenuRes = await fetch(`${baseUrl}/menu/weeks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Fall Week 1' }),
+    })
+    assert.equal(rdMenuRes.status, 201)
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()))
+  }
+})
+
 
