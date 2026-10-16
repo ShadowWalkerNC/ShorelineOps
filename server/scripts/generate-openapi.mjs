@@ -1050,6 +1050,7 @@ function handlerToOperation(h, mount, schemas, fileParked) {
   // Responses: explicit res.status(n) codes + auth-implied codes
   const codes = new Set()
   for (const sm of seg.matchAll(/res\.(?:status|sendStatus)\(\s*(\d{3})\s*\)/g)) codes.add(Number(sm[1]))
+  if (/\binvalidSession\s*\(/.test(seg)) codes.add(401)
   const responses = {}
   const successCodes = [...codes].filter((c) => c >= 200 && c < 300).sort()
   const primary = successCodes[0] || 200

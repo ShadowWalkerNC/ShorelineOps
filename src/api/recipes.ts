@@ -25,4 +25,13 @@ export const recipesApi = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`/recipes/${id}`)
   },
+
+  verifyClinical: async (
+    id: string,
+    payload: { approvedDiets?: string[]; fluidMlPerServing?: number | null; canonicalAllergens?: string[] }
+  ): Promise<Partial<Recipe>> => {
+    const { data } = await api.post<Partial<Recipe>>(`/recipes/${id}/verify-clinical`, payload)
+    return data
+  },
 }
+

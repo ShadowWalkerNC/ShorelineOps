@@ -1077,6 +1077,16 @@ const migrations = [
       ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS mfa_verified BOOLEAN NOT NULL DEFAULT false;
     `,
     },
+    {
+        name: '030_clinical_recipe_provenance',
+        sql: `
+      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS clinical_verified BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS verified_by TEXT DEFAULT NULL;
+      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ DEFAULT NULL;
+      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS approved_diets TEXT[] NOT NULL DEFAULT '{}';
+      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS fluid_ml_per_serving INTEGER DEFAULT NULL;
+    `,
+    },
 ];
 // A02: every table migrate.ts expects to exist after a full migration run.
 // Used by assertSchemaIntegrity() — a boot-time fail-closed drift guard.

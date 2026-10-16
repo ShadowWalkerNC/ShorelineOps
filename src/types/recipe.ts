@@ -40,6 +40,12 @@ export type Recipe = {
   notes: string
   costPerServing?: number       // auto-computed from linked vendor SKUs
   costProvenance?: CostProvenance // which inputs are SKU-matched vs estimated
+  clinicalVerified?: boolean
+  verifiedBy?: string | null
+  verifiedAt?: string | null
+  approvedDiets?: string[]
+  fluidMlPerServing?: number | null
   createdAt?: string
   updatedAt?: string
 }
+

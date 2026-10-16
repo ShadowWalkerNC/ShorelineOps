@@ -6016,6 +6016,69 @@
         }
       }
     },
+    "/api/recipes/{id}/verify-clinical": {
+      "post": {
+        "operationId": "post_recipes_id_verify_clinical",
+        "summary": "POST /api/recipes/:id/verify-clinical",
+        "tags": [
+          "recipes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "POST /api/recipes/:id/verify-clinical\nRegistered Dietitian / clinical manager signoff establishing canonical\nallergen equivalence, approved therapeutic diets, and fluid mL per serving.\n\nAuthentication: JWT Bearer token; capabilities: residents.clinicalWrite (admits: dietitian, manager).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeClinicalVerifySchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Unprocessable entity"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "dietitian",
+            "manager"
+          ],
+          "capabilities": [
+            "residents.clinicalWrite"
+          ]
+        }
+      }
+    },
     "/api/reporting/allergy-risk": {
       "get": {
         "operationId": "get_reporting_allergy_risk",
@@ -8650,6 +8713,32 @@
           "name"
         ]
       },
+      "RecipeClinicalVerifySchema": {
+        "type": "object",
+        "properties": {
+          "approvedDiets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "fluidMlPerServing": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "canonicalAllergens": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
       "RecipeIngredientSchema": {
         "type": "object",
         "properties": {
@@ -9418,6 +9507,9 @@
             "type": "string",
             "minLength": 2
           },
+          "deploymentReviewAcknowledged": {
+            "const": true
+          },
           "initMode": {
             "type": "string",
             "enum": [
@@ -9495,6 +9587,9 @@
             "type": "string",
             "minLength": 2
           },
+          "deploymentReviewAcknowledged": {
+            "const": true
+          },
           "initMode": {
             "type": "string",
             "enum": [
@@ -9521,6 +9616,6 @@
   "x-shoreline-generated": {
     "generator": "server/scripts/generate-openapi.mjs",
     "source": "static parse of server/src/index.ts mounts and server/src/routes/*.ts handlers",
-    "handlerCount": 190
+    "handlerCount": 191
   }
 }

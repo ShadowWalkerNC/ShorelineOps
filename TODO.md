@@ -32,7 +32,7 @@ See [current project reassessment](docs/audits/PROJECT_REASSESSMENT_2026-10-04.m
 - [x] Verify local builds, TypeScript, 228 system checks and 28 additional regression tests.
 - [ ] Validate PostgreSQL concurrency and deployment-specific integrations before release.
 - [ ] Validate keyboard, screen-reader, mobile-device and scanner behavior.
-- [ ] Establish canonical clinical recipe/allergen and restricted-diet evidence before expanding tray eligibility.
+- [ ] Establish canonical clinical recipe/allergen and restricted-diet evidence before expanding tray eligibility (Migration `030_clinical_recipe_provenance`, canonical allergen synonym normalization, therapeutic diet nutrient ceilings, fluid-restriction mL ledger, dietitian-gated `POST /api/recipes/:id/verify-clinical` and automatic edit tamper-reset implemented and verified locally; independent facility RD catalog review remains required).
 
 See [the decision workflow handoff](docs/DECISION_WORKFLOW_HANDOFF.md) for scope and remaining acceptance gates. Historical milestones below are not a production certification.
 

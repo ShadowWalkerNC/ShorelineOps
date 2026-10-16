@@ -12,8 +12,10 @@ const express_1 = require("express");
 const zod_1 = require("zod");
 const pool_1 = require("../db/pool");
 const requireAuth_1 = require("../middleware/requireAuth");
+const permissions_1 = require("../middleware/permissions");
 const nutrition_1 = require("../engine/nutrition");
 const production_1 = require("../engine/production");
+const traySafety_1 = require("../engine/traySafety");
 const costing_1 = require("../engine/costing");
 exports.recipesRouter = (0, express_1.Router)();
 const RecipeIngredientSchema = zod_1.z.object({
@@ -38,6 +40,11 @@ const RecipeBodySchema = zod_1.z.object({
     ingredients: zod_1.z.array(RecipeIngredientSchema).default([]),
     steps: zod_1.z.array(RecipeStepSchema).default([]),
     notes: zod_1.z.string().default(''),
+});
+const RecipeClinicalVerifySchema = zod_1.z.object({
+    approvedDiets: zod_1.z.array(zod_1.z.string().min(1)).default([]),
+    fluidMlPerServing: zod_1.z.number().int().min(0).nullable().optional(),
+    canonicalAllergens: zod_1.z.array(zod_1.z.string().min(1)).optional(),
 });
 /**
  * GET /api/recipes
@@ -68,6 +75,11 @@ exports.recipesRouter.get('/', async (_req, res, next) => {
             ingredients: r.ingredients || [],
             steps: r.steps || [],
             notes: r.notes || '',
+            clinicalVerified: Boolean(r.clinical_verified),
+            verifiedBy: r.verified_by ?? null,
+            verifiedAt: r.verified_at ?? null,
+            approvedDiets: r.approved_diets || [],
+            fluidMlPerServing: r.fluid_ml_per_serving !== null && r.fluid_ml_per_serving !== undefined ? Number(r.fluid_ml_per_serving) : null,
             costPerServing: parseFloat(r.cost_per_serving || 0),
             costProvenance: costing_1.RecipeCostingEngine.ingredientProvenance((typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients) || [], catalog),
             nutrition: r.calories !== null ? {
@@ -116,6 +128,11 @@ exports.recipesRouter.get('/:id', async (req, res, next) => {
             ingredients: r.ingredients || [],
             steps: r.steps || [],
             notes: r.notes || '',
+            clinicalVerified: Boolean(r.clinical_verified),
+            verifiedBy: r.verified_by ?? null,
+            verifiedAt: r.verified_at ?? null,
+            approvedDiets: r.approved_diets || [],
+            fluidMlPerServing: r.fluid_ml_per_serving !== null && r.fluid_ml_per_serving !== undefined ? Number(r.fluid_ml_per_serving) : null,
             costPerServing: parseFloat(r.cost_per_serving || 0),
             costProvenance: costBreakdown.provenance,
             costBreakdown, // per-line source flags (sku / estimated / none)
@@ -241,19 +258,22 @@ exports.recipesRouter.put('/:id', (0, requireAuth_1.requireRole)('staff'), async
         const costBreakdownPut = costing_1.RecipeCostingEngine.costRecipe(mergedIngredients, mergedServings, costCatalogPut, req.params.id);
         const { rows: [updated] } = await client.query(`
       UPDATE recipes SET
-        name            = COALESCE($1, name),
-        category        = COALESCE($2, category),
-        base_servings   = COALESCE($3, base_servings),
-        prep_time_mins  = COALESCE($4, prep_time_mins),
-        cook_time_mins  = COALESCE($5, cook_time_mins),
-        haccp_temp_f    = COALESCE($6, haccp_temp_f),
-        iddsi_level     = COALESCE($7, iddsi_level),
-        allergens       = $8,
-        ingredients     = COALESCE($9, ingredients),
-        steps           = COALESCE($10, steps),
-        notes           = COALESCE($11, notes),
-        cost_per_serving = $12,
-        updated_at      = NOW()
+        name              = COALESCE($1, name),
+        category          = COALESCE($2, category),
+        base_servings     = COALESCE($3, base_servings),
+        prep_time_mins    = COALESCE($4, prep_time_mins),
+        cook_time_mins    = COALESCE($5, cook_time_mins),
+        haccp_temp_f      = COALESCE($6, haccp_temp_f),
+        iddsi_level       = COALESCE($7, iddsi_level),
+        allergens         = $8,
+        ingredients       = COALESCE($9, ingredients),
+        steps             = COALESCE($10, steps),
+        notes             = COALESCE($11, notes),
+        cost_per_serving  = $12,
+        clinical_verified = false,
+        verified_by       = NULL,
+        verified_at       = NULL,
+        updated_at        = NOW()
       WHERE id = $13
       RETURNING *
     `, [
@@ -306,6 +326,99 @@ exports.recipesRouter.put('/:id', (0, requireAuth_1.requireRole)('staff'), async
             costProvenance: costBreakdownPut.provenance,
             costBreakdown: costBreakdownPut,
             nutrition: analysis.perServing,
+        });
+    }
+    catch (err) {
+        await client.query('ROLLBACK');
+        next(err);
+    }
+    finally {
+        client.release();
+    }
+});
+/**
+ * POST /api/recipes/:id/verify-clinical
+ * Registered Dietitian / clinical manager signoff establishing canonical
+ * allergen equivalence, approved therapeutic diets, and fluid mL per serving.
+ */
+exports.recipesRouter.post('/:id/verify-clinical', (0, permissions_1.requireCapability)('residents.clinicalWrite'), async (req, res, next) => {
+    const client = await pool_1.pool.connect();
+    try {
+        const data = RecipeClinicalVerifySchema.parse(req.body);
+        await client.query('BEGIN');
+        const { rows } = await client.query('SELECT * FROM recipes WHERE id = $1', [req.params.id]);
+        const recipe = rows[0];
+        if (!recipe) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Recipe not found' });
+        }
+        const nutRows = await client.query('SELECT * FROM recipe_nutrients WHERE recipe_id = $1', [req.params.id]);
+        if (!nutRows.rows[0]) {
+            await client.query('ROLLBACK');
+            return res.status(422).json({ error: 'Recipe nutrient breakdown is required before clinical verification' });
+        }
+        const existingAllergensRaw = recipe.allergens;
+        const existingAllergens = Array.isArray(existingAllergensRaw)
+            ? existingAllergensRaw
+            : typeof existingAllergensRaw === 'string' && existingAllergensRaw !== '{}'
+                ? JSON.parse(existingAllergensRaw)
+                : [];
+        const combinedAllergens = data.canonicalAllergens ?? existingAllergens;
+        const normalizedAllergens = [];
+        for (const allergen of combinedAllergens) {
+            const canonical = (0, traySafety_1.normalizeCanonicalAllergen)(allergen);
+            if (!canonical) {
+                await client.query('ROLLBACK');
+                return res.status(422).json({ error: `Unmapped allergen "${allergen}" is not in the canonical clinical vocabulary` });
+            }
+            if (!normalizedAllergens.includes(canonical))
+                normalizedAllergens.push(canonical);
+        }
+        for (const diet of data.approvedDiets) {
+            if (diet.trim().toLowerCase() !== 'regular' && !(0, traySafety_1.resolveDietContract)(diet)) {
+                await client.query('ROLLBACK');
+                return res.status(422).json({ error: `Unsupported therapeutic diet "${diet}"` });
+            }
+        }
+        const verifiedAt = new Date().toISOString();
+        await client.query(`UPDATE recipes SET
+         clinical_verified = true,
+         verified_by = $1,
+         verified_at = $2,
+         approved_diets = $3,
+         fluid_ml_per_serving = $4,
+         allergens = $5,
+         updated_at = NOW()
+       WHERE id = $6`, [
+            req.userId,
+            verifiedAt,
+            data.approvedDiets,
+            data.fluidMlPerServing ?? null,
+            normalizedAllergens,
+            req.params.id,
+        ]);
+        await client.query(`INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('RECIPE_CLINICAL_VERIFY', $1, $2, 'recipe', 'success', $3)`, [
+            req.userId,
+            req.params.id,
+            JSON.stringify({
+                recipeName: recipe.name,
+                approvedDiets: data.approvedDiets,
+                fluidMlPerServing: data.fluidMlPerServing ?? null,
+                canonicalAllergens: normalizedAllergens,
+            }),
+        ]);
+        const { rows: [updated] } = await client.query('SELECT * FROM recipes WHERE id = $1', [req.params.id]);
+        await client.query('COMMIT');
+        res.json({
+            id: updated.id,
+            name: updated.name,
+            clinicalVerified: Boolean(updated.clinical_verified),
+            verifiedBy: updated.verified_by,
+            verifiedAt: updated.verified_at,
+            approvedDiets: updated.approved_diets || [],
+            fluidMlPerServing: updated.fluid_ml_per_serving !== null && updated.fluid_ml_per_serving !== undefined ? Number(updated.fluid_ml_per_serving) : null,
+            allergens: updated.allergens || [],
         });
     }
     catch (err) {
