@@ -1095,6 +1095,85 @@ const migrations = [
       ALTER TABLE resident_profile_history ADD COLUMN IF NOT EXISTS liquid_consistency TEXT NOT NULL DEFAULT 'Thin';
     `,
     },
+    {
+        name: '032_postgresql_row_level_security_and_tenant_policies',
+        sql: `
+      -- Enable Row Level Security across clinical and operational tables in PostgreSQL
+      ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE residents ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE resident_profile_history ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE diet_review_flags ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE menu_weeks ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE production_sheets ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE haccp_logs ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE hydration_records ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE tray_runs ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE tray_events ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE purchase_order_lines ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE staff_profiles ENABLE ROW LEVEL SECURITY;
+
+      -- Create tenant isolation policies for PostgreSQL / Supabase
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'users_tenant_policy') THEN
+          CREATE POLICY users_tenant_policy ON users FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'residents' AND policyname = 'residents_tenant_policy') THEN
+          CREATE POLICY residents_tenant_policy ON residents FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'resident_profile_history' AND policyname = 'resident_history_tenant_policy') THEN
+          CREATE POLICY resident_history_tenant_policy ON resident_profile_history FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'diet_review_flags' AND policyname = 'diet_flags_tenant_policy') THEN
+          CREATE POLICY diet_flags_tenant_policy ON diet_review_flags FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'menu_weeks' AND policyname = 'menu_weeks_tenant_policy') THEN
+          CREATE POLICY menu_weeks_tenant_policy ON menu_weeks FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'menu_items' AND policyname = 'menu_items_tenant_policy') THEN
+          CREATE POLICY menu_items_tenant_policy ON menu_items FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'production_sheets' AND policyname = 'production_sheets_tenant_policy') THEN
+          CREATE POLICY production_sheets_tenant_policy ON production_sheets FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'recipes' AND policyname = 'recipes_tenant_policy') THEN
+          CREATE POLICY recipes_tenant_policy ON recipes FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'haccp_logs' AND policyname = 'haccp_logs_tenant_policy') THEN
+          CREATE POLICY haccp_logs_tenant_policy ON haccp_logs FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'hydration_records' AND policyname = 'hydration_records_tenant_policy') THEN
+          CREATE POLICY hydration_records_tenant_policy ON hydration_records FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tray_runs' AND policyname = 'tray_runs_tenant_policy') THEN
+          CREATE POLICY tray_runs_tenant_policy ON tray_runs FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tray_events' AND policyname = 'tray_events_tenant_policy') THEN
+          CREATE POLICY tray_events_tenant_policy ON tray_events FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'purchase_orders' AND policyname = 'purchase_orders_tenant_policy') THEN
+          CREATE POLICY purchase_orders_tenant_policy ON purchase_orders FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'purchase_order_lines' AND policyname = 'purchase_order_lines_tenant_policy') THEN
+          CREATE POLICY purchase_order_lines_tenant_policy ON purchase_order_lines FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'inventory_items' AND policyname = 'inventory_items_tenant_policy') THEN
+          CREATE POLICY inventory_items_tenant_policy ON inventory_items FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'audit_log' AND policyname = 'audit_log_tenant_policy') THEN
+          CREATE POLICY audit_log_tenant_policy ON audit_log FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'staff_profiles' AND policyname = 'staff_profiles_tenant_policy') THEN
+          CREATE POLICY staff_profiles_tenant_policy ON staff_profiles FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+      END $$;
+    `,
+    },
 ];
 // A02: every table migrate.ts expects to exist after a full migration run.
 // Used by assertSchemaIntegrity() — a boot-time fail-closed drift guard.

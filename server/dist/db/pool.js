@@ -345,13 +345,15 @@ function translateQuery(sql, params = []) {
         .replace(/CREATE TRIGGER[\s\S]*?EXECUTE FUNCTION[\s\S]*?;/gi, '')
         .replace(/ALTER TABLE \w+ DROP CONSTRAINT[\s\S]*?;/gi, '')
         .replace(/ALTER TABLE \w+ ADD CONSTRAINT[\s\S]*?;/gi, '')
-        // A02: strip COMMENT ON COLUMN statements for SQLite. The quoted-string-aware
-        // pattern is required because comment text may itself contain semicolons
-        // (e.g. 009's 'Base32 TOTP secret; null when MFA not enrolled'), which a
-        // naive non-greedy match would stop at, leaving broken SQL behind.
         .replace(/COMMENT ON COLUMN(?:'[^']*'|[^;])*;/gi, '')
         .replace(/SET LOCAL.*/gi, '-- SET LOCAL ignored')
-        .replace(/GENERATED ALWAYS AS[\s\S]*?STORED/gi, '');
+        .replace(/GENERATED ALWAYS AS[\s\S]*?STORED/gi, '')
+        .replace(/ALTER TABLE \w+ ENABLE ROW LEVEL SECURITY;/gi, '')
+        .replace(/ALTER TABLE \w+ FORCE ROW LEVEL SECURITY;/gi, '')
+        .replace(/DO \$\$[\s\S]*?\$\$ LANGUAGE plpgsql;/gi, '')
+        .replace(/DO \$\$[\s\S]*?\$\$;/gi, '')
+        .replace(/CREATE POLICY[\s\S]*?ON\s+\w+[\s\S]*?;/gi, '')
+        .replace(/DROP POLICY[\s\S]*?ON\s+\w+[\s\S]*?;/gi, '');
     const translatedParams = params.map((p) => {
         if (Array.isArray(p))
             return JSON.stringify(p);
