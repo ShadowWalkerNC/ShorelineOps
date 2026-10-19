@@ -74,8 +74,9 @@ The user interface implements **shadcn/ui** primitives combined with Apple Human
 
 ## 5. Security, HIPAA Technical Safeguards & Open Core Licensing
 
-- **Authentication & RBAC**: JWT access tokens, rotated refresh tokens, TOTP MFA, and bcrypt password hashing.
-- **Role Hierarchy**: `cook` $\to$ `aide` $\to$ `dietitian` $\to$ `manager` $\to$ `admin`.
+- **Authentication & Session Revocation**: JWT access tokens bound to persisted SHA-256 `refresh_tokens` and user `auth_version`, TOTP MFA, and bcrypt password hashing.
+- **Semantic Capability Matrix**: Fine-grained capability enforcement across 10 normalized roles (`viewer`, `dietary_aide`, `prep_cook`, `cook`, `lead_cook`, `sous_chef`, `kitchen_manager`, `chef`, `dietitian`, `admin`) and 8 domain capabilities (`server/src/middleware/permissions.ts`).
+- **PostgreSQL Row-Level Security (RLS)**: Migration 032 enforces `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` with `tenant_isolation_policy` across 17 clinical, culinary, purchasing, and compliance tables.
 - **Open Core Entitlement Engine**:
   - Client: `src/security/license.ts` validates HMAC signatures on license tokens (`SH_PRO_...` / `SH_ENT_...`) and exposes `satisfiesTier()`.
   - UI Gate: `src/components/FeatureGate.tsx` wraps proprietary features with frosted glass upgrade cards in Community Core mode.
@@ -87,7 +88,7 @@ The user interface implements **shadcn/ui** primitives combined with Apple Human
 ## 6. Autonomous Operations Consultant Engine
 
 - **Agent Persona**: `dietary_operations_consultant` acting as Certified Dietary Manager (CDM, CFPP) and Healthcare Operations Consultant.
-- **Audit Engine**: `scripts/operations_consultant_audit.js` runs automated operational audits across clinical safety, kitchen ergonomics, supply chain, CMS survey readiness, and open core licensing.
+- **Audit Engine & 24-Hour Stress Simulation**: `scripts/operations_consultant_audit.js` and `scripts/daily_operations_full_simulation.js` run automated operational audits and 24-hour full-shift fault-injection simulations across clinical safety, kitchen ergonomics, supply chain, CMS survey readiness, and open core licensing.
 - **Daily Log**: Master report generated at `docs/DAILY_OPERATIONS_AUDIT.md`.
 - **Recurring Schedule**: Standing background cron (`0 9 * * *` - Daily at 9:00 AM) runs proactive research and audits.
 
@@ -96,10 +97,10 @@ The user interface implements **shadcn/ui** primitives combined with Apple Human
 ## 7. Database Schema — Single Source of Truth
 
 - **Canonical schema**: `server/src/db/migrate.ts`. `runMigrations()` is called once at
-  server boot (`server/src/index.ts`) and applies the ordered migration chain
-  (001–027). This is the **only** schema definition that executes.
+  server boot (`server/src/index.ts`), applies the ordered migration chain
+  (001–032), and verifies all 45 required tables via `assertSchemaIntegrity()`. This is the **only** schema definition that executes.
 - **SQLite fallback**: `server/src/db/pool.ts` translates the canonical migration SQL
-  to SQLite-compatible syntax at query time. It contains **no DDL of its own** —
+  to SQLite-compatible syntax at query time (including stripping PostgreSQL-only RLS and PL/pgSQL blocks). It contains **no DDL of its own** —
   schema and admin seeding flow exclusively through `runMigrations()` + `runSeed()`
   (`server/src/db/seed.ts`).
 - **Legacy archives**: superseded definitions live in `docs/archive/schema-legacy/`

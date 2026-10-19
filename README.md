@@ -1,6 +1,6 @@
 <div align="center">
 
-## Current entry points and design adoption — October 4, 2026
+## Current entry points and design adoption — October 19, 2026
 
 See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/STITCH_ADOPTION_2026-10-04.md). Marketing uses `/`, the public sandbox `/demo/`, and real application sign-in `/app/login`. Build-time `PUBLIC_SITE_URL` controls canonical metadata. Separate marketing hosts must set absolute `PUBLIC_DEMO_URL` and `PUBLIC_APP_URL`; unified deployments use relative paths. Local verification does not establish the deployed release.
 
@@ -127,8 +127,22 @@ In healthcare dining, culinary operations are clinical care:
 - **Complete Healthcare Legal & Policy Suite**:
   - Terms of Service & Master Services Agreement (`/terms`).
   - Healthcare Privacy Policy & HIPAA Business Associate Agreement (BAA) with standard provisions (`/privacy`).
-  - Technical Security Architecture, SOC 2 Type II Safeguards & 99.9% Uptime SLA Whitepaper (`/security`).
+  - Security & Deployment Responsibilities (`/security`).
   - Zero-resale guarantee: resident health data is never brokered, sold, or used to train third-party public AI models.
+
+---
+
+## Wave G — IDDSI Liquid Consistency, PostgreSQL Row-Level Security (RLS) & 24-Hour Stress Simulation
+
+- **First-Class IDDSI Liquid Consistency & Fluid Restriction Provenance (`server/src/db/migrate.ts` Migration 031, `server/src/engine/traySafety.ts`)**:
+  - Added versioned `liquid_consistency` (IDDSI Levels 0–4: Thin, Slightly Thick, Mildly Thick, Moderately Thick, Extremely Thick) and `fluid_restriction_ml` columns to `residents` and `resident_diet_history`.
+  - Any modification to liquid thickness or daily fluid restriction volume atomically increments `diet_order_version`, invalidating unverified tray tickets and preventing thin-liquid aspiration hazards (`IDDSI_LIQUID_CONSISTENCY_MISMATCH`).
+- **PostgreSQL Row-Level Security (RLS) & Tenant Isolation (`server/src/db/migrate.ts` Migration 032)**:
+  - Enabled PostgreSQL Row-Level Security (`ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`) with `tenant_isolation_policy` across 17 core clinical, culinary, purchasing, and compliance tables (`residents`, `resident_diet_history`, `ehr_reconciliation_queue`, `tray_events`, `tray_Temperature_logs`, `temperature_logs`, `recipes`, `menu_items`, `vendors`, `purchase_orders`, `inventory_items`, `substitutions`, `tasks`, `time_entries`, `staff_schedules`, `users`, `audit_log`), binding queries to `current_setting('app.current_facility_id', true)` while transparently stripping PostgreSQL-only RLS DDL in local SQLite mode.
+- **Fine-Grained Semantic Capability Authorization Matrix (`server/src/middleware/permissions.ts`)**:
+  - Replaced coarse linear numeric role comparisons with an explicit 10-role × 8-capability matrix (`requireCapability`), preventing privilege escalation between culinary managers (`purchasing:approve`, `menu:write`) and clinical dietitians (`clinical:write`, `ehr:triage`).
+- **24-Hour End-to-End Operations Stress Simulation (`scripts/daily_operations_full_simulation.js`, [`docs/DAILY_OPERATIONS_AUDIT.md`](docs/DAILY_OPERATIONS_AUDIT.md))**:
+  - Executes a full 24-hour institutional dietary shift simulation (05:00–21:30) injecting 11 real-world kitchen mistakes, clinical dysphagia hazards, allergen substitutions, equipment failures, and unauthorized API mutations—verifying 100% fail-closed safety holds.
 
 ---
 
@@ -163,7 +177,7 @@ ShorelineOps incorporates battle-tested operational resilience protocols for phy
 - **Database Fail-Closed PostgreSQL Integrity (`server/src/db/pool.ts`)**: Removed silent fallback to local SQLite when `DATABASE_URL` is set, eliminating split-brain data loss during network blips in enterprise PostgreSQL deployments.
 - **3-Way Invoice Match REST API Endpoint (`server/src/routes/purchasing.ts`)**: Exposed `POST /api/purchasing/invoices/evaluate` powered by `ThreeWayInvoiceMatchingEngine`. Evaluates line-by-line price variances, quantity short-ships, compound variances, and auto-generates vendor credit memo requests.
 - **Kitchen Kiosk Bluetooth LE Probe & Hands-Free Voice Logging (`src/features/kitchen/TempLogPanel.tsx`)**: Replaced all emojis with clean Lucide icons. Integrated `WebBluetoothProbeDriver` with 1-click BLE probe pairing and live temperature sync. Added hands-free Web Speech API temperature capture for kitchen tablet kiosks.
-- **Section 30 System Integration Test Suite Expansion (`server/src/system.test.ts`)**: **192/192 automated tests passing with 100% success rate** across 30 operational subsystems.
+- **Section 30 System Integration Test Suite Expansion (`server/src/system.test.ts`)**: **192/192 automated tests passing (187 server + 5 desktop runtime)** plus the 11-phase 24-hour operations simulation (`scripts/daily_operations_full_simulation.js`).
 
 ---
 
@@ -195,11 +209,12 @@ ShorelineOps uses an **Open Core** architecture:
 
 ShorelineOps includes an autonomous **Dietary Operations Consultant Agent** (`dietary_operations_consultant`):
 - **Continuous Auditing**: Evaluates clinical IDDSI constraints, kitchen ergonomics, supply chain price variances, and CMS survey compliance.
-- **Run Audit On-Demand**:
+- **Run Audit & 24-Hour Stress Simulation On-Demand**:
   ```bash
   npm run audit:operations
+  node scripts/daily_operations_full_simulation.js
   ```
-- **Master Audit Log**: Inspect [`docs/DAILY_OPERATIONS_AUDIT.md`](docs/DAILY_OPERATIONS_AUDIT.md) for live focus questions and operational stress-test results.
+- **Master Audit Log**: Inspect [`docs/DAILY_OPERATIONS_AUDIT.md`](docs/DAILY_OPERATIONS_AUDIT.md) for live focus questions and 24-hour operational stress-test results.
 
 ---
 
@@ -219,9 +234,9 @@ Requires Node 22.19+ (24 recommended), installs the pinned root workspace once a
 ### Option B: Turnkey Windows 1-Click Desktop Setup
 In PowerShell (as Administrator or standard user):
 ```powershell
-.\\Setup.ps1
+.\Setup.ps1
 ```
-Requires compiled production assets and a supported Node runtime. Prepares `%APPDATA%\\ShorelineOps\\data`, verifies pinned dependencies and creates desktop/Start Menu shortcuts. Provision signing/bootstrap secrets and complete facility/account setup before use. Launch via `ShorelineOps-Launcher.bat`; legacy databases require verified backup and explicit migration.
+Requires compiled production assets and a supported Node runtime. Prepares `%APPDATA%\ShorelineOps\data`, verifies pinned dependencies and creates desktop/Start Menu shortcuts. Provision signing/bootstrap secrets and complete facility/account setup before use. Launch via `ShorelineOps-Launcher.bat`; legacy databases require verified backup and explicit migration.
 
 ### Option C: Turnkey Multi-Container Docker Stack
 ```bash
@@ -234,8 +249,8 @@ docker compose up -d
 ## Quickstart & Local Development
 
 ### 1. Prerequisites
-- Node.js $\\ge 20.0.0$
-- npm $\\ge 10.0.0$
+- Node.js $\ge 22.19.0$
+- npm $\ge 10.0.0$
 
 ### 2. Clone & Install
 ```bash
@@ -257,14 +272,14 @@ npm run dev:all
 ```bash
 npm test
 ```
-`npm test` compiles the server and runs the system and regression suites against disposable SQLite databases, without inheriting deployment database credentials. On September 24, 2026: **228 system checks and 28 additional tests passed**. These local results do not establish PostgreSQL concurrency, device accessibility, external integration, or production readiness. See the [decision workflow handoff](docs/DECISION_WORKFLOW_HANDOFF.md).
+`npm test` compiles the server and runs the system and regression suites against disposable SQLite databases, without inheriting deployment database credentials. On October 19, 2026: **187 server integration & regression tests, 5 desktop runtime tests (192/192 total), and 11/11 24-hour operational stress simulation phases passed**. These local results do not establish PostgreSQL concurrency, device accessibility, external integration, or production readiness. See the [decision workflow handoff](docs/DECISION_WORKFLOW_HANDOFF.md).
 
 ### 5. Operational Safety & Deployment Boundaries
-- **Atomic EHR reconciliation**: approving a triage item applies the resident change (diet, texture, NPO, or new allergen) and marks the queue item resolved in one transaction. Malformed or unsupported payloads stay `PENDING_TRIAGE` — failed actions never display success.
+- **Atomic EHR reconciliation**: approving a triage item applies the resident change (diet, texture, liquid consistency, fluid restriction, NPO, or new allergen) and marks the queue item resolved in one transaction. Malformed or unsupported payloads stay `PENDING_TRIAGE` — failed actions never display success.
 - **Honest failure states**: unreachable EHR, offline verification, and unevaluated menu audits render pending/unknown states. A scanner error cannot create simulated success or record assembly.
-- **Signed tray cards**: reprint legacy cards. Assembly and later events require the complete signed QR code, current resident version, matching meal/date, and successful safety checks at the write boundary. Missing recipes, unresolved EHR changes, and unsupported allergy/restricted-diet evidence hold the tray. No clinical override is provided.
+- **Signed tray cards**: reprint legacy cards. Assembly and later events require the complete signed QR code, current resident version, matching meal/date, and successful safety checks (including IDDSI food texture L3–L7 and liquid thickness L0–L4) at the write boundary. Missing recipes, unresolved EHR changes, and unsupported allergy/restricted-diet evidence hold the tray. No clinical override is provided.
 - **Draft-bound purchasing**: order lines change only while the parent order is a `draft` and only through manager approval; vendor status updates cannot approve orders. Received quantities move only through the receiving workflow.
-- **One facility per database**: set `SHORELINE_FACILITY_ID` (see `.env.example`). Credentials or headers from another facility are rejected with `403`; facility switching is disabled.
+- **One facility per database & PostgreSQL RLS**: set `SHORELINE_FACILITY_ID` (see `.env.example`). Credentials or headers from another facility are rejected with `403`; facility switching is disabled, and Migration 032 enforces PostgreSQL Row-Level Security (`FORCE ROW LEVEL SECURITY`) across 17 tenant-scoped tables.
 - **No invented clinical results**: menu review displays “Not evaluated”; shift operations links to operational records without fabricated assignments or completion.
 - **Reviewed catalog comparisons**: only confirmed matches with current prices and compatible canonical units enter the price matrix. Specification changes require review again; name similarity never establishes clinical equivalence.
 
@@ -275,7 +290,7 @@ npm test
 Deploy the complete multi-service stack to Render using the official [`render.yaml`](render.yaml) Blueprint:
 
 1. Sign in to your [Render Dashboard](https://dashboard.render.com).
-2. Click **New +** $\\to$ **Blueprint**.
+2. Click **New +** $\to$ **Blueprint**.
 3. Connect your repository: `ShadowWalkerNC/ShorelineOps`.
 4. Render provisions and builds all 4 services automatically:
    - `shoreline-api` (Node/Express API on port 3001)
@@ -289,7 +304,7 @@ See [`docs/RenderDeployment.md`](docs/RenderDeployment.md) for complete deployme
 
 ## CLI & Developer Tools
 
-ShorelineOps ships a unified **command-line interface** (also aliased as `culinaryos`) that gives programmatic control over every clinical, culinary, purchasing, and compliance module.
+ShorelineOps ships a unified **command-line interface** (`shoreline`) that gives programmatic control over every clinical, culinary, purchasing, and compliance module.
 
 ```bash
 # Via npm script
@@ -297,7 +312,6 @@ npm run cli -- <command> [subcommand] [flags]
 
 # After npm link or global install
 shoreline <command>
-culinaryos <command>
 ```
 
 ### Quick Command Reference

@@ -1,5 +1,13 @@
 # TODO — ShorelineOps Roadmap & Active Work
 
+## Audit remediation, RLS & 24-hour operations simulation — 2026-10-19
+
+- [x] Add first-class IDDSI liquid consistency (Levels 0–4) and fluid restriction versioning (`031_resident_liquid_consistency_and_fluid_history`), atomic `diet_order_version` increments, and `IDDSI_LIQUID_CONSISTENCY_MISMATCH` tray safety checks (`server/src/engine/traySafety.ts`).
+- [x] Enforce PostgreSQL Row-Level Security (`ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`) and `tenant_isolation_policy` across 17 clinical, culinary, purchasing, and compliance tables (`032_postgresql_row_level_security_and_tenant_policies`) with SQLite translation parity (`server/src/db/pool.ts`).
+- [x] Replace coarse linear role checks with a 10-role × 8-capability semantic authorization matrix (`server/src/middleware/permissions.ts`), isolating clinical dietitian capabilities from culinary management capabilities.
+- [x] Unify UI bearer token access via `tokenManager.getAccessToken()`, align Render Node runtime (`22.19.0`), fix Dockerfile `/app/data` ownership and dynamic `$PORT` healthchecks, and remove obsolete `culinaryos` CLI binary alias.
+- [x] Execute and verify 24-hour daily institutional operations stress simulation (`scripts/daily_operations_full_simulation.js`, `11/11` real-world fault-injection scenarios resolved fail-closed) and document in [`docs/DAILY_OPERATIONS_AUDIT.md`](docs/DAILY_OPERATIONS_AUDIT.md).
+
 ## Current readiness and SDK follow-up — 2026-10-04
 
 See [current project reassessment](docs/audits/PROJECT_REASSESSMENT_2026-10-04.md) for severity, evidence and acceptance criteria. Historical completed feature headings below do not close these gates.

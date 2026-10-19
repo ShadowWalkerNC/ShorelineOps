@@ -2,7 +2,15 @@
 
 All notable changes to the ShorelineOps platform are documented in this file.
 
-## Unreleased — 2026-10-04
+## Unreleased — 2026-10-19
+
+- **Clinical Dysphagia Liquid Consistency & Fluid Restriction Versioning (Migration 031)**: Added `liquid_consistency` (IDDSI Levels 0–4) and `fluid_restriction_ml` to `residents` and `resident_diet_history`, atomic `diet_order_version` increments on fluid/liquid order updates, and fail-closed `IDDSI_LIQUID_CONSISTENCY_MISMATCH` tray safety holds in `server/src/engine/traySafety.ts`.
+- **PostgreSQL Row-Level Security & Tenant Isolation (Migration 032)**: Enabled `ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` with `tenant_isolation_policy` across 17 clinical, culinary, purchasing, and audit tables bound to `current_setting('app.current_facility_id', true)`, with transparent SQLite query translation in `server/src/db/pool.ts`.
+- **Semantic Capability Authorization Matrix**: Upgraded `server/src/middleware/permissions.ts` with a 10-role × 8-capability authorization matrix (`requireCapability`), isolating clinical dietitian privileges (`clinical:write`, `ehr:triage`) from culinary management privileges (`purchasing:approve`, `menu:write`).
+- **Canonical Client Token Manager & Runtime Parity**: Unified UI bearer token reads through `tokenManager.getAccessToken()`, aligned `render.yaml` (`NODE_VERSION=22.19.0`), fixed `Dockerfile` non-root `/app/data` ownership and dynamic `$PORT` healthchecks, and removed the deprecated `culinaryos` CLI binary alias.
+- **24-Hour Daily Operations Stress Simulation**: Added `scripts/daily_operations_full_simulation.js` and documented 11/11 fail-closed clinical, culinary, and equipment fault-injection scenarios in [`docs/DAILY_OPERATIONS_AUDIT.md`](docs/DAILY_OPERATIONS_AUDIT.md).
+
+## Prior unreleased work — 2026-10-04
 
 - Adopt Stitch clinical presentation: marine teal navigation, light sign-in, grouped administration, larger touch controls and readable dashboard metrics.
 - Preserve demo isolation, clinical controls and MFA; remove passive cache notification obstruction.

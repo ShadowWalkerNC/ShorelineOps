@@ -1,7 +1,7 @@
-# ShorelineOps & CulinaryOS Unified CLI Reference
+# ShorelineOps Unified CLI Reference
 
 > **Binary:** `bin/shoreline.js`  
-> **Aliases:** `shoreline`, `culinaryos`  
+> **Command:** `shoreline`  
 > **Version:** 5.0.0 (Care OS Production Core)  
 > **Output Formats:** Interactive High-Contrast Terminal / Machine-Readable JSON (`--json`)
 
@@ -9,7 +9,7 @@
 
 ## Overview
 
-The **ShorelineOps / CulinaryOS CLI** provides direct programmatic and headless control over every operational module in the platform. It can be called from command lines, CI/CD scripts, autonomous AI agents, Model Context Protocol (MCP) servers, or custom external microservices.
+The **ShorelineOps CLI** provides direct programmatic and headless control over every operational module in the platform. It can be called from command lines, CI/CD scripts, autonomous AI agents, Model Context Protocol (MCP) servers, or custom external microservices.
 
 ---
 
@@ -24,7 +24,6 @@ node bin/shoreline.js <command> [subcommand] [flags]
 
 # Global execution (if linked via npm link)
 shoreline <command> [subcommand] [flags]
-culinaryos <command> [subcommand] [flags]
 ```
 
 ---
