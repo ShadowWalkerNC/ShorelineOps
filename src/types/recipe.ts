@@ -6,6 +6,7 @@ export type RecipeCategory = typeof RECIPE_CATEGORIES[number]
 
 export const RECIPE_ALLERGENS = [
   'Gluten', 'Dairy', 'Nuts', 'Eggs', 'Soy', 'Seeds',
+  'Celery', 'Crustaceans', 'Fish', 'Lupin', 'Molluscs', 'Mustard', 'Peanuts', 'Sesame', 'Sulphites'
 ] as const
 export type RecipeAllergen = typeof RECIPE_ALLERGENS[number]
 
