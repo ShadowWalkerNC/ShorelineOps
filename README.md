@@ -382,6 +382,22 @@ See [`sdk/README.md`](sdk/README.md) and [`docs/SDK_REFERENCE.md`](docs/SDK_REFE
 
 ---
 
+## Native iOS Companion App (`xtool` + Swift 6.1)
+
+ShorelineOps includes an offline-first native iOS application in `ios/ShorelineOps`, engineered with Swift 6.1 and compiled on Windows/Linux via `xtool`:
+- **Jakob's Law 5-Tab Navigation**: Thumb-zone bottom tabs (`Dashboard`, `Residents`, `Menu`, `Kitchen`, `More`) with tactile $\ge 44\text{pt}$ touch targets.
+- **Deterministic Tray Safety Engine**: Enforces non-overridable `NPO_HARD_BLOCK`, unassigned texture holds, allergen collisions, IDDSI liquid consistency mismatch, and stale ticket version rejection at the bedside.
+- **PointClickCare EHR Triage Queue**: Mobile RD review and 1-tap atomic reconciliation incrementing resident diet order versions.
+- **HACCP Temperature Logger**: Enforces minimum core temps (165°F cook hold, 140°F hot line hold, 41°F cold hold) with mandatory corrective action documentation on out-of-range checks.
+- **Local Verification**:
+  ```bash
+  cd ios/ShorelineOps
+  wsl -d Ubuntu -- bash -lc "swift test"
+  ```
+  *See [`ios/ShorelineOps/README.md`](ios/ShorelineOps/README.md) for device deployment and Darwin SDK setup.*
+
+---
+
 ## Compliance & Legal Policies
 
 - [Terms of Service & Master Services Agreement (MSA)](TERMS.md) • [Web View](/terms)

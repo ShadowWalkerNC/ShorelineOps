@@ -1,5 +1,14 @@
 # TODO — ShorelineOps Roadmap & Active Work
 
+## Native iOS Application (xtool & Swift 6.1) — 2026-10-25
+
+- [x] Scaffold native iOS companion app (`ios/ShorelineOps`) with SwiftPM and `xtool` (v1.22.2) configured for Windows/WSL2 cross-compilation without macOS/Xcode requirement.
+- [x] Implement Jakob's Law 5-tab mobile navigation (`Dashboard`, `Residents`, `Menu`, `Kitchen`, `More`) with Apple HIG frosted glass cards and $\ge 44\text{pt}$ touch targets.
+- [x] Build typed Swift 6 sendable models for clinical residents (IDDSI Food L3–L7 + Unassigned -1 hold, IDDSI Liquid L0–L4, fluid restriction mL tracking, Big 9 allergens).
+- [x] Implement deterministic signed tray safety verification engine (`DeterministicTraySafetyEngine`) mirroring `server/src/engine/traySafety.ts` (NPO hard blocks, unassigned texture holds, allergen collisions, IDDSI liquid consistency mismatch, stale ticket versioning).
+- [x] Implement HACCP CCP temperature logging with mandatory out-of-range corrective action enforcement.
+- [x] Add Swift Testing unit test suite (`ClinicalSafetyTests.swift`) verified passing 4/4 tests on Swift 6.1.
+
 ## Audit remediation, RLS & 24-hour operations simulation — 2026-10-19
 
 - [x] Add first-class IDDSI liquid consistency (Levels 0–4) and fluid restriction versioning (`031_resident_liquid_consistency_and_fluid_history`), atomic `diet_order_version` increments, and `IDDSI_LIQUID_CONSISTENCY_MISMATCH` tray safety checks (`server/src/engine/traySafety.ts`).
