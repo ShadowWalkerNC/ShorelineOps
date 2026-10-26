@@ -1,6 +1,6 @@
 <div align="center">
 
-## Current entry points and design adoption — October 19, 2026
+## Current entry points and design adoption — October 26, 2026
 
 See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/STITCH_ADOPTION_2026-10-04.md). Marketing uses `/`, the public sandbox `/demo/`, and real application sign-in `/app/login`. Build-time `PUBLIC_SITE_URL` controls canonical metadata. Separate marketing hosts must set absolute `PUBLIC_DEMO_URL` and `PUBLIC_APP_URL`; unified deployments use relative paths. Local verification does not establish the deployed release.
 
@@ -19,7 +19,7 @@ See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/ST
 **Engineered by a healthcare executive chef, not a venture fund.**  
 *Bridging clinical resident diets, IDDSI dysphagia safety, touch tablet batch cookery, multi-distributor split MRP purchasing, and CMS-2567 federal survey readiness.*
 
-[Live Demo App](https://shorelineops.up.railway.app/demo/menu) • [Marketing & Pricing Portal](https://shorelineops.up.railway.app/) • [Open Core Licensing](LICENSING.md) • [Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [TypeScript SDK](sdk/README.md)
+[Live Demo App](https://shorelineops.up.railway.app/demo/menu) • [Marketing & Pricing Portal](https://shorelineops.up.railway.app/) • [Open Core Licensing](LICENSING.md) • [Daily Operations Audit](docs/DAILY_OPERATIONS_AUDIT.md) • [TypeScript SDK](sdk/README.md) • [iOS App](ios/ShorelineOps/README.md) • [Handoff Notes](docs/HANDOFF_AND_ROADMAP_NOTES.md)
 
 </div>
 
@@ -112,6 +112,7 @@ In healthcare dining, culinary operations are clinical care:
 | **Purchasing & Split MRP** | `/purchasing` | Dennis/Sysco order guides, lowest-cost split POs, 3-way invoice match, credit memos | Dietary Director |
 | **CMS Survey Reporting** | `/reporting` | CMS-2567 digital survey binder export (F800–F814) incl. durable HACCP log evidence, $/CPD cost audits, substitution logs, budget targets & spend | Administrator / CDM |
 | **Facility Settings** | `/settings` | Facility profile, wings & dining rooms, CPD budget solver, meal schedule times — server-synced across devices with offline cache & sync indicator | System Admin |
+| **Native iOS App** | `ios/ShorelineOps` | Jakob's Law 5-tab mobile interface, bedside tray verification scanner, IDDSI L0–L4 liquids, HACCP temp logger | Dietary Aides / RD |
 
 ---
 
