@@ -2,6 +2,11 @@
 
 All notable changes to the ShorelineOps platform are documented in this file.
 
+## Unreleased — 2026-10-26
+
+- **Native iOS Application Scaffolding (`xtool` & Swift 6.1)**: Added native offline-first iOS companion application in `ios/ShorelineOps` with Jakob's Law 5-tab mobile navigation (`Dashboard`, `Residents`, `Menu`, `Kitchen`, `More`), Apple HIG frosted glass design tokens, deterministic bedside tray verification (`DeterministicTraySafetyEngine`), HACCP temperature logging with corrective action gating, and Swift Testing unit test suite passing 4/4 checks on Swift 6.1.
+- **CLI & Marketing Synchronization**: Aligned marketing site console snippets to runnable repository commands (`npm run cli -- <command>`, `npm link`), purged remaining `culinaryos` alias references in `bin/shoreline.js` and `package-lock.json`, and patched 13 upstream npm security advisories.
+
 ## Unreleased — 2026-10-19
 
 - **Clinical Dysphagia Liquid Consistency & Fluid Restriction Versioning (Migration 031)**: Added `liquid_consistency` (IDDSI Levels 0–4) and `fluid_restriction_ml` to `residents` and `resident_diet_history`, atomic `diet_order_version` increments on fluid/liquid order updates, and fail-closed `IDDSI_LIQUID_CONSISTENCY_MISMATCH` tray safety holds in `server/src/engine/traySafety.ts`.
