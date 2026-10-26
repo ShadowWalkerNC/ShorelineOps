@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * ShorelineOps & CulinaryOS Unified Command Line Interface (CLI)
+ * ShorelineOps Unified Command Line Interface (CLI)
  * 
  * Programmatic controller for all clinical, culinary, purchasing,
  * and regulatory modules across Shoreline Care OS.
  * 
  * Usage:
  *   shoreline <command> [subcommand] [flags]
- *   culinaryos <command> [subcommand] [flags]
- * 
  * Flags:
  *   --json       Output raw JSON for programmatic/agent pipelines (MCP, SDK)
  *   --help, -h   Show help menu
@@ -663,14 +661,13 @@ async function main() {
     default: {
       console.log(`
 ╔══════════════════════════════════════════════════════════════════════╗
-║               SHORELINE CARE OS & CULINARYOS CLI v5.0                ║
+║                      SHORELINE CARE OS CLI v5.0                      ║
 ║      Unified Command Line Controller for Healthcare Dietary Ops      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 
 Usage:
   shoreline <command> [subcommand] [flags]
-  culinaryos <command> [subcommand] [flags]
-
+  
 Commands:
   residents, census   Manage resident census, diet orders, NPO blocks, & RD triage queue
                       Subcommands: list, triage

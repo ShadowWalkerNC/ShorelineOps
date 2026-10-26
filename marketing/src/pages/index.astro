@@ -436,10 +436,11 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL || '/app/login'
           <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
             Shoreline ships with an automated terminal CLI, Model Context Protocol (MCP) server for clinical AI agents, and a typed REST API.
           </p>
-          <div class="flex items-center gap-3 pt-2 font-mono text-xs">
-            <span class="px-2 py-1 rounded bg-slate-100 dark:bg-obsidian border border-slate-200 dark:border-obsidian-border text-slate-700 dark:text-slate-300">
-              npm i -g @shoreline/cli
+          <div class="flex flex-wrap items-center gap-2 pt-2 font-mono text-xs">
+            <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-obsidian border border-slate-200 dark:border-obsidian-border text-slate-700 dark:text-slate-300">
+              npm run cli -- help
             </span>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">or link globally with <code class="text-slate-700 dark:text-slate-300">npm link</code></span>
           </div>
         </div>
 
