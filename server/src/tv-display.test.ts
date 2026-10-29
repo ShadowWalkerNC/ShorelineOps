@@ -227,6 +227,101 @@ void test('tv wall-display pairing issues display-scoped sessions and PHI-free a
       assert.equal((await request('/api/tv/crew-today', distributorSession.accessToken)).status, 403)
     })
 
+    await t.test('schedule feed lists today shifts with coverage counts and no private fields', async () => {
+      const today = new Date().toISOString().slice(0, 10)
+      const addProfile = async (over: Record<string, unknown>) => {
+        const id = crypto.randomUUID()
+        await pool.query(
+          `INSERT INTO staff_profiles
+             (id, first_name, last_name, role, department, position, status, phone, email)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            id,
+            over.first_name ?? 'Shift', over.last_name ?? 'Worker',
+            over.role ?? 'dietary', over.department ?? 'Dietary', over.position ?? 'Cook',
+            over.status ?? 'Active', '555-0199', 'shift@example.invalid',
+          ]
+        )
+        return id
+      }
+      const morningId = await addProfile({ first_name: 'Morning', last_name: 'Lead', role: 'manager', position: 'Executive Chef' })
+      const eveningId = await addProfile({ first_name: 'Evening', last_name: 'Aide', position: 'Dietary Aide' })
+      const terminatedId = await addProfile({ first_name: 'Gone', last_name: 'Cook', status: 'Terminated' })
+      const nurseId = await addProfile({ first_name: 'Night', last_name: 'Nurse', department: 'Nursing', position: 'RN' })
+      const addShift = (staffId: string, date: string, shift: string, station: string) =>
+        pool.query('INSERT INTO shifts (id, staff_id, date, shift, station) VALUES ($1, $2, $3, $4, $5)', [
+          crypto.randomUUID(), staffId, date, shift, station,
+        ])
+      await addShift(morningId, today, 'Morning', 'Hot line')
+      await addShift(eveningId, today, 'Evening', 'Tray assembly')
+      await addShift(terminatedId, today, 'Morning', 'Dish')
+      await addShift(nurseId, today, 'Morning', 'Floor')
+      await addShift(morningId, '2099-01-01', 'Morning', 'Hot line')
+      await pool.query(
+        `INSERT INTO call_outs (id, staff_id, filed_by_id, date, shift, reason, notes, coverage_status, replacement_staff_id)
+         VALUES ($1, $2, $3, $4, 'Morning', 'Sick', 'private health note', 'Uncovered', NULL)`,
+        [crypto.randomUUID(), eveningId, morningId, today]
+      )
+      await pool.query(
+        `INSERT INTO call_outs (id, staff_id, filed_by_id, date, shift, reason, coverage_status, replacement_staff_id, manager_acknowledged)
+         VALUES ($1, $2, $3, $4, 'Midday', 'Personal', 'Covered', $5, true)`,
+        [crypto.randomUUID(), morningId, morningId, today, eveningId]
+      )
+      const response = await request('/api/tv/schedule-today', displayToken)
+      assert.equal(response.status, 200)
+      const body = (await response.json()) as any
+      assert.deepEqual(Object.keys(body).sort(), ['coverage', 'date', 'generatedAt', 'shifts'])
+      assert.equal(body.date, today)
+      assert.equal(body.shifts.length, 2)
+      // Morning block sorts before Evening; inactive and non-dietary staff excluded.
+      assert.deepEqual(body.shifts[0], { name: 'Morning Lead', position: 'Executive Chef', shift: 'Morning', station: 'Hot line' })
+      assert.deepEqual(body.shifts[1], { name: 'Evening Aide', position: 'Dietary Aide', shift: 'Evening', station: 'Tray assembly' })
+      assert.deepEqual(body.coverage, { callOuts: 2, uncovered: 1, byShift: { Morning: 1, Midday: 1 } })
+      const serialized = JSON.stringify(body).toLowerCase()
+      for (const forbidden of ['phone', 'email', 'reason', 'notes', 'replacement', 'sick', 'personal', 'emergency']) {
+        assert.ok(!serialized.includes(`"${forbidden}`), `payload must not contain ${forbidden} fields`)
+      }
+      assert.equal((await request('/api/tv/schedule-today')).status, 401)
+      const distributor = await createUser('distributor')
+      const distributorSession = await login(distributor.email)
+      assert.equal((await request('/api/tv/schedule-today', distributorSession.accessToken)).status, 403)
+    })
+
+    await t.test('meals feed reports census and diet/texture counts only', async () => {
+      const addResident = (over: Record<string, unknown>) =>
+        pool.query(
+          'INSERT INTO residents (id, name, room, status, diet_type, texture) VALUES ($1, $2, $3, $4, $5, $6)',
+          [
+            crypto.randomUUID(),
+            over.name ?? 'Test Resident Zephyr', over.room ?? '101A',
+            over.status ?? 'Active', over.diet_type ?? 'Regular', over.texture ?? 'Regular',
+          ]
+        )
+      await addResident({ name: 'Alice Alpha', diet_type: 'Regular', texture: 'Regular' })
+      await addResident({ name: 'Bob Beta', diet_type: 'NAS', texture: 'Pureed' })
+      await addResident({ name: 'Cara Gamma', diet_type: 'Diabetic', texture: 'Soft' })
+      await addResident({ name: 'Discharged Delta', status: 'Discharged', diet_type: 'Renal', texture: 'Minced' })
+      const response = await request('/api/tv/meals-today', displayToken)
+      assert.equal(response.status, 200)
+      const body = (await response.json()) as any
+      assert.deepEqual(Object.keys(body).sort(), ['census', 'date', 'diets', 'generatedAt', 'textures'])
+      assert.equal(body.census, 3)
+      assert.deepEqual(body.diets, { Regular: 1, NAS: 1, Diabetic: 1 })
+      assert.deepEqual(body.textures, { Regular: 1, Pureed: 1, Soft: 1 })
+      for (const n of [body.census, ...Object.values(body.diets), ...Object.values(body.textures)]) {
+        assert.equal(typeof n, 'number')
+        assert.ok((n as number) >= 0)
+      }
+      const serialized = JSON.stringify(body)
+      for (const leaked of ['Alice Alpha', 'Bob Beta', 'Cara Gamma', '101A', 'room', 'allerg']) {
+        assert.ok(!serialized.includes(leaked), `payload must not contain ${leaked}`)
+      }
+      assert.equal((await request('/api/tv/meals-today')).status, 401)
+      const distributor = await createUser('distributor')
+      const distributorSession = await login(distributor.email)
+      assert.equal((await request('/api/tv/meals-today', distributorSession.accessToken)).status, 403)
+    })
+
     await t.test('refresh preserves display scope', async () => {
       const response = await request('/api/auth/refresh', undefined, { refreshToken: displayRefresh })
       assert.equal(response.status, 200)

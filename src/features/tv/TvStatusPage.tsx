@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { tvApi, type CrewToday, type OpsToday } from '@/api/tv'
+import { tvApi, type CrewToday, type MealsToday, type OpsToday } from '@/api/tv'
 import {
   ageLabel,
   formatToday,
@@ -17,11 +17,13 @@ import './tv.css'
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 const SNAPSHOT_KEY = 'shoreline:tv-ops-snapshot'
 const CREW_SNAPSHOT_KEY = 'shoreline:tv-crew-snapshot'
+const MEALS_SNAPSHOT_KEY = 'shoreline:tv-meals-snapshot'
 const REFRESH_MS = 30000
 
 export default function TvStatusPage() {
   const [ops, setOps] = useState<OpsToday | null>(null)
   const [crew, setCrew] = useState<CrewToday | null>(null)
+  const [meals, setMeals] = useState<MealsToday | null>(null)
   const [fetchedAt, setFetchedAt] = useState<string | null>(null)
   const [stale, setStale] = useState(false)
   const [fatal, setFatal] = useState<string | null>(null)
@@ -41,6 +43,21 @@ export default function TvStatusPage() {
         facilityName: 'Shoreline Care Center',
         production: { total, signedOff, pending: total - signedOff },
         trays: { runs: 0, assembled: 0, dispatched: 0, delivered: 0, missed: 0, remade: 0 },
+        generatedAt: new Date().toISOString(),
+      })
+      const { SEED_RESIDENTS } = await import('@/demo/seed')
+      const active = SEED_RESIDENTS.filter(r => r.status === 'Active')
+      const diets: Record<string, number> = {}
+      const textures: Record<string, number> = {}
+      for (const r of active) {
+        diets[r.dietType] = (diets[r.dietType] ?? 0) + 1
+        textures[r.texture] = (textures[r.texture] ?? 0) + 1
+      }
+      setMeals({
+        date: new Date().toISOString().slice(0, 10),
+        census: active.length,
+        diets,
+        textures,
         generatedAt: new Date().toISOString(),
       })
       setFetchedAt(new Date().toISOString())
@@ -74,6 +91,15 @@ export default function TvStatusPage() {
     } catch {
       const cached = loadSnapshot<CrewToday>(CREW_SNAPSHOT_KEY)
       if (cached) setCrew(cached.data)
+    }
+    // Meal counts load independently for the same reason.
+    try {
+      const data = await tvApi.mealsToday()
+      saveSnapshot(MEALS_SNAPSHOT_KEY, data)
+      setMeals(data)
+    } catch {
+      const cached = loadSnapshot<MealsToday>(MEALS_SNAPSHOT_KEY)
+      if (cached) setMeals(cached.data)
     }
   }, [])
 
@@ -166,6 +192,48 @@ export default function TvStatusPage() {
               <p className="tv-note">Demo preview — live tray counts come from the facility server.</p>
             )}
           </section>
+
+          {meals && (
+            <section className="tv-panel tv-span-all" aria-label="Meal counts">
+              <h2 className="tv-panel-title">Meal counts</h2>
+              <div className="tv-big-stats">
+                <div className="tv-stat">
+                  <span className="tv-stat-value">{meals.census}</span>
+                  <span className="tv-stat-label">Residents</span>
+                </div>
+              </div>
+              <div className="tv-count-cols">
+                <div>
+                  <h3 className="tv-choice-label">Diets</h3>
+                  {Object.keys(meals.diets).length === 0 && <p className="tv-empty">No diet orders on file.</p>}
+                  <div className="tv-count-list">
+                    {Object.entries(meals.diets)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([label, count]) => (
+                        <div key={label} className="tv-count-row">
+                          <span className="tv-count-label">{label}</span>
+                          <span className="tv-count-value">{count}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="tv-choice-label">Textures</h3>
+                  {Object.keys(meals.textures).length === 0 && <p className="tv-empty">No texture orders on file.</p>}
+                  <div className="tv-count-list">
+                    {Object.entries(meals.textures)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([label, count]) => (
+                        <div key={label} className="tv-count-row">
+                          <span className="tv-count-label">{label}</span>
+                          <span className="tv-count-value">{count}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           {crew && crew.crew.length > 0 && (
             <section className="tv-panel tv-span-all" aria-label="Kitchen crew">

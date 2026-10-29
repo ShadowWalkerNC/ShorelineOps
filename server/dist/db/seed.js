@@ -628,6 +628,49 @@ async function runSeed() {
        VALUES ($1, $2, $3, $4, $5, 'Dietary', $6, $7, $8) ON CONFLICT (id) DO NOTHING`, [`22000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, emp, first, last, role, position, status, ft]);
     }
     console.log(`[*] Seeded ${CREW.length} dietary crew profiles`);
+    // 8. TV wall-display staff schedule: rolling 7-day shift roster starting
+    // today (UTC day, matching the wall feeds). Existence-checked per row so
+    // reseeds extend the window without duplicating posted shifts.
+    const staffId = (n) => `22000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+    const ROSTER = [
+        // [crew#, shift, station]
+        [1, 'Morning', 'Lead'],
+        [2, 'Morning', 'Hot line'],
+        [5, 'Morning', 'Tray assembly'],
+        [3, 'Midday', 'Cold prep'],
+        [6, 'Midday', 'Dish'],
+        [4, 'Evening', 'Prep'],
+    ];
+    let shiftCount = 0;
+    for (let day = 0; day < 7; day++) {
+        const date = new Date(Date.now() + day * 86400000).toISOString().slice(0, 10);
+        for (const [crew, shift, station] of ROSTER) {
+            const { rows: existing } = await pool_1.pool.query('SELECT 1 FROM shifts WHERE staff_id = $1 AND date = $2 AND shift = $3', [staffId(crew), date, shift]);
+            if (existing.length > 0)
+                continue;
+            await pool_1.pool.query('INSERT INTO shifts (id, staff_id, date, shift, station) VALUES ($1, $2, $3, $4, $5)', [crypto_1.default.randomUUID(), staffId(crew), date, shift, station]);
+            shiftCount++;
+        }
+    }
+    console.log(`[*] Seeded ${shiftCount} dietary shifts (7-day window)`);
+    // 9. Demo call-outs for today so the schedule board shows coverage state.
+    const today = new Date().toISOString().slice(0, 10);
+    const CALL_OUTS = [
+        // [crew#, shift, reason, coverage, replacement#, acknowledged] — one open,
+        // one covered, so both wall states are visible in seeded builds.
+        [5, 'Morning', 'Sick', 'Uncovered', null, false],
+        [6, 'Midday', 'Personal', 'Covered', '4', true],
+    ];
+    let callCount = 0;
+    for (const [crew, shift, reason, coverage, replacement, ack] of CALL_OUTS) {
+        const { rows: existing } = await pool_1.pool.query('SELECT 1 FROM call_outs WHERE staff_id = $1 AND date = $2 AND shift = $3', [staffId(crew), today, shift]);
+        if (existing.length > 0)
+            continue;
+        await pool_1.pool.query(`INSERT INTO call_outs (id, staff_id, filed_by_id, date, shift, reason, coverage_status, replacement_staff_id, manager_acknowledged)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, [crypto_1.default.randomUUID(), staffId(crew), staffId(1), today, shift, reason, coverage, replacement ? staffId(Number(replacement)) : null, ack]);
+        callCount++;
+    }
+    console.log(`[*] Seeded ${callCount} call-outs for ${today}`);
     console.log('\n[seed] Multi-facility dataset seeding complete.');
 }
 if (require.main === module) {

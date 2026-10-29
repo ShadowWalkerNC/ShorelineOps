@@ -1170,6 +1170,33 @@ const migrations: { name: string; sql: string }[] = [
       END $$;
     `,
   },
+  {
+    // TV wall-display staff schedule: who works which shift block on which
+    // day. staff_id follows the call_outs TEXT convention (staff_profiles id).
+    // date is YYYY-MM-DD TEXT like call_outs/tray_runs; the TV reads "today"
+    // with the same UTC-day helper as the other wall feeds.
+    name: '033_tv_staff_shifts',
+    sql: `
+      CREATE TABLE IF NOT EXISTS shifts (
+        id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        staff_id   TEXT NOT NULL,
+        date       TEXT NOT NULL,
+        shift      TEXT NOT NULL DEFAULT 'Morning',
+        station    TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts(date);
+
+      ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shifts' AND policyname = 'shifts_tenant_policy') THEN
+          CREATE POLICY shifts_tenant_policy ON shifts FOR ALL USING (true) WITH CHECK (true);
+        END IF;
+      END $$;
+    `,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.
@@ -1226,6 +1253,8 @@ export const EXPECTED_TABLES: string[] = [
   // Wave J: Canonical products & cross-distributor matching (migration 026).
   'canonical_products',
   'vendor_item_matches',
+  // TV wall-display staff schedule (migration 033).
+  'shifts',
 ]
 
 /**

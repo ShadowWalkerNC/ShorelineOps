@@ -2,10 +2,11 @@
 
 Read-only wall boards for dining rooms, nurse stations, and the kitchen pass:
 today's menu (Choice A/B), a meal countdown, production sign-off progress,
-and today's tray flow as counts. No data entry, no resident data on screen.
+today's tray flow as counts, the staff schedule, and meal-count aggregates.
+No data entry, no resident data on screen.
 
-- Web UI: `/tv/menu`, `/tv/status`, `/tv/setup` (`src/features/tv/`)
-- Server API: `server/src/routes/tv.ts` (pairing + counts-only ops feed)
+- Web UI: `/tv/menu`, `/tv/status`, `/tv/schedule`, `/tv/setup` (`src/features/tv/`)
+- Server API: `server/src/routes/tv.ts` (pairing + wall feeds)
 - Native shell: `android-tv/` (sideloaded APK, hosts the web UI in a WebView)
 - Tests: `server/src/tv-display.test.ts`
 
@@ -14,12 +15,13 @@ and today's tray flow as counts. No data entry, no resident data on screen.
 | Board | Content | Source |
 |---|---|---|
 | **Menu board** (`/tv/menu`) | Today's breakfast, lunch and dinner (Choice A/B + dessert), next-meal countdown | Existing `menu.read` endpoints (payloads carry no PHI) |
-| **Kitchen status** (`/tv/status`) | Production sheets total / signed-off / pending; today's tray runs, assembled, dispatched, delivered, missed, remade | `GET /api/tv/ops-today` |
+| **Kitchen status** (`/tv/status`) | Production sheets total / signed-off / pending; today's tray runs, assembled, dispatched, delivered, missed, remade; meal counts (census + diet/texture breakdowns); kitchen crew | `GET /api/tv/ops-today`, `GET /api/tv/meals-today`, `GET /api/tv/crew-today` |
+| **Schedule** (`/tv/schedule`) | Today's dietary shifts by Morning / Midday / Evening block with stations; call-out coverage banner | `GET /api/tv/schedule-today` |
 | **Setup** (`/tv/setup`) | Pairing, meal times, unpair | TV-local + pairing API |
 
-Boards auto-refresh (menu 60s, status 30s) and fall back to the last-good
-snapshot with an honest stale banner when the server is unreachable.
-D-pad Left/Right switches boards; Up/Down scrolls.
+Boards auto-refresh (menu 60s, status/schedule 30s) and fall back to the
+last-good snapshot with an honest stale banner when the server is
+unreachable. D-pad Left/Right cycles boards; Up/Down scrolls.
 
 ### Counts only — no resident PHI, by construction
 
@@ -39,6 +41,14 @@ D-pad Left/Right switches boards; Up/Down scrolls.
 }
 ```
 
+- `GET /api/tv/meals-today` returns the active census plus diet-type and
+  texture breakdowns as **numbers only** — no names, rooms, or allergies:
+  `{ "census": 54, "diets": { "Regular": 38, "NAS": 9 }, "textures": { "Regular": 47, "Pureed": 4 } }`.
+- `GET /api/tv/schedule-today` returns today's shifts (staff names,
+  positions, shift blocks, stations) plus call-out **counts** per shift and
+  an uncovered total. Call-out reasons, notes, and replacement names stay
+  server-side. Shift data lives in the `shifts` table (migration `033`);
+  the demo seed posts a rolling 7-day roster.
 - The display **never** shows resident names, rooms, diet orders, allergies,
   or tray cards. If a screen ever shows resident-level data, treat it as a
   defect: power off the display and report it.

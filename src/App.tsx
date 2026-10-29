@@ -31,6 +31,7 @@ const SettingsPage = lazy(() => import('./features/settings/SettingsPage'))
 const MobileTasksPage = lazy(() => import('./features/tasks/MobileTasksPage'))
 const TvMenuPage = lazy(() => import('./features/tv/TvMenuPage'))
 const TvStatusPage = lazy(() => import('./features/tv/TvStatusPage'))
+const TvSchedulePage = lazy(() => import('./features/tv/TvSchedulePage'))
 const TvSetupPage = lazy(() => import('./features/tv/TvSetupPage'))
 const TvApprovePage = lazy(() => import('./features/tv/TvApprovePage'))
 
@@ -102,6 +103,7 @@ export default function App() {
         <Route path="/tv" element={<Navigate to="/tv/menu" replace />} />
         <Route path="/tv/menu" element={<TvGate><TvMenuPage /></TvGate>} />
         <Route path="/tv/status" element={<TvGate><TvStatusPage /></TvGate>} />
+        <Route path="/tv/schedule" element={<TvGate><TvSchedulePage /></TvGate>} />
         <Route path="/tv/setup" element={<TvSetupPage />} />
         {/* ── TV pairing approval (manager+ staff session, not display identity) ── */}
         <Route

@@ -301,3 +301,83 @@ tvRouter.get('/crew-today', requireAuth({ allowDisplay: true }), requireCapabili
     next(err)
   }
 })
+
+// GET /api/tv/schedule-today — Today's dietary shifts (names + positions +
+// stations only) with call-out coverage counts. Column-explicit like
+// crew-today; call-out reasons, notes, and replacement names never leave
+// the server.
+tvRouter.get('/schedule-today', requireAuth({ allowDisplay: true }), requireCapability('kitchen.read'), async (_req: AuthRequest, res, next) => {
+  try {
+    const date = todayString()
+    const { rows } = await pool.query(
+      `SELECT p.preferred_name, p.first_name, p.last_name, p.position, s.shift, s.station
+       FROM shifts s JOIN staff_profiles p ON p.id = s.staff_id
+       WHERE s.date = $1 AND p.status = 'Active' AND p.department = 'Dietary'
+       ORDER BY CASE s.shift WHEN 'Morning' THEN 0 WHEN 'Midday' THEN 1 WHEN 'Evening' THEN 2 ELSE 3 END,
+         p.last_name, p.first_name
+       LIMIT 100`,
+      [date]
+    )
+    const shifts = rows.map(row => ({
+      name: `${row.preferred_name || row.first_name} ${row.last_name}`.trim(),
+      position: String(row.position ?? ''),
+      shift: String(row.shift ?? ''),
+      station: String(row.station ?? ''),
+    }))
+    const { rows: callRows } = await pool.query(
+      `SELECT shift, coverage_status, COUNT(*) AS n FROM call_outs WHERE date = $1 GROUP BY shift, coverage_status`,
+      [date]
+    )
+    let callOuts = 0
+    let uncovered = 0
+    const byShift: Record<string, number> = {}
+    for (const row of callRows) {
+      const n = toCount(row.n)
+      callOuts += n
+      if (row.coverage_status === 'Uncovered') uncovered += n
+      if (typeof row.shift === 'string' && row.shift) byShift[row.shift] = (byShift[row.shift] ?? 0) + n
+    }
+    res.json({
+      date,
+      shifts,
+      coverage: { callOuts, uncovered, byShift },
+      generatedAt: new Date().toISOString(),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /api/tv/meals-today — Counts-only meal planning aggregates: active
+// census plus diet-type and texture breakdowns for the kitchen wall.
+// COUNT/GROUP BY over status columns only; no resident names, rooms,
+// allergies, or other clinical fields.
+tvRouter.get('/meals-today', requireAuth({ allowDisplay: true }), requireCapability('residents.serviceRead'), async (_req: AuthRequest, res, next) => {
+  try {
+    const { rows: censusRows } = await pool.query(
+      `SELECT COUNT(*) AS n FROM residents WHERE status = 'Active'`
+    )
+    const { rows: dietRows } = await pool.query(
+      `SELECT diet_type AS k, COUNT(*) AS n FROM residents WHERE status = 'Active' GROUP BY diet_type`
+    )
+    const { rows: textureRows } = await pool.query(
+      `SELECT texture AS k, COUNT(*) AS n FROM residents WHERE status = 'Active' GROUP BY texture`
+    )
+    const counts = (rows: Array<{ k: unknown; n: unknown }>): Record<string, number> => {
+      const out: Record<string, number> = {}
+      for (const row of rows) {
+        if (typeof row.k === 'string' && row.k) out[row.k] = toCount(row.n)
+      }
+      return out
+    }
+    res.json({
+      date: todayString(),
+      census: toCount(censusRows[0]?.n),
+      diets: counts(dietRows),
+      textures: counts(textureRows),
+      generatedAt: new Date().toISOString(),
+    })
+  } catch (err) {
+    next(err)
+  }
+})

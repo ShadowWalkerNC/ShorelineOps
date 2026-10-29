@@ -7,6 +7,9 @@
 - [x] Ship native Android TV shell (`android-tv/`, Leanback launcher + WebView + setup) and operator guide (`docs/TV_DISPLAY.md`). APK compiled and verified (`app-debug.apk`, leanback-launchable, debug-signed; repo-local toolchain under `.tools/`).
 - [x] Cover pairing/scope/refresh/revocation/no-PHI in `server/src/tv-display.test.ts` (12 tests; full gate green 228 + 199 + 5).
 - [x] Pilot install on onn. 4K box via CleanMyTV ADB path (reconnect + installApk + LEANBACK_LAUNCHER launch verified 2026-10-28).
+- [x] Ship staff schedule board (`/tv/schedule`, shifts by Morning/Midday/Evening + call-out coverage banner) backed by `GET /api/tv/schedule-today` and the `shifts` table (migration 033).
+- [x] Ship meal counts on the status board (census + diet/texture breakdowns) backed by counts-only `GET /api/tv/meals-today`; 3-board D-pad rotation in `TvGate`.
+- [ ] Shift-management UI: shifts are currently posted via seed/API only; add a manager screen for weekly roster entry.
 - [ ] Pilot visual check on the TV: server URL setup, 10-foot readability, D-pad order, WebView currency.
 - [ ] Decide licensing tier for walls (shipped Community-open; see `docs/TV_DISPLAY.md` §9 for the enterprise gate recipe).
 

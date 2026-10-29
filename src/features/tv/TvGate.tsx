@@ -15,6 +15,8 @@ import './tv.css'
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 const IS_DEV = import.meta.env.DEV
 
+const TV_BOARDS = ['/tv/menu', '/tv/status', '/tv/schedule'] as const
+
 export default function TvGate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<'checking' | 'ready' | 'setup'>('checking')
   const navigate = useNavigate()
@@ -53,7 +55,10 @@ export default function TvGate({ children }: { children: React.ReactNode }) {
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-      const target = location.pathname.startsWith('/tv/status') ? '/tv/menu' : '/tv/status'
+      const found = TV_BOARDS.findIndex(board => location.pathname.startsWith(board))
+      const current = found === -1 ? 0 : found
+      const delta = e.key === 'ArrowRight' ? 1 : -1
+      const target = TV_BOARDS[(current + delta + TV_BOARDS.length) % TV_BOARDS.length]
       e.preventDefault()
       navigate(target)
       // Return focus to the frame so Up/Down keep scrolling the new board
@@ -76,7 +81,8 @@ export default function TvGate({ children }: { children: React.ReactNode }) {
     return <Navigate to="/tv/setup" replace />
   }
 
-  const onStatus = location.pathname.startsWith('/tv/status')
+  const activeBoard = TV_BOARDS.find(board => location.pathname.startsWith(board)) ?? TV_BOARDS[0]
+  const tabClass = (board: string) => (board === activeBoard ? 'tv-tab tv-tab-active' : 'tv-tab')
   return (
     <div ref={frameRef} className="tv-root" onKeyDown={onKeyDown} tabIndex={0}>
       <header className="tv-topbar">
@@ -89,11 +95,14 @@ export default function TvGate({ children }: { children: React.ReactNode }) {
           <span>Shoreline</span>
         </div>
         <nav className="tv-tabs" aria-label="Boards">
-          <Link to="/tv/menu" className={onStatus ? 'tv-tab' : 'tv-tab tv-tab-active'} aria-current={onStatus ? undefined : 'page'}>
+          <Link to="/tv/menu" className={tabClass('/tv/menu')} aria-current={activeBoard === '/tv/menu' ? 'page' : undefined}>
             Menu board
           </Link>
-          <Link to="/tv/status" className={onStatus ? 'tv-tab tv-tab-active' : 'tv-tab'} aria-current={onStatus ? 'page' : undefined}>
+          <Link to="/tv/status" className={tabClass('/tv/status')} aria-current={activeBoard === '/tv/status' ? 'page' : undefined}>
             Kitchen status
+          </Link>
+          <Link to="/tv/schedule" className={tabClass('/tv/schedule')} aria-current={activeBoard === '/tv/schedule' ? 'page' : undefined}>
+            Schedule
           </Link>
         </nav>
         <div className="tv-clock" aria-label="Current time">

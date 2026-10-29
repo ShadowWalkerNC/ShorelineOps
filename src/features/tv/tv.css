@@ -631,6 +631,66 @@
   font-weight: 600;
 }
 
+/* ── Schedule board + meal counts ─────────────────────────── */
+
+.tv-alert {
+  border-width: 3px;
+  margin-bottom: 2vmin;
+}
+
+.tv-shift-count {
+  display: inline-block;
+  min-width: 2.2em;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  border: 2px solid var(--tv-line);
+  border-radius: 999px;
+  padding: 0.1em 0.6em;
+  margin-left: 1rem;
+  vertical-align: middle;
+}
+
+.tv-count-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 3rem;
+  margin-top: 1.6vmin;
+}
+
+@media (max-width: 900px) {
+  .tv-count-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tv-count-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9vmin;
+  margin-top: 0.6vmin;
+}
+
+.tv-count-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--tv-line);
+  padding-bottom: 0.7vmin;
+}
+
+.tv-count-label {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.tv-count-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tv-root *,
   .tv-root *::before,
