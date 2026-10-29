@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ShorelineOps TV</string>
+    <string name="setup_title">ShorelineOps Wall Display</string>
+    <string name="setup_subtitle">Enter the facility server URL to pair this TV.</string>
+    <string name="setup_hint">https://server.facility.local:3001</string>
+    <string name="setup_save">Save and Connect</string>
+    <string name="setup_error_scheme">URL must start with http:// or https://</string>
+</resources>

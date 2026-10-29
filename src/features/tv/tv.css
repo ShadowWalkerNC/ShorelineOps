@@ -1,0 +1,641 @@
+/* Shoreline TV wall display — 10-foot theme.
+ * Dark high-contrast board, overscan-safe padding, rem-based type that stays
+ * legible from across a dining room. No gradients, no glass, no decoration:
+ * every pixel carries menu or ops information. */
+
+.tv-root {
+  --tv-bg: #0a1628;
+  --tv-panel: #111f36;
+  --tv-line: #274069;
+  --tv-ink: #ffffff;
+  --tv-muted: #ffffff;
+  --tv-accent: #2dd4bf;
+  --tv-warn: #fbbf24;
+  --tv-danger: #fb7185;
+  /* Wall readability rule: every glyph on the boards renders pure white.
+     Hierarchy comes from size and weight, never from color. */
+  min-height: 100dvh;
+  background: var(--tv-bg);
+  color: var(--tv-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  padding: 3.5vmin 4vmin;
+  outline: none;
+}
+
+.tv-root :focus {
+  outline: none;
+}
+
+.tv-root :focus-visible {
+  outline: 4px solid #ffffff;
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.tv-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+/* The app shell styles bare elements (h1-h6, p, label, a, button) with dark
+   clinical-theme colors, and any direct selector beats .tv-root inheritance.
+   Re-assert white on every text-bearing descendant so the wall rule holds. */
+.tv-root h1,
+.tv-root h2,
+.tv-root h3,
+.tv-root h4,
+.tv-root h5,
+.tv-root h6,
+.tv-root p,
+.tv-root span,
+.tv-root a,
+.tv-root small,
+.tv-root label,
+.tv-root li,
+.tv-root button {
+  color: #ffffff;
+}
+
+.tv-field label {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.tv-kicker {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tv-muted);
+  margin: 0;
+}
+
+.tv-loading {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ── Top bar ─────────────────────────────────────────────── */
+
+.tv-topbar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding-bottom: 1.5vmin;
+  border-bottom: 2px solid var(--tv-line);
+  margin-bottom: 2vmin;
+}
+
+.tv-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.tv-logo {
+  width: 2.4rem;
+  height: 2.4rem;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.tv-tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.tv-tab {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--tv-muted);
+  text-decoration: none;
+  padding: 0.65rem 1.4rem;
+  border: 2px solid var(--tv-line);
+  border-radius: 10px;
+  background: transparent;
+}
+
+.tv-tab-active {
+  color: #ffffff;
+  background: transparent;
+  border-color: #ffffff;
+  border-width: 3px;
+}
+
+.tv-clock {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  min-width: 7ch;
+  text-align: right;
+}
+
+/* ── Menu board ──────────────────────────────────────────── */
+
+.tv-headline-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5vmin;
+}
+
+.tv-date {
+  font-size: clamp(1.6rem, 2.8vw, 2.3rem);
+  font-weight: 800;
+  margin: 0;
+}
+
+.tv-week {
+  font-size: 1.3rem;
+  color: var(--tv-muted);
+  font-weight: 600;
+}
+
+.tv-countdown {
+  margin-left: auto;
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.tv-meals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2vmin;
+}
+
+/* Grid children must shrink below content width or wide children
+   (notably text inputs with large min-content) blow the board past
+   the viewport with no wrap point. */
+.tv-meals > *,
+.tv-status-grid > *,
+.tv-setup-grid > *,
+.tv-meal-times > *,
+.tv-week-grid > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .tv-meals {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tv-meal {
+  background: var(--tv-panel);
+  border: 2px solid var(--tv-line);
+  border-radius: 14px;
+  padding: 1.7vmin 2vmin;
+}
+
+.tv-meal-current {
+  border-color: #ffffff;
+  border-width: 3px;
+}
+
+.tv-meal-head {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.8vmin;
+}
+
+.tv-meal-name {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 800;
+  margin: 0;
+}
+
+.tv-meal-time {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--tv-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tv-now-flag {
+  margin-left: auto;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: transparent;
+  border: 2px solid #ffffff;
+  border-radius: 6px;
+  padding: 0.3rem 0.8rem;
+  white-space: nowrap;
+}
+
+.tv-dish {
+  font-size: clamp(1.1rem, 1.8vw, 1.45rem);
+  line-height: 1.4;
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.tv-dish-note {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--tv-muted);
+}
+
+.tv-choice-label {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin: 1vmin 0 0.4vmin;
+}
+
+.tv-choice-label:first-of-type {
+  margin-top: 0.4vmin;
+}
+
+.tv-dessert-label {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tv-muted);
+  margin: 1vmin 0 0.4vmin;
+}
+
+.tv-empty {
+  font-size: 1.3rem;
+  color: var(--tv-muted);
+  font-style: italic;
+  margin: 0.5rem 0 0;
+}
+
+/* ── Status board ────────────────────────────────────────── */
+
+.tv-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2vmin;
+}
+
+@media (max-width: 900px) {
+  .tv-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tv-panel {
+  background: var(--tv-panel);
+  border: 2px solid var(--tv-line);
+  border-radius: 14px;
+  padding: 2.4vmin 2.6vmin;
+}
+
+.tv-panel-title {
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  font-weight: 800;
+  margin: 0 0 1.6vmin;
+}
+
+.tv-big-stats {
+  display: flex;
+  gap: 3rem;
+}
+
+.tv-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.tv-stat-value {
+  font-size: clamp(3rem, 5.5vw, 4.6rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tv-stat-label {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--tv-muted);
+}
+
+.tv-stat-good .tv-stat-value,
+.tv-stat-warn .tv-stat-value,
+.tv-stat-bad .tv-stat-value {
+  color: #ffffff;
+}
+
+.tv-meter {
+  height: 1rem;
+  border-radius: 6px;
+  background: #1e2f4d;
+  margin-top: 1.8vmin;
+  overflow: hidden;
+}
+
+.tv-meter-fill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 6px;
+}
+
+.tv-flow {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: nowrap;
+}
+
+.tv-flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.tv-flow-arrow {
+  font-size: 1.5rem;
+  color: var(--tv-muted);
+  font-weight: 800;
+  flex: none;
+}
+
+.tv-note {
+  font-size: 1.25rem;
+  color: var(--tv-muted);
+  margin: 1.4vmin 0 0;
+}
+
+/* ── Footers, banners ────────────────────────────────────── */
+
+.tv-foot {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2.5vmin;
+  padding-top: 1.6vmin;
+  border-top: 2px solid var(--tv-line);
+  font-size: 1.15rem;
+  color: var(--tv-muted);
+  font-weight: 600;
+}
+
+.tv-stale {
+  color: #ffffff;
+  background: transparent;
+  border: 3px solid #ffffff;
+  font-weight: 800;
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+}
+
+.tv-setup-link {
+  margin-left: auto;
+  color: var(--tv-muted);
+  font-size: 1.1rem;
+}
+
+/* ── Setup / pairing ─────────────────────────────────────── */
+
+.tv-setup-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 2vmin;
+  max-width: 1400px;
+}
+
+@media (max-width: 900px) {
+  .tv-setup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tv-code {
+  font-size: clamp(4rem, 9vw, 7rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  margin: 1vmin 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tv-setup-title {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 800;
+  margin: 0 0 1vmin;
+}
+
+.tv-setup-text {
+  font-size: 1.35rem;
+  line-height: 1.55;
+  color: var(--tv-muted);
+  margin: 0 0 1.2rem;
+}
+
+.tv-setup-text strong {
+  color: var(--tv-ink);
+}
+
+.tv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.4rem;
+}
+
+.tv-field label {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.tv-input {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--tv-ink);
+  background: #0d1c33;
+  border: 2px solid var(--tv-line);
+  border-radius: 10px;
+  padding: 0.9rem 1.2rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 26rem;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.tv-input:focus-visible {
+  border-color: #ffffff;
+}
+
+.tv-button {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: transparent;
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  padding: 1rem 2.2rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.tv-button-secondary {
+  color: var(--tv-ink);
+  background: transparent;
+  border: 2px solid var(--tv-line);
+}
+
+.tv-button-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.tv-error {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 1rem 0 0;
+}
+
+.tv-meal-times {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .tv-meal-times {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tv-saved {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0.8rem 0 0;
+}
+
+/* ── Menu views (today / tomorrow / week) ──────────────────── */
+
+.tv-view-switch {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.tv-view-btn {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: transparent;
+  border: 2px solid var(--tv-line);
+  border-radius: 10px;
+  padding: 0.65rem 1.4rem;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 48px;
+}
+
+.tv-view-active {
+  border-color: #ffffff;
+  border-width: 3px;
+  font-weight: 800;
+}
+
+.tv-week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 2vmin;
+}
+
+.tv-day-card {
+  background: var(--tv-panel);
+  border: 2px solid var(--tv-line);
+  border-radius: 14px;
+  padding: 1.8vmin 2vmin;
+}
+
+.tv-day-today {
+  border-color: #ffffff;
+  border-width: 3px;
+}
+
+.tv-day-name {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 1vmin;
+}
+
+.tv-day-row {
+  font-size: 1.15rem;
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+}
+
+.tv-day-meal {
+  display: inline-block;
+  min-width: 6.5rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 1rem;
+}
+
+/* ── Crew panel ──────────────────────────────────────────── */
+
+.tv-span-all {
+  grid-column: 1 / -1;
+}
+
+.tv-crew-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 3rem;
+}
+
+.tv-crew-member {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 12rem;
+}
+
+.tv-crew-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.tv-crew-role {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-root *,
+  .tv-root *::before,
+  .tv-root *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

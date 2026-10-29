@@ -26,3 +26,5 @@ backups/
 shorelineops_backup_*
 *.sql.gz
 *.sql.dump
+
+.tools/

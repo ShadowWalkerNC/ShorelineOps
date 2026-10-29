@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.startServer = startServer;
 require("dotenv/config");
 const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
@@ -27,6 +26,9 @@ const recipes_1 = require("./routes/recipes");
 const enterprise_1 = require("./routes/enterprise");
 const inventory_1 = require("./routes/inventory");
 const trayruns_1 = require("./routes/trayruns");
+const tv_1 = require("./routes/tv");
+const plaintextCsp_1 = require("./middleware/plaintextCsp");
+const sameOriginCors_1 = require("./middleware/sameOriginCors");
 const errorHandler_1 = require("./middleware/errorHandler");
 const requireAuth_1 = require("./middleware/requireAuth");
 const pool_1 = require("./db/pool");
@@ -57,6 +59,21 @@ app.use((req, res, next) => {
     next();
 });
 // Security middleware
+// Plaintext LAN/offline servers must not send upgrade-insecure-requests
+// (it upgrades every subresource to https:// against a plaintext server and
+// blanks the page); HTTPS deployments keep it. Runs before helmet so the
+// setHeader patch below intercepts helmet's write, not after it.
+app.use(plaintextCsp_1.stripUpgradeInsecureRequests);
+// Optional access log for facility debugging (SHORELINE_ACCESS_LOG=true).
+if (process.env.SHORELINE_ACCESS_LOG === 'true') {
+    app.use((req, res, next) => {
+        const start = Date.now();
+        res.on('finish', () => {
+            console.log(`[access] ${req.method} ${req.url} -> ${res.statusCode} ${res.getHeader('content-type')} ${Date.now() - start}ms`);
+        });
+        next();
+    });
+}
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
         directives: {
@@ -79,10 +96,14 @@ app.use((0, helmet_1.default)({
     noSniff: true,
 }));
 app.use((0, compression_1.default)());
-// CORS: FRONTEND_URL may be a comma-separated list of allowed origins
+// CORS: FRONTEND_URL may be a comma-separated list of allowed origins.
+// Mounted globally: static shells/assets are same-origin by construction and
+// the bypass lets them through (mirroring cors()'s headers so CORS-mode
+// `crossorigin` subresources stay indistinguishable from allowlisted ones),
+// while the strict allowlist still gates every cross-origin request.
 const rawOrigins = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
-app.use((0, cors_1.default)({
+app.use((0, sameOriginCors_1.sameOriginCors)({
     origin: (origin, callback) => {
         if (!origin)
             return callback(null, true);
@@ -143,19 +164,19 @@ app.use('/api', (req, res, next) => {
 });
 // Routes
 app.use('/api/setup', setup_1.setupRouter);
-app.use('/api/auth', auth_1.authRouter);
+app.use('/api/auth', auth_1.authRouter); // login/refresh/logout are public/token-hash flows; /me denies display tokens
 app.use('/api/billing', billing_1.billingRouter);
 app.use('/api/residents', requireAuth_1.requireAuth, residents_1.residentsRouter);
 app.use('/api/audit', requireAuth_1.requireAuth, audit_1.auditRouter);
-app.use('/api/menu', requireAuth_1.requireAuth, (0, cache_1.httpCacheMiddleware)(60, 'menu'), menu_1.menuRouter);
+app.use('/api/menu', (0, requireAuth_1.requireAuth)({ allowDisplay: true }), (0, cache_1.httpCacheMiddleware)(60, 'menu'), menu_1.menuRouter);
 app.use('/api/recipes', requireAuth_1.requireAuth, (0, cache_1.httpCacheMiddleware)(60, 'recipes'), recipes_1.recipesRouter);
-app.use('/api/production', requireAuth_1.requireAuth, production_1.productionRouter);
+app.use('/api/production', (0, requireAuth_1.requireAuth)({ allowDisplay: true }), production_1.productionRouter);
 app.use('/api/admin', requireAuth_1.requireAuth, admin_1.adminRouter);
 app.use('/api/kitchen', requireAuth_1.requireAuth, kitchen_1.kitchenRouter);
 app.use('/api/purchasing', requireAuth_1.requireAuth, purchasing_1.purchasingRouter);
 app.use('/api/distributor', requireAuth_1.requireAuth, distributor_1.distributorRouter);
 app.use('/api/inventory', requireAuth_1.requireAuth, inventory_1.inventoryRouter);
-app.use('/api/trayruns', requireAuth_1.requireAuth, trayruns_1.trayrunsRouter);
+app.use('/api/trayruns', (0, requireAuth_1.requireAuth)({ allowDisplay: true }), trayruns_1.trayrunsRouter);
 app.use('/api/reporting', requireAuth_1.requireAuth, reporting_1.reportingRouter);
 app.use('/api/enterprise', enterprise_1.enterpriseRouter);
 app.use('/api/ehr', ehr_1.ehrRouter);
@@ -166,6 +187,8 @@ app.use('/api/hardware', requireAuth_1.requireAuth, hardware_1.hardwareRouter);
 if (process.env.ENABLE_TIMECARD_PLUGIN !== 'false') {
     app.use('/api/timecard', timecard_1.timecardRouter);
 }
+// Wall-display pairing (public request/status) + aggregate feeds (auth per route).
+app.use('/api/tv', tv_1.tvRouter);
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const shellRouting_1 = require("./shellRouting");

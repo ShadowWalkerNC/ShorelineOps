@@ -22,6 +22,9 @@ import { recipesRouter } from './routes/recipes'
 import { enterpriseRouter } from './routes/enterprise'
 import { inventoryRouter } from './routes/inventory'
 import { trayrunsRouter } from './routes/trayruns'
+import { tvRouter } from './routes/tv'
+import { stripUpgradeInsecureRequests } from './middleware/plaintextCsp'
+import { sameOriginCors } from './middleware/sameOriginCors'
 import { errorHandler } from './middleware/errorHandler'
 import { requireAuth } from './middleware/requireAuth'
 import { pool } from './db/pool'
@@ -57,6 +60,21 @@ app.use((req, res, next) => {
 })
 
 // Security middleware
+// Plaintext LAN/offline servers must not send upgrade-insecure-requests
+// (it upgrades every subresource to https:// against a plaintext server and
+// blanks the page); HTTPS deployments keep it. Runs before helmet so the
+// setHeader patch below intercepts helmet's write, not after it.
+app.use(stripUpgradeInsecureRequests)
+// Optional access log for facility debugging (SHORELINE_ACCESS_LOG=true).
+if (process.env.SHORELINE_ACCESS_LOG === 'true') {
+  app.use((req, res, next) => {
+    const start = Date.now()
+    res.on('finish', () => {
+      console.log(`[access] ${req.method} ${req.url} -> ${res.statusCode} ${res.getHeader('content-type')} ${Date.now() - start}ms`)
+    })
+    next()
+  })
+}
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -81,10 +99,14 @@ app.use(
   })
 )
 app.use(compression())
-// CORS: FRONTEND_URL may be a comma-separated list of allowed origins
+// CORS: FRONTEND_URL may be a comma-separated list of allowed origins.
+// Mounted globally: static shells/assets are same-origin by construction and
+// the bypass lets them through (mirroring cors()'s headers so CORS-mode
+// `crossorigin` subresources stay indistinguishable from allowlisted ones),
+// while the strict allowlist still gates every cross-origin request.
 const rawOrigins = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean)
-app.use(cors({
+app.use(sameOriginCors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, true)
@@ -148,19 +170,19 @@ app.use('/api', (req, res, next) => {
 
 // Routes
 app.use('/api/setup',      setupRouter)
-app.use('/api/auth',       authRouter)
+app.use('/api/auth',       authRouter) // login/refresh/logout are public/token-hash flows; /me denies display tokens
 app.use('/api/billing',    billingRouter)
 app.use('/api/residents',  requireAuth, residentsRouter)
 app.use('/api/audit',      requireAuth, auditRouter)
-app.use('/api/menu',       requireAuth, httpCacheMiddleware(60, 'menu'), menuRouter)
+app.use('/api/menu',       requireAuth({ allowDisplay: true }), httpCacheMiddleware(60, 'menu'), menuRouter)
 app.use('/api/recipes',    requireAuth, httpCacheMiddleware(60, 'recipes'), recipesRouter)
-app.use('/api/production', requireAuth, productionRouter)
+app.use('/api/production', requireAuth({ allowDisplay: true }), productionRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
 app.use('/api/kitchen',    requireAuth, kitchenRouter)
 app.use('/api/purchasing', requireAuth, purchasingRouter)
 app.use('/api/distributor', requireAuth, distributorRouter)
 app.use('/api/inventory',  requireAuth, inventoryRouter)
-app.use('/api/trayruns',  requireAuth, trayrunsRouter)
+app.use('/api/trayruns',  requireAuth({ allowDisplay: true }), trayrunsRouter)
 app.use('/api/reporting',  requireAuth, reportingRouter)
 app.use('/api/enterprise', enterpriseRouter)
 app.use('/api/ehr',        ehrRouter)
@@ -172,6 +194,8 @@ app.use('/api/hardware',   requireAuth, hardwareRouter)
 if (process.env.ENABLE_TIMECARD_PLUGIN !== 'false') {
   app.use('/api/timecard', timecardRouter)
 }
+// Wall-display pairing (public request/status) + aggregate feeds (auth per route).
+app.use('/api/tv', tvRouter)
 
 import path from 'path'
 import fs from 'fs'

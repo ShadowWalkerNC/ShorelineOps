@@ -16,9 +16,9 @@ const REFRESH_EXPIRES_DAYS = Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7
 const MFA_PENDING_EXPIRES = '5m' as jwt.SignOptions['expiresIn']
 const ISSUER = process.env.MFA_ISSUER || 'ShorelineOps'
 
-function makeTokens(userId: string, role: ApiRole, mfaVerified: boolean, facilityId: string, platformAdmin: boolean, sessionId: string, authVersion: number) {
+function makeTokens(userId: string, role: ApiRole, mfaVerified: boolean, facilityId: string, platformAdmin: boolean, sessionId: string, authVersion: number, display = false) {
   const accessToken = jwt.sign(
-    { sub: userId, role, mfa: mfaVerified, purpose: 'access', facilityId, platformAdmin, sessionId, authVersion },
+    { sub: userId, role, mfa: mfaVerified, purpose: 'access', facilityId, platformAdmin, sessionId, authVersion, ...(display ? { display: true as const } : null) },
     getJwtSecret(),
     { expiresIn: JWT_EXPIRES, audience: ACCESS_TOKEN_AUDIENCE, algorithm: 'HS256' }
   )
@@ -54,6 +54,11 @@ function asApiRole(role: string): ApiRole {
   return (API_ROLES as readonly string[]).includes(role) ? (role as ApiRole) : 'readonly'
 }
 
+/** Reserved service namespace for TV wall-display identities (see routes/tv.ts). */
+function isDisplayEmail(email: unknown): boolean {
+  return typeof email === 'string' && /^tv-display\+[a-z0-9-]*@shoreline\.local$/.test(email)
+}
+
 function totpFromSecret(secretBase32: string) {
   return new OTPAuth.TOTP({
     issuer: ISSUER,
@@ -79,13 +84,13 @@ async function isMfaRequiredGlobally(): Promise<boolean> {
   }
 }
 
-async function issueSession(user: { id: string; name: string; email: string; role: string; auth_version: number; facility_id?: string; platform_admin?: boolean }, mfaVerified: boolean) {
+export async function issueSession(user: { id: string; name: string; email: string; role: string; auth_version: number; facility_id?: string; platform_admin?: boolean }, mfaVerified: boolean, display = false) {
   const role = asApiRole(user.role)
   const facilityId = user.facility_id || 'default'
   const platformAdmin = !!user.platform_admin
   const sessionId = crypto.randomUUID()
   const authVersion = Number(user.auth_version)
-  const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified, facilityId, platformAdmin, sessionId, authVersion)
+  const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified, facilityId, platformAdmin, sessionId, authVersion, display)
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
   const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000)
 
@@ -386,16 +391,20 @@ authRouter.post('/refresh', async (req, res, next) => {
     const globalMfa = await isMfaRequiredGlobally()
     const tokens = await authTransaction(async client => {
       const { rows } = await client.query(
-        `SELECT rt.*, u.id AS uid, u.role, u.mfa_enabled, u.facility_id, u.platform_admin
+        `SELECT rt.*, u.id AS uid, u.role, u.email, u.mfa_enabled, u.facility_id, u.platform_admin
          FROM refresh_tokens rt JOIN users u ON u.id = rt.user_id
          WHERE rt.token_hash = $1 AND rt.expires_at > $2 AND u.active = true
            AND rt.auth_version = u.auth_version` + AUTH_USER_LOCK,
         [tokenHash, new Date().toISOString()],
       )
       const session = rows[0]
-      if (!session || ((globalMfa || !!session.mfa_enabled) && !session.mfa_verified)) throw invalidSession()
+      const isDisplay = isDisplayEmail(session?.email)
+      // Display sessions inherit trust from the manager approval (the approver passed
+      // auth+MFA); the wall board itself cannot complete TOTP, so the verified-MFA
+      // requirement is waived for the reserved display namespace.
+      if (!session || ((globalMfa || !!session.mfa_enabled) && !session.mfa_verified && !isDisplay)) throw invalidSession()
       const issued = makeTokens(session.uid, asApiRole(session.role), !!session.mfa_verified,
-        session.facility_id || 'default', !!session.platform_admin, session.id, Number(session.auth_version))
+        session.facility_id || 'default', !!session.platform_admin, session.id, Number(session.auth_version), isDisplay)
       const newHash = crypto.createHash('sha256').update(issued.refreshToken).digest('hex')
       const { rows: rotated } = await client.query(
         `UPDATE refresh_tokens SET token_hash = $1, expires_at = $2

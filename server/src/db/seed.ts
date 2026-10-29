@@ -576,6 +576,97 @@ export async function runSeed() {
     console.log(`[*] Seeded ${recipesToSeed.length} master institutional recipes`)
   }
 
+  // 6. Cycle menu (item library + one active week) so menu boards render.
+  const menuId = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+  const MENU_ITEMS: Array<[number, string, boolean, string]> = [
+    [1, 'Scrambled Eggs', true, ''], [2, 'Toast with Butter', true, ''],
+    [3, 'Oatmeal', true, 'Can add brown sugar or cinnamon'], [4, 'Pancakes', true, ''],
+    [5, 'Orange Juice', false, ''], [6, 'Fresh Fruit Cup', false, ''],
+    [8, 'Grilled Chicken Breast', true, ''], [14, 'Baked Salmon', true, ''],
+    [17, 'Beef Pot Roast', true, ''], [25, 'Pork Chop', true, ''],
+    [26, 'Turkey Meatloaf', true, ''], [10, 'Green Beans', true, ''],
+    [15, 'Steamed Broccoli', true, ''], [27, 'Glazed Carrots', true, ''],
+    [28, 'Corn', true, ''], [29, 'Peas', true, ''],
+    [9, 'Mashed Potatoes', true, ''], [16, 'Brown Rice', true, ''],
+    [18, 'Egg Noodles', true, ''], [30, 'Baked Potato', true, ''],
+    [31, 'Mac & Cheese', true, ''], [19, 'Applesauce', false, ''],
+    [20, 'Pudding Cup', false, ''], [32, 'Vanilla Ice Cream', false, ''],
+    [33, 'Fruit Cobbler', false, ''], [34, 'Jello', false, ''],
+  ]
+  for (const [n, name, tex, notes] of MENU_ITEMS) {
+    await pool.query(
+      `INSERT INTO menu_items (id, name, notes, texture_modified)
+       VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`,
+      [menuId(n), name, notes, tex]
+    )
+  }
+  // Per day: [breakfast[], lunchA[meat,veg,starch], lunchB, lunchDessert[],
+  // dinnerA, dinnerB, dinnerDessert[]] using the item numbers above.
+  const WEEK: Record<string, [number[], number[], number[], number[], number[], number[], number[]]> = {
+    Sunday: [[3, 2, 5], [8, 10, 9], [14, 15, 16], [20], [17, 28, 18], [25, 27, 30], [32]],
+    Monday: [[1, 2, 6], [8, 15, 9], [26, 29, 31], [19], [14, 10, 16], [17, 27, 18], [34]],
+    Tuesday: [[4, 5, 6], [17, 28, 18], [8, 10, 16], [33], [25, 15, 9], [26, 29, 31], [20]],
+    Wednesday: [[3, 1, 5], [14, 27, 30], [26, 15, 9], [32], [8, 10, 16], [17, 28, 18], [34]],
+    Thursday: [[1, 4, 6], [25, 29, 9], [8, 15, 31], [19], [14, 27, 16], [26, 10, 30], [33]],
+    Friday: [[3, 2, 5], [8, 10, 9], [14, 15, 16], [20], [17, 28, 18], [25, 29, 30], [32]],
+    Saturday: [[4, 6, 5], [17, 27, 18], [26, 28, 31], [34], [8, 15, 9], [14, 10, 16], [19]],
+  }
+  const SLOT_KEYS = [
+    'breakfast',
+    'lunchOpt1Meat', 'lunchOpt1Veggie', 'lunchOpt1Starch',
+    'lunchOpt2Meat', 'lunchOpt2Veggie', 'lunchOpt2Starch',
+    'lunchDessert',
+    'dinnerOpt1Meat', 'dinnerOpt1Veggie', 'dinnerOpt1Starch',
+    'dinnerOpt2Meat', 'dinnerOpt2Veggie', 'dinnerOpt2Starch',
+    'dinnerDessert',
+  ]
+  const { rows: weekCount } = await pool.query('SELECT COUNT(*) FROM menu_weeks')
+  if (parseInt(weekCount[0]?.count || '0') === 0) {
+    const days: Record<string, Record<string, { itemIds: string[] }>> = {}
+    for (const [day, slots] of Object.entries(WEEK)) {
+      // Flatten: index 0 is breakfast (multi), then triples, dessert, triples, dessert.
+      const flat: number[][] = [
+        slots[0],
+        [slots[1][0]], [slots[1][1]], [slots[1][2]],
+        [slots[2][0]], [slots[2][1]], [slots[2][2]],
+        slots[3],
+        [slots[4][0]], [slots[4][1]], [slots[4][2]],
+        [slots[5][0]], [slots[5][1]], [slots[5][2]],
+        slots[6],
+      ]
+      days[day] = {}
+      SLOT_KEYS.forEach((key, i) => {
+        days[day][key] = { itemIds: flat[i].map(menuId) }
+      })
+    }
+    await pool.query(
+      `INSERT INTO menu_weeks (id, name, effective_from, days, active)
+       VALUES ($1, 'Cycle 1', $2, $3, true)`,
+      ['21000000-0000-4000-8000-000000000001', new Date().toISOString().slice(0, 10), JSON.stringify(days)]
+    )
+    console.log(`[*] Seeded ${MENU_ITEMS.length} menu items and 1 active cycle week`)
+  }
+
+  // 7. Dietary crew roster for the kitchen status board.
+  const CREW: Array<[string, string, string, string, string, string, boolean]> = [
+    // [employee#, first, last, role, position, status, fullTime]
+    ['D001', 'Marcus', 'Vance', 'manager', 'Executive Chef', 'Active', true],
+    ['D002', 'Carlos', 'Mendez', 'dietary', 'Lead Cook', 'Active', true],
+    ['D003', 'Priya', 'Nair', 'dietary', 'Cook', 'Active', true],
+    ['D004', 'Tom', 'Baker', 'dietary', 'Prep Cook', 'Active', true],
+    ['D005', 'Jordan', 'Ellis', 'dietary', 'Dietary Aide', 'Active', false],
+    ['D006', 'Sam', 'Okafor', 'dietary', 'Dietary Aide', 'Active', false],
+  ]
+  for (let i = 0; i < CREW.length; i++) {
+    const [emp, first, last, role, position, status, ft] = CREW[i]
+    await pool.query(
+      `INSERT INTO staff_profiles (id, employee_number, first_name, last_name, role, department, position, status, full_time)
+       VALUES ($1, $2, $3, $4, $5, 'Dietary', $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
+      [`22000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, emp, first, last, role, position, status, ft]
+    )
+  }
+  console.log(`[*] Seeded ${CREW.length} dietary crew profiles`)
+
   console.log('\n[seed] Multi-facility dataset seeding complete.')
 }
 

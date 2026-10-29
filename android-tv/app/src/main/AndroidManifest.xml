@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Wall-display shell loads the facility server over the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- TV-only shell: require Leanback so Play targets TV devices. -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+    <!-- Conventional TVs have no touchscreen; must be installable without one. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <application
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen"
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true">
+
+        <!-- Launcher entry: LEANBACK_LAUNCHER puts the app on the TV home screen. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboardHidden|orientation|screenSize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- First-run server URL setup; explicit intents only. -->
+        <activity
+            android:name=".SetupActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+    </application>
+</manifest>

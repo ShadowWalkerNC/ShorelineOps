@@ -41,11 +41,22 @@ const ItemBodySchema = z.object({
 // ── Mappers ────────────────────────────────────────────────────────────────────
 
 function toWeek(row: any) {
+  // Postgres returns JSONB parsed; the SQLite shim stores TEXT and only
+  // auto-parses arrays, so object columns arrive as strings. Normalize here
+  // so every client sees the documented Record shape on both databases.
+  let days = row.days
+  if (typeof days === 'string') {
+    try {
+      days = JSON.parse(days)
+    } catch {
+      days = {}
+    }
+  }
   return {
     id: row.id,
     name: row.name,
     effectiveFrom: row.effective_from ?? undefined,
-    days: row.days,
+    days: days ?? {},
     active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

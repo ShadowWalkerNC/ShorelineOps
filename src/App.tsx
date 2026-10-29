@@ -19,6 +19,7 @@ const SetupWizardPage = lazy(() => import('./features/setup/SetupWizardPage'))
 const LegalPage = lazy(() => import('./pages/Legal'))
 import Layout from './components/Layout'
 import PwaBanner from './components/PwaBanner'
+import TvGate from './features/tv/TvGate'
 const OrderEntryPage = lazy(() => import('./features/kitchen/OrderEntryPage'))
 const KitchenSheetPage = lazy(() => import('./features/kitchen/KitchenSheetPage'))
 const TrayCardGeneratorPage = lazy(() => import('./features/kitchen/TrayCardGeneratorPage'))
@@ -28,6 +29,10 @@ const DistributorPortalPage = lazy(() => import('./features/distributor/Distribu
 const ReportingPage = lazy(() => import('./features/reporting/ReportingPage'))
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage'))
 const MobileTasksPage = lazy(() => import('./features/tasks/MobileTasksPage'))
+const TvMenuPage = lazy(() => import('./features/tv/TvMenuPage'))
+const TvStatusPage = lazy(() => import('./features/tv/TvStatusPage'))
+const TvSetupPage = lazy(() => import('./features/tv/TvSetupPage'))
+const TvApprovePage = lazy(() => import('./features/tv/TvApprovePage'))
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -92,6 +97,21 @@ export default function App() {
         <Route path="/reporting"         element={<AuthedLayout><ReportingPage /></AuthedLayout>} />
         <Route path="/settings"          element={<AuthedLayout><SettingsPage /></AuthedLayout>} />
         <Route path="/tasks"             element={<AuthedLayout><MobileTasksPage /></AuthedLayout>} />
+
+        {/* ── TV wall display (own gate: display identity, not staff auth) ── */}
+        <Route path="/tv" element={<Navigate to="/tv/menu" replace />} />
+        <Route path="/tv/menu" element={<TvGate><TvMenuPage /></TvGate>} />
+        <Route path="/tv/status" element={<TvGate><TvStatusPage /></TvGate>} />
+        <Route path="/tv/setup" element={<TvSetupPage />} />
+        {/* ── TV pairing approval (manager+ staff session, not display identity) ── */}
+        <Route
+          path="/tv/approve"
+          element={
+            <AuthedLayout>
+              <RoleGate role="manager"><TvApprovePage /></RoleGate>
+            </AuthedLayout>
+          }
+        />
 
         {/* ── Manager+ routes ──────────────────────────────────────── */}
         {/* /budget merged into /reporting (B13 scope cut) — legacy redirect */}

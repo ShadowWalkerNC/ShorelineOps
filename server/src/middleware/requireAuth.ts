@@ -31,6 +31,12 @@ export interface AccessTokenClaims extends jwt.JwtPayload {
   platformAdmin: boolean
   sessionId: string
   authVersion: number
+  /**
+   * Display-scoped session (TV wall boards). Absent on older tokens and all
+   * human sessions. Display tokens are denied by default and only admitted
+   * on routes mounted with requireAuth({ allowDisplay: true }).
+   */
+  display?: boolean
 }
 
 export function verifyAccessToken(token: string): AccessTokenClaims {
@@ -48,6 +54,7 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
         typeof payload.exp !== 'number' ||
         typeof payload.sessionId !== 'string' || !payload.sessionId.trim() ||
         !Number.isSafeInteger(payload.authVersion) || Number(payload.authVersion) < 0 ||
+        (payload.display !== undefined && typeof payload.display !== 'boolean') ||
         !(API_ROLES as readonly unknown[]).includes(payload.role)) {
       throw new Error('Invalid access token claims')
     }
@@ -75,6 +82,7 @@ export interface AuthRequest extends Request {
   userRole?: ApiRole
   facilityId?: string
   platformAdmin?: boolean
+  displayOnly?: boolean
 }
 
 export function getJwtSecret(): string {
@@ -110,23 +118,43 @@ export async function validateAccessSession(token: string): Promise<AccessTokenC
   return payload
 }
 
-export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+export interface RequireAuthOptions {
+  allowDisplay?: boolean
+}
+
+export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void>
+export function requireAuth(options: RequireAuthOptions): (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>
+export function requireAuth(reqOrOptions: AuthRequest | RequireAuthOptions, res?: Response, next?: NextFunction): Promise<void> | ((req: AuthRequest, res: Response, next: NextFunction) => Promise<void>) {
+  if (typeof (reqOrOptions as AuthRequest).headers === 'undefined' || typeof res === 'undefined' || typeof next === 'undefined') {
+    const options = reqOrOptions as RequireAuthOptions
+    return (req: AuthRequest, innerRes: Response, innerNext: NextFunction) => runRequireAuth(req, innerRes, innerNext, options)
+  }
+  return runRequireAuth(reqOrOptions as AuthRequest, res, next, {})
+}
+
+async function runRequireAuth(req: AuthRequest, res: Response, next: NextFunction, options: RequireAuthOptions): Promise<void> {
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' })
+    res.status(401).json({ error: 'Unauthorized' })
+    return
   }
 
   const token = header.slice(7)
   try {
     const payload = await validateAccessSession(token)
+    if (payload.display === true && options.allowDisplay !== true) {
+      res.status(403).json({ error: 'Display sessions are limited to TV routes' })
+      return
+    }
     req.userId = payload.sub
     req.userRole = payload.role
     req.facilityId = payload.facilityId
     req.platformAdmin = payload.platformAdmin
+    req.displayOnly = payload.display === true
     next()
   } catch (error: any) {
-    if (error.status === 503) return res.status(503).json({ error: 'Authentication service unavailable' })
-    return res.status(401).json({ error: 'Invalid or expired token' })
+    if (error.status === 503) { res.status(503).json({ error: 'Authentication service unavailable' }); return }
+    res.status(401).json({ error: 'Invalid or expired token' })
   }
 }
 

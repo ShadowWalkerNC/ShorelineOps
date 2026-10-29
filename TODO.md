@@ -1,5 +1,15 @@
 # TODO — ShorelineOps Roadmap & Active Work
 
+## TV Wall Display (Android TV) — 2026-10-28
+
+- [x] Ship wall-display server API (`server/src/routes/tv.ts`): claim-bound pairing (manager approve), counts-only `GET /api/tv/ops-today`, display-scoped sessions denied off the TV allowlist.
+- [x] Ship 10-foot web boards (`/tv/menu`, `/tv/status`, `/tv/setup`) with D-pad nav, auto-refresh, and last-good offline snapshots.
+- [x] Ship native Android TV shell (`android-tv/`, Leanback launcher + WebView + setup) and operator guide (`docs/TV_DISPLAY.md`). APK compiled and verified (`app-debug.apk`, leanback-launchable, debug-signed; repo-local toolchain under `.tools/`).
+- [x] Cover pairing/scope/refresh/revocation/no-PHI in `server/src/tv-display.test.ts` (12 tests; full gate green 228 + 199 + 5).
+- [x] Pilot install on onn. 4K box via CleanMyTV ADB path (reconnect + installApk + LEANBACK_LAUNCHER launch verified 2026-10-28).
+- [ ] Pilot visual check on the TV: server URL setup, 10-foot readability, D-pad order, WebView currency.
+- [ ] Decide licensing tier for walls (shipped Community-open; see `docs/TV_DISPLAY.md` §9 for the enterprise gate recipe).
+
 ## Native iOS Application (xtool & Swift 6.1) — 2026-10-25
 
 - [x] Scaffold native iOS companion app (`ios/ShorelineOps`) with SwiftPM and `xtool` (v1.22.2) configured for Windows/WSL2 cross-compilation without macOS/Xcode requirement.

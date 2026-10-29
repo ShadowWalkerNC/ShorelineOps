@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.shorelineops.tv'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.shorelineops.tv'
+        // ASSUMPTION (stated per task): minSdk 21 = first Android TV platform
+        // (Lollipop); target/compile 34 = conservative modern baseline.
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+        debug {
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+// No external dependencies: the shell uses framework WebView, SharedPreferences,
+// and android.app.Activity only, keeping the APK tiny and offline-safe.
+dependencies {
+}

@@ -37,6 +37,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authRouter = void 0;
+exports.issueSession = issueSession;
 const express_1 = require("express");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -51,8 +52,8 @@ const JWT_EXPIRES = (process.env.JWT_EXPIRES_IN ?? '15m');
 const REFRESH_EXPIRES_DAYS = Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7);
 const MFA_PENDING_EXPIRES = '5m';
 const ISSUER = process.env.MFA_ISSUER || 'ShorelineOps';
-function makeTokens(userId, role, mfaVerified, facilityId, platformAdmin, sessionId, authVersion) {
-    const accessToken = jsonwebtoken_1.default.sign({ sub: userId, role, mfa: mfaVerified, purpose: 'access', facilityId, platformAdmin, sessionId, authVersion }, (0, requireAuth_1.getJwtSecret)(), { expiresIn: JWT_EXPIRES, audience: requireAuth_1.ACCESS_TOKEN_AUDIENCE, algorithm: 'HS256' });
+function makeTokens(userId, role, mfaVerified, facilityId, platformAdmin, sessionId, authVersion, display = false) {
+    const accessToken = jsonwebtoken_1.default.sign({ sub: userId, role, mfa: mfaVerified, purpose: 'access', facilityId, platformAdmin, sessionId, authVersion, ...(display ? { display: true } : null) }, (0, requireAuth_1.getJwtSecret)(), { expiresIn: JWT_EXPIRES, audience: requireAuth_1.ACCESS_TOKEN_AUDIENCE, algorithm: 'HS256' });
     const refreshToken = crypto_1.default.randomBytes(48).toString('hex');
     return { accessToken, refreshToken };
 }
@@ -78,6 +79,10 @@ function verifyMfaPendingToken(token, purpose) {
 function asApiRole(role) {
     return requireAuth_1.API_ROLES.includes(role) ? role : 'readonly';
 }
+/** Reserved service namespace for TV wall-display identities (see routes/tv.ts). */
+function isDisplayEmail(email) {
+    return typeof email === 'string' && /^tv-display\+[a-z0-9-]*@shoreline\.local$/.test(email);
+}
 function totpFromSecret(secretBase32) {
     return new OTPAuth.TOTP({
         issuer: ISSUER,
@@ -102,13 +107,13 @@ async function isMfaRequiredGlobally() {
         throw Object.assign(new Error('Authentication settings unavailable'), { status: 503 });
     }
 }
-async function issueSession(user, mfaVerified) {
+async function issueSession(user, mfaVerified, display = false) {
     const role = asApiRole(user.role);
     const facilityId = user.facility_id || 'default';
     const platformAdmin = !!user.platform_admin;
     const sessionId = crypto_1.default.randomUUID();
     const authVersion = Number(user.auth_version);
-    const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified, facilityId, platformAdmin, sessionId, authVersion);
+    const { accessToken, refreshToken } = makeTokens(user.id, role, mfaVerified, facilityId, platformAdmin, sessionId, authVersion, display);
     const tokenHash = crypto_1.default.createHash('sha256').update(refreshToken).digest('hex');
     const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000);
     await (0, authSession_1.authTransaction)(async (client) => {
@@ -362,14 +367,18 @@ exports.authRouter.post('/refresh', async (req, res, next) => {
         const tokenHash = crypto_1.default.createHash('sha256').update(refreshToken).digest('hex');
         const globalMfa = await isMfaRequiredGlobally();
         const tokens = await (0, authSession_1.authTransaction)(async (client) => {
-            const { rows } = await client.query(`SELECT rt.*, u.id AS uid, u.role, u.mfa_enabled, u.facility_id, u.platform_admin
+            const { rows } = await client.query(`SELECT rt.*, u.id AS uid, u.role, u.email, u.mfa_enabled, u.facility_id, u.platform_admin
          FROM refresh_tokens rt JOIN users u ON u.id = rt.user_id
          WHERE rt.token_hash = $1 AND rt.expires_at > $2 AND u.active = true
            AND rt.auth_version = u.auth_version` + authSession_1.AUTH_USER_LOCK, [tokenHash, new Date().toISOString()]);
             const session = rows[0];
-            if (!session || ((globalMfa || !!session.mfa_enabled) && !session.mfa_verified))
+            const isDisplay = isDisplayEmail(session?.email);
+            // Display sessions inherit trust from the manager approval (the approver passed
+            // auth+MFA); the wall board itself cannot complete TOTP, so the verified-MFA
+            // requirement is waived for the reserved display namespace.
+            if (!session || ((globalMfa || !!session.mfa_enabled) && !session.mfa_verified && !isDisplay))
                 throw (0, authSession_1.invalidSession)();
-            const issued = makeTokens(session.uid, asApiRole(session.role), !!session.mfa_verified, session.facility_id || 'default', !!session.platform_admin, session.id, Number(session.auth_version));
+            const issued = makeTokens(session.uid, asApiRole(session.role), !!session.mfa_verified, session.facility_id || 'default', !!session.platform_admin, session.id, Number(session.auth_version), isDisplay);
             const newHash = crypto_1.default.createHash('sha256').update(issued.refreshToken).digest('hex');
             const { rows: rotated } = await client.query(`UPDATE refresh_tokens SET token_hash = $1, expires_at = $2
          WHERE id = $3 AND token_hash = $4 AND auth_version = $5 RETURNING id`, [newHash, new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400_000).toISOString(), session.id, tokenHash, Number(session.auth_version)]);

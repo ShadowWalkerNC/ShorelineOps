@@ -24,6 +24,8 @@ interface DeviceContextValue {
   isTouch: boolean
   /** Screen orientation */
   orientation: 'portrait' | 'landscape'
+  /** True if running on a TV (leanback UA or ?tv=1 override) */
+  isTV: boolean
 }
 
 const STORAGE_KEY = 'shoreline:device-mode-override'
@@ -78,6 +80,12 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     return 'ontouchstart' in window || navigator.maxTouchPoints > 0
   }, [])
 
+  const isTV = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    if (new URLSearchParams(window.location.search).get('tv') === '1') return true
+    return /leanback|googletv|android tv|tizen|webos.*tv|smart-tv|smarttv|appletv/i.test(navigator.userAgent)
+  }, [])
+
   const orientation = dimensions.width >= dimensions.height ? 'landscape' : 'portrait'
 
   const device: EffectiveDevice = useMemo(() => {
@@ -102,7 +110,8 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     isDesktop: device === 'desktop',
     isTouch,
     orientation,
-  }), [dimensions, deviceMode, device, isTouch, orientation])
+    isTV,
+  }), [dimensions, deviceMode, device, isTouch, orientation, isTV])
 
   return (
     <DeviceContext.Provider value={value}>
@@ -131,6 +140,7 @@ export function useDevice(): DeviceContextValue {
       isDesktop,
       isTouch: false,
       orientation: width >= height ? 'landscape' : 'portrait',
+      isTV: typeof navigator !== 'undefined' && /leanback|googletv|android tv|tizen|webos.*tv|smart-tv|smarttv|appletv/i.test(navigator.userAgent),
     }
   }
   return context

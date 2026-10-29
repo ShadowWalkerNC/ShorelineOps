@@ -42,6 +42,7 @@ function verifyAccessToken(token) {
             typeof payload.exp !== 'number' ||
             typeof payload.sessionId !== 'string' || !payload.sessionId.trim() ||
             !Number.isSafeInteger(payload.authVersion) || Number(payload.authVersion) < 0 ||
+            (payload.display !== undefined && typeof payload.display !== 'boolean') ||
             !exports.API_ROLES.includes(payload.role)) {
             throw new Error('Invalid access token claims');
         }
@@ -93,24 +94,39 @@ async function validateAccessSession(token) {
         throw Object.assign(new Error('Invalid or revoked session'), { status: 401 });
     return payload;
 }
-async function requireAuth(req, res, next) {
+function requireAuth(reqOrOptions, res, next) {
+    if (typeof reqOrOptions.headers === 'undefined' || typeof res === 'undefined' || typeof next === 'undefined') {
+        const options = reqOrOptions;
+        return (req, innerRes, innerNext) => runRequireAuth(req, innerRes, innerNext, options);
+    }
+    return runRequireAuth(reqOrOptions, res, next, {});
+}
+async function runRequireAuth(req, res, next, options) {
     const header = req.headers.authorization;
     if (!header?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
     }
     const token = header.slice(7);
     try {
         const payload = await validateAccessSession(token);
+        if (payload.display === true && options.allowDisplay !== true) {
+            res.status(403).json({ error: 'Display sessions are limited to TV routes' });
+            return;
+        }
         req.userId = payload.sub;
         req.userRole = payload.role;
         req.facilityId = payload.facilityId;
         req.platformAdmin = payload.platformAdmin;
+        req.displayOnly = payload.display === true;
         next();
     }
     catch (error) {
-        if (error.status === 503)
-            return res.status(503).json({ error: 'Authentication service unavailable' });
-        return res.status(401).json({ error: 'Invalid or expired token' });
+        if (error.status === 503) {
+            res.status(503).json({ error: 'Authentication service unavailable' });
+            return;
+        }
+        res.status(401).json({ error: 'Invalid or expired token' });
     }
 }
 function requirePlatformAdmin(req, res, next) {
