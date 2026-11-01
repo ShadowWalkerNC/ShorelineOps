@@ -2,6 +2,22 @@
 
 All notable changes to the ShorelineOps platform are documented in this file.
 
+## [v5.0.0] — 2026-11-01
+### Added & Enhanced (Turnkey Zero-Config Experience & Clinical Safety Invariants)
+- **Turnkey Workstation Secrets Provisioner (`desktop/workstation-provision.cjs`)**:
+  - Implemented automatic, zero-setup provisioning of cryptographically secure per-workstation secrets (`JWT_SECRET` with 64 hex characters and `SETUP_BOOTSTRAP_SECRET` with 32 hex characters) persisted in the OS user directory (`%APPDATA%\ShorelineOps\workstation-secrets.json` or `~/.local/share/ShorelineOps`).
+  - Writes `FIRST-RUN-SETUP-KEY.txt` on initialization so system operators can authenticate through the first-run setup wizard immediately without manual environment variable authoring.
+  - Seamless integration across all entrypoints: `launcher.js`, `electron-main.js`, `Setup.ps1`, `Setup.bat`, and `bin/shoreline.js`.
+  - Added `turnkey` and `prestart` npm scripts to automatically compile missing web bundles and backend outputs (`npm run build:all`) prior to server startup.
+- **Setup Wizard & Developer Velocity Enhancements**:
+  - Upgraded `src/features/setup/SetupWizardPage.tsx` with keyboard Enter key tag addition, 1-click preset suggestions (`+ North Wing`, `+ Memory Care Dining`, etc.), live password strength feedback, and dynamic `/api/setup/status` querying.
+  - Implemented seeded role quick-fill cards in `src/features/auth/LoginPage.tsx` and `src/security/demoCredentials.ts` for instant 1-click testing of all five core operational roles (`admin`, `chef`, `rdn`, `cook`, `aide`).
+  - Hardened `server/src/db/seed.ts` for idempotent SQLite seeding across all 46 tables with resident deduplication and clinical role alignment (`dietitian` for clinical verification privileges).
+- **Clinical Recipe Provenance, TV Concurrency & Test Suite Hardening**:
+  - Added `server/src/recipe-provenance.test.ts` covering registered dietitian verification authorization gates, allergen normalization, therapeutic nutrient bounds, tamper-reset on recipe edits, and cache tag invalidation.
+  - Verified TV display pairing concurrency invariants (10 concurrent requests serialize to 1 success and 9 rejections; single-use token consumption).
+  - Extended child process execution timeouts across Windows test suites (`seed-security`, `recovery-access`, `deployment-config`, `backend`) to eliminate CPU-load flakes, achieving 100% deterministic pass rate across all 456 tests.
+
 ## Unreleased — 2026-10-26
 
 - **Native iOS Application Scaffolding (`xtool` & Swift 6.1)**: Added native offline-first iOS companion application in `ios/ShorelineOps` with Jakob's Law 5-tab mobile navigation (`Dashboard`, `Residents`, `Menu`, `Kitchen`, `More`), Apple HIG frosted glass design tokens, deterministic bedside tray verification (`DeterministicTraySafetyEngine`), HACCP temperature logging with corrective action gating, and Swift Testing unit test suite passing 4/4 checks on Swift 6.1.

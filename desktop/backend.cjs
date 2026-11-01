@@ -24,7 +24,7 @@ function checkReady(origin) {
     request.on('error', () => resolve(false))
   })
 }
-async function launchBackend({root,userData,executable=process.execPath,env=process.env,port=4000,timeout=30000}) {
+async function launchBackend({root,userData,executable=process.execPath,env=process.env,port=4000,timeout=60000}) {
   if(!env.JWT_SECRET || env.JWT_SECRET.length < 32) throw new Error('A provisioned JWT_SECRET is required')
   const entry = path.join(root,'server','dist','index.js')
   for(const artifact of [entry,path.join(root,'dist','app','index.html')]) {

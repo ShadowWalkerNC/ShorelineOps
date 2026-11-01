@@ -41,6 +41,8 @@ if (-not (Test-Path (Join-Path $InstallPath "node_modules"))) {
 # workspace install, which can prune or change the pinned dependency tree.
 node -e "const {createRequire}=require('node:module');const path=require('node:path');const req=createRequire(path.resolve(process.argv[1],'server/package.json'));req('express');req('sqlite3')" $InstallPath
 if ($LASTEXITCODE -ne 0) { throw 'Runtime dependencies are incomplete; reinstall the pinned root workspace before creating shortcuts.' }
+$ProvisionScript = Join-Path $InstallPath "desktop/workstation-provision.cjs"
+if (Test-Path $ProvisionScript) { node -e "const p=require(process.argv[1]).ensureWorkstationSecrets(process.env);console.log('    Workstation secrets provisioned at:',p.keyNoticeFile)" $ProvisionScript }
 
 # 3. Create Desktop and Start Menu Shortcuts
 Write-Host "`n[*] Generating Desktop and Start Menu Shortcuts..." -ForegroundColor Yellow

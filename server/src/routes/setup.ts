@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import { z } from 'zod'
 import { pool, databaseDialect } from '../db/pool'
 import { authTransaction } from '../db/authSession'
-import { assertDemoSeedAllowed, runSeed } from '../db/seed'
+import { assertDemoSeedAllowed, isDemoSeedEnabled, runSeed } from '../db/seed'
 
 export const setupRouter = Router()
 
@@ -35,7 +35,7 @@ setupRouter.get('/status', async (_req, res) => {
     const { rows } = await pool.query('SELECT is_initialized, facility_name, facility_type FROM facility_config WHERE id = $1', ['default'])
     const config = rows[0]
     if (!config || !config.is_initialized) {
-      return res.json({ isInitialized: false })
+      return res.json({ isInitialized: false, sampleSeedAllowed: isDemoSeedEnabled() })
     }
     return res.json({
       isInitialized: true,
@@ -43,7 +43,7 @@ setupRouter.get('/status', async (_req, res) => {
       facilityType: config.facility_type,
     })
   } catch {
-    res.json({ isInitialized: false })
+    res.json({ isInitialized: false, sampleSeedAllowed: isDemoSeedEnabled() })
   }
 })
 

@@ -25,6 +25,8 @@
     "db:seed": "npm --prefix server run db:seed",
     "setup:local": "powershell -ExecutionPolicy Bypass -File Setup.ps1",
     "launch": "node launcher.js",
+    "turnkey": "node launcher.js",
+    "prestart": "node -e \"const fs=require('fs'),cp=require('child_process');if(!fs.existsSync('server/dist/index.js')||!fs.existsSync('dist/app/index.html')){console.log('[Shoreline] Compiling missing build artifacts...');cp.execSync('npm run build',{stdio:'inherit'})}\"",
     "start": "node server/dist/index.js",
     "test": "node scripts/run-tests.mjs",
     "test:postgres": "node scripts/run-postgres-acceptance.mjs",

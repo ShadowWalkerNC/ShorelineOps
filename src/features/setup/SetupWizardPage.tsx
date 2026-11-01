@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ShieldCheck,
@@ -14,12 +14,46 @@ import {
 } from 'lucide-react'
 import { useDevice } from '@/hooks/useDevice'
 
+const PRESET_WINGS = ['North Wing', 'South Wing', 'Memory Care', 'Rehab Wing']
+const PRESET_DINING = ['Main Dining Room', 'Memory Care Dining', 'Room Tray Service']
+
+function isValidAdminPassword(pw: string): boolean {
+  return (
+    pw.length >= 12 &&
+    /[A-Z]/.test(pw) &&
+    /[a-z]/.test(pw) &&
+    /[0-9]/.test(pw) &&
+    /[^A-Za-z0-9]/.test(pw)
+  )
+}
+
 export default function SetupWizardPage() {
   const navigate = useNavigate()
   const { isMobile } = useDevice()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sampleSeedAllowed, setSampleSeedAllowed] = useState<boolean>(import.meta.env.DEV)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/setup/status')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((status) => {
+        if (cancelled || !status) return
+        if (status.isInitialized === true) {
+          navigate('/login', { replace: true })
+          return
+        }
+        if (typeof status.sampleSeedAllowed === 'boolean') {
+          setSampleSeedAllowed(status.sampleSeedAllowed)
+        }
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [navigate])
 
   const [formData, setFormData] = useState({
     facilityName: '',
@@ -526,6 +560,12 @@ export default function SetupWizardPage() {
                     placeholder="e.g. Memory Care, East Wing"
                     value={wingInput}
                     onChange={(e) => setWingInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddWing()
+                      }
+                    }}
                     style={{
                       flex: 1,
                       height: 'var(--input-height)',
@@ -538,6 +578,7 @@ export default function SetupWizardPage() {
                     }}
                   />
                   <button
+                    type="button"
                     onClick={handleAddWing}
                     style={{
                       height: 'var(--input-height)',
@@ -552,6 +593,26 @@ export default function SetupWizardPage() {
                   >
                     Add Wing
                   </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {PRESET_WINGS.filter((p) => !formData.wings.includes(p)).map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, wings: [...prev.wings, preset] }))}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px dashed var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-secondary)',
+                        fontSize: 'var(--text-xs)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + {preset}
+                    </button>
+                  ))}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {formData.wings.map((w) => (
@@ -591,6 +652,12 @@ export default function SetupWizardPage() {
                     placeholder="e.g. Main Dining Room, Tray Service"
                     value={diningInput}
                     onChange={(e) => setDiningInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddDining()
+                      }
+                    }}
                     style={{
                       flex: 1,
                       height: 'var(--input-height)',
@@ -603,6 +670,7 @@ export default function SetupWizardPage() {
                     }}
                   />
                   <button
+                    type="button"
                     onClick={handleAddDining}
                     style={{
                       height: 'var(--input-height)',
@@ -617,6 +685,26 @@ export default function SetupWizardPage() {
                   >
                     Add Dining Room
                   </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {PRESET_DINING.filter((p) => !formData.diningRooms.includes(p)).map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, diningRooms: [...prev.diningRooms, preset] }))}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px dashed var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-secondary)',
+                        fontSize: 'var(--text-xs)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + {preset}
+                    </button>
+                  ))}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {formData.diningRooms.map((r) => (
@@ -829,13 +917,16 @@ export default function SetupWizardPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div
-                  onClick={() => setFormData({ ...formData, initMode: 'sample' })}
+                  onClick={() => {
+                    if (sampleSeedAllowed) setFormData({ ...formData, initMode: 'sample' })
+                  }}
                   style={{
                     padding: 20,
                     borderRadius: 'var(--radius-lg)',
                     border: `2px solid ${formData.initMode === 'sample' ? 'var(--color-primary)' : 'var(--border-color)'}`,
                     backgroundColor: formData.initMode === 'sample' ? 'var(--color-primary-light)' : 'var(--bg-card)',
-                    cursor: 'pointer',
+                    cursor: sampleSeedAllowed ? 'pointer' : 'not-allowed',
+                    opacity: sampleSeedAllowed ? 1 : 0.55,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 8
@@ -846,7 +937,9 @@ export default function SetupWizardPage() {
                     <span>Sample Demo Data</span>
                   </div>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    Populates anonymized sample resident records, diet orders, recipes, and shift rosters for instant staff evaluation and testing.
+                    {sampleSeedAllowed
+                      ? 'Populates anonymized sample resident records, diet orders, recipes, and shift rosters for instant staff evaluation and testing.'
+                      : 'Disabled in production mode to protect clinical data integrity. Clean Production Slate is enforced.'}
                   </p>
                 </div>
 
@@ -901,9 +994,35 @@ export default function SetupWizardPage() {
             <button
               disabled={
                 (step === 1 && (!formData.facilityName || !formData.primaryContactEmail)) ||
-                (step === 2 && (!formData.adminName || !formData.adminEmail || !formData.adminPassword))
+                (step === 2 && (
+                  !formData.adminName ||
+                  !formData.adminEmail ||
+                  !isValidAdminPassword(formData.adminPassword) ||
+                  formData.adminPassword !== formData.adminPasswordConfirm
+                )) ||
+                (step === 3 && (
+                  (formData.wings.length === 0 && !wingInput.trim()) ||
+                  (formData.diningRooms.length === 0 && !diningInput.trim())
+                )) ||
+                (step === 4 && formData.setupSecret.trim().length < 16) ||
+                (step === 5 && (!formData.baaAccepted || formData.baaSigneeName.trim().length < 2))
               }
-              onClick={() => setStep(step + 1)}
+              onClick={() => {
+                if (step === 3) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    wings: wingInput.trim() && !prev.wings.includes(wingInput.trim())
+                      ? [...prev.wings, wingInput.trim()]
+                      : prev.wings,
+                    diningRooms: diningInput.trim() && !prev.diningRooms.includes(diningInput.trim())
+                      ? [...prev.diningRooms, diningInput.trim()]
+                      : prev.diningRooms,
+                  }))
+                  setWingInput('')
+                  setDiningInput('')
+                }
+                setStep(step + 1)
+              }}
               style={{
                 height: 'var(--btn-height-md)',
                 padding: '0 28px',

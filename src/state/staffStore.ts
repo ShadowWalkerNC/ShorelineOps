@@ -95,14 +95,117 @@ function callOutToRow(data: Partial<CallOut>): Record<string, unknown> {
   return r
 }
 
+// ── Shift Types & Mapper ─────────────────────────────────────────────────────
+
+export type ShiftWindow = 'Morning' | 'Midday' | 'Evening'
+
+export interface Shift {
+  id: string
+  staffId: string
+  staffName: string
+  date: string // YYYY-MM-DD
+  shift: ShiftWindow
+  position: string
+  station?: string
+  callOut: boolean
+  callOutReason?: string
+  notes?: string
+  coverageStatus?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateShiftInput {
+  staffId?: string
+  staffName?: string
+  date: string
+  shift: ShiftWindow
+  position?: string
+  station?: string
+  callOut?: boolean
+  callOutReason?: string
+  notes?: string
+  coverageStatus?: string
+}
+
+function toShift(row: Record<string, unknown>): Shift {
+  const staffName = ((row.staff_name ?? row.staffName) as string) ||
+    `${(row.preferred_name ?? row.first_name ?? '') as string} ${(row.last_name ?? '') as string}`.trim() ||
+    ((row.staff_id ?? row.staffId) as string) || 'Dietary Staff'
+  const date = ((row.shift_date ?? row.date) as string) || new Date().toISOString().slice(0, 10)
+  const rawShift = String(row.shift_window ?? row.shift ?? 'Morning')
+  let shiftWindow: ShiftWindow = 'Morning'
+  if (/^midday$/i.test(rawShift)) shiftWindow = 'Midday'
+  else if (/^evening$/i.test(rawShift)) shiftWindow = 'Evening'
+
+  const isCallOut = Boolean(row.call_out ?? row.callOut ?? row.call_out_id)
+  return {
+    id: (row.id as string) ?? crypto.randomUUID(),
+    staffId: ((row.staff_id ?? row.staffId) as string) ?? '',
+    staffName,
+    date,
+    shift: shiftWindow,
+    position: ((row.position as string) ?? 'Dietary Aide'),
+    station: (row.station as string) || undefined,
+    callOut: isCallOut,
+    callOutReason: ((row.call_out_reason ?? row.callOutReason ?? row.reason) as string) || undefined,
+    notes: ((row.call_out_notes ?? row.notes) as string) || undefined,
+    coverageStatus: ((row.call_out_coverage_status ?? row.coverage_status ?? row.coverageStatus) as string) || (isCallOut ? 'Uncovered' : undefined),
+    createdAt: ((row.created_at ?? row.createdAt) as string) ?? new Date().toISOString(),
+    updatedAt: ((row.updated_at ?? row.updatedAt) as string) ?? new Date().toISOString(),
+  }
+}
+
+function getInitialDemoShifts(): Shift[] {
+  const today = new Date()
+  const shifts: Shift[] = []
+  const demoCrew = [
+    { staffId: 'D001', staffName: 'Marcus Vance', position: 'Executive Chef', shift: 'Morning' as ShiftWindow, station: 'Hot Line' },
+    { staffId: 'D002', staffName: 'Carlos Mendez', position: 'Lead Cook', shift: 'Morning' as ShiftWindow, station: 'Hot Line' },
+    { staffId: 'D003', staffName: 'Priya Nair', position: 'Cook', shift: 'Evening' as ShiftWindow, station: 'Special Diets' },
+    { staffId: 'D004', staffName: 'Tom Baker', position: 'Prep Cook', shift: 'Midday' as ShiftWindow, station: 'Cold Prep' },
+    { staffId: 'D005', staffName: 'Jordan Ellis', position: 'Dietary Aide', shift: 'Morning' as ShiftWindow, station: 'Tray Assembly' },
+    { staffId: 'D006', staffName: 'Sam Okafor', position: 'Dietary Aide', shift: 'Evening' as ShiftWindow, station: 'Dish Room' },
+  ]
+
+  for (let offset = -2; offset <= 4; offset++) {
+    const d = new Date(today)
+    d.setDate(today.getDate() + offset)
+    const dateStr = d.toISOString().slice(0, 10)
+
+    demoCrew.slice(0, 4).forEach((crew, idx) => {
+      const isCallOut = offset === 0 && idx === 2
+      shifts.push({
+        id: `demo-shift-${dateStr}-${crew.staffId}`,
+        staffId: crew.staffId,
+        staffName: crew.staffName,
+        date: dateStr,
+        shift: crew.shift,
+        position: crew.position,
+        station: crew.station,
+        callOut: isCallOut,
+        callOutReason: isCallOut ? 'Sick' : undefined,
+        notes: isCallOut ? 'Coverage requested for dinner service' : undefined,
+        coverageStatus: isCallOut ? 'Uncovered' : undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    })
+  }
+  return shifts
+}
+
 // ── State interface ──────────────────────────────────────────────────────────
 
 export interface StaffState {
-  profiles:  StaffProfile[]
-  callOuts:  CallOut[]
-  schedule:  ScheduleEntry[]
-  isLoading: boolean
-  error:     string | null
+  profiles:      StaffProfile[]
+  callOuts:      CallOut[]
+  schedule:      ScheduleEntry[]
+  shifts:        Shift[]
+  isLoading:     boolean
+  shiftsLoading: boolean
+  error:         string | null
+  shiftsError:   string | null
 
   fetch:               () => Promise<void>
   addProfile:          (data: Omit<StaffProfile, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
@@ -119,30 +222,44 @@ export interface StaffState {
   updateScheduleEntry: (id: string, updates: Partial<ScheduleEntry>) => void
   removeScheduleEntry: (id: string) => void
 
+  fetchShifts:         (params?: { date?: string; from?: string; to?: string; staffId?: string }) => Promise<void>
+  createShift:         (input: CreateShiftInput) => Promise<Shift | null>
+  updateShift:         (id: string, updates: Partial<Shift>) => Promise<Shift | null>
+  deleteShift:         (id: string) => Promise<boolean>
+  toggleCallOut:       (id: string, reason?: string, notes?: string) => Promise<Shift | null>
+
   profileByAuthId: (authUserId: string) => StaffProfile | undefined
 }
 
 const isDemo = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export const useStaffStore = create<StaffState>((set, get) => ({
-  profiles:  [],
-  callOuts:  [],
-  schedule:  [],
-  isLoading: false,
-  error:     null,
+  profiles:      [],
+  callOuts:      [],
+  schedule:      [],
+  shifts:        getInitialDemoShifts(),
+  isLoading:     false,
+  shiftsLoading: false,
+  error:         null,
+  shiftsError:   null,
 
   fetch: async () => {
     set({ isLoading: true, error: null })
     if (!isDemo) {
       try {
-        const [profilesRes, callOutsRes] = await Promise.all([
+        const [profilesRes, callOutsRes, shiftsRes] = await Promise.all([
           api.get('/admin/staff'),
           api.get('/admin/call-outs'),
+          api.get('/admin/shifts'),
         ])
         if (Array.isArray(profilesRes.data) && Array.isArray(callOutsRes.data)) {
+          const fetchedShifts = Array.isArray(shiftsRes.data?.shifts)
+            ? shiftsRes.data.shifts.map(toShift)
+            : []
           set({
             profiles: profilesRes.data.map(toProfile),
             callOuts: callOutsRes.data.map(toCallOut),
+            shifts: fetchedShifts.length > 0 ? fetchedShifts : getInitialDemoShifts(),
             isLoading: false,
           })
           return
@@ -284,6 +401,166 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   removeScheduleEntry: (id) =>
     set(s => ({ schedule: s.schedule.filter(e => e.id !== id) })),
+
+  fetchShifts: async (params) => {
+    set({ shiftsLoading: true, shiftsError: null })
+    if (!isDemo) {
+      try {
+        const qs = new URLSearchParams()
+        if (params?.date)    qs.set('date', params.date)
+        if (params?.from)    qs.set('from', params.from)
+        if (params?.to)      qs.set('to', params.to)
+        if (params?.staffId) qs.set('staff_id', params.staffId)
+        const path = `/admin/shifts${qs.toString() ? '?' + qs.toString() : ''}`
+        const res = await api.get(path)
+        if (Array.isArray(res.data?.shifts)) {
+          set({
+            shifts: res.data.shifts.map(toShift),
+            shiftsLoading: false,
+          })
+          return
+        }
+      } catch (err: any) {
+        console.warn('[staffStore] Live API fetchShifts failed, falling back to local adapter:', err?.message)
+      }
+    }
+    // Fallback: filter local shifts by date / staffId if provided
+    set(s => {
+      let filtered = s.shifts
+      if (params?.date) filtered = filtered.filter(x => x.date === params.date)
+      if (params?.from) filtered = filtered.filter(x => x.date >= params.from!)
+      if (params?.to)   filtered = filtered.filter(x => x.date <= params.to!)
+      if (params?.staffId) filtered = filtered.filter(x => x.staffId === params.staffId)
+      return { shiftsLoading: false }
+    })
+  },
+
+  createShift: async (input) => {
+    set({ shiftsLoading: true, shiftsError: null })
+    if (!isDemo) {
+      try {
+        const res = await api.post('/admin/shifts', {
+          staff_id: input.staffId,
+          staff_name: input.staffName,
+          shift_date: input.date,
+          shift_window: input.shift,
+          position: input.position,
+          station: input.station,
+          call_out: input.callOut,
+          call_out_reason: input.callOutReason,
+          notes: input.notes,
+          coverage_status: input.coverageStatus,
+        })
+        if (res.data?.id) {
+          const created = toShift(res.data)
+          set(s => ({
+            shifts: [...s.shifts.filter(x => x.id !== created.id), created],
+            shiftsLoading: false,
+          }))
+          return created
+        }
+      } catch (err: any) {
+        console.warn('[staffStore] Live API createShift failed, falling back to local adapter:', err?.message)
+      }
+    }
+    const newShift: Shift = {
+      id: crypto.randomUUID(),
+      staffId: input.staffId || crypto.randomUUID(),
+      staffName: input.staffName || 'Dietary Staff',
+      date: input.date,
+      shift: input.shift,
+      position: input.position || 'Dietary Aide',
+      station: input.station || '',
+      callOut: Boolean(input.callOut),
+      callOutReason: input.callOutReason,
+      notes: input.notes,
+      coverageStatus: input.callOut ? (input.coverageStatus || 'Uncovered') : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    set(s => ({
+      shifts: [...s.shifts.filter(x => !(x.staffId === newShift.staffId && x.date === newShift.date && x.shift === newShift.shift)), newShift],
+      shiftsLoading: false,
+    }))
+    return newShift
+  },
+
+  updateShift: async (id, updates) => {
+    set({ shiftsLoading: true, shiftsError: null })
+    if (!isDemo) {
+      try {
+        const res = await api.put(`/admin/shifts/${id}`, {
+          staff_id: updates.staffId,
+          staff_name: updates.staffName,
+          shift_date: updates.date,
+          shift_window: updates.shift,
+          position: updates.position,
+          station: updates.station,
+          call_out: updates.callOut,
+          call_out_reason: updates.callOutReason,
+          notes: updates.notes,
+          coverage_status: updates.coverageStatus,
+        })
+        if (res.data?.id) {
+          const updated = toShift(res.data)
+          set(s => ({
+            shifts: s.shifts.map(x => x.id === id ? updated : x),
+            shiftsLoading: false,
+          }))
+          return updated
+        }
+      } catch (err: any) {
+        console.warn('[staffStore] Live API updateShift failed, falling back to local adapter:', err?.message)
+      }
+    }
+    let updatedShift: Shift | null = null
+    set(s => {
+      const list = s.shifts.map(x => {
+        if (x.id !== id) return x
+        updatedShift = {
+          ...x,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        }
+        return updatedShift
+      })
+      return { shifts: list, shiftsLoading: false }
+    })
+    return updatedShift
+  },
+
+  deleteShift: async (id) => {
+    set({ shiftsLoading: true, shiftsError: null })
+    if (!isDemo) {
+      try {
+        await api.delete(`/admin/shifts/${id}`)
+        set(s => ({
+          shifts: s.shifts.filter(x => x.id !== id),
+          shiftsLoading: false,
+        }))
+        return true
+      } catch (err: any) {
+        console.warn('[staffStore] Live API deleteShift failed, falling back to local adapter:', err?.message)
+      }
+    }
+    set(s => ({
+      shifts: s.shifts.filter(x => x.id !== id),
+      shiftsLoading: false,
+    }))
+    return true
+  },
+
+  toggleCallOut: async (id, reason, notes) => {
+    const current = get().shifts.find(s => s.id === id)
+    if (!current) return null
+    const nextCallOut = !current.callOut
+    return get().updateShift(id, {
+      callOut: nextCallOut,
+      callOutReason: nextCallOut ? (reason || 'Sick') : undefined,
+      notes: nextCallOut ? (notes || current.notes) : current.notes,
+      coverageStatus: nextCallOut ? (current.coverageStatus || 'Uncovered') : undefined,
+    })
+  },
 
   profileByAuthId: (authUserId) =>
     get().profiles.find(p => p.authUserId === authUserId),

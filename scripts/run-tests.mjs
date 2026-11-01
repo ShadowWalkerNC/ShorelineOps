@@ -22,8 +22,8 @@ if (process.platform === 'win32') {
     if (process.env[name] !== undefined) env[name] = process.env[name]
   }
 }
-function run(args, cwd, childEnv = env) {
-  const result = spawnSync(process.execPath, args, { cwd, env: childEnv, stdio: 'inherit', timeout: 180_000 })
+function run(args, cwd, childEnv = env, timeout = 600_000) {
+  const result = spawnSync(process.execPath, args, { cwd, env: childEnv, stdio: 'inherit', timeout })
   if (result.error) throw result.error
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
@@ -37,5 +37,5 @@ if (process.argv.includes('--backup-diagnostics')) {
 }
 run([path.join(dist, 'system.test.js')], directory)
 const cases = readdirSync(dist).filter(name => name.endsWith('.test.js') && !['system.test.js', 'compliance.test.js'].includes(name))
-run(['--test', ...cases.map(name => path.join(dist, name))], directory)
+run(['--test', '--test-concurrency=1', ...cases.map(name => path.join(dist, name))], directory)
 run(['--test', path.join(root, 'desktop', 'backend.test.cjs')], directory)

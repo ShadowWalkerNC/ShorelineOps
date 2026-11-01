@@ -15,6 +15,8 @@ This document details the **Open Core** architecture of ShorelineOps, separating
 | **Batch Recipe Book & Scaler** | ✅ Included | ✅ Included | ✅ Included |
 | **Tray Card Generator & Table Kiosk** | ✅ Included | ✅ Included | ✅ Included |
 | **Timecard Punch Clock & Roster** | ✅ Included | ✅ Included | ✅ Included |
+| **TV Wall Display Boards (Single-Facility)** | ✅ Free forever (1 Wall / Facility) | ✅ Included | ✅ Included |
+| **Multi-Wall Display Fleet Provisioning** | ❌ | ✅ Unlimited Single-Facility Walls | ✅ Multi-Facility Fleet & Telemetry |
 | **USDA Nutrition Solver** | ❌ (Manual Input) | ✅ Real-time USDA FoodData API | ✅ Real-time USDA FoodData API |
 | **Multi-Distributor Split MRP Optimizer** | ❌ | ✅ Algorithmic Lowest-Cost PO | ✅ Algorithmic Lowest-Cost PO |
 | **Multi-User Cloud Sync & Backups** | ❌ (Local DB) | ✅ Automated Nightly Cloud Sync | ✅ Continuous Geo-Redundant Sync |
@@ -29,14 +31,15 @@ This document details the **Open Core** architecture of ShorelineOps, separating
 
 ### A. Free Community Core (`COMMUNITY`)
 - Located in the open GitHub repository.
-- Contains all single-facility operational tools: Census management, cycle menus, standardized recipes, HACCP food temps, tray card printing, and timecard kiosk.
+- Contains all single-facility operational tools: Census management, cycle menus, standardized recipes, HACCP food temps, tray card printing, timecard kiosk, and TV wall display boards (single-facility pairing and counts-only menu/status/schedule boards).
 - Persists data to a local offline SQLite database or self-hosted Supabase/PostgreSQL instance.
-- Operates without any license key requirement.
+- Operates without any license key requirement (preserving the zero clinical lockout invariant).
 
 ### B. Pro & Enterprise SaaS Tiers (`PRO` & `ENTERPRISE`)
 - Enterprise connectors (PointClickCare OAuth bridge, distributor EDI pipelines, CMS-2567 crosswalk engines) require a cryptographically signed HMAC license key (`SH_PRO_...` or `SH_ENT_...`) or connection to Shoreline Cloud SaaS.
 - **Client Guardrail**: `<FeatureGate requiredTier="enterprise">` presents a Cupertino upgrade card with value metrics, tier comparisons, and a license key activation input.
 - **Backend Guardrail**: `requireTier('enterprise')` middleware gates high-value REST/GraphQL endpoints, returning `402 LICENSE_TIER_REQUIRED` if accessed without an active SaaS entitlement.
+- **TV Wall Display Boundary**: TV pairing and single-facility wall display boards (`/tv/menu`, `/tv/status`, `/tv/schedule`) are completely open in Community Core out-of-the-box without licensing gates or timeouts. Multi-wall deployment across multiple dining stations, automated cloud display backups, centralized enterprise fleet provisioning, and cross-facility board syndication are gated under Pro (`SH_PRO_...`) and Enterprise (`SH_ENT_...`) tiers.
 
 ### C. Live Demo Sandbox Mode (`DEMO`)
 - Deployed at `https://shoreline-demo.onrender.com`.

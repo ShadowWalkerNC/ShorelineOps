@@ -170,21 +170,20 @@ to the pairing screen.
 | **"Too many pending pairings"** | >200 unapproved codes server-wide | Wait a few minutes (codes expire automatically) and retry. |
 | **"TV Display identity is disabled"** | Facility revoked all walls (§6) | Re-enable the `TV Display` user in Admin, then re-pair. |
 
-## 9. Tier note (licensing)
+## 9. Licensing Tier Policy
 
-- **Default: Community-open.** The wall display ships as Community Core —
-  no license key required, consistent with single-facility operational
-  tools in `LICENSING.md`.
-- **If commercialized later,** gate it exactly like other SaaS modules:
-  - Client: wrap the `/tv/*` routes in
-    `<FeatureGate requiredTier="enterprise">` (see
-    `src/components/FeatureGate.tsx` + `src/security/license.ts`).
-  - Server: add `requireTier('enterprise')` to the TV router
-    (`server/src/middleware/requireTier.ts`), returning
-    `402 LICENSE_TIER_REQUIRED` without an active entitlement.
-  - Suggested mapping: Community = one wall display; Pro/Enterprise =
-    unlimited walls + multi-facility boards. No tier change alters the
-    counts-only / no-PHI guarantee.
+TV wall displays adhere to the ShorelineOps Open Core licensing framework documented in `LICENSING.md`:
+
+| Tier | Wall Display Capabilities | Deployment & Pricing |
+|---|---|---|
+| **Community Core (Open Source)** | Single-facility wall display (1 wall display per facility, TV-local schedule, counts-only feeds, touchless boards `/tv/menu`, `/tv/status`, `/tv/schedule`). Zero clinical lockout invariant preserved. | Free forever out-of-the-box (AGPL-3.0 / Apache-2.0, self-hosted, no license key required). |
+| **Pro Cloud SaaS** | Unlimited single-facility multi-wall deployment across all facility stations (dining rooms, memory care, kitchen pass, nursing stations) + automated cloud configuration backup. | $199/mo per facility (Commercial SaaS License, HMAC key `SH_PRO_...`). |
+| **Enterprise Care Network SaaS** | Multi-facility enterprise fleet provisioning, centralized display status telemetry, remote unpair/re-pair administration, and cross-campus menu syndication. | $399/mo per network (Commercial SaaS License, HMAC key `SH_ENT_...`). |
+
+### Architectural Guarantees & Separation
+- **Zero Clinical Lockout:** Single-facility wall displays never blank, interrupt countdowns, or lock out during license lapses or connectivity drops. Wall displays maintain continuous 10-foot operation, gracefully falling back to local snapshots with an honest stale banner.
+- **Strict No-PHI Invariant:** Across all tiers, all wall display endpoints (`/api/tv/*`) enforce counts-only aggregation. Resident names, rooms, diet orders, textures, and allergies never cross the wire to displays.
+- **Enforcement Boundary:** Single-facility pairing and TV endpoints run without license gating in Community Core. Multi-wall fleet management and cross-facility fleet provisioning enforce commercial SaaS entitlements (`requireTier('pro')` / `requireTier('enterprise')` and `<FeatureGate>`).
 
 ## 10. Quick reference (API contract)
 
@@ -195,3 +194,5 @@ to the pairing screen.
 | `POST /api/tv/pair/approve` | manager+ | Manager approves code → binds facility display identity, audit-logged |
 | `GET /api/tv/ops-today` | display-admitted read roles | Counts-only ops feed + facility name + `generatedAt` |
 | `GET /api/tv/crew-today` | display-admitted read roles | Active dietary crew names + positions (no phone/email/notes) |
+| `GET /api/tv/meals-today` | display-admitted read roles | Active census + diet-type and texture breakdowns (numbers only) |
+| `GET /api/tv/schedule-today` | display-admitted read roles | Today's dietary shifts by block + station and call-out counts (zero PHI) |

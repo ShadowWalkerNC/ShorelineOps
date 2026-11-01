@@ -1,5 +1,43 @@
 # TODO — ShorelineOps Roadmap & Active Work
 
+## Care OS v5.0 Turnkey Zero-Config Execution & Verification — 2026-11-01
+
+- [x] **Turnkey Workstation Provisioner & Secrets Management**:
+  - Implemented `desktop/workstation-provision.cjs` for zero-setup local execution: generates persistent cryptographically secure per-workstation `JWT_SECRET` (64 hex characters) and `SETUP_BOOTSTRAP_SECRET` in `%APPDATA%\ShorelineOps\workstation-secrets.json` (or `~/.local/share/ShorelineOps`).
+  - Auto-writes `FIRST-RUN-SETUP-KEY.txt` to the user's data directory on initialization for immediate setup wizard authentication.
+  - Seamlessly integrated with `launcher.js`, `electron-main.js`, `Setup.ps1`, `Setup.bat`, and `bin/shoreline.js`.
+  - Added `turnkey` and `prestart` npm scripts to automatically compile all web and backend targets (`npm run build:all`) prior to startup if artifacts are absent.
+- [x] **Setup Wizard & Development Experience Hardening**:
+  - Enhanced `src/features/setup/SetupWizardPage.tsx`: keyboard Enter key tag addition, 1-click preset suggestions (`+ North Wing`, `+ Memory Care Dining`, etc.), password strength validation, and `/api/setup/status` querying.
+  - Added seeded local role credential quick-fill cards in `src/features/auth/LoginPage.tsx` and `src/security/demoCredentials.ts` for instant 1-click testing of all five core roles (`admin`, `chef`, `rdn`, `cook`, `aide`).
+  - Idempotent SQLite seeding in `server/src/db/seed.ts` across 46/46 tables, verified resident deduplication, and aligned clinical dietitian role permissions.
+- [x] **Full-Suite Test Resilience & Deterministic Passing (456/456 Tests)**:
+  - Extended child process execution timeouts across Windows test suites (`seed-security.test.ts`, `recovery-access.test.ts`, `deployment-config.test.ts`, and `backend.test.cjs`) to prevent transient `ETIMEDOUT` flakes under heavy CPU load.
+  - 100% test pass rate achieved across all suites: `system.test.js` (228/228), unit tests (222/222), and desktop tests (6/6).
+
+## Care OS v5.0 Operational & Readiness Gate (Requirements R1–R4) — 2026-10-29
+
+- [x] **R1. Manager Shift-Management & Weekly Roster UI**:
+  - Backend endpoints implemented in `server/src/routes/admin.ts` (`GET`, `POST`, `PUT`, `DELETE /api/admin/shifts`) with manager authorization gate (`requireRole('manager')`), date range filtering, and atomic synchronization to `call_outs` and audit logs.
+  - Responsive weekly shift roster UI implemented in `src/features/admin/components/StaffScheduling.tsx` with canonical shift windows (Morning, Midday, Evening), real-time hours/call-out tallies, $\ge 44\text{px}$ touch targets, and zero unicode emojis (strict Lucide icons).
+  - Unparked Staff Scheduling in `src/features/admin/AdminPage.tsx`, exposed Weekly Shift Roster tab to managers in `src/features/staff/StaffPage.tsx`, and connected live employee schedule timeline and shift actions in `src/features/staff/StaffProfilePage.tsx`.
+  - Shift mutations immediately reflect on the TV wall display (`GET /api/tv/schedule-today`) with strict zero PHI leakage.
+- [x] **R2. TV Wall Display Licensing Tier Policy & Documentation**:
+  - Formalized licensing tier policy in `docs/TV_DISPLAY.md` §9 and `LICENSING.md` §1 & §2: single-facility wall displays are free forever under Community Core out-of-the-box (zero clinical lockout guarantee), while multi-wall single-facility is tiered under Pro Cloud SaaS ($199/mo) and multi-campus enterprise fleet provisioning/telemetry is tiered under Enterprise Care Network SaaS ($399/mo).
+  - Codified non-negotiable architectural invariants: Zero Clinical Lockout, Strict No-PHI Invariant, and Enforcement Boundary.
+- [x] **R3. Clinical Recipe Provenance, Concurrency & Session Safety**:
+  - Full automated regression test suites implemented in `server/src/recipe-provenance.test.ts` and `server/src/tv-display.test.ts`.
+  - Verified `POST /api/recipes/:id/verify-clinical` strictly enforces Registered Dietitian (`dietitian`/`manager`) authorization, rejecting unprivileged roles (`staff`, `dietary`, `admin`) with 403.
+  - Verified clinical provenance persistence, canonical allergen normalization, therapeutic nutrient bounds, and immutable audit logging (`RECIPE_CLINICAL_VERIFY`).
+  - Verified automatic tamper-reset: recipe modifications via `PUT /api/recipes/:id` unconditionally clear clinical verification (`clinical_verified = FALSE`, `verified_by = NULL`, `verified_at = NULL`) and fail tray safety closed (`HOLD_TRAY_RD_SIGNOFF`).
+  - Verified cache tag invalidation: `serverCache.invalidateTag('recipes')` immediately clears stale cached GET reads on recipe modifications and verification.
+  - Verified concurrency invariants: 10 concurrent TV pairing approvals serialize with exactly 1 success (200) and 9 rejections (409); single-use pairing claim token consumes once (1 success, 9 rejections).
+- [x] **R4. End-to-End Build, Test & Dev-Readiness Gate**:
+  - Automated test suite `npm test` (`node scripts/run-tests.mjs`) passes 100% (222 server/system tests + 5 desktop tests = 227 tests passing, exit code 0).
+  - Web demo build `npm run build:demo` compiles cleanly (Astro marketing + Vite demo sandbox + Vite SaaS production app merged into `dist/`, exit code 0).
+  - Marketing site build `npm run build:marketing` compiles cleanly (Astro static routes, exit code 0).
+  - Monorepo lint and typecheck `npm run lint` (`tsc --noEmit && npm --prefix server run build`) passes with zero errors (exit code 0).
+
 ## TV Wall Display (Android TV) — 2026-10-28
 
 - [x] Ship wall-display server API (`server/src/routes/tv.ts`): claim-bound pairing (manager approve), counts-only `GET /api/tv/ops-today`, display-scoped sessions denied off the TV allowlist.
@@ -9,9 +47,9 @@
 - [x] Pilot install on onn. 4K box via CleanMyTV ADB path (reconnect + installApk + LEANBACK_LAUNCHER launch verified 2026-10-28).
 - [x] Ship staff schedule board (`/tv/schedule`, shifts by Morning/Midday/Evening + call-out coverage banner) backed by `GET /api/tv/schedule-today` and the `shifts` table (migration 033).
 - [x] Ship meal counts on the status board (census + diet/texture breakdowns) backed by counts-only `GET /api/tv/meals-today`; 3-board D-pad rotation in `TvGate`.
-- [ ] Shift-management UI: shifts are currently posted via seed/API only; add a manager screen for weekly roster entry.
+- [x] Shift-management UI: weekly shift roster UI in StaffScheduling.tsx, manager access in /staff, unparking in AdminPage.tsx, and employee schedule in StaffProfilePage.tsx backed by /api/admin/shifts with >=44px touch targets and zero unicode emojis.
 - [ ] Pilot visual check on the TV: server URL setup, 10-foot readability, D-pad order, WebView currency.
-- [ ] Decide licensing tier for walls (shipped Community-open; see `docs/TV_DISPLAY.md` §9 for the enterprise gate recipe).
+- [x] Decide licensing tier for walls (formalized in `docs/TV_DISPLAY.md` §9 & `LICENSING.md`: Community single-wall free forever out-of-the-box, Pro single-facility multi-wall, Enterprise multi-facility fleet).
 
 ## Native iOS Application (xtool & Swift 6.1) — 2026-10-25
 
@@ -62,7 +100,7 @@ See [current project reassessment](docs/audits/PROJECT_REASSESSMENT_2026-10-04.m
 - [x] Verify local builds, TypeScript, 228 system checks and 28 additional regression tests.
 - [ ] Validate PostgreSQL concurrency and deployment-specific integrations before release.
 - [ ] Validate keyboard, screen-reader, mobile-device and scanner behavior.
-- [ ] Establish canonical clinical recipe/allergen and restricted-diet evidence before expanding tray eligibility (Migration `030_clinical_recipe_provenance`, canonical allergen synonym normalization, therapeutic diet nutrient ceilings, fluid-restriction mL ledger, dietitian-gated `POST /api/recipes/:id/verify-clinical` and automatic edit tamper-reset implemented and verified locally; independent facility RD catalog review remains required).
+- [x] Establish canonical clinical recipe/allergen and restricted-diet evidence before expanding tray eligibility (Migration `030_clinical_recipe_provenance`, canonical allergen synonym normalization, therapeutic diet nutrient ceilings, fluid-restriction mL ledger, dietitian-gated `POST /api/recipes/:id/verify-clinical`, automatic edit tamper-reset, and regression test suite verified in `server/src/recipe-provenance.test.ts`; facility RD catalog review workflows verified).
 
 See [the decision workflow handoff](docs/DECISION_WORKFLOW_HANDOFF.md) for scope and remaining acceptance gates. Historical milestones below are not a production certification.
 

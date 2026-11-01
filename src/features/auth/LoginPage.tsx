@@ -60,7 +60,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!DEMO_MODE && !import.meta.env.DEV) return
-    void import('../../security/demoCredentials').then((m) => setDemoAccounts(m.DEMO_ACCOUNTS))
+    void import('../../security/demoCredentials').then((m) =>
+      setDemoAccounts(DEMO_MODE ? m.DEMO_ACCOUNTS : m.DEV_SEED_ACCOUNTS)
+    )
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {

@@ -13,8 +13,8 @@
 // ============================================================
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { AlertTriangle } from 'lucide-react'
-import { useStaffStore } from '../../state/staffStore'
+import { AlertTriangle, Calendar, Clock, Plus, Trash2, Sunrise, Sun, Moon, Check, X, type LucideIcon } from 'lucide-react'
+import { useStaffStore, type ShiftWindow } from '../../state/staffStore'
 import { useNotificationsStore } from '../../state/notificationsStore'
 import { useAuth } from '../../security/AuthContext'
 import { ROLE_LABEL } from '../../types/roles'
@@ -213,11 +213,224 @@ function NotificationsTab({ notifications, staffId }: { notifications: Notificat
   )
 }
 
-// ── Schedule tab (placeholder) ────────────────────────────────────────────────
+// ── Schedule tab ─────────────────────────────────────────────────────────────
 function ScheduleTab({ p }: { p: StaffProfile }) {
+  const { shifts, createShift, deleteShift, toggleCallOut } = useStaffStore()
+  const { user } = useAuth()
+  const isPrivileged = user?.role === 'admin' || user?.role === 'manager'
+
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [shiftDate, setShiftDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [shiftWindow, setShiftWindow] = useState<ShiftWindow>('Morning')
+  const [station, setStation] = useState('Hot Line')
+  const [notes, setNotes] = useState('')
+
+  const fullName = `${p.firstName} ${p.lastName}`.trim()
+  const staffShifts = shifts
+    .filter(s => s.staffId === p.id || s.staffName.toLowerCase() === fullName.toLowerCase())
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  async function handleAddShift(e: React.FormEvent) {
+    e.preventDefault()
+    await createShift({
+      staffId: p.id,
+      staffName: fullName,
+      date: shiftDate,
+      shift: shiftWindow,
+      position: p.position,
+      station,
+      notes: notes.trim() || undefined,
+    })
+    setShowAddModal(false)
+    setNotes('')
+  }
+
+  const SHIFT_ICONS: Record<ShiftWindow, LucideIcon> = {
+    Morning: Sunrise,
+    Midday: Sun,
+    Evening: Moon,
+  }
+
   return (
     <SectionCard title="Upcoming Schedule">
-      <EmptyState message="Schedule entries will appear here once the schedule module is built." />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+          {staffShifts.length} scheduled shift{staffShifts.length !== 1 ? 's' : ''} on record.
+        </p>
+        {isPrivileged && (
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="min-h-[44px] px-4 py-2 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
+            aria-label="Add shift for this employee"
+          >
+            <Plus size={16} />
+            <span>Add Shift</span>
+          </button>
+        )}
+      </div>
+
+      {showAddModal && (
+        <form onSubmit={handleAddShift} style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Calendar size={16} className="text-teal-600 dark:text-teal-400" />
+            <span>Schedule Shift for {fullName}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Date</label>
+              <input
+                type="date"
+                value={shiftDate}
+                onChange={e => setShiftDate(e.target.value)}
+                className="min-h-[44px] w-full px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+                required
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Shift Window</label>
+              <select
+                value={shiftWindow}
+                onChange={e => setShiftWindow(e.target.value as ShiftWindow)}
+                className="min-h-[44px] w-full px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 cursor-pointer"
+              >
+                <option value="Morning">Morning (6:00 AM – 2:00 PM)</option>
+                <option value="Midday">Midday (10:00 AM – 6:00 PM)</option>
+                <option value="Evening">Evening (2:00 PM – 10:00 PM)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Station</label>
+              <select
+                value={station}
+                onChange={e => setStation(e.target.value)}
+                className="min-h-[44px] w-full px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 cursor-pointer"
+              >
+                <option value="Hot Line">Hot Line</option>
+                <option value="Cold Prep">Cold Prep</option>
+                <option value="Tray Assembly">Tray Assembly</option>
+                <option value="Special Diets">Special Diets</option>
+                <option value="Dish Room">Dish Room</option>
+                <option value="Dining Room">Dining Room</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Notes</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="e.g. Requested tray line station"
+              className="min-h-[44px] w-full px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 4 }}>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="min-h-[44px] px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="min-h-[44px] px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Check size={14} />
+              <span>Save Shift</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {staffShifts.length === 0 ? (
+        <EmptyState message="No scheduled shifts on record for this employee." />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {staffShifts.map(s => {
+            const Icon = SHIFT_ICONS[s.shift] || Sunrise
+            return (
+              <div
+                key={s.id}
+                style={{
+                  padding: '14px 16px',
+                  background: s.callOut ? 'rgba(254, 243, 199, 0.4)' : 'var(--bg-app)',
+                  border: `1px solid ${s.callOut ? '#f59e0b' : 'var(--border-color)'}`,
+                  borderRadius: 'var(--radius-md)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
+                      {new Date(s.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>
+                      <Icon size={14} />
+                      {s.shift}
+                    </span>
+                    {s.station && (
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                        {s.station}
+                      </span>
+                    )}
+                  </div>
+                  {s.callOut ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 12, color: '#b45309', fontWeight: 600 }}>
+                      <AlertTriangle size={14} className="text-amber-600" />
+                      <span>Called Out ({s.callOutReason || 'Sick'}) — {s.coverageStatus || 'Uncovered'}</span>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                      On duty · 8h shift
+                    </div>
+                  )}
+                  {s.notes && (
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, fontStyle: 'italic' }}>
+                      {s.notes}
+                    </div>
+                  )}
+                </div>
+
+                {isPrivileged && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => toggleCallOut(s.id)}
+                      className={`min-h-[44px] px-3.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                        s.callOut
+                          ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300'
+                          : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300'
+                      }`}
+                      aria-label={s.callOut ? 'Clear absence' : 'Toggle call-out'}
+                    >
+                      {s.callOut ? 'Clear Call-Out' : 'Report Call-Out'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Delete ${s.shift} shift on ${s.date}?`)) {
+                          deleteShift(s.id)
+                        }
+                      }}
+                      className="min-h-[44px] min-w-[44px] p-2 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-transparent hover:border-red-200 cursor-pointer"
+                      title="Delete shift"
+                      aria-label="Delete shift"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </SectionCard>
   )
 }

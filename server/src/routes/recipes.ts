@@ -8,6 +8,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
+import { randomUUID } from 'crypto'
 import { pool } from '../db/pool'
 import { requireCapability } from '../middleware/permissions'
 import type { AuthRequest } from '../middleware/requireAuth'
@@ -21,6 +22,7 @@ import {
   recalcAllRecipeCosts,
   type CostProvenance,
 } from '../engine/costing'
+import { serverCache } from '../middleware/cache'
 
 export const recipesRouter = Router()
 
@@ -185,12 +187,14 @@ recipesRouter.post('/', requireCapability('recipes.write'), async (req: AuthRequ
 
     await client.query('BEGIN')
 
+    const recipeId = randomUUID()
     const { rows: [recipe] } = await client.query(`
       INSERT INTO recipes 
-        (name, category, base_servings, prep_time_mins, cook_time_mins, haccp_temp_f, iddsi_level, allergens, ingredients, steps, notes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        (id, name, category, base_servings, prep_time_mins, cook_time_mins, haccp_temp_f, iddsi_level, allergens, ingredients, steps, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `, [
+      recipeId,
       data.name,
       data.category,
       data.baseServings,
@@ -247,6 +251,7 @@ recipesRouter.post('/', requireCapability('recipes.write'), async (req: AuthRequ
     ])
 
     await client.query('COMMIT')
+    serverCache.invalidateTag('recipes')
 
     res.status(201).json({
       ...recipe,
@@ -357,6 +362,7 @@ recipesRouter.put('/:id', requireCapability('recipes.write'), async (req: AuthRe
     ])
 
     await client.query('COMMIT')
+    serverCache.invalidateTag('recipes')
 
     res.json({
       ...updated,
@@ -365,7 +371,7 @@ recipesRouter.put('/:id', requireCapability('recipes.write'), async (req: AuthRe
       nutrition: analysis.perServing,
     })
   } catch (err) {
-    await client.query('ROLLBACK')
+    try { await client.query('ROLLBACK') } catch { /* ignore rollback failure if tx not active */ }
     next(err)
   } finally {
     client.release()
@@ -459,6 +465,7 @@ recipesRouter.post('/:id/verify-clinical', requireCapability('residents.clinical
 
     const { rows: [updated] } = await client.query('SELECT * FROM recipes WHERE id = $1', [req.params.id])
     await client.query('COMMIT')
+    serverCache.invalidateTag('recipes')
 
     res.json({
       id: updated.id,
@@ -471,7 +478,7 @@ recipesRouter.post('/:id/verify-clinical', requireCapability('residents.clinical
       allergens: updated.allergens || [],
     })
   } catch (err) {
-    await client.query('ROLLBACK')
+    try { await client.query('ROLLBACK') } catch { /* ignore rollback failure if tx not active */ }
     next(err)
   } finally {
     client.release()
@@ -486,6 +493,7 @@ recipesRouter.delete('/:id', requireCapability('recipes.delete'), async (req: Au
     const { rows: existing } = await pool.query('SELECT id FROM recipes WHERE id = $1', [req.params.id])
     if (!existing[0]) return res.status(404).json({ error: 'Recipe not found' })
     await pool.query('DELETE FROM recipes WHERE id = $1', [req.params.id])
+    serverCache.invalidateTag('recipes')
     res.status(204).send()
   } catch (err) { next(err) }
 })
@@ -509,9 +517,11 @@ recipesRouter.post('/recalc-costs', requireCapability('recipes.write'), async (r
           results.push({ id, name: rows[0]?.name ?? '', costPerServing: breakdown.costPerServing, provenance: breakdown.provenance })
         }
       }
+      serverCache.invalidateTag('recipes')
       return res.json({ updated: results.length, results, idempotent: true })
     }
     const result = await recalcAllRecipeCosts(pool)
+    serverCache.invalidateTag('recipes')
     res.json({ ...result, idempotent: true })
   } catch (err) { next(err) }
 })

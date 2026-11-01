@@ -21,7 +21,7 @@ const TABS: { id: AdminTab; label: string }[] = [
   { id: 'diagnostics', label: 'System Health & Self-Repair' },
   { id: 'backup',      label: 'Backup & Recovery' },
   { id: 'license',     label: 'SaaS Licensing & Entitlements' },
-  { id: 'scheduling',  label: 'Staff Scheduling (Parked)' },
+  { id: 'scheduling',  label: 'Staff Scheduling' },
   { id: 'users',       label: 'User Accounts' },
   { id: 'callouts',    label: 'Call-Outs' },
   { id: 'data',        label: 'Data Management' },

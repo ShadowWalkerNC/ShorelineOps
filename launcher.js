@@ -19,8 +19,20 @@ async function launchWorkstation({env=process.env,root=__dirname,open=openBrowse
   return {...backend,url}
 }
 if (require.main === module) {
-  launchWorkstation().then(backend => {
-    console.log(`[Launcher] Workstation ready: ${backend.url}. Press Ctrl+C to stop.`)
+  const { ensureWorkstationSecrets, ensureCompiledArtifacts } = require('./desktop/workstation-provision.cjs')
+  try {
+    ensureCompiledArtifacts(__dirname)
+  } catch (err) {
+    console.error('[Launcher] Failed to compile build artifacts:', err.message)
+    process.exit(1)
+  }
+  const provisioned = ensureWorkstationSecrets(process.env)
+  launchWorkstation({ env: provisioned.env }).then(backend => {
+    console.log(`[Launcher] Workstation ready: ${backend.url}`)
+    console.log(`[Launcher] Interactive Demo:  ${backend.origin}/demo/`)
+    console.log(`[Launcher] First-Run Setup Bootstrap Secret: ${provisioned.setupBootstrapSecret}`)
+    console.log(`[Launcher] (Saved at: ${provisioned.keyNoticeFile})`)
+    console.log('[Launcher] Press Ctrl+C to stop.')
     const stop = () => { backend.stop(); process.exit(0) }
     process.once('SIGINT',stop)
     process.once('SIGTERM',stop)

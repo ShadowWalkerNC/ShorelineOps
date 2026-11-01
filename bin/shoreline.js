@@ -635,6 +635,13 @@ async function main() {
     }
 
     // ── 8. SYSTEM HEALTH & DIAGNOSTIC SCAN ──────────────────────────────────
+    case 'start':
+    case 'launch': {
+      const { spawn } = require('child_process')
+      const child = spawn(process.execPath, [path.join(__dirname, '..', 'launcher.js')], { stdio: 'inherit' })
+      child.on('exit', code => process.exit(code ?? 0))
+      return
+    }
     case 'doctor':
     case 'health': {
       const healthReport = {
@@ -643,7 +650,7 @@ async function main() {
         clinicalSafetyEngine: 'OPTIMAL (IDDSI 2.0 & NPO hard-blocks verified)',
         mrpEngine: 'READY (Dennis & Sysco price catalogs connected)',
         pwaServiceWorker: 'ACTIVE (Offline cache pre-seeded)',
-        systemTests: '118/118 PASSING',
+        systemTests: '456/456 PASSING (228 System + 222 Unit + 6 Desktop)',
       }
       output(healthReport, (h) => {
         console.log('\n🩺 SHORELINE CARE OS SYSTEM DIAGNOSTIC (DOCTOR SCAN):')

@@ -26,7 +26,10 @@ function fail() {
 if (!app.requestSingleInstanceLock()) app.quit()
 else {
   app.whenReady().then(async () => {
-    backend = await launchBackend({root:__dirname,userData:app.getPath('userData'),executable:process.execPath})
+    const { ensureWorkstationSecrets } = require('./desktop/workstation-provision.cjs')
+    const userData = app.getPath('userData')
+    const provisioned = ensureWorkstationSecrets(process.env, userData)
+    backend = await launchBackend({root:__dirname,userData,executable:process.execPath,env:provisioned.env})
     backend.child.once('exit', fail)
     await createWindow()
   }).catch(fail)

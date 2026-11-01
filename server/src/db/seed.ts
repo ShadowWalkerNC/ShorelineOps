@@ -281,12 +281,14 @@ export async function runSeed() {
   const USERS_TO_SEED = [
     { email: 'admin@shoreline.local', name: 'System Administrator', role: 'admin' },
     { email: 'chef@shoreline.local', name: 'Marcus Vance, CDM, CFPP', role: 'manager' },
-    { email: 'rdn@shoreline.local', name: 'Sarah Jenkins, MS, RDN, LD', role: 'manager' },
+    { email: 'rdn@shoreline.local', name: 'Sarah Jenkins, MS, RDN, LD', role: 'dietitian' },
     { email: 'cook@shoreline.local', name: 'Carlos Mendez, Lead Line Cook', role: 'dietary' },
     { email: 'frontdesk@shoreline.local', name: 'Front Desk Concierge', role: 'frontdesk' },
   ]
 
   for (const u of USERS_TO_SEED) {
+    const { rows: existingUser } = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [u.email])
+    if (existingUser.length > 0) continue
     await pool.query(
       `INSERT INTO users (id, name, email, password, role)
        VALUES ($1, $2, $3, $4, $5)
@@ -348,22 +350,26 @@ export async function runSeed() {
   console.log(`[*] Seeded 3 multi-site healthcare facilities`)
 
   // 3. Residents Setup (54 residents)
+  const { rows: residentCountRows } = await pool.query('SELECT COUNT(*) as count FROM residents')
+  const existingResidentCount = parseInt(residentCountRows[0]?.count || '0', 10)
   const residentsList = buildResidents()
-  for (const r of residentsList) {
-    await pool.query(
-      `INSERT INTO residents
-        (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
-         allergies, beverages, birthday_month, birthday_day, serving_location,
-         table_assignment, likes, dislikes, special_instructions)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-       ON CONFLICT DO NOTHING`,
-      [
-        crypto.randomUUID(), r.name, r.room, r.status, r.diet_type, r.texture, r.portion_size,
-        r.ensure_per_day, r.allergies, r.beverages, r.birthday_month,
-        r.birthday_day, r.serving_location, r.table_assignment,
-        r.likes, r.dislikes, r.special_instructions,
-      ]
-    )
+  if (existingResidentCount === 0) {
+    for (const r of residentsList) {
+      await pool.query(
+        `INSERT INTO residents
+          (id, name, room, status, diet_type, texture, portion_size, ensure_per_day,
+           allergies, beverages, birthday_month, birthday_day, serving_location,
+           table_assignment, likes, dislikes, special_instructions)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+         ON CONFLICT DO NOTHING`,
+        [
+          crypto.randomUUID(), r.name, r.room, r.status, r.diet_type, r.texture, r.portion_size,
+          r.ensure_per_day, r.allergies, r.beverages, r.birthday_month,
+          r.birthday_day, r.serving_location, r.table_assignment,
+          r.likes, r.dislikes, r.special_instructions,
+        ]
+      )
+    }
   }
   console.log(`[*] Seeded ${residentsList.length} realistic residents (Diabetic, Renal, Pureed L4, Minced L5, NPO)`)
 

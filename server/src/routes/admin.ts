@@ -715,6 +715,38 @@ function toCallOut(row: any) {
   }
 }
 
+function toShift(row: any) {
+  if (!row) return null
+  const staffName = (row.staff_name || `${row.preferred_name || row.first_name || ''} ${row.last_name || ''}`).trim() || row.staff_id || ''
+  const date = row.shift_date || row.date || ''
+  const shiftWindow = row.shift_window || row.shift || 'Morning'
+  const isCallOut = Boolean(row.call_out || row.call_out_id)
+  return {
+    id: row.id,
+    staff_id: row.staff_id,
+    staffId: row.staff_id,
+    staff_name: staffName,
+    staffName: staffName,
+    shift_date: date,
+    date: date,
+    shift_window: shiftWindow,
+    shift: shiftWindow,
+    position: row.position || '',
+    station: row.station || '',
+    call_out: isCallOut,
+    callOut: isCallOut,
+    call_out_reason: row.call_out_reason || row.reason || undefined,
+    callOutReason: row.call_out_reason || row.reason || undefined,
+    notes: row.call_out_notes || row.notes || undefined,
+    coverage_status: row.call_out_coverage_status || row.coverage_status || (isCallOut ? 'Uncovered' : undefined),
+    coverageStatus: row.call_out_coverage_status || row.coverage_status || (isCallOut ? 'Uncovered' : undefined),
+    created_at: row.created_at,
+    createdAt: row.created_at,
+    updated_at: row.updated_at || row.created_at,
+    updatedAt: row.updated_at || row.created_at,
+  }
+}
+
 function toCommThread(row: any) {
   const parseJson = (v: any, def: any) => {
     if (v == null) return def
@@ -846,6 +878,336 @@ adminRouter.delete('/call-outs/:id', requireRole('manager'), async (req: AuthReq
   try {
     await pool.query('DELETE FROM call_outs WHERE id = $1', [req.params.id])
     res.status(204).send()
+  } catch (err) { next(err) }
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// SHIFTS (Manager Roster & TV Wall Display Synchronization)
+// ════════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/shifts
+adminRouter.get('/shifts', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    const conditions: string[] = []
+    const params: any[] = []
+
+    const queryDate = req.query.date || req.query.shift_date
+    if (queryDate && typeof queryDate === 'string') {
+      params.push(queryDate.trim())
+      conditions.push(`s.date = $${params.length}`)
+    } else {
+      if (req.query.from && typeof req.query.from === 'string') {
+        params.push(req.query.from.trim())
+        conditions.push(`s.date >= $${params.length}`)
+      }
+      if (req.query.to && typeof req.query.to === 'string') {
+        params.push(req.query.to.trim())
+        conditions.push(`s.date <= $${params.length}`)
+      }
+    }
+
+    const staffIdParam = req.query.staff_id || req.query.staffId
+    if (staffIdParam && typeof staffIdParam === 'string') {
+      params.push(staffIdParam.trim())
+      conditions.push(`s.staff_id = $${params.length}`)
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const { rows } = await pool.query(
+      `SELECT 
+         s.id,
+         s.staff_id,
+         s.date,
+         s.shift,
+         s.station,
+         s.created_at,
+         p.first_name,
+         p.last_name,
+         p.preferred_name,
+         p.position,
+         c.id AS call_out_id,
+         c.reason AS call_out_reason,
+         c.notes AS call_out_notes,
+         c.coverage_status AS call_out_coverage_status
+       FROM shifts s
+       LEFT JOIN staff_profiles p ON p.id = s.staff_id
+       LEFT JOIN call_outs c ON c.staff_id = s.staff_id AND c.date = s.date AND c.shift = s.shift
+       ${whereClause}
+       ORDER BY s.date ASC, 
+         CASE s.shift WHEN 'Morning' THEN 0 WHEN 'Midday' THEN 1 WHEN 'Evening' THEN 2 ELSE 3 END, 
+         p.last_name ASC, p.first_name ASC`,
+      params
+    )
+
+    res.json({ shifts: rows.map(toShift) })
+  } catch (err) { next(err) }
+})
+
+// GET /api/admin/shifts/:id
+adminRouter.get('/shifts/:id', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT 
+         s.id,
+         s.staff_id,
+         s.date,
+         s.shift,
+         s.station,
+         s.created_at,
+         p.first_name,
+         p.last_name,
+         p.preferred_name,
+         p.position,
+         c.id AS call_out_id,
+         c.reason AS call_out_reason,
+         c.notes AS call_out_notes,
+         c.coverage_status AS call_out_coverage_status
+       FROM shifts s
+       LEFT JOIN staff_profiles p ON p.id = s.staff_id
+       LEFT JOIN call_outs c ON c.staff_id = s.staff_id AND c.date = s.date AND c.shift = s.shift
+       WHERE s.id = $1`,
+      [req.params.id]
+    )
+    if (!rows[0]) return res.status(404).json({ error: 'Shift not found' })
+    res.json(toShift(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/shifts
+adminRouter.post('/shifts', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    const d = req.body || {}
+    const staffId = String(d.staff_id || d.staffId || '').trim()
+    const shiftDate = String(d.shift_date || d.date || '').trim()
+    let shiftWindow = String(d.shift_window || d.shift || 'Morning').trim()
+
+    if (/^morning$/i.test(shiftWindow)) shiftWindow = 'Morning'
+    else if (/^midday$/i.test(shiftWindow)) shiftWindow = 'Midday'
+    else if (/^evening$/i.test(shiftWindow)) shiftWindow = 'Evening'
+
+    if (!staffId && !d.staff_name && !d.staffName) {
+      return res.status(400).json({ error: 'staff_id is required' })
+    }
+    if (!shiftDate || !/^\d{4}-\d{2}-\d{2}$/.test(shiftDate)) {
+      return res.status(400).json({ error: 'Valid shift_date (YYYY-MM-DD) is required' })
+    }
+    if (!['Morning', 'Midday', 'Evening'].includes(shiftWindow)) {
+      return res.status(400).json({ error: 'shift_window must be Morning, Midday, or Evening' })
+    }
+
+    const effectiveStaffId = staffId || crypto.randomUUID()
+    const { rows: staffRows } = await pool.query('SELECT * FROM staff_profiles WHERE id = $1', [effectiveStaffId])
+    if (!staffRows[0]) {
+      const rawName = String(d.staff_name || d.staffName || 'Dietary Staff').trim()
+      const parts = rawName.split(/\s+/)
+      const firstName = parts[0] || 'Staff'
+      const lastName = parts.slice(1).join(' ') || 'Dietary'
+      const position = d.position || 'Dietary Aide'
+      await pool.query(
+        `INSERT INTO staff_profiles (id, first_name, last_name, role, department, position, status)
+         VALUES ($1, $2, $3, 'dietary', 'Dietary', $4, 'Active')
+         ON CONFLICT (id) DO NOTHING`,
+        [effectiveStaffId, firstName, lastName, position]
+      )
+    }
+
+    const shiftId = d.id || crypto.randomUUID()
+    const station = String(d.station || '').trim()
+
+    const { rows: existingShifts } = await pool.query(
+      'SELECT id FROM shifts WHERE staff_id = $1 AND date = $2 AND shift = $3',
+      [effectiveStaffId, shiftDate, shiftWindow]
+    )
+
+    let finalShiftId = shiftId
+    if (existingShifts[0]) {
+      finalShiftId = existingShifts[0].id
+      await pool.query(
+        'UPDATE shifts SET station = $1 WHERE id = $2',
+        [station, finalShiftId]
+      )
+    } else {
+      await pool.query(
+        'INSERT INTO shifts (id, staff_id, date, shift, station) VALUES ($1, $2, $3, $4, $5)',
+        [shiftId, effectiveStaffId, shiftDate, shiftWindow, station]
+      )
+    }
+
+    const isCallOut = Boolean(d.call_out ?? d.callOut)
+    const reason = d.call_out_reason || d.callOutReason || d.reason || 'Sick'
+    const notes = d.notes || null
+    const coverageStatus = d.coverage_status || d.coverageStatus || 'Uncovered'
+
+    if (isCallOut) {
+      const { rows: existingCallOut } = await pool.query(
+        'SELECT id FROM call_outs WHERE staff_id = $1 AND date = $2 AND shift = $3',
+        [effectiveStaffId, shiftDate, shiftWindow]
+      )
+      if (existingCallOut[0]) {
+        await pool.query(
+          'UPDATE call_outs SET reason = $1, notes = $2, coverage_status = $3 WHERE id = $4',
+          [reason, notes, coverageStatus, existingCallOut[0].id]
+        )
+      } else {
+        await pool.query(
+          `INSERT INTO call_outs (id, staff_id, filed_by_id, date, shift, reason, notes, coverage_status, manager_acknowledged)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)`,
+          [crypto.randomUUID(), effectiveStaffId, req.userId || 'manager', shiftDate, shiftWindow, reason, notes, coverageStatus]
+        )
+      }
+    } else {
+      await pool.query(
+        'DELETE FROM call_outs WHERE staff_id = $1 AND date = $2 AND shift = $3',
+        [effectiveStaffId, shiftDate, shiftWindow]
+      )
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('CREATE_SHIFT', $1, $2, 'shift', 'success', $3)`,
+      [req.userId, finalShiftId, JSON.stringify({ staffId: effectiveStaffId, shiftDate, shiftWindow, station, callOut: isCallOut })]
+    )
+
+    const { rows: resultRows } = await pool.query(
+      `SELECT 
+         s.id,
+         s.staff_id,
+         s.date,
+         s.shift,
+         s.station,
+         s.created_at,
+         p.first_name,
+         p.last_name,
+         p.preferred_name,
+         p.position,
+         c.id AS call_out_id,
+         c.reason AS call_out_reason,
+         c.notes AS call_out_notes,
+         c.coverage_status AS call_out_coverage_status
+       FROM shifts s
+       LEFT JOIN staff_profiles p ON p.id = s.staff_id
+       LEFT JOIN call_outs c ON c.staff_id = s.staff_id AND c.date = s.date AND c.shift = s.shift
+       WHERE s.id = $1`,
+      [finalShiftId]
+    )
+
+    res.status(201).json(toShift(resultRows[0]))
+  } catch (err) { next(err) }
+})
+
+// PUT /api/admin/shifts/:id
+adminRouter.put('/shifts/:id', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    const { rows: existing } = await pool.query('SELECT * FROM shifts WHERE id = $1', [req.params.id])
+    if (!existing[0]) return res.status(404).json({ error: 'Shift not found' })
+
+    const current = existing[0]
+    const d = req.body || {}
+
+    const newStaffId = String(d.staff_id || d.staffId || current.staff_id).trim()
+    const newDate = String(d.shift_date || d.date || current.date).trim()
+    let newShift = String(d.shift_window || d.shift || current.shift).trim()
+    if (/^morning$/i.test(newShift)) newShift = 'Morning'
+    else if (/^midday$/i.test(newShift)) newShift = 'Midday'
+    else if (/^evening$/i.test(newShift)) newShift = 'Evening'
+
+    const newStation = d.station !== undefined ? String(d.station).trim() : current.station
+
+    if (current.staff_id !== newStaffId || current.date !== newDate || current.shift !== newShift) {
+      await pool.query(
+        'UPDATE call_outs SET staff_id = $1, date = $2, shift = $3 WHERE staff_id = $4 AND date = $5 AND shift = $6',
+        [newStaffId, newDate, newShift, current.staff_id, current.date, current.shift]
+      )
+    }
+
+    await pool.query(
+      `UPDATE shifts SET staff_id = $1, date = $2, shift = $3, station = $4 WHERE id = $5`,
+      [newStaffId, newDate, newShift, newStation, req.params.id]
+    )
+
+    if (d.call_out !== undefined || d.callOut !== undefined) {
+      const isCallOut = Boolean(d.call_out ?? d.callOut)
+      const reason = d.call_out_reason || d.callOutReason || d.reason || 'Sick'
+      const notes = d.notes || null
+      const coverageStatus = d.coverage_status || d.coverageStatus || 'Uncovered'
+
+      if (isCallOut) {
+        const { rows: callRows } = await pool.query(
+          'SELECT id FROM call_outs WHERE staff_id = $1 AND date = $2 AND shift = $3',
+          [newStaffId, newDate, newShift]
+        )
+        if (callRows[0]) {
+          await pool.query(
+            'UPDATE call_outs SET reason = $1, notes = $2, coverage_status = $3 WHERE id = $4',
+            [reason, notes, coverageStatus, callRows[0].id]
+          )
+        } else {
+          await pool.query(
+            `INSERT INTO call_outs (id, staff_id, filed_by_id, date, shift, reason, notes, coverage_status, manager_acknowledged)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)`,
+            [crypto.randomUUID(), newStaffId, req.userId || 'manager', newDate, newShift, reason, notes, coverageStatus]
+          )
+        }
+      } else {
+        await pool.query(
+          'DELETE FROM call_outs WHERE staff_id = $1 AND date = $2 AND shift = $3',
+          [newStaffId, newDate, newShift]
+        )
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('UPDATE_SHIFT', $1, $2, 'shift', 'success', $3)`,
+      [req.userId, req.params.id, JSON.stringify({ staffId: newStaffId, date: newDate, shift: newShift, station: newStation })]
+    )
+
+    const { rows: updatedRows } = await pool.query(
+      `SELECT 
+         s.id,
+         s.staff_id,
+         s.date,
+         s.shift,
+         s.station,
+         s.created_at,
+         p.first_name,
+         p.last_name,
+         p.preferred_name,
+         p.position,
+         c.id AS call_out_id,
+         c.reason AS call_out_reason,
+         c.notes AS call_out_notes,
+         c.coverage_status AS call_out_coverage_status
+       FROM shifts s
+       LEFT JOIN staff_profiles p ON p.id = s.staff_id
+       LEFT JOIN call_outs c ON c.staff_id = s.staff_id AND c.date = s.date AND c.shift = s.shift
+       WHERE s.id = $1`,
+      [req.params.id]
+    )
+
+    res.json(toShift(updatedRows[0]))
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/admin/shifts/:id
+adminRouter.delete('/shifts/:id', requireRole('manager'), async (req: AuthRequest, res, next) => {
+  try {
+    const { rows: existing } = await pool.query('SELECT * FROM shifts WHERE id = $1', [req.params.id])
+    if (!existing[0]) return res.status(404).json({ error: 'Shift not found' })
+
+    const shift = existing[0]
+
+    await pool.query('DELETE FROM shifts WHERE id = $1', [req.params.id])
+    await pool.query('DELETE FROM call_outs WHERE staff_id = $1 AND date = $2 AND shift = $3', [shift.staff_id, shift.date, shift.shift])
+
+    await pool.query(
+      `INSERT INTO audit_log (action, user_id, resource_id, resource_type, outcome, details)
+       VALUES ('DELETE_SHIFT', $1, $2, 'shift', 'success', $3)`,
+      [req.userId, req.params.id, JSON.stringify({ staffId: shift.staff_id, date: shift.date, shift: shift.shift })]
+    )
+
+    res.status(200).json({ success: true, id: req.params.id })
   } catch (err) { next(err) }
 })
 

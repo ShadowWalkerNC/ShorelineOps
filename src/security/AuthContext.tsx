@@ -42,7 +42,6 @@ interface AuthContextValue {
 }
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
-const IS_DEV = import.meta.env.DEV
 const SESSION_KEY = 'shoreline_demo_user'
 const IDLE_TIMEOUT_MS = Number(import.meta.env.VITE_SESSION_TIMEOUT_MS ?? 15 * 60 * 1000)
 
@@ -80,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function restore() {
       try {
-        if (DEMO_MODE || IS_DEV) {
+        if (DEMO_MODE) {
           const stored = sessionStorage.getItem(SESSION_KEY)
           if (stored) {
             const parsed = JSON.parse(stored) as unknown
@@ -146,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    if (DEMO_MODE || IS_DEV) {
+    if (DEMO_MODE) {
       try {
         const { DEMO_USERS } = await import('./demoCredentials')
         const match = DEMO_USERS.find(

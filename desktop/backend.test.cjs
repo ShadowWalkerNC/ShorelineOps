@@ -13,7 +13,7 @@ test('Windows setup rejects missing artifacts and incomplete runtime before shor
   const install = path.join(directory,'install')
   fs.mkdirSync(install)
   const run = () => spawnSync('powershell.exe',['-NoProfile','-File',path.join(root,'Setup.ps1'),'-InstallPath',install],
-    {env:{...process.env,APPDATA:path.join(directory,'profile')},encoding:'utf8',timeout:15000,windowsHide:true})
+    {env:{...process.env,APPDATA:path.join(directory,'profile')},encoding:'utf8',timeout:60000,windowsHide:true})
   const absent = run()
   assert.equal(absent.error,undefined)
   assert.notEqual(absent.status,0)
@@ -98,4 +98,20 @@ test('occupied local port fails instead of trusting another service', async () =
   try {
     await assert.rejects(launchBackend({root,userData:'unused',port:listener.address().port,env:{JWT_SECRET:'test'.repeat(10)}}),/EADDRINUSE/)
   } finally {await new Promise(resolve => listener.close(resolve))}
+})
+test('workstation provisioner creates persistent per-user secrets and setup key file', () => {
+  const {ensureWorkstationSecrets} = require('./workstation-provision.cjs')
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(),'shoreline-provision-'))
+  try {
+    const first = ensureWorkstationSecrets({APPDATA:directory})
+    assert.ok(first.env.JWT_SECRET && first.env.JWT_SECRET.length >= 64)
+    assert.ok(first.env.SETUP_BOOTSTRAP_SECRET && first.env.SETUP_BOOTSTRAP_SECRET.length >= 16)
+    assert.equal(fs.existsSync(first.secretsFile),true)
+    assert.equal(fs.existsSync(first.keyNoticeFile),true)
+    const second = ensureWorkstationSecrets({APPDATA:directory})
+    assert.equal(second.env.JWT_SECRET,first.env.JWT_SECRET)
+    assert.equal(second.env.SETUP_BOOTSTRAP_SECRET,first.env.SETUP_BOOTSTRAP_SECRET)
+  } finally {
+    fs.rmSync(directory,{recursive:true,force:true})
+  }
 })

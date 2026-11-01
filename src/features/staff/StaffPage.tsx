@@ -7,11 +7,13 @@
 // ============================================================
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Users, Calendar } from 'lucide-react'
 import { useStaffStore } from '../../state/staffStore'
 import { useAuth } from '../../security/AuthContext'
 import { DEPARTMENTS, ROLE_LABEL } from '../../types/roles'
 import type { Department, UserRole } from '../../types/roles'
 import type { StaffProfile, StaffStatus } from '../../types/staff'
+import StaffScheduling from '../admin/components/StaffScheduling'
 
 const STATUSES: StaffStatus[] = ['Active', 'Inactive', 'On Leave', 'Terminated']
 
@@ -28,6 +30,7 @@ export default function StaffPage() {
   const { user } = useAuth()
   const { profiles, fetch, isLoading } = useStaffStore()
 
+  const [viewMode, setViewMode] = useState<'directory' | 'schedule'>('directory')
   const [search, setSearch]   = useState('')
   const [dept, setDept]       = useState<Department | 'All'>('All')
   const [status, setStatus]   = useState<StaffStatus | 'All'>('Active')
@@ -69,18 +72,62 @@ export default function StaffPage() {
       {/* Page header */}
       <div className="sl-page-header sl-card p-6 flex items-center justify-between flex-wrap gap-5" style={{ marginBottom: 'var(--space-6)' }}>
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">People & access</p><h1 className="sl-page-title">Staff directory</h1>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-300">People & access</p>
+          <h1 className="sl-page-title">
+            {viewMode === 'directory' ? 'Staff directory' : 'Weekly shift roster'}
+          </h1>
           <p className="sl-page-subtitle">
-            {filtered.length} of {profiles.length} employee{profiles.length !== 1 ? 's' : ''}
+            {viewMode === 'directory'
+              ? `${filtered.length} of ${profiles.length} employee${profiles.length !== 1 ? 's' : ''}`
+              : 'Manager schedule planner synchronized with TV display wall'}
           </p>
         </div>
-        {user?.role === 'admin' && (
-          <button className="sl-btn sl-btn-primary min-h-12" onClick={() => navigate('/staff/new')}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Add Employee
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {viewMode === 'directory' && user?.role === 'admin' && (
+            <button className="sl-btn sl-btn-primary min-h-12" onClick={() => navigate('/staff/new')}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Add Employee
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* View Switcher Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-700 pb-3" role="tablist" aria-label="Staff navigation tabs">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={viewMode === 'directory'}
+          onClick={() => setViewMode('directory')}
+          className={`min-h-[44px] px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 cursor-pointer transition-colors ${
+            viewMode === 'directory'
+              ? 'bg-teal-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Users size={18} />
+          <span>Staff Directory</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={viewMode === 'schedule'}
+          onClick={() => setViewMode('schedule')}
+          className={`min-h-[44px] px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 cursor-pointer transition-colors ${
+            viewMode === 'schedule'
+              ? 'bg-teal-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Calendar size={18} />
+          <span>Weekly Shift Roster</span>
+        </button>
+      </div>
+
+      {viewMode === 'schedule' ? (
+        <StaffScheduling hideHeader />
+      ) : (
+        <>
 
       {/* Filters */}
       <div className="sl-card p-4 flex flex-wrap gap-3" style={{ marginBottom: 'var(--space-5)' }}>
@@ -140,6 +187,8 @@ export default function StaffPage() {
             </tbody>
           </table>
         </div>
+      )}
+      </>
       )}
     </div>
   )

@@ -21,6 +21,7 @@ void test('tv wall-display pairing issues display-scoped sessions and PHI-free a
   const { tvRouter } = await import('./routes/tv')
   const { menuRouter } = await import('./routes/menu')
   const { residentsRouter } = await import('./routes/residents')
+  const { adminRouter } = await import('./routes/admin')
   const { errorHandler } = await import('./middleware/errorHandler')
   await runMigrations()
   await pool.query('UPDATE system_settings SET mfa_required = false WHERE id = 1')
@@ -41,6 +42,7 @@ void test('tv wall-display pairing issues display-scoped sessions and PHI-free a
   app.use(express.json())
   app.use('/api/auth', authRouter)
   app.use('/api/tv', tvRouter)
+  app.use('/api/admin', requireAuth, adminRouter)
   // Mirror the production mounts: menu admits display tokens, residents denies them.
   app.use('/api/menu', requireAuth({ allowDisplay: true }), menuRouter)
   app.use('/api/residents', requireAuth, residentsRouter)
@@ -116,6 +118,45 @@ void test('tv wall-display pairing issues display-scoped sessions and PHI-free a
       displayRefresh = body.refreshToken
       // Single use: the code is destroyed on first approved read.
       assert.equal((await request(`/api/tv/pair/status?code=${pending.code}&claim=${pending.claimToken}`)).status, 404)
+    })
+
+    await t.test('concurrent pairing approvals serialize and exactly one succeeds', async () => {
+      const pending = await pairRequest('Concurrent TV')
+      const results = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          request('/api/tv/pair/approve', adminSession.accessToken, { code: pending.code })
+        )
+      )
+      const statuses = results.map(r => r.status)
+      const successes = statuses.filter(s => s === 200)
+      const conflicts = statuses.filter(s => s === 409)
+      assert.equal(successes.length, 1, 'Exactly one approval request must succeed')
+      assert.equal(conflicts.length, 9, 'All other concurrent approvals must return 409 Conflict')
+
+      // Verify the single approved code can now be claimed
+      const claimRes = await request(`/api/tv/pair/status?code=${pending.code}&claim=${pending.claimToken}`)
+      assert.equal(claimRes.status, 200)
+      const claimBody = (await claimRes.json()) as any
+      assert.equal(claimBody.status, 'approved')
+      assert.equal(typeof claimBody.accessToken, 'string')
+    })
+
+    await t.test('concurrent status polls consume single-use claim token exactly once', async () => {
+      const pending = await pairRequest('Concurrent Poll TV')
+      const approveRes = await request('/api/tv/pair/approve', adminSession.accessToken, { code: pending.code })
+      assert.equal(approveRes.status, 200)
+
+      // 10 concurrent requests to claim the approved token
+      const polls = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          request(`/api/tv/pair/status?code=${pending.code}&claim=${pending.claimToken}`)
+        )
+      )
+      const pollStatuses = polls.map(p => p.status)
+      const pollSuccesses = pollStatuses.filter(s => s === 200)
+      const pollNotFound = pollStatuses.filter(s => s === 404)
+      assert.equal(pollSuccesses.length, 1, 'Exactly one status poll must retrieve the approved session')
+      assert.equal(pollNotFound.length, 9, 'Subsequent or concurrent polls must receive 404')
     })
 
     await t.test('ops feed is counts-only with no resident-level fields', async () => {
@@ -285,6 +326,70 @@ void test('tv wall-display pairing issues display-scoped sessions and PHI-free a
       const distributor = await createUser('distributor')
       const distributorSession = await login(distributor.email)
       assert.equal((await request('/api/tv/schedule-today', distributorSession.accessToken)).status, 403)
+    })
+
+    await t.test('shift CRUD via /api/admin/shifts synchronizes to /api/tv/schedule-today with zero PHI leakage', async () => {
+      const manager = await createUser('manager')
+      const managerSession = await login(manager.email)
+      const today = new Date().toISOString().slice(0, 10)
+
+      // 1. Create shift via manager API
+      const createRes = await request('/api/admin/shifts', managerSession.accessToken, {
+        staff_name: 'Jordan River',
+        position: 'Dietary Cook',
+        station: 'Grill Station',
+        shift_date: today,
+        shift_window: 'Morning',
+      })
+      assert.equal(createRes.status, 201)
+      const createdShift = (await createRes.json()) as any
+      assert.equal(createdShift.staff_name, 'Jordan River')
+      assert.equal(createdShift.station, 'Grill Station')
+
+      // 2. Query schedule-today with displayToken -> Jordan River appears
+      const schedRes1 = await request('/api/tv/schedule-today', displayToken)
+      assert.equal(schedRes1.status, 200)
+      const schedBody1 = (await schedRes1.json()) as any
+      const matching1 = schedBody1.shifts.find((s: any) => s.name === 'Jordan River')
+      assert.ok(matching1, 'Created shift must appear on schedule-today')
+      assert.equal(matching1.position, 'Dietary Cook')
+      assert.equal(matching1.shift, 'Morning')
+      assert.equal(matching1.station, 'Grill Station')
+
+      // 3. Update shift with call_out and private medical note
+      const initialCallOuts = schedBody1.coverage.callOuts
+      const updateRes = await request(`/api/admin/shifts/${createdShift.id}`, managerSession.accessToken, {
+        call_out: true,
+        call_out_reason: 'Viral Gastroenteritis',
+        notes: 'Confidential clinical health note 104928',
+      }, 'PUT')
+      assert.equal(updateRes.status, 200)
+
+      // 4. Query schedule-today -> call-out count incremented, private note NOT leaked
+      const schedRes2 = await request('/api/tv/schedule-today', displayToken)
+      assert.equal(schedRes2.status, 200)
+      const schedBody2 = (await schedRes2.json()) as any
+      assert.equal(schedBody2.coverage.callOuts, initialCallOuts + 1)
+      const serialized = JSON.stringify(schedBody2).toLowerCase()
+      for (const forbidden of ['gastroenteritis', 'confidential', 'clinical', 'health', '104928']) {
+        assert.ok(!serialized.includes(forbidden), `TV schedule must not leak PHI: ${forbidden}`)
+      }
+
+      // 5. Clear call_out
+      const clearRes = await request(`/api/admin/shifts/${createdShift.id}`, managerSession.accessToken, {
+        call_out: false,
+      }, 'PUT')
+      assert.equal(clearRes.status, 200)
+      const schedRes3 = await request('/api/tv/schedule-today', displayToken)
+      const schedBody3 = (await schedRes3.json()) as any
+      assert.equal(schedBody3.coverage.callOuts, initialCallOuts)
+
+      // 6. Delete shift
+      const delRes = await request(`/api/admin/shifts/${createdShift.id}`, managerSession.accessToken, undefined, 'DELETE')
+      assert.equal(delRes.status, 200)
+      const schedRes4 = await request('/api/tv/schedule-today', displayToken)
+      const schedBody4 = (await schedRes4.json()) as any
+      assert.ok(!schedBody4.shifts.some((s: any) => s.name === 'Jordan River'), 'Deleted shift must be removed from TV display')
     })
 
     await t.test('meals feed reports census and diet/texture counts only', async () => {
