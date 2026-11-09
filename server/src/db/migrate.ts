@@ -1197,6 +1197,21 @@ const migrations: { name: string; sql: string }[] = [
       END $$;
     `,
   },
+  {
+    // Remove only untouched, exact historical fixture rows. Operator-owned settings remain.
+    name: '034_remove_unowned_fixture_settings',
+    sql: `DELETE FROM facility_settings WHERE updated_by IS NULL AND (
+        (key = 'facility' AND value = '{"name":"Shoreline Healthcare & Rehabilitation","organization":"Shoreline Senior Living Group LLC","npiNumber":"1942857102","licenseNumber":"SNF-ME-40891","facilityType":"Skilled Nursing","address":"104 Shoreline Drive, Portland, ME 04101","phone":"(207) 555-0199","email":"dietary.ops@shorelinecare.com","directorOfDining":"Chef Marcus Vance, CDM, CFPP","registeredDietitian":"Sarah Jenkins, MS, RDN, LD"}') OR
+        (key = 'operations' AND value = '{"wings":["Coastal Wing (Assisted Living)","Harbor View (Memory Care)","Atlantic Rehab Unit"],"diningRooms":["Main Dining Hall","Harbor Bistro","In-Room Bedside Tray Service"],"targetCpd":8.75,"mealTimes":{"breakfast":"07:30","lunch":"12:00","dinner":"17:30","snack":"20:00"},"temperatureUnit":"F","iddsiStrictEnforcement":true,"fourteenHourRuleCheck":true}') OR
+        (key = 'integrations' AND value = '{"primaryDistributor":"dennis","distributorCustomerNumber":"DEN-884910","pccFacilityId":"FAC-PORTLAND-01","autoSyncCensus":true,"invoiceOcrAutoApprove":false}') OR
+        (key = 'security' AND value = '{"sessionTimeoutMinutes":30,"hipaaAuditRetentionDays":2555,"baaSignedDate":"2026-01-15","baaSignee":"Marcus Vance (Executive Director)"}')
+      );`,
+  },
+  {
+    // Historical calculated rows are not evidence of a reviewed nutrient source.
+    name: '035_recipe_nutrition_sources',
+    sql: `ALTER TABLE recipe_nutrients ADD COLUMN IF NOT EXISTS nutrition_source TEXT NOT NULL DEFAULT 'legacy-unverified';`,
+  },
 ]
 
 // A02: every table migrate.ts expects to exist after a full migration run.

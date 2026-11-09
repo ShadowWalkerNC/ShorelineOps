@@ -7,6 +7,7 @@ import type { DayOfWeek, MealSlot } from '@/types/menu'
 import { MEAL_GROUPS } from '@/types/menu'
 import type { ProductionSheet } from '@/types/production'
 import { productionApi } from '@/api/production'
+import PaperworkTab from './PaperworkTab'
 import ProductionSheetView from './components/ProductionSheet'
 import HydrationPassTab from './components/HydrationPass'
 import TempLogPanel from '../kitchen/TempLogPanel' // C01: HACCP temperature logging tab (self-contained)
@@ -27,9 +28,10 @@ import {
 } from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────────
-type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists' | 'hydration' | 'templog'
+type ServiceTab = 'worksheet' | 'traytickets' | 'preplist' | 'shiftchecklists' | 'hydration' | 'templog' | 'paperwork'
 
 const SERVICE_TABS: { id: ServiceTab; label: string; icon: LucideIcon }[] = [
+  { id: 'paperwork', label: 'Paperwork', icon: Printer },
   { id: 'worksheet',       label: 'Worksheet',    icon: FileText },
   { id: 'traytickets',     label: 'Tray Tickets', icon: Utensils },
   { id: 'preplist',        label: 'Prep List',    icon: ChefHat },
@@ -692,6 +694,7 @@ function ProductionPageView() {
         padding: 'var(--space-6)',
         boxShadow: 'var(--shadow-sm)',
       }}>
+        {activeTab==='paperwork'       && <PaperworkTab />}
         {activeTab==='worksheet'       && <WorksheetTab />}
         {activeTab==='traytickets'     && <TrayTicketsTab />}
         {activeTab==='preplist'        && <CulinaryPrepTab />}

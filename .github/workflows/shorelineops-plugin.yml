@@ -1,0 +1,32 @@
+name: ShorelineOps companion
+on:
+  pull_request:
+    paths:
+      - 'packages/shorelineops-plugin/**'
+      - 'public/icon-512.png'
+      - '.github/workflows/shorelineops-plugin.yml'
+  push:
+    paths:
+      - 'packages/shorelineops-plugin/**'
+      - 'public/icon-512.png'
+      - '.github/workflows/shorelineops-plugin.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      LOCALAPPDATA: ${{ runner.temp }}/shorelineops-runtime
+    defaults:
+      run:
+        working-directory: packages/shorelineops-plugin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/shorelineops-plugin/package-lock.json
+      - run: npm ci --workspaces=false
+      - run: npx playwright install --with-deps chromium
+      - run: npm run plugin:setup
+      - run: npm test
+      - run: npm run release:prepare

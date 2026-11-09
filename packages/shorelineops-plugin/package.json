@@ -1,0 +1,33 @@
+{
+  "name": "sylvia-menu-processor",
+  "version": "0.13.2",
+  "private": true,
+  "type": "module",
+  "description": "ShorelineOps facility kitchen companion by CulinaryOS",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run plugin:build && node --test dist/tests/*.test.js",
+    "validate": "node dist/src/cli/index.js validate",
+    "preview": "node dist/src/cli/index.js preview",
+    "approve": "node dist/src/cli/index.js approve",
+    "generate": "node dist/src/cli/index.js generate",
+    "plugin:build": "npm run build && node scripts/build-plugin.mjs",
+    "plugin:setup": "node plugin/setup.mjs",
+    "release:prepare": "npm run plugin:build && node scripts/prepare-platforms.mjs && python scripts/package-plugin.py"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "esbuild": "^0.28.2",
+    "playwright": "^1.48.1",
+    "typescript": "^5.6.3",
+    "yaml": "^2.9.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

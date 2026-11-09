@@ -432,38 +432,38 @@ adminRouter.patch('/settings', requireRole('admin'), async (req: AuthRequest, re
 // src/state/settingsStore.ts — fallback when no rows exist yet.
 const DEFAULT_FACILITY_SETTINGS = {
   facility: {
-    name: 'Shoreline Healthcare & Rehabilitation',
-    organization: 'Shoreline Senior Living Group LLC',
-    npiNumber: '1942857102',
-    licenseNumber: 'SNF-ME-40891',
-    facilityType: 'Skilled Nursing',
-    address: '104 Shoreline Drive, Portland, ME 04101',
-    phone: '(207) 555-0199',
-    email: 'dietary.ops@shorelinecare.com',
-    directorOfDining: 'Chef Marcus Vance, CDM, CFPP',
-    registeredDietitian: 'Sarah Jenkins, MS, RDN, LD',
+    name: '',
+    organization: '',
+    npiNumber: '',
+    licenseNumber: '',
+    facilityType: '',
+    address: '',
+    phone: '',
+    email: '',
+    directorOfDining: '',
+    registeredDietitian: '',
   },
   operations: {
-    wings: ['Coastal Wing (Assisted Living)', 'Harbor View (Memory Care)', 'Atlantic Rehab Unit'],
-    diningRooms: ['Main Dining Hall', 'Harbor Bistro', 'In-Room Bedside Tray Service'],
-    targetCpd: 8.75,
-    mealTimes: { breakfast: '07:30', lunch: '12:00', dinner: '17:30', snack: '20:00' },
+    wings: [],
+    diningRooms: [],
+    targetCpd: 0,
+    mealTimes: { breakfast: '', lunch: '', dinner: '', snack: '' },
     temperatureUnit: 'F',
     iddsiStrictEnforcement: true,
     fourteenHourRuleCheck: true,
   },
   integrations: {
-    primaryDistributor: 'dennis',
-    distributorCustomerNumber: 'DEN-884910',
-    pccFacilityId: 'FAC-PORTLAND-01',
-    autoSyncCensus: true,
+    primaryDistributor: '',
+    distributorCustomerNumber: '',
+    pccFacilityId: '',
+    autoSyncCensus: false,
     invoiceOcrAutoApprove: false,
   },
   security: {
     sessionTimeoutMinutes: 30,
     hipaaAuditRetentionDays: 2555,
-    baaSignedDate: '2026-01-15',
-    baaSignee: 'Marcus Vance (Executive Director)',
+    baaSignedDate: '',
+    baaSignee: '',
   },
 } as const
 
@@ -499,7 +499,7 @@ const OperationsSectionSchema = z.object({
 }).partial()
 
 const IntegrationsSectionSchema = z.object({
-  primaryDistributor: z.enum(['dennis', 'sysco', 'usfoods', 'gordon', 'pfg']),
+  primaryDistributor: z.enum(['', 'dennis', 'sysco', 'usfoods', 'gordon', 'pfg']),
   distributorCustomerNumber: z.string(),
   pccFacilityId: z.string(),
   autoSyncCensus: z.boolean(),
@@ -623,10 +623,10 @@ adminRouter.get('/facility-settings', requireFacilitySettingsReader, async (req:
   try {
     const facilityId = req.facilityId || 'default'
     let { rows } = await pool.query(
-      'SELECT 1 FROM facility_settings WHERE facility_id = $1 LIMIT 1',
+      'SELECT 1 FROM facility_settings WHERE facility_id = $1',
       [facilityId]
     )
-    if (rows.length === 0) {
+    if (rows.length < FACILITY_SETTING_KEYS.length) {
       await seedFacilitySettingsFromConfig(facilityId, req.userId ?? null)
     }
     const { settings, meta } = await readFacilitySettings(facilityId)

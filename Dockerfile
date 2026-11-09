@@ -43,6 +43,7 @@ COPY --from=server-builder --chown=node:node /app/server/package*.json ./
 # a prebuilt native addon that may require a newer GLIBC at runtime.
 COPY --from=server-builder --chown=node:node /app/server/node_modules ./node_modules
 COPY --from=server-builder --chown=node:node /app/server/dist ./dist
+COPY --from=server-builder --chown=node:node /app/server/vendor ./vendor
 
 USER node
 

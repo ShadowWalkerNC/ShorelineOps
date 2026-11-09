@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto'
 import { pool, databaseDialect } from '../db/pool'
+import { DietaryNutritionalEngine } from './nutrition'
 
 const ephemeralKey = randomBytes(32).toString('hex')
 const key = () => process.env.TRAY_SIGNING_SECRET || process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('Tray signing key required') })() : ephemeralKey)
@@ -227,6 +228,12 @@ export async function verifyTray(raw: unknown, db: Pick<typeof pool, 'query'> = 
       const nutRows = await db.query('SELECT * FROM recipe_nutrients WHERE recipe_id = $1', [recipe.id])
       if (nutRows.rows.length !== 1) return hold('Restricted diet or beverage data requires verified recipe specifications. Hold tray.')
       const nut = nutRows.rows[0]
+      const source = typeof nut.nutrition_source === 'string' ? nut.nutrition_source : ''
+      if (!source.startsWith('clinical-review:') && !(source === 'local-reference' && DietaryNutritionalEngine.recipeNutritionProvenance(recipe.ingredients).available)) {
+        return hold('Reviewed nutrient sources are required for restricted diets. Hold tray.')
+      }
+      const nutrientKeys = ['calories', 'protein_g', 'carbs_g', 'fat_g', 'sat_fat_g', 'sodium_mg', 'potassium_mg', 'phosphorus_mg', 'fiber_g', 'sugar_g']
+      if (nutrientKeys.some(field => nut[field] == null || !Number.isFinite(Number(nut[field])) || Number(nut[field]) < 0)) return hold('Nutrient data is incomplete. Hold tray.')
       totalSodiumMg += Number(nut.sodium_mg || 0)
       totalSatFatG += Number(nut.sat_fat_g || 0)
       totalCarbsG += Number(nut.carbs_g || 0)

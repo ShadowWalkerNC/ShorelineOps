@@ -1,0 +1,2921 @@
+{
+  "schemaVersion": 1,
+  "facility": "sylvia_ross",
+  "week": 1,
+  "startDate": "2026-10-25",
+  "source": {
+    "file": "fixtures/source/week-1-original-menu.jpg",
+    "sha256": "088a1192246675ca6607bd4a37ff15c0e8dbb0d266dbf6a4264e7a2fe6dcebef"
+  },
+  "metadata": {
+    "week": {
+      "originalText": "WEEK 1",
+      "value": "1",
+      "confidence": null,
+      "source": {
+        "file": "fixtures/source/week-1-original-menu.jpg",
+        "cell": "left header: WEEK 1"
+      },
+      "needsReview": false
+    },
+    "startDate": {
+      "originalText": "10/25/2026",
+      "value": "2026-10-25",
+      "confidence": null,
+      "source": {
+        "file": "fixtures/source/week-1-original-menu.jpg",
+        "cell": "Sunday DATE"
+      },
+      "needsReview": false
+    }
+  },
+  "days": [
+    {
+      "date": {
+        "originalText": "10/25/2026",
+        "value": "2026-10-25",
+        "confidence": null,
+        "source": {
+          "file": "fixtures/source/week-1-original-menu.jpg",
+          "cell": "2026-10-25 DATE"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "BAKED EGG OMELET, EGG OF CHOICE, DANISH, TOAST",
+              "value": "BAKED EGG OMELET, EGG OF CHOICE, DANISH, TOAST",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-25 BREAKFAST CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BAKED EGG OMELET",
+                  "value": "BAKED EGG OMELET",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 BREAKFAST CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG OF CHOICE",
+                  "value": "EGG OF CHOICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 BREAKFAST CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "DANISH",
+                  "value": "DANISH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 BREAKFAST CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "TOAST",
+                  "value": "TOAST",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 BREAKFAST CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "COLD CEREAL, OATMEAL, FRUIT",
+              "value": "COLD CEREAL, OATMEAL, FRUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-25 BREAKFAST CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "COLD CEREAL",
+                  "value": "COLD CEREAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 BREAKFAST CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "OATMEAL",
+                  "value": "OATMEAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 BREAKFAST CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUIT",
+                  "value": "FRUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 BREAKFAST CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "CORNFLAKE CHICKEN, MASHED POTATOES, BROCCOLI, ROLL, ICE CREAM SUNDAES",
+              "value": "CORNFLAKE CHICKEN, MASHED POTATOES, BROCCOLI, ROLL, ICE CREAM SUNDAES",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-25 LUNCH CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CORNFLAKE CHICKEN",
+                  "value": "CORNFLAKE CHICKEN",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "MASHED POTATOES",
+                  "value": "MASHED POTATOES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BROCCOLI",
+                  "value": "BROCCOLI",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ICE CREAM SUNDAES",
+                  "value": "ICE CREAM SUNDAES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "BEEF TIPS W/GRAVY, BUTTERED NOODLES, CARROTS, ROLL",
+              "value": "BEEF TIPS W/GRAVY, BUTTERED NOODLES, CARROTS, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-25 LUNCH CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BEEF TIPS W/GRAVY",
+                  "value": "BEEF TIPS W/GRAVY",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BUTTERED NOODLES",
+                  "value": "BUTTERED NOODLES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CARROTS",
+                  "value": "CARROTS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 LUNCH CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "TOMATO BASIL SOUP, CRACKERS, TUNA SANDWICH, CHERRY CREAM CHEESE BAR",
+              "value": "TOMATO BASIL SOUP, CRACKERS, TUNA SANDWICH, CHERRY CREAM CHEESE BAR",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-25 DINNER CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "TOMATO BASIL SOUP",
+                  "value": "TOMATO BASIL SOUP",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CRACKERS",
+                  "value": "CRACKERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "TUNA SANDWICH",
+                  "value": "TUNA SANDWICH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CHERRY CREAM CHEESE BAR",
+                  "value": "CHERRY CREAM CHEESE BAR",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "STUFFED PASTA SHELLS, GARDEN SALAD, DRESSING, ROLL",
+              "value": "STUFFED PASTA SHELLS, GARDEN SALAD, DRESSING, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-25 DINNER CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "STUFFED PASTA SHELLS",
+                  "value": "STUFFED PASTA SHELLS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GARDEN SALAD",
+                  "value": "GARDEN SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "DRESSING",
+                  "value": "DRESSING",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-25 DINNER CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "10/26/2026",
+        "value": "2026-10-26",
+        "confidence": null,
+        "source": {
+          "file": "fixtures/source/week-1-original-menu.jpg",
+          "cell": "2026-10-26 DATE"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "SCRAMBLED EGGS, EGG OF CHOICE, SAUSAGE PATTY, BISCUIT",
+              "value": "SCRAMBLED EGGS, EGG OF CHOICE, SAUSAGE PATTY, BISCUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-26 BREAKFAST CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "SCRAMBLED EGGS",
+                  "value": "SCRAMBLED EGGS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 BREAKFAST CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG OF CHOICE",
+                  "value": "EGG OF CHOICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 BREAKFAST CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "SAUSAGE PATTY",
+                  "value": "SAUSAGE PATTY",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 BREAKFAST CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BISCUIT",
+                  "value": "BISCUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 BREAKFAST CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "COLD CEREAL, CREAM OF WHEAT, FRUIT",
+              "value": "COLD CEREAL, CREAM OF WHEAT, FRUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-26 BREAKFAST CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "COLD CEREAL",
+                  "value": "COLD CEREAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 BREAKFAST CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CREAM OF WHEAT",
+                  "value": "CREAM OF WHEAT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 BREAKFAST CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUIT",
+                  "value": "FRUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 BREAKFAST CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "MEATLOAF, MASHED POTATOES, BEETS, ROLL, STRAWBERRY SHORTCAKE",
+              "value": "MEATLOAF, MASHED POTATOES, BEETS, ROLL, STRAWBERRY SHORTCAKE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-26 LUNCH CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "MEATLOAF",
+                  "value": "MEATLOAF",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "MASHED POTATOES",
+                  "value": "MASHED POTATOES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BEETS",
+                  "value": "BEETS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "STRAWBERRY SHORTCAKE",
+                  "value": "STRAWBERRY SHORTCAKE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "APPLE BUTTER PORK LOIN, RICE PILAF, ROLL, GREEN BEANS",
+              "value": "APPLE BUTTER PORK LOIN, RICE PILAF, ROLL, GREEN BEANS",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-26 LUNCH CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "APPLE BUTTER PORK LOIN",
+                  "value": "APPLE BUTTER PORK LOIN",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "RICE PILAF",
+                  "value": "RICE PILAF",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GREEN BEANS",
+                  "value": "GREEN BEANS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 LUNCH CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "CORN CHOWDER, CRACKERS, EGG SALAD SANDWICH, 4 BEAN SALAD, CHILLED PEACHES",
+              "value": "CORN CHOWDER, CRACKERS, EGG SALAD SANDWICH, 4 BEAN SALAD, CHILLED PEACHES",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-26 DINNER CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CORN CHOWDER",
+                  "value": "CORN CHOWDER",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CRACKERS",
+                  "value": "CRACKERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG SALAD SANDWICH",
+                  "value": "EGG SALAD SANDWICH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "4 BEAN SALAD",
+                  "value": "4 BEAN SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CHILLED PEACHES",
+                  "value": "CHILLED PEACHES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "HONEY GLAZED MEATBALLS, BABY CARROTS, ROLL",
+              "value": "HONEY GLAZED MEATBALLS, BABY CARROTS, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-26 DINNER CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "HONEY GLAZED MEATBALLS",
+                  "value": "HONEY GLAZED MEATBALLS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BABY CARROTS",
+                  "value": "BABY CARROTS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-26 DINNER CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "10/27/2026",
+        "value": "2026-10-27",
+        "confidence": null,
+        "source": {
+          "file": "fixtures/source/week-1-original-menu.jpg",
+          "cell": "2026-10-27 DATE"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "BOILED EGG, EGG OF CHOICE, BACON, APPLE SPICE MUFFIN",
+              "value": "BOILED EGG, EGG OF CHOICE, BACON, APPLE SPICE MUFFIN",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-27 BREAKFAST CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BOILED EGG",
+                  "value": "BOILED EGG",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 BREAKFAST CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG OF CHOICE",
+                  "value": "EGG OF CHOICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 BREAKFAST CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BACON",
+                  "value": "BACON",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 BREAKFAST CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "APPLE SPICE MUFFIN",
+                  "value": "APPLE SPICE MUFFIN",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 BREAKFAST CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "COLD CEREAL, MAYPO, FRUIT",
+              "value": "COLD CEREAL, MAYPO, FRUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-27 BREAKFAST CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "COLD CEREAL",
+                  "value": "COLD CEREAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 BREAKFAST CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "MAYPO",
+                  "value": "MAYPO",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 BREAKFAST CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUIT",
+                  "value": "FRUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 BREAKFAST CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "CRUMB BAKED HADDOCK, HERBED ORZO, BRUSSEL SPROUTS, ROLL, CHOC CHIP COOKIE",
+              "value": "CRUMB BAKED HADDOCK, HERBED ORZO, BRUSSEL SPROUTS, ROLL, CHOC CHIP COOKIE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-27 LUNCH CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CRUMB BAKED HADDOCK",
+                  "value": "CRUMB BAKED HADDOCK",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "HERBED ORZO",
+                  "value": "HERBED ORZO",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BRUSSEL SPROUTS",
+                  "value": "BRUSSEL SPROUTS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CHOC CHIP COOKIE",
+                  "value": "CHOC CHIP COOKIE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "BEEF & RICE CASSEROLE, GREEN PEAS, ROLL",
+              "value": "BEEF & RICE CASSEROLE, GREEN PEAS, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-27 LUNCH CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BEEF & RICE CASSEROLE",
+                  "value": "BEEF & RICE CASSEROLE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GREEN PEAS",
+                  "value": "GREEN PEAS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 LUNCH CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "CREAM OF ASPARAGUS SOUP, CRACKERS, BLT SANDWICH, ROLL, FRESH FRUIT CUP",
+              "value": "CREAM OF ASPARAGUS SOUP, CRACKERS, BLT SANDWICH, ROLL, FRESH FRUIT CUP",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-27 DINNER CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CREAM OF ASPARAGUS SOUP",
+                  "value": "CREAM OF ASPARAGUS SOUP",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CRACKERS",
+                  "value": "CRACKERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BLT SANDWICH",
+                  "value": "BLT SANDWICH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRESH FRUIT CUP",
+                  "value": "FRESH FRUIT CUP",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "CHICKEN TENDERS, CONDIMENTS, BAKED POTATO WEDGES, CORN",
+              "value": "CHICKEN TENDERS, CONDIMENTS, BAKED POTATO WEDGES, CORN",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-27 DINNER CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CHICKEN TENDERS",
+                  "value": "CHICKEN TENDERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CONDIMENTS",
+                  "value": "CONDIMENTS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BAKED POTATO WEDGES",
+                  "value": "BAKED POTATO WEDGES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CORN",
+                  "value": "CORN",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-27 DINNER CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "10/28/2026",
+        "value": "2026-10-28",
+        "confidence": null,
+        "source": {
+          "file": "fixtures/source/week-1-original-menu.jpg",
+          "cell": "2026-10-28 DATE"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "PANCAKES, SAUSAGE, EGG OF CHOICE, TOAST",
+              "value": "PANCAKES, SAUSAGE, EGG OF CHOICE, TOAST",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-28 BREAKFAST CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "PANCAKES",
+                  "value": "PANCAKES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 BREAKFAST CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "SAUSAGE",
+                  "value": "SAUSAGE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 BREAKFAST CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG OF CHOICE",
+                  "value": "EGG OF CHOICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 BREAKFAST CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "TOAST",
+                  "value": "TOAST",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 BREAKFAST CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "COLD CEREAL OATMEAL, FRUIT",
+              "value": "COLD CEREAL OATMEAL, FRUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-28 BREAKFAST CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "COLD CEREAL",
+                  "value": "COLD CEREAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 BREAKFAST CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "OATMEAL",
+                  "value": "OATMEAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 BREAKFAST CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUIT",
+                  "value": "FRUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 BREAKFAST CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "SPAGHETTI W/MEAT SAUCE, GREEN BEANS, GARLIC BREAD, PINEAPPLE UPSIDE DOWN CAKE,",
+              "value": "SPAGHETTI W/MEAT SAUCE, GREEN BEANS, GARLIC BREAD, PINEAPPLE UPSIDE DOWN CAKE,",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-28 LUNCH CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "SPAGHETTI W/MEAT SAUCE",
+                  "value": "SPAGHETTI W/MEAT SAUCE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GREEN BEANS",
+                  "value": "GREEN BEANS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GARLIC BREAD",
+                  "value": "GARLIC BREAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "PINEAPPLE UPSIDE DOWN CAKE",
+                  "value": "PINEAPPLE UPSIDE DOWN CAKE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "ROAST TURKEY, MASHED POTATOES, DILL CARROTS, ROLL",
+              "value": "ROAST TURKEY, MASHED POTATOES, DILL CARROTS, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-28 LUNCH CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "ROAST TURKEY",
+                  "value": "ROAST TURKEY",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "MASHED POTATOES",
+                  "value": "MASHED POTATOES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "DILL CARROTS",
+                  "value": "DILL CARROTS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 LUNCH CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "BEEF VEG SOUP, CRACKERS, FISH SANDWICH, SPINACH/TOM ORZO SALAD, ROLL",
+              "value": "BEEF VEG SOUP, CRACKERS, FISH SANDWICH, SPINACH/TOM ORZO SALAD, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-28 DINNER CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BEEF VEG SOUP",
+                  "value": "BEEF VEG SOUP",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CRACKERS",
+                  "value": "CRACKERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FISH SANDWICH",
+                  "value": "FISH SANDWICH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "SPINACH/TOM ORZO SALAD",
+                  "value": "SPINACH/TOM ORZO SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "CHICKEN CAESAR SALAD, CUCUMBER SALAD, BLONDE BROWNIE",
+              "value": "CHICKEN CAESAR SALAD, CUCUMBER SALAD, BLONDE BROWNIE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-28 DINNER CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CHICKEN CAESAR SALAD",
+                  "value": "CHICKEN CAESAR SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CUCUMBER SALAD",
+                  "value": "CUCUMBER SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BLONDE BROWNIE",
+                  "value": "BLONDE BROWNIE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-28 DINNER CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "10/29/2026",
+        "value": "2026-10-29",
+        "confidence": null,
+        "source": {
+          "file": "fixtures/source/week-1-original-menu.jpg",
+          "cell": "2026-10-29 DATE"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "BREAKFAST BOWL, EGG OF CHOICE, TOAST",
+              "value": "BREAKFAST BOWL, EGG OF CHOICE, TOAST",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-29 BREAKFAST CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BREAKFAST BOWL",
+                  "value": "BREAKFAST BOWL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 BREAKFAST CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG OF CHOICE",
+                  "value": "EGG OF CHOICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 BREAKFAST CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "TOAST",
+                  "value": "TOAST",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 BREAKFAST CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "COLD CEREAL, CREAM OF WHEAT, FRUIT",
+              "value": "COLD CEREAL, CREAM OF WHEAT, FRUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-29 BREAKFAST CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "COLD CEREAL",
+                  "value": "COLD CEREAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 BREAKFAST CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CREAM OF WHEAT",
+                  "value": "CREAM OF WHEAT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 BREAKFAST CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUIT",
+                  "value": "FRUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 BREAKFAST CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "CHICKEN CORDON BLEU, BROWN RICE, 5 WAY MIXED VEGS, ROLL, PEACH COBBLER A LA MODE",
+              "value": "CHICKEN CORDON BLEU, BROWN RICE, 5 WAY MIXED VEGS, ROLL, PEACH COBBLER A LA MODE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-29 LUNCH CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CHICKEN CORDON BLEU",
+                  "value": "CHICKEN CORDON BLEU",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BROWN RICE",
+                  "value": "BROWN RICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "5 WAY MIXED VEGS",
+                  "value": "5 WAY MIXED VEGS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "PEACH COBBLER A LA MODE",
+                  "value": "PEACH COBBLER A LA MODE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "BEEF CACCIATORE, BUTTERED NOODLES, ROLL, SEASONED CABBAGE",
+              "value": "BEEF CACCIATORE, BUTTERED NOODLES, ROLL, SEASONED CABBAGE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-29 LUNCH CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BEEF CACCIATORE",
+                  "value": "BEEF CACCIATORE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BUTTERED NOODLES",
+                  "value": "BUTTERED NOODLES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "SEASONED CABBAGE",
+                  "value": "SEASONED CABBAGE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 LUNCH CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "TOMATO BARLEY SOUP, CRACKERS, CHICK SAL SANDWICH, VEG SALAD, ORANGE SLICES",
+              "value": "TOMATO BARLEY SOUP, CRACKERS, CHICK SAL SANDWICH, VEG SALAD, ORANGE SLICES",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-29 DINNER CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "TOMATO BARLEY SOUP",
+                  "value": "TOMATO BARLEY SOUP",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CRACKERS",
+                  "value": "CRACKERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CHICK SAL SANDWICH",
+                  "value": "CHICK SAL SANDWICH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "VEG SALAD",
+                  "value": "VEG SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ORANGE SLICES",
+                  "value": "ORANGE SLICES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "STUFFED BELL PEPPER, BASIL ZUCCHINI SAUTE, ROLL",
+              "value": "STUFFED BELL PEPPER, BASIL ZUCCHINI SAUTE, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-29 DINNER CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "STUFFED BELL PEPPER",
+                  "value": "STUFFED BELL PEPPER",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BASIL ZUCCHINI SAUTE",
+                  "value": "BASIL ZUCCHINI SAUTE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-29 DINNER CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "10/30/2026",
+        "value": "2026-10-30",
+        "confidence": null,
+        "source": {
+          "file": "fixtures/source/week-1-original-menu.jpg",
+          "cell": "2026-10-30 DATE"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "FRENCH TOAST, BACON, EGG OF CHOICE",
+              "value": "FRENCH TOAST, BACON, EGG OF CHOICE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-30 BREAKFAST CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "FRENCH TOAST",
+                  "value": "FRENCH TOAST",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 BREAKFAST CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BACON",
+                  "value": "BACON",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 BREAKFAST CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG OF CHOICE",
+                  "value": "EGG OF CHOICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 BREAKFAST CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "COLD CEREAL, OATMEAL, FRUIT",
+              "value": "COLD CEREAL, OATMEAL, FRUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-30 BREAKFAST CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "COLD CEREAL",
+                  "value": "COLD CEREAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 BREAKFAST CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "OATMEAL",
+                  "value": "OATMEAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 BREAKFAST CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUIT",
+                  "value": "FRUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 BREAKFAST CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "CRAB SALAD SANDWICH, VEG PASTA SALAD, ROLL, PICKLED BEETS, FRUITED GELATIN",
+              "value": "CRAB SALAD SANDWICH, VEG PASTA SALAD, ROLL, PICKLED BEETS, FRUITED GELATIN",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-30 LUNCH CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CRAB SALAD SANDWICH",
+                  "value": "CRAB SALAD SANDWICH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "VEG PASTA SALAD",
+                  "value": "VEG PASTA SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "PICKLED BEETS",
+                  "value": "PICKLED BEETS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUITED GELATIN",
+                  "value": "FRUITED GELATIN",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "BAKED ZITI & MEAT SAUCE, GARDEN SALAD, DRESSING, ROLL",
+              "value": "BAKED ZITI & MEAT SAUCE, GARDEN SALAD, DRESSING, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-30 LUNCH CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BAKED ZITI & MEAT SAUCE",
+                  "value": "BAKED ZITI & MEAT SAUCE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GARDEN SALAD",
+                  "value": "GARDEN SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "DRESSING",
+                  "value": "DRESSING",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 LUNCH CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "CLAM CHOWDER, OYSTER CRACKERS, HAM SAL SANDWICH, APPLE CARROT SALAD, APPLESAUCE CAKE",
+              "value": "CLAM CHOWDER, OYSTER CRACKERS, HAM SAL SANDWICH, APPLE CARROT SALAD, APPLESAUCE CAKE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-30 DINNER CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CLAM CHOWDER",
+                  "value": "CLAM CHOWDER",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "OYSTER CRACKERS",
+                  "value": "OYSTER CRACKERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "HAM SAL SANDWICH",
+                  "value": "HAM SAL SANDWICH",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "APPLE CARROT SALAD",
+                  "value": "APPLE CARROT SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "APPLESAUCE CAKE",
+                  "value": "APPLESAUCE CAKE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "PORK SCHNITZEL W/DILL, WHIPPED POTATOES, ROASTED BROCCOLI SPEARS",
+              "value": "PORK SCHNITZEL W/DILL, WHIPPED POTATOES, ROASTED BROCCOLI SPEARS",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-30 DINNER CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "PORK SCHNITZEL W/DILL",
+                  "value": "PORK SCHNITZEL W/DILL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "WHIPPED POTATOES",
+                  "value": "WHIPPED POTATOES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROASTED BROCCOLI SPEARS",
+                  "value": "ROASTED BROCCOLI SPEARS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-30 DINNER CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "10/31/2026",
+        "value": "2026-10-31",
+        "confidence": null,
+        "source": {
+          "file": "fixtures/source/week-1-original-menu.jpg",
+          "cell": "2026-10-31 DATE"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "CONFETTI EGGS, WAFFLE, EGG OF CHOICE, TOAST",
+              "value": "CONFETTI EGGS, WAFFLE, EGG OF CHOICE, TOAST",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-31 BREAKFAST CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CONFETTI EGGS",
+                  "value": "CONFETTI EGGS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 BREAKFAST CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "WAFFLE",
+                  "value": "WAFFLE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 BREAKFAST CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "EGG OF CHOICE",
+                  "value": "EGG OF CHOICE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 BREAKFAST CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "TOAST",
+                  "value": "TOAST",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 BREAKFAST CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "COLD CEREAL, MAYPO, FRUIT",
+              "value": "COLD CEREAL, MAYPO, FRUIT",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-31 BREAKFAST CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "COLD CEREAL",
+                  "value": "COLD CEREAL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 BREAKFAST CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "MAYPO",
+                  "value": "MAYPO",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 BREAKFAST CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "FRUIT",
+                  "value": "FRUIT",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 BREAKFAST CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "BEANS & FRANKS, COLESLAW, BROWN BREAD, WAX BEANS, SILVER WHITE CAKE",
+              "value": "BEANS & FRANKS, COLESLAW, BROWN BREAD, WAX BEANS, SILVER WHITE CAKE",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-31 LUNCH CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "BEANS & FRANKS",
+                  "value": "BEANS & FRANKS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "COLESLAW",
+                  "value": "COLESLAW",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BROWN BREAD",
+                  "value": "BROWN BREAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "WAX BEANS",
+                  "value": "WAX BEANS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "SILVER WHITE CAKE",
+                  "value": "SILVER WHITE CAKE",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "SALISBURY STEAK, BAKED POTATO W/SC, BRUSSEL SPROUTS, ROLL",
+              "value": "SALISBURY STEAK, BAKED POTATO W/SC, BRUSSEL SPROUTS, ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-31 LUNCH CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "SALISBURY STEAK",
+                  "value": "SALISBURY STEAK",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BAKED POTATO W/SC",
+                  "value": "BAKED POTATO W/SC",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BRUSSEL SPROUTS",
+                  "value": "BRUSSEL SPROUTS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "ROLL",
+                  "value": "ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 LUNCH CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "CHICKEN RICE SOUP, CRACKERS, TURKEY SAL SAND, TOMATO SALAD, BALSAMIC STRAWBERRIES",
+              "value": "CHICKEN RICE SOUP, CRACKERS, TURKEY SAL SAND, TOMATO SALAD, BALSAMIC STRAWBERRIES",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-31 DINNER CHOICE 1"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "CHICKEN RICE SOUP",
+                  "value": "CHICKEN RICE SOUP",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 1; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "CRACKERS",
+                  "value": "CRACKERS",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 1; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "TURKEY SAL SAND",
+                  "value": "TURKEY SAL SAND",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 1; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "TOMATO SALAD",
+                  "value": "TOMATO SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 1; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "BALSAMIC STRAWBERRIES",
+                  "value": "BALSAMIC STRAWBERRIES",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 1; component 5"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "VEGETABLE PIZZA, GARDEN SALAD, DRESSING, GARLIC ROLL",
+              "value": "VEGETABLE PIZZA, GARDEN SALAD, DRESSING, GARLIC ROLL",
+              "confidence": null,
+              "source": {
+                "file": "fixtures/source/week-1-original-menu.jpg",
+                "cell": "2026-10-31 DINNER CHOICE 2"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "VEGETABLE PIZZA",
+                  "value": "VEGETABLE PIZZA",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 2; component 1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GARDEN SALAD",
+                  "value": "GARDEN SALAD",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 2; component 2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "DRESSING",
+                  "value": "DRESSING",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 2; component 3"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "GARLIC ROLL",
+                  "value": "GARLIC ROLL",
+                  "confidence": null,
+                  "source": {
+                    "file": "fixtures/source/week-1-original-menu.jpg",
+                    "cell": "2026-10-31 DINNER CHOICE 2; component 4"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "approval": null
+}

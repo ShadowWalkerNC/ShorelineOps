@@ -138,7 +138,7 @@ export default function LoginPage() {
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <div className="stitch-sign-in-brand flex items-center justify-center gap-3 mb-3">
               <img
-                src="/icon-192.png"
+                src={`${import.meta.env.BASE_URL}icon-192.png`}
                 alt="Shoreline Care OS"
                 style={{
                   width: 48,

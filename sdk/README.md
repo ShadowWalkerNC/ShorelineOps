@@ -1,120 +1,52 @@
-# @shoreline/sdk
+# @shoreline/sdk 0.3
 
-Repository TypeScript client for the **ShorelineOps Care OS** REST API. This package is separate from the Muse Spark and Gadget tooling in `tools/muse`.
+Repository TypeScript client for the implemented ShorelineOps REST routes. It is separate from Muse tooling in `tools/muse`, the paperwork companion and the central SaaS account service. Requires Node.js 18+ or browser `fetch`; the facility server has a higher Node requirement.
 
----
+## Build and consume
 
-## Capabilities
-
-- **Resident Census & Diets**: Facility census queries, recorded diet and texture orders, and CSV ingestion. Recorded texture orders do not verify physical IDDSI preparation.
-- **EHR Triage & Clinical Reconciliation**: PointClickCare inbound webhook triage queue, audit logging, and RD approval/rejection workflows.
-- **Recipe & Nutritional Analysis**: Master recipe details, automated USDA nutrient calculation, and Big 9 allergen scanning.
-- **Purchasing & 3-Way Match**: Dennis vs. Sysco lowest-cost split MRP, 3-way invoice matching, price variance detection, and vendor credit memo proposals.
-- **HACCP Monitoring**: Submitted temperature readings and equipment check schedules. The client does not connect to Bluetooth probes.
-- **Tray Line Execution**: Real-time meal slot tracking, assembly timestamps, delivery SLAs, and remake event logging.
-- **Survey Preparation**: Survey binder retrieval and Cost per Resident Day ($/CPD) reporting. Reports require facility review and do not certify compliance.
-
----
-
-## Installation from source
-
-```bash
-npm install ./sdk
-```
-
----
-
-## Quick Start
+Run `npm run build` in `sdk`, then install the local folder or run `npm pack`. `prepack` builds CommonJS JavaScript and declarations. ESM and CommonJS consumers share the same client. Registry publication has not been verified.
 
 ```typescript
 import { ShorelineClient } from '@shoreline/sdk'
 
 const client = new ShorelineClient({
-  baseUrl: 'https://shoreline-api-production.up.railway.app',
-  apiKey: process.env.SHORELINE_ACCESS_TOKEN, // Access JWT from an authorized login
+  baseUrl: 'https://your-facility.example.com',
+  apiKey: process.env.SHORELINE_ACCESS_TOKEN,
 })
-
-// 1. Fetch active facility census
+const residents = await client.getResidents()
 const census = await client.getCensus()
-console.log(`Active residents: ${census.activeCount}, NPO: ${census.npoCount}`)
-
-// 2. Run lowest-cost split MRP comparison
-const mrp = await client.getMrpSplitPo('Turkey Breast', 50)
-console.log(`Best vendor: ${mrp.recommendedVendor}, Savings: $${mrp.savingsVsAlternate.toFixed(2)}`)
-
-// 3. Evaluate 3-way invoice match
-const match = await client.evaluateInvoiceMatch({
-  invoiceNumber: 'INV-2026-9812',
-  vendorName: 'Dennis Food Service',
-  lines: [
-    {
-      itemSku: 'TURK-001',
-      description: 'Raw Turkey Breast',
-      poQty: 10,
-      receivedQty: 9,
-      invoicedQty: 10,
-      poContractUnitPrice: 4.25,
-      invoicedUnitPrice: 4.85,
-    },
-  ],
-})
-
-console.log(`Status: ${match.report.overallStatus}`)
-console.log(`Disputed: $${match.report.totalCreditDisputedAmount}`)
+// census.source === 'resident-list': counts are derived from the authorized list.
+// Protect returned records; never log patient data in public output.
 ```
 
----
+`apiKey` is a compatibility property name for an access JWT obtained through authorized facility login. The SDK does not issue API keys or automatically refresh sessions. Create a new client after credential refresh. Roles, license gates, patient privacy and deterministic tray safety remain server-enforced.
 
-## Client Configuration
+## Supported operations
 
-```typescript
-export interface ShorelineClientConfig {
-  /** Base URL of your ShorelineOps API (no trailing slash) */
-  baseUrl: string
-  /** Access JWT; property name retained for compatibility. No API-key issuance is implemented. */
-  apiKey?: string
-}
-```
+| Method | Server contract |
+|---|---|
+| `getResidents` | GET `/api/residents`, role-appropriate projection |
+| `getCensus` | Derived from `getResidents`; no invented facility identity or census endpoint |
+| `importCensusCsv` | POST `/api/residents/import-csv` |
+| `getRecipe` | GET `/api/recipes/:id` |
+| `analyzeRecipeNutrition` | POST `/api/recipes/analyze-nutrition`, nullable totals and explicit provenance |
+| `verifyRecipeClinical` | POST `/api/recipes/:id/verify-clinical`, authorized clinician only |
+| `evaluateInvoiceMatch` | POST `/api/purchasing/invoices/evaluate`, enterprise and capability gates |
+| `getReconciliationQueue` / `resolveReconciliationItem` | Authenticated EHR review queue and decision routes |
+| `logHaccpTemperature` / `getHaccpSchedule` | Persisted HACCP logs and equipment schedule |
+| `getTrayRuns` / `recordTrayEvent` | Tray runs and append-only events; signed QR payload required for events |
+| `runHealthCheck` | GET `/api/health`, process health rather than database readiness |
 
----
+Nutrition calculations use a small local reference library. Unsupported ingredients or unmeasured count/density quantities return `null`, with reasons in `nutritionProvenance`; they never receive generic substitute values. A clinician can submit a complete `nutritionReview.perServing` plus `sourceReference` at the clinical-review endpoint. Approval does not override NPO, allergen, fluid, texture or current signed-tray checks. Live USDA/PCC nutrient endpoints remain unavailable.
 
-## API Reference
+Meal slots are `breakfast`, `morningSnack`, `lunch`, `afternoonSnack`, `dinner`. Tray events are `assembled`, `dispatched`, `delivered`, `missed`, `remade`; a cancellation operation is not implemented. Equipment schedule fields use the server's snake_case names. Raw PostgreSQL numeric fields may be strings, reflected in the declarations.
 
-The capability descriptions below describe API operations, not verified physical device connections, live vendor integrations, or regulatory certification. Role, facility, license, and deterministic clinical checks still apply. The client does not acquire or refresh credentials: create a new client with the current access JWT after login/refresh. Logout and account security changes revoke sessions. Never embed credentials in public bundles or log resident data. Registry publication of this package has not been verified; build the repository SDK before installing it from source.
+## Corrected contracts in 0.3
 
-### Residents & Census
-- `getResidents(): Promise<Resident[]>` — Pull all resident records.
-- `getCensus(): Promise<CensusEntry>` — Live census overview with active/NPO counts.
-- `importCensusCsv(csv: string): Promise<CensusImportResult>` — Bulk import resident rosters and clinical diet orders.
+Resident fields are `dietType`, `liquidConsistency`, `isNpo`, `profileVersion` and the actual status vocabulary. Recipe steps are structured objects, and nutrition can be unavailable. Review callers when moving from 0.2 declarations.
 
-### Recipes & Clinical Nutrition
-- `getRecipe(recipeId: string): Promise<RecipeDetail>` — Retrieve full recipe bill-of-materials and nutrition.
-- `validateRecipe(recipeId: string): Promise<RecipeValidationResult>` — Clinical safety audit (NAS, NCS, Renal, allergens).
-- `analyzeRecipeNutrition(input: AnalyzeNutritionInput): Promise<RecipeNutritionAnalysis>` — On-the-fly macro/micronutrient breakdown.
+Historical `validateRecipe`, `getMrpSplitPo`, `getCmsSurveyBinder` and `getCostPerResidentDay` helpers had no matching server contract. They remain callable for compatibility but reject locally with status 501 and `SDK_OPERATION_UNAVAILABLE`. They send no request. The server's scheduled MRP, survey export and CPD breakdown routes have different contracts and are not falsely mapped to these helpers.
 
-### Purchasing & Invoicing
-- `getMrpSplitPo(item: string, demandLbs: number): Promise<MrpSplitPo>` — Split MRP price comparison across Dennis, Sysco, and US Foods.
-- `evaluateInvoiceMatch(input: EvaluateInvoiceInput): Promise<ThreeWayMatchResponse>` — 3-way invoice reconciliation and vendor credit memo proposals.
+Tests validate module loading, HTTP authorization/envelopes/errors, census derivation and unavailable-operation behavior. Actual facility API contract tests live in the server suite. Passing local tests does not establish provider connectivity, physical hardware operation or regulatory compliance.
 
-### Clinical EHR Reconciliation
-- `getReconciliationQueue(status?: string): Promise<ReconciliationQueueResult>` — List pending triage queue items.
-- `resolveReconciliationItem(id: string, action: ReconciliationAction): Promise<ReconciliationResolveResult>` — RD approval or rejection of EHR modifications.
-
-### Kitchen Hardware & HACCP
-- `logHaccpTemperature(input: LogHaccpInput): Promise<HaccpLogResult>` — Record food or equipment temperatures.
-- `getHaccpSchedule(): Promise<HaccpScheduleResult>` — Equipment check schedule with due/overdue counts.
-
-### Tray Line Execution
-- `getTrayRuns(serviceDate?: string, mealSlot?: string): Promise<TrayRun[]>` — Tray runs by date and meal.
-- `recordTrayEvent(runId: string, event: RecordTrayEventInput): Promise<TrayEventRecord>` — Log tray assembly, dispatch, delivery, or cancellation.
-
-### Reporting & Health
-- `getCmsSurveyBinder(): Promise<CmsSurveyBinder>` — CMS F-Tag survey binder (Enterprise tier).
-- `getCostPerResidentDay(): Promise<CostPerResidentDay>` — Cost-per-resident-day budget variances.
-- `runHealthCheck(): Promise<HealthCheckResult>` — Server uptime and database connectivity.
-
----
-
-## License
-
-MIT © Shoreline Operations LLC. Open-Source Healthcare Technology.
+License: MIT, as declared by this package.

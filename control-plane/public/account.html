@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My account — ShorelineOps</title>
+<link rel="stylesheet" href="/site.css">
+</head>
+<body data-page="account">
+<main>
+<h1>My account</h1>
+<dl>
+<dt>Email</dt><dd id="status-email">…</dd>
+<dt>Email status</dt><dd id="status-verified">…</dd>
+<dt>Verification mail</dt><dd id="status-mail">…</dd>
+</dl>
+<h2>Cloud facility</h2>
+<p id="status-activation">Loading activation status…</p>
+<p>Cloud hosting requires the owner's manual activation. Requesting a plan creates no paid resources and starts no billing.</p>
+<form id="activation-form">
+<label for="plan">Requested plan</label>
+<select id="plan" name="plan"><option value="PRO_TIER">Pro Cloud — $199 / facility / month</option><option value="ENTERPRISE_TIER">Enterprise — $399 / facility / month</option></select>
+<button type="submit">Request manual activation</button>
+</form>
+<p id="facility-link" hidden></p>
+<p id="facility-key" hidden></p>
+<p id="result" role="status" aria-live="polite"></p>
+<form id="logout-form"><button type="submit">Log out</button></form>
+<p><a href="/">Back to start</a></p>
+</main>
+<script src="/portal.js" defer></script>
+</body>
+</html>

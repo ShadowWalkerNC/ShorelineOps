@@ -337,6 +337,7 @@ export default function SettingsPage() {
                 onChange={e => updateFacility({ facilityType: e.target.value as any })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium outline-none"
               >
+                <option value="">Not configured</option>
                 <option value="Skilled Nursing">Skilled Nursing Facility (SNF)</option>
                 <option value="Assisted Living">Assisted Living Facility (ALF)</option>
                 <option value="Memory Care">Memory Care Community</option>
@@ -618,6 +619,7 @@ export default function SettingsPage() {
                 onChange={e => updateIntegrations({ primaryDistributor: e.target.value as any })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium outline-none"
               >
+                <option value="">Not configured</option>
                 <option value="dennis">Dennis Food Service</option>
                 <option value="sysco">Sysco Corporation</option>
                 <option value="usfoods">US Foods</option>
@@ -630,6 +632,7 @@ export default function SettingsPage() {
               <label className="font-bold text-slate-600 dark:text-slate-300">Vendor Customer / Account #</label>
               <input
                 type="text"
+                placeholder="Not configured"
                 value={integrations.distributorCustomerNumber}
                 onChange={e => updateIntegrations({ distributorCustomerNumber: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono outline-none"
@@ -640,6 +643,7 @@ export default function SettingsPage() {
               <label className="font-bold text-slate-600 dark:text-slate-300">PointClickCare / EHR Facility ID</label>
               <input
                 type="text"
+                placeholder="Not configured"
                 value={integrations.pccFacilityId}
                 onChange={e => updateIntegrations({ pccFacilityId: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono outline-none"

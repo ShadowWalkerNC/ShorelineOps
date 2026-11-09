@@ -1,0 +1,13 @@
+import { promises as fs } from 'node:fs';
+import { CampusProfileSchema } from '../dist/src/campus/index.js';
+import { buildRossWorksheetHtml,renderPdfFromHtml } from '../dist/src/renderer/index.js';
+const profile=CampusProfileSchema.parse(JSON.parse(await fs.readFile('fixtures/campus-profile.json','utf8')));
+const prep=buildRossWorksheetHtml(profile,'ross_manor','2026-10-29','prep-list',true);
+const service=buildRossWorksheetHtml(profile,'ross_manor','2026-10-29','meal-service',true);
+const pages=service.match(/<div class="packet">([\s\S]*)<\/div><\/body>/)?.[1];
+if(!pages)throw new Error('Missing service sheet');
+const html=prep.replace('</div></body></html>',`${pages}</div></body></html>`);
+await fs.mkdir('output/preview',{recursive:true});
+await fs.writeFile('output/preview/ross-manor-worksheet-demo.html',html);
+await renderPdfFromHtml(html,'output/preview/ross-manor-worksheet-demo.pdf');
+console.log('Created two-page Ross Manor blank worksheet demo.');

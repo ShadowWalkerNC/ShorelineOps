@@ -1,0 +1,12 @@
+node_modules/
+dist/
+output/
+.muse/
+.eden/
+.hg/
+.sl/
+.agents/
+
+plugin/server.mjs
+plugin/fixtures/
+.mcpb-cache/

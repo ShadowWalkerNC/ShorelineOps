@@ -21,7 +21,7 @@ test('signed trays fail closed and action boundary rechecks current safety', asy
   await pool.query('CREATE TABLE residents (id TEXT PRIMARY KEY, name TEXT, room TEXT, status TEXT, profile_version INTEGER, is_npo INTEGER, allergies TEXT, texture TEXT, diet_type TEXT, fluid_restriction_ml INTEGER, liquid_consistency TEXT DEFAULT "Thin", npo_reason TEXT DEFAULT "", updated_at TEXT)')
   await pool.query('CREATE TABLE ehr_reconciliation_queue (id TEXT, resident_id TEXT, status TEXT)')
   await pool.query('CREATE TABLE recipes (id TEXT, name TEXT, category TEXT DEFAULT "Entree", base_servings NUMERIC DEFAULT 10, prep_time_mins INTEGER DEFAULT 15, cook_time_mins INTEGER DEFAULT 30, haccp_temp_f NUMERIC DEFAULT 165, allergens TEXT, iddsi_level INTEGER, ingredients TEXT DEFAULT "[]", steps TEXT DEFAULT "[]", notes TEXT DEFAULT "", cost_per_serving NUMERIC DEFAULT 0, clinical_verified INTEGER DEFAULT 0, verified_by TEXT, verified_at TEXT, approved_diets TEXT DEFAULT "[]", fluid_ml_per_serving INTEGER, updated_at TEXT)')
-  await pool.query('CREATE TABLE recipe_nutrients (recipe_id TEXT PRIMARY KEY, calories NUMERIC DEFAULT 0, protein_g NUMERIC DEFAULT 0, carbs_g NUMERIC DEFAULT 0, fat_g NUMERIC DEFAULT 0, sat_fat_g NUMERIC DEFAULT 0, sodium_mg NUMERIC DEFAULT 0, potassium_mg NUMERIC DEFAULT 0, phosphorus_mg NUMERIC DEFAULT 0, fiber_g NUMERIC DEFAULT 0, sugar_g NUMERIC DEFAULT 0, calculated_at TEXT)')
+  await pool.query('CREATE TABLE recipe_nutrients (recipe_id TEXT PRIMARY KEY, calories NUMERIC DEFAULT 0, protein_g NUMERIC DEFAULT 0, carbs_g NUMERIC DEFAULT 0, fat_g NUMERIC DEFAULT 0, sat_fat_g NUMERIC DEFAULT 0, sodium_mg NUMERIC DEFAULT 0, potassium_mg NUMERIC DEFAULT 0, phosphorus_mg NUMERIC DEFAULT 0, fiber_g NUMERIC DEFAULT 0, sugar_g NUMERIC DEFAULT 0, nutrition_source TEXT DEFAULT "legacy-unverified", calculated_at TEXT)')
   await pool.query('CREATE TABLE hydration_records (id TEXT PRIMARY KEY, resident_id TEXT, consumed_ml INTEGER, recorded_at TEXT)')
   await pool.query('CREATE TABLE vendor_items (id TEXT PRIMARY KEY, vendor_sku TEXT, name TEXT, unit_cost NUMERIC, pack_size TEXT, uom TEXT, active INTEGER DEFAULT 1)')
   await pool.query('CREATE TABLE tray_runs (id TEXT PRIMARY KEY, meal_slot TEXT, service_date TEXT)')
@@ -113,12 +113,13 @@ test('clinical provenance: canonical allergen synonyms, restricted diet ceilings
   const port = (server.address() as { port: number }).port
   const baseUrl = `http://127.0.0.1:${port}/recipes`
 
+  const reviewed = (calories: number, proteinG: number, sodiumMg: number, satFatG: number) => ({ sourceReference: 'Synthetic clinician-reviewed test label', perServing: { calories, proteinG, sodiumMg, satFatG, carbsG: 0, fatG: 0, potassiumMg: 0, phosphorusMg: 0, fiberG: 0, sugarG: 0 } })
   try {
     // Staff and admin cannot clinically verify recipes (strictly dietitian/manager)
     const deniedStaff = await fetch(`${baseUrl}/rec-herb-chicken/verify-clinical`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ approvedDiets: ['Low Sodium'], fluidMlPerServing: 60, canonicalAllergens: [] }),
+      body: JSON.stringify({ approvedDiets: ['Low Sodium'], fluidMlPerServing: 60, canonicalAllergens: [], nutritionReview: reviewed(320, 28, 240, 2.5) }),
     })
     assert.equal(deniedStaff.status, 403)
 
@@ -126,7 +127,7 @@ test('clinical provenance: canonical allergen synonyms, restricted diet ceilings
     const deniedAdmin = await fetch(`${baseUrl}/rec-herb-chicken/verify-clinical`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ approvedDiets: ['Low Sodium'], fluidMlPerServing: 60, canonicalAllergens: [] }),
+      body: JSON.stringify({ approvedDiets: ['Low Sodium'], fluidMlPerServing: 60, canonicalAllergens: [], nutritionReview: reviewed(320, 28, 240, 2.5) }),
     })
     assert.equal(deniedAdmin.status, 403)
 
@@ -136,14 +137,14 @@ test('clinical provenance: canonical allergen synonyms, restricted diet ceilings
     const verifyChicken = await fetch(`${baseUrl}/rec-herb-chicken/verify-clinical`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ approvedDiets: ['Low Sodium'], fluidMlPerServing: 60, canonicalAllergens: [] }),
+      body: JSON.stringify({ approvedDiets: ['Low Sodium'], fluidMlPerServing: 60, canonicalAllergens: [], nutritionReview: reviewed(320, 28, 240, 2.5) }),
     })
     assert.equal(verifyChicken.status, 200)
 
     const verifyWater = await fetch(`${baseUrl}/rec-water/verify-clinical`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ approvedDiets: ['Low Sodium', 'Regular'], fluidMlPerServing: 240, canonicalAllergens: [] }),
+      body: JSON.stringify({ approvedDiets: ['Low Sodium', 'Regular'], fluidMlPerServing: 240, canonicalAllergens: [], nutritionReview: reviewed(0, 0, 0, 0) }),
     })
     assert.equal(verifyWater.status, 200)
 

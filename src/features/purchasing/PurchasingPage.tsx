@@ -87,6 +87,9 @@ export default function PurchasingPage() {
   const [suggestedLines, setSuggestedLines] = useState<SuggestedOrderLine[]>([])
   const [orders, setOrders] = useState<PurchaseOrder[]>([])
   const [loading, setLoading] = useState(false)
+  const [unavailable, setUnavailable] = useState<string[]>([])
+  const dataUnavailable = (name: string) => setUnavailable(previous => [...new Set([...previous, name])])
+  const dataAvailable = (name: string) => setUnavailable(previous => previous.filter(value => value !== name))
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   // Price Matrix state (Cut+Dry style Cross-Vendor Comparison)
@@ -133,62 +136,11 @@ export default function PurchasingPage() {
       const res = await api.get('/distributor/price-matrix')
       setPriceMatrix(res.data.matrix || [])
       setPriceMatrixSummary(res.data.summary || null)
-    } catch (err: any) {
-      // Fallback demo price matrix
-      const demoMatrix: PriceMatrixRow[] = [
-        {
-          canonicalId: 'prod-1',
-          canonicalName: 'Chicken Breast, Boneless/Skinless',
-          category: 'Poultry',
-          standardUom: 'lb',
-          bestUnitCost: 2.15,
-          winningVendorId: 'dennis-1',
-          winningVendorName: 'Dennis Food Service',
-          costSavingsPerUnit: 0.40,
-          priceSpreadPercent: 18.6,
-          offers: [
-            { vendorId: 'dennis-1', vendorName: 'Dennis Food Service', vendorCode: 'DNS', vendorSku: 'DNS-01', itemName: 'Fresh Chk Brst B/S', packSize: '4/10 lb', caseCost: 86.00, normalizedUnitCost: 2.15, isBestPrice: true },
-            { vendorId: 'sysco-1', vendorName: 'Sysco Foods', vendorCode: 'SY', vendorSku: 'SY-1092', itemName: 'Chicken Breast Raw B/S', packSize: '2/20 lb', caseCost: 102.00, normalizedUnitCost: 2.55, isBestPrice: false },
-          ]
-        },
-        {
-          canonicalId: 'prod-2',
-          canonicalName: 'Ground Beef 80/20 Fresh',
-          category: 'Beef',
-          standardUom: 'lb',
-          bestUnitCost: 3.89,
-          winningVendorId: 'dennis-1',
-          winningVendorName: 'Dennis Food Service',
-          costSavingsPerUnit: 0.31,
-          priceSpreadPercent: 8.0,
-          offers: [
-            { vendorId: 'dennis-1', vendorName: 'Dennis Food Service', vendorCode: 'DNS', vendorSku: 'DNS-02', itemName: 'Beef Ground 80/20 Chilled', packSize: '4/10 lb', caseCost: 155.60, normalizedUnitCost: 3.89, isBestPrice: true },
-            { vendorId: 'sysco-1', vendorName: 'Sysco Foods', vendorCode: 'SY', vendorSku: 'SY-2093', itemName: 'Ground Beef 80/20 Loaf', packSize: '2/20 lb', caseCost: 168.00, normalizedUnitCost: 4.20, isBestPrice: false },
-          ]
-        },
-        {
-          canonicalId: 'prod-3',
-          canonicalName: 'Russet Potatoes 70ct',
-          category: 'Produce',
-          standardUom: 'lb',
-          bestUnitCost: 0.52,
-          winningVendorId: 'sysco-1',
-          winningVendorName: 'Sysco Foods',
-          costSavingsPerUnit: 0.06,
-          priceSpreadPercent: 11.5,
-          offers: [
-            { vendorId: 'sysco-1', vendorName: 'Sysco Foods', vendorCode: 'SY', vendorSku: 'SY-4019', itemName: 'Potato Russet Idaho 70ct', packSize: '50 lb', caseCost: 26.00, normalizedUnitCost: 0.52, isBestPrice: true },
-            { vendorId: 'dennis-1', vendorName: 'Dennis Food Service', vendorCode: 'DNS', vendorSku: 'DNS-04', itemName: 'Potatoes Russet #1 70ct', packSize: '50 lb', caseCost: 29.00, normalizedUnitCost: 0.58, isBestPrice: false },
-          ]
-        }
-      ]
-      setPriceMatrix(demoMatrix)
-      setPriceMatrixSummary({
-        totalCanonicalProducts: 3,
-        comparedProductsCount: 3,
-        singleVendorProductsCount: 0,
-        estimatedMonthlySavings: 428.50,
-      })
+      dataAvailable('Price comparison')
+    } catch {
+      setPriceMatrix([])
+      setPriceMatrixSummary(null)
+      dataUnavailable('Price comparison')
     } finally {
       setLoading(false)
     }
@@ -206,14 +158,15 @@ export default function PurchasingPage() {
       if (res.data.length > 0 && !selectedVendorId) {
         setSelectedVendorId(res.data[0].id)
       }
-    } catch (err: any) {
-      console.error(err)
-      // Fallback demo data if backend offline/local demo mode
-      const demoVendors: Vendor[] = [
-        { id: 'dennis-1', name: 'Dennis Food Service', code: 'dennis', active: true, website: 'https://dennisfoodservice.com' }
-      ]
-      setVendors(demoVendors)
-      setSelectedVendorId(demoVendors[0].id)
+      dataAvailable('Vendors')
+    } catch {
+      setVendors([])
+      setSelectedVendorId('')
+      setOrderGuide([])
+      setCatalogItems([])
+      setSuggestedLines([])
+      dataUnavailable('Vendors')
+
     }
   }
 
@@ -222,14 +175,10 @@ export default function PurchasingPage() {
     try {
       const res = await api.get(`/purchasing/order-guide?vendorId=${vendorId}`)
       setOrderGuide(res.data)
-    } catch (err) {
-      console.error(err)
-      // Fallback data
-      setOrderGuide([
-        { id: 'og-1', vendor_id: vendorId, vendor_item_id: 'vi-1', item_name: 'Peaches Diced in 100% Juice', vendor_sku: 'DNS-1001', pack_size: '6/#10 cans', uom: 'case', par_level: 5, on_hand: 2, unit_cost: 48.50, category: 'Canned Fruits' },
-        { id: 'og-2', vendor_id: vendorId, vendor_item_id: 'vi-2', item_name: 'Orange Juice Thickened Nectar', vendor_sku: 'DNS-1002', pack_size: '12/32oz', uom: 'case', par_level: 4, on_hand: 2, unit_cost: 32.75, category: 'Thickened Beverages' },
-        { id: 'og-3', vendor_id: vendorId, vendor_item_id: 'vi-3', item_name: 'Pureed Green Beans', vendor_sku: 'DNS-1003', pack_size: '24/4oz', uom: 'case', par_level: 3, on_hand: 2, unit_cost: 29.90, category: 'Pureed Foods' },
-      ])
+      dataAvailable('Order guide')
+    } catch {
+      setOrderGuide([])
+      dataUnavailable('Order guide')
     } finally {
       setLoading(false)
     }
@@ -240,14 +189,10 @@ export default function PurchasingPage() {
     try {
       const res = await api.get(`/purchasing/items?vendorId=${vendorId}`)
       setCatalogItems(res.data)
-    } catch (err) {
-      console.error(err)
-      setCatalogItems([
-        { id: 'vi-1', vendor_id: vendorId, vendor_sku: 'DNS-1001', name: 'Peaches Diced in 100% Juice', brand: 'Dennis Select', pack_size: '6/#10 cans', uom: 'case', category: 'Canned Fruits', unit_cost: 48.50, active: true },
-        { id: 'vi-2', vendor_id: vendorId, vendor_sku: 'DNS-1002', name: 'Orange Juice Thickened Nectar', brand: 'Thick & Easy', pack_size: '12/32oz', uom: 'case', category: 'Thickened Beverages', unit_cost: 32.75, active: true },
-        { id: 'vi-3', vendor_id: vendorId, vendor_sku: 'DNS-1003', name: 'Pureed Green Beans', brand: 'Puree Supreme', pack_size: '24/4oz', uom: 'case', category: 'Pureed Foods', unit_cost: 29.90, active: true },
-        { id: 'vi-4', vendor_id: vendorId, vendor_sku: 'DNS-1004', name: 'Chicken Breast Boneless Skinless 4oz', brand: 'Dennis Farms', pack_size: '40/4oz', uom: 'case', category: 'Poultry & Meat', unit_cost: 64.20, active: true },
-      ])
+      dataAvailable('Catalog')
+    } catch {
+      setCatalogItems([])
+      dataUnavailable('Catalog')
     } finally {
       setLoading(false)
     }
@@ -258,13 +203,10 @@ export default function PurchasingPage() {
     try {
       const res = await api.post('/purchasing/suggested-order', { vendorId })
       setSuggestedLines(res.data.lines)
-    } catch (err) {
-      console.error(err)
-      setSuggestedLines([
-        { vendorItemId: 'vi-1', vendorSku: 'DNS-1001', itemName: 'Peaches Diced in 100% Juice', vendor: 'Dennis Food Service', packSize: '6/#10 cans', uom: 'case', unitCost: 48.50, parLevel: 5, onHand: 2, suggestedQty: 3, category: 'Canned Fruits' },
-        { vendorItemId: 'vi-2', vendorSku: 'DNS-1002', itemName: 'Orange Juice Thickened Nectar', vendor: 'Dennis Food Service', packSize: '12/32oz', uom: 'case', unitCost: 32.75, parLevel: 4, onHand: 2, suggestedQty: 2, category: 'Thickened Beverages' },
-        { vendorItemId: 'vi-3', vendorSku: 'DNS-1003', itemName: 'Pureed Green Beans', vendor: 'Dennis Food Service', packSize: '24/4oz', uom: 'case', unitCost: 29.90, parLevel: 3, onHand: 2, suggestedQty: 1, category: 'Pureed Foods' },
-      ])
+      dataAvailable('Suggested order')
+    } catch {
+      setSuggestedLines([])
+      dataUnavailable('Suggested order')
     } finally {
       setLoading(false)
     }
@@ -275,8 +217,10 @@ export default function PurchasingPage() {
     try {
       const res = await api.get('/purchasing/orders')
       setOrders(res.data)
-    } catch (err) {
-      console.error(err)
+      dataAvailable('Orders')
+    } catch {
+      setOrders([])
+      dataUnavailable('Orders')
     } finally {
       setLoading(false)
     }
@@ -505,6 +449,7 @@ export default function PurchasingPage() {
             onChange={e => setSelectedVendorId(e.target.value)}
             className="bg-transparent text-xs font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer pr-1"
           >
+            {!vendors.length && <option value="">No vendor data available</option>}
             {vendors.map(v => (
               <option key={v.id} value={v.id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
                 {v.name} ({v.code})
@@ -513,6 +458,8 @@ export default function PurchasingPage() {
           </select>
         </div>
       </div>
+
+      {unavailable.length > 0 && <p role="alert" className="sl-card p-4 text-red-700 dark:text-red-300">{unavailable.join(', ')} unavailable. No substitute prices, inventory or suggested quantities are shown. Retry the request before ordering.</p>}
 
       {message && (
         <div className={`p-4 rounded-2xl text-xs font-semibold border flex items-center gap-3 backdrop-blur-md ${
@@ -1190,7 +1137,7 @@ export default function PurchasingPage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm shadow-xs">
                   <TrendingDown className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Savings: $2.45 per resident day</span>
+                  <span>{priceMatrixSummary ? `Estimated monthly difference: $${priceMatrixSummary.estimatedMonthlySavings.toFixed(2)}` : 'Price comparison unavailable'}</span>
                 </div>
 
                 <button

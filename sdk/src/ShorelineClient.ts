@@ -1,5 +1,5 @@
 /**
- * ShorelineClient — @shoreline/sdk v0.2.0
+ * ShorelineClient — @shoreline/sdk v0.3.0
  *
  * TypeScript client for the ShorelineOps Care OS REST API.
  * All methods are fully typed and return Promise-based results.
@@ -13,7 +13,6 @@ import type {
   Resident,
   CensusEntry,
   CensusImportResult,
-  RecipeNutrients,
   RecipeValidationResult,
   AnalyzeNutritionInput,
   RecipeNutritionAnalysis,
@@ -34,6 +33,8 @@ import type {
   CostPerResidentDay,
   HealthCheckResult,
   ShorelineApiError,
+  ClinicalRecipeReview,
+  TrayMealSlot,
 } from './types'
 
 export interface ShorelineClientConfig {
@@ -72,7 +73,7 @@ export class ShorelineClient {
         error: res.statusText,
       }))
       throw Object.assign(new Error(err.error ?? `HTTP ${res.status}`), {
-        status: err.status ?? res.status,
+        status: res.status,
         apiError: err,
       })
     }
@@ -86,15 +87,20 @@ export class ShorelineClient {
    * Retrieve all active residents in the facility census.
    */
   async getResidents(): Promise<Resident[]> {
-    const data = await this.request<{ residents: Resident[] }>('/api/residents')
-    return data.residents ?? (data as unknown as Resident[])
+    const data = await this.request<Resident[] | { residents: Resident[] }>('/api/residents')
+    if (Array.isArray(data)) return data
+    if (data && Array.isArray(data.residents)) return data.residents
+    throw new Error('Invalid resident-list response')
   }
 
   /**
-   * Pull the live census snapshot including NPO counts and status breakdown.
+   * Derive counts from the authorized resident list. No server census route exists.
    */
   async getCensus(): Promise<CensusEntry> {
-    return this.request<CensusEntry>('/api/residents/census')
+    const residents = await this.getResidents()
+    const active = residents.filter(resident => resident.status === 'Active')
+    return { source: 'resident-list', residentCount: residents.length, activeCount: active.length,
+      npoCount: active.filter(resident => resident.isNpo).length, residents, pulledAt: new Date().toISOString() }
   }
 
   /**
@@ -118,15 +124,20 @@ export class ShorelineClient {
   }
 
   /**
-   * Validate a recipe against NAS, NCS, Renal, and allergen safety rules.
+   * @deprecated No recipe-validation route exists. Use clinical review and signed tray verification.
    * @param recipeId - Internal recipe UUID or slug
    */
   async validateRecipe(recipeId: string): Promise<RecipeValidationResult> {
-    return this.request<RecipeValidationResult>(`/api/recipes/${encodeURIComponent(recipeId)}/validate`)
+    return this.unavailable('validateRecipe')
+  }
+
+  /** Submit an authorized clinician's review. This never overrides tray safety. */
+  async verifyRecipeClinical(recipeId: string, review: ClinicalRecipeReview): Promise<Pick<RecipeDetail, 'id' | 'name' | 'clinicalVerified' | 'verifiedBy' | 'verifiedAt' | 'approvedDiets'> & { fluidMlPerServing: number | null; allergens: string[] }> {
+    return this.request(`/api/recipes/${encodeURIComponent(recipeId)}/verify-clinical`, { method: 'POST', body: JSON.stringify(review) })
   }
 
   /**
-   * Instant nutrition calculation for any ingredient list.
+   * Local-reference estimates for supported weighed ingredients. Unavailable totals are null.
    */
   async analyzeRecipeNutrition(input: AnalyzeNutritionInput): Promise<RecipeNutritionAnalysis> {
     return this.request<RecipeNutritionAnalysis>('/api/recipes/analyze-nutrition', {
@@ -138,14 +149,12 @@ export class ShorelineClient {
   // ── MRP & Purchasing ─────────────────────────────────────────────────────
 
   /**
-   * Run the lowest-cost Dennis vs Sysco split MRP for a given item and demand.
+   * @deprecated No matching item/demand split-MRP route exists.
    * @param item - Item name or description (e.g. "Turkey Breast")
    * @param demandLbs - Total demand in pounds
    */
   async getMrpSplitPo(item: string, demandLbs: number): Promise<MrpSplitPo> {
-    return this.request<MrpSplitPo>(
-      `/api/purchasing/mrp-split?item=${encodeURIComponent(item)}&demand=${demandLbs}`
-    )
+    return this.unavailable('getMrpSplitPo')
   }
 
   /**
@@ -208,7 +217,7 @@ export class ShorelineClient {
   /**
    * List tray runs by service date and meal slot.
    */
-  async getTrayRuns(serviceDate?: string, mealSlot?: 'Breakfast' | 'Lunch' | 'Dinner'): Promise<TrayRun[]> {
+  async getTrayRuns(serviceDate?: string, mealSlot?: TrayMealSlot): Promise<TrayRun[]> {
     const params = new URLSearchParams()
     if (serviceDate) params.append('serviceDate', serviceDate)
     if (mealSlot) params.append('mealSlot', mealSlot)
@@ -217,7 +226,7 @@ export class ShorelineClient {
   }
 
   /**
-   * Record a tray tracking lifecycle event (assembled, dispatched, delivered, remade, canceled).
+     * Record a tray tracking lifecycle event (assembled, dispatched, delivered, remade, missed).
    */
   async recordTrayEvent(runId: string, event: RecordTrayEventInput): Promise<TrayEventRecord> {
     return this.request<TrayEventRecord>(`/api/trayruns/${encodeURIComponent(runId)}/events`, {
@@ -229,18 +238,17 @@ export class ShorelineClient {
   // ── Reporting & Compliance ───────────────────────────────────────────────
 
   /**
-   * Retrieve the CMS F800–F814 federal dietary survey binder.
-   * Requires enterprise license tier.
+   * @deprecated The server survey-export contract differs from this historical helper.
    */
   async getCmsSurveyBinder(): Promise<CmsSurveyBinder> {
-    return this.request<CmsSurveyBinder>('/api/reporting/cms-survey-binder')
+    return this.unavailable('getCmsSurveyBinder')
   }
 
   /**
-   * Get cost-per-resident-day ($/CPD) analytics for the current reporting period.
+   * @deprecated The server CPD-breakdown contract differs from this historical helper.
    */
   async getCostPerResidentDay(): Promise<CostPerResidentDay> {
-    return this.request<CostPerResidentDay>('/api/reporting/cpd')
+    return this.unavailable('getCostPerResidentDay')
   }
 
   // ── System Health ────────────────────────────────────────────────────────
@@ -250,5 +258,10 @@ export class ShorelineClient {
    */
   async runHealthCheck(): Promise<HealthCheckResult> {
     return this.request<HealthCheckResult>('/api/health')
+  }
+
+  private unavailable(operation: string): never {
+    const apiError = { status: 501, error: 'SDK_OPERATION_UNAVAILABLE', message: `${operation} has no matching server contract. See the SDK supported-operations guide.` }
+    throw Object.assign(new Error(apiError.message), { status: 501, apiError })
   }
 }

@@ -135,6 +135,7 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
       return {
         recipeName,
         perServingNutrients: nutrition.perServing,
+        nutritionProvenance: nutrition.nutritionProvenance,
         totalBatchNutrients: nutrition.totalBatch,
         detectedAllergens: allergens,
         ingredientContributions: nutrition.ingredientContributions,

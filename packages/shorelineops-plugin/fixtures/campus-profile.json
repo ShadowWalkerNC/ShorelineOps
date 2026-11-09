@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "name": "Ross Manor Food Operation",
+  "status": "draft",
+  "confirmedBy": null,
+  "source": "Resident areas confirmed by user on 2026-10-25. Kitchen and hot/cold station names proposed from the campus MASTER_DEV_PLAN; assignments and additional departments are not confirmed.",
+  "residentAreas": [
+    {
+      "id": "ross_manor",
+      "name": "Ross Manor",
+      "active": true
+    },
+    {
+      "id": "engel_place",
+      "name": "Engel Place",
+      "active": true
+    },
+    {
+      "id": "sylvia_ross",
+      "name": "Sylvia Ross",
+      "active": true
+    }
+  ],
+  "kitchens": [
+    {
+      "id": "ross",
+      "name": "Ross Production",
+      "active": true
+    },
+    {
+      "id": "sylvia",
+      "name": "Sylvia Production",
+      "active": true
+    }
+  ],
+  "workAreas": [
+    {
+      "id": "ross_hot",
+      "name": "Ross Hot",
+      "kitchenId": "ross",
+      "kind": "hot",
+      "active": true
+    },
+    {
+      "id": "ross_cold",
+      "name": "Ross Cold",
+      "kitchenId": "ross",
+      "kind": "cold",
+      "active": true
+    },
+    {
+      "id": "sylvia_hot",
+      "name": "Sylvia Hot",
+      "kitchenId": "sylvia",
+      "kind": "hot",
+      "active": true
+    },
+    {
+      "id": "sylvia_cold",
+      "name": "Sylvia Cold",
+      "kitchenId": "sylvia",
+      "kind": "cold",
+      "active": true
+    }
+  ],
+  "sharedMenus": [],
+  "residentAreasConfirmedBy": "User confirmation in this conversation, 2026-10-25"
+}

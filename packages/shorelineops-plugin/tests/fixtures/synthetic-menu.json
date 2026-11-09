@@ -1,0 +1,2128 @@
+{
+  "schemaVersion": 1,
+  "facility": "sylvia_ross",
+  "week": 1,
+  "startDate": "2026-10-25",
+  "source": {
+    "file": "tests/fixtures/synthetic-source.txt",
+    "sha256": "5c2c04d6fa15cbb824514111bab492eb50a4615636727d07c98e1f2aed4249b4"
+  },
+  "metadata": {
+    "week": {
+      "originalText": "Week 1",
+      "value": "1",
+      "confidence": null,
+      "source": {
+        "file": "tests/fixtures/synthetic-source.txt",
+        "cell": "meta-week"
+      },
+      "needsReview": false
+    },
+    "startDate": {
+      "originalText": "2026-10-25",
+      "value": "2026-10-25",
+      "confidence": null,
+      "source": {
+        "file": "tests/fixtures/synthetic-source.txt",
+        "cell": "meta-date"
+      },
+      "needsReview": false
+    }
+  },
+  "days": [
+    {
+      "date": {
+        "originalText": "2026-10-25",
+        "value": "2026-10-25",
+        "confidence": null,
+        "source": {
+          "file": "tests/fixtures/synthetic-source.txt",
+          "cell": "d0-date"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "Oatmeal, Milk, Fruit Cup",
+              "value": "Oatmeal, Milk, Fruit Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d0-bf-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-bf-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-bf-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Fruit Cup",
+                  "value": "Fruit Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-bf-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Eggs & Toast, Milk <2%>",
+              "value": "Eggs & Toast, Milk <2%>",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d0-bf-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Eggs & Toast",
+                  "value": "Eggs & Toast",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-bf-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk <2%>",
+                  "value": "Milk <2%>",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-bf-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "Chicken Soup, Crackers, Pudding Cup",
+              "value": "Chicken Soup, Crackers, Pudding Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d0-lu-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Chicken Soup",
+                  "value": "Chicken Soup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-lu-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Crackers",
+                  "value": "Crackers",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-lu-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Pudding Cup",
+                  "value": "Pudding Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-lu-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Tuna Salad, Chips",
+              "value": "Tuna Salad, Chips",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d0-lu-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Tuna Salad",
+                  "value": "Tuna Salad",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-lu-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Chips",
+                  "value": "Chips",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-lu-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "Beef Stew, Roll, Cookie",
+              "value": "Beef Stew, Roll, Cookie",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d0-di-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Beef Stew",
+                  "value": "Beef Stew",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-di-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Roll",
+                  "value": "Roll",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-di-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Cookie",
+                  "value": "Cookie",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-di-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Pasta, Green Beans",
+              "value": "Pasta, Green Beans",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d0-di-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Pasta",
+                  "value": "Pasta",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-di-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Green Beans",
+                  "value": "Green Beans",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d0-di-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "2026-10-26",
+        "value": "2026-10-26",
+        "confidence": null,
+        "source": {
+          "file": "tests/fixtures/synthetic-source.txt",
+          "cell": "d1-date"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "Oatmeal, Milk, Fruit Cup",
+              "value": "Oatmeal, Milk, Fruit Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d1-bf-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-bf-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-bf-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Fruit Cup",
+                  "value": "Fruit Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-bf-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Oatmeal, Milk",
+              "value": "Oatmeal, Milk",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d1-bf-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-bf-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-bf-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "Chicken Soup, Crackers, Pudding Cup",
+              "value": "Chicken Soup, Crackers, Pudding Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d1-lu-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Chicken Soup",
+                  "value": "Chicken Soup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-lu-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Crackers",
+                  "value": "Crackers",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-lu-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Pudding Cup",
+                  "value": "Pudding Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-lu-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Tuna Salad, Chips",
+              "value": "Tuna Salad, Chips",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d1-lu-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Tuna Salad",
+                  "value": "Tuna Salad",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-lu-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Chips",
+                  "value": "Chips",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-lu-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "Beef Stew, Roll, Cookie",
+              "value": "Beef Stew, Roll, Cookie",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d1-di-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Beef Stew",
+                  "value": "Beef Stew",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-di-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Roll",
+                  "value": "Roll",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-di-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Cookie",
+                  "value": "Cookie",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-di-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Pasta, Green Beans",
+              "value": "Pasta, Green Beans",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d1-di-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Pasta",
+                  "value": "Pasta",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-di-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Green Beans",
+                  "value": "Green Beans",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d1-di-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "2026-10-27",
+        "value": "2026-10-27",
+        "confidence": null,
+        "source": {
+          "file": "tests/fixtures/synthetic-source.txt",
+          "cell": "d2-date"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "Oatmeal, Milk, Fruit Cup",
+              "value": "Oatmeal, Milk, Fruit Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d2-bf-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-bf-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-bf-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Fruit Cup",
+                  "value": "Fruit Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-bf-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Oatmeal, Milk",
+              "value": "Oatmeal, Milk",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d2-bf-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-bf-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-bf-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "Chicken Soup, Crackers, Pudding Cup",
+              "value": "Chicken Soup, Crackers, Pudding Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d2-lu-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Chicken Soup",
+                  "value": "Chicken Soup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-lu-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Crackers",
+                  "value": "Crackers",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-lu-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Pudding Cup",
+                  "value": "Pudding Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-lu-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Tuna Salad, Chips",
+              "value": "Tuna Salad, Chips",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d2-lu-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Tuna Salad",
+                  "value": "Tuna Salad",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-lu-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Chips",
+                  "value": "Chips",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-lu-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "Beef Stew, Roll, Cookie",
+              "value": "Beef Stew, Roll, Cookie",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d2-di-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Beef Stew",
+                  "value": "Beef Stew",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-di-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Roll",
+                  "value": "Roll",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-di-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Cookie",
+                  "value": "Cookie",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-di-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Pasta, Green Beans",
+              "value": "Pasta, Green Beans",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d2-di-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Pasta",
+                  "value": "Pasta",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-di-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Green Beans",
+                  "value": "Green Beans",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d2-di-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "2026-10-28",
+        "value": "2026-10-28",
+        "confidence": null,
+        "source": {
+          "file": "tests/fixtures/synthetic-source.txt",
+          "cell": "d3-date"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "Oatmeal, Milk, Fruit Cup",
+              "value": "Oatmeal, Milk, Fruit Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d3-bf-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-bf-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-bf-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Fruit Cup",
+                  "value": "Fruit Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-bf-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Oatmeal, Milk",
+              "value": "Oatmeal, Milk",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d3-bf-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-bf-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-bf-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "Chicken Soup, Crackers, Pudding Cup",
+              "value": "Chicken Soup, Crackers, Pudding Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d3-lu-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Chicken Soup",
+                  "value": "Chicken Soup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-lu-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Crackers",
+                  "value": "Crackers",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-lu-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Pudding Cup",
+                  "value": "Pudding Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-lu-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Tuna Salad, Chips",
+              "value": "Tuna Salad, Chips",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d3-lu-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Tuna Salad",
+                  "value": "Tuna Salad",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-lu-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Chips",
+                  "value": "Chips",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-lu-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "Beef Stew, Roll, Cookie",
+              "value": "Beef Stew, Roll, Cookie",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d3-di-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Beef Stew",
+                  "value": "Beef Stew",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-di-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Roll",
+                  "value": "Roll",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-di-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Cookie",
+                  "value": "Cookie",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-di-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Pasta, Green Beans",
+              "value": "Pasta, Green Beans",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d3-di-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Pasta",
+                  "value": "Pasta",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-di-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Green Beans",
+                  "value": "Green Beans",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d3-di-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "2026-10-29",
+        "value": "2026-10-29",
+        "confidence": null,
+        "source": {
+          "file": "tests/fixtures/synthetic-source.txt",
+          "cell": "d4-date"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "Oatmeal, Milk, Fruit Cup",
+              "value": "Oatmeal, Milk, Fruit Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d4-bf-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-bf-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-bf-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Fruit Cup",
+                  "value": "Fruit Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-bf-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Oatmeal, Milk",
+              "value": "Oatmeal, Milk",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d4-bf-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-bf-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-bf-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "Chicken Soup, Crackers, Pudding Cup",
+              "value": "Chicken Soup, Crackers, Pudding Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d4-lu-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Chicken Soup",
+                  "value": "Chicken Soup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-lu-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Crackers",
+                  "value": "Crackers",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-lu-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Pudding Cup",
+                  "value": "Pudding Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-lu-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Tuna Salad, Chips",
+              "value": "Tuna Salad, Chips",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d4-lu-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Tuna Salad",
+                  "value": "Tuna Salad",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-lu-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Chips",
+                  "value": "Chips",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-lu-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "Beef Stew, Roll, Cookie",
+              "value": "Beef Stew, Roll, Cookie",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d4-di-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Beef Stew",
+                  "value": "Beef Stew",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-di-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Roll",
+                  "value": "Roll",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-di-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Cookie",
+                  "value": "Cookie",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-di-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Pasta, Green Beans",
+              "value": "Pasta, Green Beans",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d4-di-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Pasta",
+                  "value": "Pasta",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-di-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Green Beans",
+                  "value": "Green Beans",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d4-di-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "2026-10-30",
+        "value": "2026-10-30",
+        "confidence": null,
+        "source": {
+          "file": "tests/fixtures/synthetic-source.txt",
+          "cell": "d5-date"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "Oatmeal, Milk, Fruit Cup",
+              "value": "Oatmeal, Milk, Fruit Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d5-bf-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-bf-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-bf-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Fruit Cup",
+                  "value": "Fruit Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-bf-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Oatmeal, Milk",
+              "value": "Oatmeal, Milk",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d5-bf-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-bf-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-bf-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "Chicken Soup, Crackers, Pudding Cup",
+              "value": "Chicken Soup, Crackers, Pudding Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d5-lu-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Chicken Soup",
+                  "value": "Chicken Soup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-lu-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Crackers",
+                  "value": "Crackers",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-lu-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Pudding Cup",
+                  "value": "Pudding Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-lu-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Tuna Salad, Chips",
+              "value": "Tuna Salad, Chips",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d5-lu-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Tuna Salad",
+                  "value": "Tuna Salad",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-lu-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Chips",
+                  "value": "Chips",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-lu-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "Beef Stew, Roll, Cookie",
+              "value": "Beef Stew, Roll, Cookie",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d5-di-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Beef Stew",
+                  "value": "Beef Stew",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-di-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Roll",
+                  "value": "Roll",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-di-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Cookie",
+                  "value": "Cookie",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-di-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Pasta, Green Beans",
+              "value": "Pasta, Green Beans",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d5-di-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Pasta",
+                  "value": "Pasta",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-di-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Green Beans",
+                  "value": "Green Beans",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d5-di-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "date": {
+        "originalText": "2026-10-31",
+        "value": "2026-10-31",
+        "confidence": null,
+        "source": {
+          "file": "tests/fixtures/synthetic-source.txt",
+          "cell": "d6-date"
+        },
+        "needsReview": false
+      },
+      "meals": {
+        "breakfast": {
+          "a": {
+            "text": {
+              "originalText": "Oatmeal, Milk, Fruit Cup",
+              "value": "Oatmeal, Milk, Fruit Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d6-bf-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-bf-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-bf-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Fruit Cup",
+                  "value": "Fruit Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-bf-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Oatmeal, Milk",
+              "value": "Oatmeal, Milk",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d6-bf-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Oatmeal",
+                  "value": "Oatmeal",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-bf-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Milk",
+                  "value": "Milk",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-bf-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "lunch": {
+          "a": {
+            "text": {
+              "originalText": "Chicken Soup, Crackers, Pudding Cup",
+              "value": "Chicken Soup, Crackers, Pudding Cup",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d6-lu-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Chicken Soup",
+                  "value": "Chicken Soup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-lu-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Crackers",
+                  "value": "Crackers",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-lu-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Pudding Cup",
+                  "value": "Pudding Cup",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-lu-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Tuna Salad, Chips",
+              "value": "Tuna Salad, Chips",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d6-lu-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Tuna Salad",
+                  "value": "Tuna Salad",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-lu-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Chips",
+                  "value": "Chips",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-lu-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        },
+        "dinner": {
+          "a": {
+            "text": {
+              "originalText": "Beef Stew, Roll, Cookie",
+              "value": "Beef Stew, Roll, Cookie",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d6-di-a-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Beef Stew",
+                  "value": "Beef Stew",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-di-a-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Roll",
+                  "value": "Roll",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-di-a-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Cookie",
+                  "value": "Cookie",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-di-a-i2"
+                  },
+                  "needsReview": false
+                },
+                "kind": "dessert"
+              }
+            ]
+          },
+          "b": {
+            "text": {
+              "originalText": "Pasta, Green Beans",
+              "value": "Pasta, Green Beans",
+              "confidence": null,
+              "source": {
+                "file": "tests/fixtures/synthetic-source.txt",
+                "cell": "d6-di-b-opt"
+              },
+              "needsReview": false
+            },
+            "items": [
+              {
+                "text": {
+                  "originalText": "Pasta",
+                  "value": "Pasta",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-di-b-i0"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              },
+              {
+                "text": {
+                  "originalText": "Green Beans",
+                  "value": "Green Beans",
+                  "confidence": null,
+                  "source": {
+                    "file": "tests/fixtures/synthetic-source.txt",
+                    "cell": "d6-di-b-i1"
+                  },
+                  "needsReview": false
+                },
+                "kind": "unspecified"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "approval": null
+}

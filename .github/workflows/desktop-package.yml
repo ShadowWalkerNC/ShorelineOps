@@ -1,0 +1,36 @@
+name: Desktop installer candidates
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:desktop
+      - run: npm test
+      - run: node scripts/verify-packaged-desktop.cjs
+      - name: Verify Windows graphical setup and restart
+        if: runner.os == 'Windows'
+        run: node scripts/verify-packaged-desktop-ui.cjs release/desktop/win-unpacked/ShorelineOps.exe release/desktop/ui-evidence
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shorelineops-desktop-${{ matrix.os }}-x64
+          path: |
+            release/desktop/*.exe
+            release/desktop/*.AppImage
+            release/desktop/*.deb
+          if-no-files-found: error

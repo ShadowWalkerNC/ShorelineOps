@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in — ShorelineOps</title>
+<link rel="stylesheet" href="/site.css">
+</head>
+<body data-page="login">
+<main>
+<h1>Log in</h1>
+<form id="login-form">
+<label for="email">Email address
+<input id="email" name="email" type="email" inputmode="email" autocomplete="email" required maxlength="254">
+</label>
+<label for="password">Password
+<input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200">
+</label>
+<button type="submit">Log in</button>
+</form>
+<p id="result" role="status" aria-live="polite"></p>
+<p><a href="/reset.html">Forgot your password?</a> · <a href="/">Back to start</a></p>
+</main>
+<script src="/portal.js" defer></script>
+</body>
+</html>

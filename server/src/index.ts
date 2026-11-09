@@ -10,6 +10,7 @@ import { residentsRouter } from './routes/residents'
 import { auditRouter } from './routes/audit'
 import { menuRouter } from './routes/menu'
 import { productionRouter } from './routes/production'
+import { paperworkRouter } from './routes/paperwork'
 import { adminRouter } from './routes/admin'
 import { timecardRouter } from './routes/timecard'
 import { kitchenRouter } from './routes/kitchen'
@@ -177,6 +178,7 @@ app.use('/api/audit',      requireAuth, auditRouter)
 app.use('/api/menu',       requireAuth({ allowDisplay: true }), httpCacheMiddleware(60, 'menu'), menuRouter)
 app.use('/api/recipes',    requireAuth, httpCacheMiddleware(60, 'recipes'), recipesRouter)
 app.use('/api/production', requireAuth({ allowDisplay: true }), productionRouter)
+app.use('/api/paperwork',  requireAuth, paperworkRouter)
 app.use('/api/admin',      requireAuth, adminRouter)
 app.use('/api/kitchen',    requireAuth, kitchenRouter)
 app.use('/api/purchasing', requireAuth, purchasingRouter)

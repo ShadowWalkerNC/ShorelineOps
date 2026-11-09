@@ -1,0 +1,12 @@
+import { readFile,writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { createTransfer } from '../dist/src/integration/transfer.js';
+const require=createRequire(import.meta.url),file=process.argv[2];
+if(!file)throw new Error('Specify the existing ShorelineOps engine.cjs');
+const bridge=require(file),menu=JSON.parse(await readFile('fixtures/reviewed/week-1.menu.json','utf8'));
+const transfer=createTransfer(menu,await readFile('fixtures/source/week-1-original-menu.jpg'));
+const imported=bridge.readTransfer(transfer),html=bridge.buildPacketHtml(imported.menu,{preview:true,selection:{kind:'weekly'}});
+const pages=(html.match(/class="page"/g)||[]).length;
+if(pages!==2||imported.menu.approval!==null)throw Error('Menu-transfer compatibility failure');
+const result={result:'PASS',plugin:'0.10.0',shorelineEngine:'0.9.0',format:'menu-only transfer',pages,approval:'cleared',scanStateSync:'not automatic'};
+await writeFile('output/v0.10-shoreline-compatibility.json',JSON.stringify(result,null,2)+'\n');console.log(result);

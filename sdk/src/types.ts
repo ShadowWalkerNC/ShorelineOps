@@ -10,16 +10,21 @@ export interface Resident {
   name: string
   room: string
   wing?: string
-  diet: string
+  dietType: string
   texture: string
-  fluids: string
+  liquidConsistency: string
   allergies: string[]
-  npo: boolean
-  status?: 'Active' | 'Hospital' | 'LOA' | 'Discharged'
+  isNpo: boolean
+  npoReason: string
+  fluidRestrictionMl: number | null
+  profileVersion: number
+  status: 'Active' | 'Hospital' | 'LOA' | 'Passed Away'
 }
 
 export interface CensusEntry {
-  facilityId: string
+  /** Derived from the authorized resident list; no separate census route exists. */
+  source: 'resident-list'
+  facilityId?: string
   residentCount: number
   activeCount: number
   npoCount: number
@@ -72,8 +77,9 @@ export interface AnalyzeNutritionInput {
 }
 
 export interface RecipeNutritionAnalysis {
-  perServing: RecipeNutrients
-  totalBatch: RecipeNutrients
+  perServing: RecipeNutrients | null
+  totalBatch: RecipeNutrients | null
+  nutritionProvenance: NutritionProvenance
   allergens: string[]
   ingredientContributions: Array<{
     item: string
@@ -82,6 +88,23 @@ export interface RecipeNutritionAnalysis {
     proteinG: number
     sodiumMg: number
   }>
+}
+
+export interface NutritionProvenance {
+  source: 'local-reference' | 'clinician-reviewed'
+  available: boolean
+  estimated: boolean
+  requiresClinicalReview: boolean
+  sourceReference?: string
+  missingIngredients?: string[]
+  weightRequiredIngredients?: string[]
+}
+
+export interface ClinicalRecipeReview {
+  approvedDiets?: string[]
+  fluidMlPerServing?: number | null
+  canonicalAllergens?: string[]
+  nutritionReview?: { sourceReference: string; perServing: Required<RecipeNutrients> }
 }
 
 export interface RecipeDetail {
@@ -95,10 +118,15 @@ export interface RecipeDetail {
   iddsiLevel: string | number
   allergens: string[]
   ingredients: Array<{ item: string; qty: string }>
-  steps: string[]
+  steps: Array<{ step: number; instruction: string }>
   notes: string
   costPerServing: number
-  nutrition: RecipeNutrients
+  nutrition: RecipeNutrients | null
+  nutritionProvenance: NutritionProvenance
+  clinicalVerified: boolean
+  verifiedBy?: string | null
+  verifiedAt?: string | null
+  approvedDiets?: string[]
 }
 
 // ── MRP / Purchasing ─────────────────────────────────────────────────────────
@@ -237,9 +265,9 @@ export interface HaccpLogRecord {
   item_name: string
   equipment_id?: string | null
   equipment_name?: string | null
-  temp_f: number
-  target_temp_f: number
-  compliant: boolean
+  temp_f: number | string
+  target_temp_f: number | string
+  compliant: boolean | 0 | 1
   violation_type?: string | null
   corrective_action?: string | null
   source: string
@@ -257,10 +285,14 @@ export interface HaccpEquipmentScheduleItem {
   id: string
   name: string
   type: string
-  targetTempF: number
-  checkFrequency: string
-  lastCheckedAt?: string | null
-  status: 'compliant' | 'due' | 'overdue' | 'violation'
+  target_temp_f: number | string
+  check_frequency: 'shift' | 'daily' | 'weekly'
+  active: boolean | 0 | 1
+  last_log_id: string | null
+  last_recorded_at: string | null
+  last_temp_f: number | null
+  next_due_at: string | null
+  status: 'ok' | 'due' | 'overdue'
 }
 
 export interface HaccpScheduleResult {
@@ -272,12 +304,14 @@ export interface HaccpScheduleResult {
 
 // ── Tray Line Execution & Tracking ───────────────────────────────────────────
 
+export type TrayMealSlot = 'breakfast' | 'morningSnack' | 'lunch' | 'afternoonSnack' | 'dinner'
+export type TrayEventType = 'assembled' | 'dispatched' | 'delivered' | 'missed' | 'remade'
+
 export interface TrayRun {
   id: string
-  mealSlot: 'Breakfast' | 'Lunch' | 'Dinner'
+  mealSlot: TrayMealSlot
   serviceDate: string
   wing: string
-  status: 'active' | 'completed' | 'paused'
   notes: string
   createdBy?: string | null
   createdAt: string
@@ -288,16 +322,18 @@ export interface TrayEventRecord {
   run_id: string
   resident_id?: string | null
   ticket_id: string
-  event: 'assembled' | 'dispatched' | 'delivered' | 'remade' | 'canceled'
+  event: TrayEventType
   at: string
   by?: string | null
   note?: string
 }
 
 export interface RecordTrayEventInput {
+  /** Signed QR payload is mandatory; server rechecks current clinical safety. */
+  rawQrPayload: string
   residentId?: string | null
   ticketId?: string
-  event: 'assembled' | 'dispatched' | 'delivered' | 'remade' | 'canceled'
+  event: TrayEventType
   note?: string
   newTicketId?: string
 }
@@ -356,7 +392,8 @@ export interface HealthCheckResult {
 // ── SDK Error ────────────────────────────────────────────────────────────────
 
 export interface ShorelineApiError {
-  status: number
+  /** Some endpoints use status for a domain verdict. Error.status is always HTTP. */
+  status?: number | string
   error: string
   message?: string
 }

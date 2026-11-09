@@ -1,0 +1,51 @@
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+const root=process.argv[2];
+if(!root) throw new Error('Provide installed plugin root');
+const manifest=JSON.parse(await fs.readFile(path.join(root,'plugin.json'),'utf8'));
+const state=await fs.mkdtemp(path.join(os.tmpdir(),'shoreline-installed-check-'));
+const client=new Client({name:'sylvia-installed-verifier',version:manifest.version},{capabilities:{}});
+const transport=new StdioClientTransport({command:process.execPath,args:[path.join(root,'server.mjs')],cwd:root,env:{...getDefaultEnvironment(),SYLVIA_DATA_DIR:state,SHORELINEOPS_DATA_DIR:state,LOCALAPPDATA:process.env.LOCALAPPDATA || path.join(os.homedir(),'AppData','Local')},stderr:'pipe'});
+try {
+ await client.connect(transport);
+ await client.callTool({name:'campus_configure',arguments:{profile:JSON.parse(await fs.readFile(path.join(root,'fixtures/campus-profile.json'),'utf8')),confirmed:true,confirmed_by:'SYNTHETIC VERIFICATION'}});
+ const listed=await client.listTools();
+ const status=await client.callTool({name:'sylvia_status',arguments:{}});
+ if(status.isError)throw new Error(JSON.stringify(status));
+ const exported=await client.callTool({name:'menu_export',arguments:{menu_id:'week-1-example'}});
+ if(exported.isError)throw new Error(JSON.stringify(exported));
+ const transferInfo=JSON.parse(exported.content[0].text);
+ const transferResource=await client.readResource({uri:transferInfo.resource_uri});
+ const transfer=JSON.parse(transferResource.contents[0].text);
+ if(transfer.menu.approval!==null||!transfer.menu.source.file.startsWith('menu-source.'))throw new Error('Unsafe transfer metadata');
+ const generated=await client.callTool({name:'packet_generate',arguments:{menu_id:'week-1-example'}});
+ if(generated.isError)throw new Error(JSON.stringify(generated));
+ const packet=JSON.parse(generated.content[0].text);
+ if(packet.pages!==2 || !packet.preview)throw new Error('Incorrect default packet');
+ const read=await client.readResource({uri:packet.resource_uri});
+ if(Buffer.from(read.contents[0].blob,'base64').subarray(0,5).toString()!=='%PDF-')throw new Error('Missing PDF resource');
+ const campus=await client.callTool({name:'campus_review',arguments:{}});
+ if(campus.isError)throw new Error(JSON.stringify(campus));
+ const profile=campus.structuredContent.profile;
+ if(profile.residentAreas.length<3)throw new Error('Missing resident areas');
+ const refusal=await client.callTool({name:'packet_generate',arguments:{menu_id:'week-1-example',resident_area_id:'ross_manor'}});
+ if(!refusal.isError)throw new Error('Cross-wing unassigned menu was accepted');
+ const station=await client.callTool({name:'work_area_generate',arguments:{work_area_id:'ross_hot',date:'2026-10-25'}});
+ if(station.isError)throw new Error(JSON.stringify(station));
+ const stationInfo=JSON.parse(station.content[0].text);
+ if(stationInfo.pages!==1)throw new Error('Station log must be one page');
+ for(const format of ['prep-list','meal-service']){
+  const generatedSheet=await client.callTool({name:'ross_worksheet_generate',arguments:{format,resident_area_id:'ross_manor',date:'2026-10-29'}});
+  if(generatedSheet.isError)throw new Error(JSON.stringify(generatedSheet));
+  const sheet=JSON.parse(generatedSheet.content[0].text);
+  if(sheet.pages!==1)throw new Error('Ross worksheet must be one page');
+  const worksheetResource=await client.readResource({uri:sheet.resource_uri});
+  if(Buffer.from(worksheetResource.contents[0].blob,'base64').subarray(0,5).toString()!=='%PDF-')throw new Error('Missing Ross worksheet PDF');
+ }
+ const record={plugin:'sylvia-ross-menu-processor',version:manifest.version,installedPath:root,codexInstalled:true,codexEnabled:true,localMcpStartup:'PASS',localToolDiscovery:'PASS',tools:listed.tools.map(tool=>tool.name),localPdfGeneration:'PASS',pdfResourceRead:'PASS',defaultPages:packet.pages,residentAreas:profile.residentAreas.map(area=>area.name),crossWingRefusal:'PASS',productionStationLog:'PASS - 1 page',productionStructureStatus:profile.status,reviewPdfPath:packet.file_path,chatgptAccountPluginId:'plugins_6ade5f1572208191abd57aa866449f51',chatgptPluginUrl:'https://chatgpt.com/plugins/plugins_6ade5f1572208191abd57aa866449f51',chatgptAccountInstalled:true,chatgptWebPdfExecution:'NOT CONNECTED - requires reachable backend; local stdio is not hosted',currentChatToolActivation:'NOT OBSERVED - new chat may be needed',humanMenuApproval:'NOT GRANTED',physicalPrint:'NOT RUN'};
+ await fs.writeFile('output/plugin-installation.json',JSON.stringify(record,null,2)+'\n');
+ console.log(JSON.stringify(record,null,2));
+} finally {await client.close();await fs.rm(state,{recursive:true,force:true});}

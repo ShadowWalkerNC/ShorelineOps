@@ -69,6 +69,10 @@
       "description": "Cycle menu planning"
     },
     {
+      "name": "paperwork",
+      "description": "paperwork endpoints"
+    },
+    {
       "name": "production",
       "description": "Batch cook sheets and production records"
     },
@@ -99,6 +103,10 @@
     {
       "name": "trayruns",
       "description": "Tray-run tracking and SLA monitoring"
+    },
+    {
+      "name": "tv",
+      "description": "tv endpoints"
     }
   ],
   "paths": {
@@ -855,6 +863,253 @@
         }
       }
     },
+    "/api/admin/shifts": {
+      "get": {
+        "operationId": "get_admin_shifts",
+        "summary": "GET /api/admin/shifts",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          },
+          {
+            "name": "shift_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          },
+          {
+            "name": "staffId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          },
+          {
+            "name": "staff_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          }
+        ],
+        "description": "GET /api/admin/shifts\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "minRole": "manager"
+        }
+      },
+      "post": {
+        "operationId": "post_admin_shifts",
+        "summary": "POST /api/admin/shifts",
+        "tags": [
+          "admin"
+        ],
+        "description": "POST /api/admin/shifts\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad request — validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "minRole": "manager"
+        }
+      }
+    },
+    "/api/admin/shifts/{id}": {
+      "get": {
+        "operationId": "get_admin_shifts_id",
+        "summary": "GET /api/admin/shifts/:id",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "GET /api/admin/shifts/:id\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "minRole": "manager"
+        }
+      },
+      "put": {
+        "operationId": "put_admin_shifts_id",
+        "summary": "PUT /api/admin/shifts/:id",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "PUT /api/admin/shifts/:id\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "minRole": "manager"
+        }
+      },
+      "delete": {
+        "operationId": "delete_admin_shifts_id",
+        "summary": "DELETE /api/admin/shifts/:id",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "DELETE /api/admin/shifts/:id\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "minRole": "manager"
+        }
+      }
+    },
     "/api/admin/staff": {
       "get": {
         "operationId": "get_admin_staff",
@@ -1490,9 +1745,18 @@
               "type": "string"
             },
             "description": "Query parameter read by the handler."
+          },
+          {
+            "name": "plan",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
           }
         ],
-        "description": "GET /api/billing/estimate\nComputes monthly SaaS fee based on licensed bed count\n\nPublic — no authentication required.",
+        "description": "GET /api/billing/estimate\nComputes the selected monthly facility plan\nplan selects COMMUNITY ($0), PRO_TIER ($199, default), or ENTERPRISE_TIER ($399).\nPrices are monthly USD per facility. Census and bed counts do not change price.\n\nPublic — no authentication required.",
         "responses": {
           "200": {
             "description": "Successful response"
@@ -1884,11 +2148,11 @@
           "200": {
             "description": "Successful response"
           },
-          "400": {
-            "description": "Bad request — validation failed"
-          },
           "401": {
             "description": "Unauthorized"
+          },
+          "503": {
+            "description": "Service unavailable — integration not configured"
           }
         },
         "security": [
@@ -1914,11 +2178,11 @@
           "200": {
             "description": "Successful response"
           },
-          "400": {
-            "description": "Bad request — validation failed"
-          },
           "401": {
             "description": "Unauthorized"
+          },
+          "503": {
+            "description": "Service unavailable — integration not configured"
           }
         },
         "security": [
@@ -4394,6 +4658,156 @@
         }
       }
     },
+    "/api/paperwork/catalog": {
+      "get": {
+        "operationId": "get_paperwork_catalog",
+        "summary": "GET /api/paperwork/catalog",
+        "tags": [
+          "paperwork"
+        ],
+        "description": "Authentication: JWT Bearer token; capabilities: production.read (admits: admin, manager, dietitian, dietary, staff, readonly).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          },
+          "503": {
+            "description": "Service unavailable — integration not configured"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "admin",
+            "manager",
+            "dietitian",
+            "dietary",
+            "staff",
+            "readonly"
+          ],
+          "capabilities": [
+            "production.read"
+          ]
+        }
+      }
+    },
+    "/api/paperwork/inspect": {
+      "post": {
+        "operationId": "post_paperwork_inspect",
+        "summary": "POST /api/paperwork/inspect",
+        "tags": [
+          "paperwork"
+        ],
+        "description": "Authentication: JWT Bearer token; capabilities: production.write (admits: admin, manager, dietitian, dietary, staff).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/importSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "400": {
+            "description": "Bad request — validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "admin",
+            "manager",
+            "dietitian",
+            "dietary",
+            "staff"
+          ],
+          "capabilities": [
+            "production.write"
+          ]
+        }
+      }
+    },
+    "/api/paperwork/render": {
+      "post": {
+        "operationId": "post_paperwork_render",
+        "summary": "POST /api/paperwork/render",
+        "tags": [
+          "paperwork"
+        ],
+        "description": "Authentication: JWT Bearer token; capabilities: production.write (admits: admin, manager, dietitian, dietary, staff).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/renderSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "400": {
+            "description": "Bad request — validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "admin",
+            "manager",
+            "dietitian",
+            "dietary",
+            "staff"
+          ],
+          "capabilities": [
+            "production.write"
+          ]
+        }
+      }
+    },
     "/api/production/sheets": {
       "get": {
         "operationId": "get_production_sheets",
@@ -6027,7 +6441,17 @@
         "tags": [
           "recipes"
         ],
-        "description": "POST /api/recipes/analyze-nutrition\nInstant preview calculation of any ingredient list\n\nAuthentication: JWT Bearer token; capabilities: recipes.read (admits: ).",
+        "description": "POST /api/recipes/analyze-nutrition\nLocal-reference estimate for supported weighed ingredients, with explicit provenance.\n\nAuthentication: JWT Bearer token; capabilities: recipes.read (admits: ).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/post_recipes_analyze_nutrition_Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response"
@@ -8441,6 +8865,303 @@
           ]
         }
       }
+    },
+    "/api/tv/crew-today": {
+      "get": {
+        "operationId": "get_tv_crew_today",
+        "summary": "GET /api/tv/crew-today — Active dietary crew for the wall (names + roles",
+        "tags": [
+          "tv"
+        ],
+        "description": "GET /api/tv/crew-today — Active dietary crew for the wall (names + roles\nonly). Column-explicit: phone, email, emergency contacts, certifications,\nand manager notes never leave the server.\n\nAuthentication: JWT Bearer token; capabilities: kitchen.read (admits: admin, manager, dietitian, dietary, activities, server, staff, readonly).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "admin",
+            "manager",
+            "dietitian",
+            "dietary",
+            "activities",
+            "server",
+            "staff",
+            "readonly"
+          ],
+          "capabilities": [
+            "kitchen.read"
+          ],
+          "additionalMiddleware": [
+            "requireAuth({ allowDisplay: true })"
+          ]
+        },
+        "x-shoreline-conditional": "Mounted only when ENABLE_TIMECARD_PLUGIN !== \"false\" (see src/index.ts)."
+      }
+    },
+    "/api/tv/meals-today": {
+      "get": {
+        "operationId": "get_tv_meals_today",
+        "summary": "GET /api/tv/meals-today — Counts-only meal planning aggregates: active",
+        "tags": [
+          "tv"
+        ],
+        "description": "GET /api/tv/meals-today — Counts-only meal planning aggregates: active\ncensus plus diet-type and texture breakdowns for the kitchen wall.\nCOUNT/GROUP BY over status columns only; no resident names, rooms,\nallergies, or other clinical fields.\n\nAuthentication: JWT Bearer token; capabilities: residents.serviceRead (admits: admin, manager, dietitian, frontdesk, dietary, activities, server, staff, readonly).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "admin",
+            "manager",
+            "dietitian",
+            "frontdesk",
+            "dietary",
+            "activities",
+            "server",
+            "staff",
+            "readonly"
+          ],
+          "capabilities": [
+            "residents.serviceRead"
+          ],
+          "additionalMiddleware": [
+            "requireAuth({ allowDisplay: true })"
+          ]
+        },
+        "x-shoreline-conditional": "Mounted only when ENABLE_TIMECARD_PLUGIN !== \"false\" (see src/index.ts)."
+      }
+    },
+    "/api/tv/ops-today": {
+      "get": {
+        "operationId": "get_tv_ops_today",
+        "summary": "GET /api/tv/ops-today — counts for the wall display. Any read role passes;",
+        "tags": [
+          "tv"
+        ],
+        "description": "GET /api/tv/ops-today — counts for the wall display. Any read role passes;\nthe payload is identical for every caller because it contains no PHI.\n\nAuthentication: JWT Bearer token; capabilities: production.read or trayruns.read (admits: admin, manager, dietitian, dietary, staff, readonly).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "admin",
+            "manager",
+            "dietitian",
+            "dietary",
+            "staff",
+            "readonly"
+          ],
+          "capabilities": [
+            "production.read",
+            "trayruns.read"
+          ],
+          "additionalMiddleware": [
+            "requireAuth({ allowDisplay: true })"
+          ]
+        },
+        "x-shoreline-conditional": "Mounted only when ENABLE_TIMECARD_PLUGIN !== \"false\" (see src/index.ts)."
+      }
+    },
+    "/api/tv/pair/approve": {
+      "post": {
+        "operationId": "post_tv_pair_approve",
+        "summary": "POST /api/tv/pair/approve — manager/admin approves a code shown on a TV.",
+        "tags": [
+          "tv"
+        ],
+        "description": "POST /api/tv/pair/approve — manager/admin approves a code shown on a TV.\n\nAuthentication: JWT Bearer token; minimum role: manager (admits: manager, admin).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "minRole": "manager"
+        },
+        "x-shoreline-conditional": "Mounted only when ENABLE_TIMECARD_PLUGIN !== \"false\" (see src/index.ts)."
+      }
+    },
+    "/api/tv/pair/request": {
+      "post": {
+        "operationId": "post_tv_pair_request",
+        "summary": "POST /api/tv/pair/request — TV asks for a short code to show on screen.",
+        "tags": [
+          "tv"
+        ],
+        "description": "POST /api/tv/pair/request — TV asks for a short code to show on screen.\n\nPublic — no authentication required.",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "503": {
+            "description": "Service unavailable — integration not configured"
+          }
+        },
+        "security": [],
+        "x-shoreline-auth": {
+          "required": false,
+          "mechanism": "none",
+          "additionalMiddleware": [
+            "pairRequestLimiter"
+          ]
+        },
+        "x-shoreline-conditional": "Mounted only when ENABLE_TIMECARD_PLUGIN !== \"false\" (see src/index.ts)."
+      }
+    },
+    "/api/tv/pair/status": {
+      "get": {
+        "operationId": "get_tv_pair_status",
+        "summary": "GET /api/tv/pair/status?code=XXXXXX&claim=… — TV polls until approved.",
+        "tags": [
+          "tv"
+        ],
+        "parameters": [
+          {
+            "name": "claim",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Query parameter read by the handler."
+          }
+        ],
+        "description": "GET /api/tv/pair/status?code=XXXXXX&claim=… — TV polls until approved.\n\nPublic — no authentication required.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [],
+        "x-shoreline-auth": {
+          "required": false,
+          "mechanism": "none"
+        },
+        "x-shoreline-conditional": "Mounted only when ENABLE_TIMECARD_PLUGIN !== \"false\" (see src/index.ts)."
+      }
+    },
+    "/api/tv/schedule-today": {
+      "get": {
+        "operationId": "get_tv_schedule_today",
+        "summary": "GET /api/tv/schedule-today — Today's dietary shifts (names + positions +",
+        "tags": [
+          "tv"
+        ],
+        "description": "GET /api/tv/schedule-today — Today's dietary shifts (names + positions +\nstations only) with call-out coverage counts. Column-explicit like\ncrew-today; call-out reasons, notes, and replacement names never leave\nthe server.\n\nAuthentication: JWT Bearer token; capabilities: kitchen.read (admits: admin, manager, dietitian, dietary, activities, server, staff, readonly).",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — insufficient role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-shoreline-auth": {
+          "required": true,
+          "mechanism": "jwt-bearer",
+          "exactRoles": [
+            "admin",
+            "manager",
+            "dietitian",
+            "dietary",
+            "activities",
+            "server",
+            "staff",
+            "readonly"
+          ],
+          "capabilities": [
+            "kitchen.read"
+          ],
+          "additionalMiddleware": [
+            "requireAuth({ allowDisplay: true })"
+          ]
+        },
+        "x-shoreline-conditional": "Mounted only when ENABLE_TIMECARD_PLUGIN !== \"false\" (see src/index.ts)."
+      }
     }
   },
   "components": {
@@ -8751,6 +9472,7 @@
           "primaryDistributor": {
             "type": "string",
             "enum": [
+              "",
               "dennis",
               "sysco",
               "usfoods",
@@ -9027,6 +9749,77 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          "nutritionReview": {
+            "type": "object",
+            "properties": {
+              "sourceReference": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 500
+              },
+              "perServing": {
+                "type": "object",
+                "properties": {
+                  "calories": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "proteinG": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "carbsG": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "fatG": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "satFatG": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "sodiumMg": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "potassiumMg": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "phosphorusMg": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "fiberG": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "sugarG": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "calories",
+                  "proteinG",
+                  "carbsG",
+                  "fatG",
+                  "satFatG",
+                  "sodiumMg",
+                  "potassiumMg",
+                  "phosphorusMg",
+                  "fiberG",
+                  "sugarG"
+                ]
+              }
+            },
+            "required": [
+              "sourceReference",
+              "perServing"
+            ]
           }
         }
       },
@@ -9362,6 +10155,19 @@
             ]
           }
         }
+      },
+      "importSchema": {
+        "type": "object",
+        "properties": {
+          "transfer": {},
+          "privacy_review": {
+            "$ref": "#/components/schemas/privacy"
+          }
+        },
+        "required": [
+          "transfer",
+          "privacy_review"
+        ]
       },
       "inventory_ItemBodySchema": {
         "type": "object",
@@ -9707,6 +10513,26 @@
           "staffName"
         ]
       },
+      "post_recipes_analyze_nutrition_Body": {
+        "type": "object",
+        "properties": {
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeIngredientSchema"
+            },
+            "maxItems": 500
+          },
+          "baseServings": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "default": 1
+          }
+        },
+        "required": [
+          "ingredients"
+        ]
+      },
       "post_residents_flags_flagId_resolve_Body": {
         "type": "object",
         "properties": {
@@ -9826,6 +10652,107 @@
           "initMode"
         ]
       },
+      "privacy": {
+        "type": "object",
+        "properties": {
+          "source_content_reviewed": {
+            "const": true
+          },
+          "source_filename_reviewed": {
+            "const": true
+          },
+          "resident_information_found": {
+            "const": false
+          }
+        },
+        "required": [
+          "source_content_reviewed",
+          "source_filename_reviewed",
+          "resident_information_found"
+        ]
+      },
+      "query": {
+        "type": "object",
+        "properties": {
+          "beds": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "default": 60
+          },
+          "census": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "COMMUNITY",
+              "PRO_TIER",
+              "ENTERPRISE_TIER"
+            ],
+            "default": "PRO_TIER"
+          }
+        }
+      },
+      "renderSchema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "daily",
+              "complete",
+              "prep-list",
+              "meal-service"
+            ]
+          },
+          "areaId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "date": {
+            "type": "string"
+          },
+          "extras": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary",
+                "prep",
+                "dessert"
+              ]
+            },
+            "maxItems": 3
+          },
+          "preview": {
+            "type": "boolean",
+            "default": true
+          },
+          "transfer": {},
+          "privacy_review": {
+            "$ref": "#/components/schemas/privacy"
+          },
+          "expectedHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "confirmedAll42": {
+            "type": "boolean",
+            "default": false
+          },
+          "confirmedCountsHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "format",
+          "areaId"
+        ]
+      },
       "setup_body": {
         "type": "object",
         "properties": {
@@ -9911,6 +10838,6 @@
   "x-shoreline-generated": {
     "generator": "server/scripts/generate-openapi.mjs",
     "source": "static parse of server/src/index.ts mounts and server/src/routes/*.ts handlers",
-    "handlerCount": 191
+    "handlerCount": 206
   }
 }

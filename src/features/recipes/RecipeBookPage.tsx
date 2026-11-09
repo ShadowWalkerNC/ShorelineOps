@@ -79,6 +79,9 @@ function CostBadge({ recipe, large = false }: { recipe: Recipe; large?: boolean 
       <AppleBadge color={PROVENANCE_COLOR[provenance]} dot>
         {PROVENANCE_LABEL[provenance]}
       </AppleBadge>
+      <span className="text-xs text-[var(--text-secondary)]">
+        {recipe.nutritionProvenance?.source === 'clinician-reviewed' ? 'Clinician-reviewed nutrition' : recipe.nutritionProvenance?.available ? 'Nutrition uses local reference estimates; clinical review required' : 'Nutrition unavailable; verified inputs required'}
+      </span>
     </div>
   )
 }

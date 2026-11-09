@@ -12,7 +12,7 @@ const AuditEventSchema = z.object({
   resourceType: z.string().optional(),
   outcome: z.enum(['success', 'failure']),
   userAgent: z.string().optional(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
   // Client-supplied userId is intentionally ignored — always use req.userId
 })
 

@@ -24,3 +24,7 @@ backups/
 shorelineops_backup_*
 *.sql.gz
 *.sql.dump
+release/
+.tools/
+**/node_modules
+**/dist

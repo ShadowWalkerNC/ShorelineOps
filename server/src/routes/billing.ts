@@ -5,6 +5,7 @@
 
 import crypto from 'crypto'
 import { Router, Request, Response, NextFunction } from 'express'
+import { z } from 'zod'
 import { StripeBillingEngine } from '../billing/stripeEngine'
 
 export const billingRouter = Router()
@@ -82,12 +83,18 @@ export function verifyStripeWebhookSignature(
 
 /**
  * GET /api/billing/estimate
- * Computes monthly SaaS fee based on licensed bed count
+ * Computes the selected monthly facility plan
+ * plan selects COMMUNITY ($0), PRO_TIER ($199, default), or ENTERPRISE_TIER ($399).
+ * Prices are monthly USD per facility. Census and bed counts do not change price.
  */
-billingRouter.get('/estimate', (req: Request, res: Response) => {
-  const beds = parseInt(req.query.beds as string, 10) || 60
-  const census = parseInt(req.query.census as string, 10) || beds
-  const fee = StripeBillingEngine.calculateMonthlyFee(beds, census)
+billingRouter.get('/estimate', (req: Request, res: Response, next: NextFunction) => {
+  const query = z.object({
+    beds: z.coerce.number().int().positive().default(60),
+    census: z.coerce.number().int().nonnegative().optional(),
+    plan: z.enum(['COMMUNITY', 'PRO_TIER', 'ENTERPRISE_TIER']).default('PRO_TIER'),
+  }).safeParse({ beds: req.query.beds, census: req.query.census, plan: req.query.plan })
+  if (!query.success) return next(query.error)
+  const fee = StripeBillingEngine.calculateMonthlyFee(query.data.beds, query.data.census, query.data.plan)
   res.json(fee)
 })
 

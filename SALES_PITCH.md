@@ -50,11 +50,13 @@ It eliminates vendor lock-in, reduces food and labor spend by **$1.50–$3.00 pe
 
 ### Subscription Tiers (Monthly SaaS or Self-Hosted Support)
 
-| Package Tier | Facility Size | Monthly Price | Annual Discount (Paid Upfront) | Included Modules |
-|---|---|---|---|---|
-| **Starter** | Up to 35 Beds (Small AL / Memory Care) | **$199 / mo** | **$1,990 / yr** *(2 months free)* | Resident Diets, Tray Cards, Tablet Mode, Weekly Menu Planner, Basic Purchasing |
-| **Professional** *(Most Popular)* | 36–90 Beds (Standard Facility) | **$399 / mo** | **$3,990 / yr** | All Starter features + Dennis CSV Auto-Sync, Cost & Compliance Reporting, Recipe Book Allergen Auto-Tagging, Multi-User RBAC |
-| **Enterprise / Multi-Facility** | 90+ Beds or Campus Operator | **$699 / mo** | **$6,990 / yr** | All Pro features + Custom Distributor Integrations, Priority HIPAA/BAA Compliance Support, Automated Database Backup Service |
+| Package Tier | Monthly Price per Facility | Scope |
+|---|---|---|
+| **Community** | **$0** | Open-source single-facility tools |
+| **Pro Cloud** | **$199 / mo** | Pro plan as listed on the marketing pricing page |
+| **Enterprise** | **$399 / mo** | Enterprise plan as listed on the marketing pricing page |
+
+Annual terms and optional services require a reviewed quote. Provider, hardware and recovery acceptance must be verified before promising their availability.
 
 ### Optional Professional Services
 - **White-Glove Facility Setup & Census Import**: **$499 one-time** (Census, diet orders, and Dennis Order Guide mapped and verified within 48 hours).

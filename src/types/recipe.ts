@@ -41,6 +41,15 @@ export type Recipe = {
   notes: string
   costPerServing?: number       // auto-computed from linked vendor SKUs
   costProvenance?: CostProvenance // which inputs are SKU-matched vs estimated
+  nutritionProvenance?: {
+    source: 'local-reference' | 'clinician-reviewed'
+    available: boolean
+    estimated: boolean
+    requiresClinicalReview: boolean
+    sourceReference?: string
+    missingIngredients?: string[]
+    weightRequiredIngredients?: string[]
+  }
   clinicalVerified?: boolean
   verifiedBy?: string | null
   verifiedAt?: string | null

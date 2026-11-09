@@ -12,7 +12,7 @@ import { randomUUID } from 'crypto'
 import { pool } from '../db/pool'
 import { requireCapability } from '../middleware/permissions'
 import type { AuthRequest } from '../middleware/requireAuth'
-import { DietaryNutritionalEngine } from '../engine/nutrition'
+import { DietaryNutritionalEngine, type NutrientValues } from '../engine/nutrition'
 import { KitchenProductionEngine } from '../engine/production'
 import { normalizeCanonicalAllergen, resolveDietContract } from '../engine/traySafety'
 import {
@@ -25,6 +25,31 @@ import {
 import { serverCache } from '../middleware/cache'
 
 export const recipesRouter = Router()
+
+async function persistNutrition(client: Awaited<ReturnType<typeof pool.connect>>, recipeId: string, nutrients: NutrientValues | null, source = 'local-reference') {
+  if (!nutrients) {
+    await client.query('DELETE FROM recipe_nutrients WHERE recipe_id = $1', [recipeId])
+    return
+  }
+  await client.query(`INSERT INTO recipe_nutrients
+    (recipe_id, calories, protein_g, carbs_g, fat_g, sat_fat_g, sodium_mg, potassium_mg, phosphorus_mg, fiber_g, sugar_g, nutrition_source)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    ON CONFLICT (recipe_id) DO UPDATE SET calories=EXCLUDED.calories, protein_g=EXCLUDED.protein_g,
+      carbs_g=EXCLUDED.carbs_g, fat_g=EXCLUDED.fat_g, sat_fat_g=EXCLUDED.sat_fat_g,
+      sodium_mg=EXCLUDED.sodium_mg, potassium_mg=EXCLUDED.potassium_mg,
+      phosphorus_mg=EXCLUDED.phosphorus_mg, fiber_g=EXCLUDED.fiber_g,
+      sugar_g=EXCLUDED.sugar_g, nutrition_source=EXCLUDED.nutrition_source, calculated_at=NOW()`,
+    [recipeId, nutrients.calories, nutrients.proteinG, nutrients.carbsG, nutrients.fatG,
+      nutrients.satFatG, nutrients.sodiumMg, nutrients.potassiumMg, nutrients.phosphorusMg,
+      nutrients.fiberG, nutrients.sugarG, source])
+}
+
+function nutritionEvidence(recipe: Record<string, any>) {
+  const source = typeof recipe.nutrition_source === 'string' ? recipe.nutrition_source : ''
+  if (source.startsWith('clinical-review:')) return { source: 'clinician-reviewed', available: true, estimated: false, requiresClinicalReview: false, sourceReference: source.slice('clinical-review:'.length) }
+  const provenance = DietaryNutritionalEngine.recipeNutritionProvenance(recipe.ingredients)
+  return { ...provenance, available: provenance.available && source === 'local-reference' }
+}
 
 const RecipeIngredientSchema = z.object({
   qty: z.string().min(1),
@@ -56,6 +81,14 @@ const RecipeClinicalVerifySchema = z.object({
   approvedDiets: z.array(z.string().min(1)).default([]),
   fluidMlPerServing: z.number().int().min(0).nullable().optional(),
   canonicalAllergens: z.array(z.string().min(1)).optional(),
+  nutritionReview: z.object({
+    sourceReference: z.string().trim().min(3).max(500),
+    perServing: z.object({
+      calories: z.number().nonnegative(), proteinG: z.number().nonnegative(), carbsG: z.number().nonnegative(),
+      fatG: z.number().nonnegative(), satFatG: z.number().nonnegative(), sodiumMg: z.number().nonnegative(),
+      potassiumMg: z.number().nonnegative(), phosphorusMg: z.number().nonnegative(), fiberG: z.number().nonnegative(), sugarG: z.number().nonnegative(),
+    }).strict(),
+  }).strict().optional(),
 })
 
 /**
@@ -68,7 +101,7 @@ recipesRouter.get('/', requireCapability('recipes.read'), async (_req: Request, 
   try {
     const { rows } = await pool.query(`
       SELECT r.*, 
-             rn.calories, rn.protein_g, rn.carbs_g, rn.fat_g, rn.sodium_mg, rn.fiber_g
+             rn.calories, rn.protein_g, rn.carbs_g, rn.fat_g, rn.sodium_mg, rn.fiber_g, rn.nutrition_source
       FROM recipes r
       LEFT JOIN recipe_nutrients rn ON rn.recipe_id = r.id
       ORDER BY r.category, r.name ASC
@@ -88,7 +121,8 @@ recipesRouter.get('/', requireCapability('recipes.read'), async (_req: Request, 
       ingredients: r.ingredients || [],
       steps: r.steps || [],
       notes: r.notes || '',
-      clinicalVerified: Boolean(r.clinical_verified),
+      clinicalVerified: Boolean(r.clinical_verified) && nutritionEvidence(r).available,
+      nutritionProvenance: nutritionEvidence(r),
       verifiedBy: r.verified_by ?? null,
       verifiedAt: r.verified_at ?? null,
       approvedDiets: r.approved_diets || [],
@@ -98,7 +132,7 @@ recipesRouter.get('/', requireCapability('recipes.read'), async (_req: Request, 
         (typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients) || [],
         catalog
       ) as CostProvenance,
-      nutrition: r.calories !== null ? {
+      nutrition: r.calories != null && nutritionEvidence(r).available ? {
         calories: parseFloat(r.calories || 0),
         proteinG: parseFloat(r.protein_g || 0),
         carbsG: parseFloat(r.carbs_g || 0),
@@ -149,7 +183,8 @@ recipesRouter.get('/:id', requireCapability('recipes.read'), async (req: Request
       ingredients: r.ingredients || [],
       steps: r.steps || [],
       notes: r.notes || '',
-      clinicalVerified: Boolean(r.clinical_verified),
+      clinicalVerified: Boolean(r.clinical_verified) && nutritionEvidence(r).available,
+      nutritionProvenance: nutritionEvidence(r),
       verifiedBy: r.verified_by ?? null,
       verifiedAt: r.verified_at ?? null,
       approvedDiets: r.approved_diets || [],
@@ -157,7 +192,7 @@ recipesRouter.get('/:id', requireCapability('recipes.read'), async (req: Request
       costPerServing: parseFloat(r.cost_per_serving || 0),
       costProvenance: costBreakdown.provenance,
       costBreakdown, // per-line source flags (sku / estimated / none)
-      nutrition: {
+      nutrition: r.calories != null && nutritionEvidence(r).available ? {
         calories: parseFloat(r.calories || 0),
         proteinG: parseFloat(r.protein_g || 0),
         carbsG: parseFloat(r.carbs_g || 0),
@@ -168,7 +203,7 @@ recipesRouter.get('/:id', requireCapability('recipes.read'), async (req: Request
         phosphorusMg: parseFloat(r.phosphorus_mg || 0),
         fiberG: parseFloat(r.fiber_g || 0),
         sugarG: parseFloat(r.sugar_g || 0),
-      },
+      } : null,
     })
   } catch (err) { next(err) }
 })
@@ -220,35 +255,7 @@ recipesRouter.post('/', requireCapability('recipes.write'), async (req: AuthRequ
     )
 
     // 2. Persist nutritional profile
-    await client.query(`
-      INSERT INTO recipe_nutrients 
-        (recipe_id, calories, protein_g, carbs_g, fat_g, sat_fat_g, sodium_mg, potassium_mg, phosphorus_mg, fiber_g, sugar_g)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (recipe_id) DO UPDATE SET
-        calories = EXCLUDED.calories,
-        protein_g = EXCLUDED.protein_g,
-        carbs_g = EXCLUDED.carbs_g,
-        fat_g = EXCLUDED.fat_g,
-        sat_fat_g = EXCLUDED.sat_fat_g,
-        sodium_mg = EXCLUDED.sodium_mg,
-        potassium_mg = EXCLUDED.potassium_mg,
-        phosphorus_mg = EXCLUDED.phosphorus_mg,
-        fiber_g = EXCLUDED.fiber_g,
-        sugar_g = EXCLUDED.sugar_g,
-        calculated_at = NOW()
-    `, [
-      recipe.id,
-      analysis.perServing.calories,
-      analysis.perServing.proteinG,
-      analysis.perServing.carbsG,
-      analysis.perServing.fatG,
-      analysis.perServing.satFatG,
-      analysis.perServing.sodiumMg,
-      analysis.perServing.potassiumMg,
-      analysis.perServing.phosphorusMg,
-      analysis.perServing.fiberG,
-      analysis.perServing.sugarG,
-    ])
+    await persistNutrition(client, recipe.id, analysis.perServing)
 
     await client.query('COMMIT')
     serverCache.invalidateTag('recipes')
@@ -259,6 +266,7 @@ recipesRouter.post('/', requireCapability('recipes.write'), async (req: AuthRequ
       costProvenance: costBreakdown.provenance,
       costBreakdown,
       nutrition: analysis.perServing,
+      nutritionProvenance: analysis.nutritionProvenance,
       ingredientContributions: analysis.ingredientContributions,
     })
   } catch (err) {
@@ -276,6 +284,11 @@ recipesRouter.put('/:id', requireCapability('recipes.write'), async (req: AuthRe
   const client = await pool.connect()
   try {
     const data = RecipeBodySchema.partial().parse(req.body)
+    // Zod defaults also run inside partial objects. An omitted PATCH field must
+    // never replace saved ingredients, yield, times or steps with create defaults.
+    for (const field of Object.keys(data) as Array<keyof typeof data>) {
+      if (!Object.prototype.hasOwnProperty.call(req.body, field)) delete data[field]
+    }
     const { rows: existing } = await pool.query('SELECT * FROM recipes WHERE id = $1', [req.params.id])
     if (!existing[0]) return res.status(404).json({ error: 'Recipe not found' })
 
@@ -331,35 +344,7 @@ recipesRouter.put('/:id', requireCapability('recipes.write'), async (req: AuthRe
       req.params.id,
     ])
 
-    await client.query(`
-      INSERT INTO recipe_nutrients 
-        (recipe_id, calories, protein_g, carbs_g, fat_g, sat_fat_g, sodium_mg, potassium_mg, phosphorus_mg, fiber_g, sugar_g)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (recipe_id) DO UPDATE SET
-        calories = EXCLUDED.calories,
-        protein_g = EXCLUDED.protein_g,
-        carbs_g = EXCLUDED.carbs_g,
-        fat_g = EXCLUDED.fat_g,
-        sat_fat_g = EXCLUDED.sat_fat_g,
-        sodium_mg = EXCLUDED.sodium_mg,
-        potassium_mg = EXCLUDED.potassium_mg,
-        phosphorus_mg = EXCLUDED.phosphorus_mg,
-        fiber_g = EXCLUDED.fiber_g,
-        sugar_g = EXCLUDED.sugar_g,
-        calculated_at = NOW()
-    `, [
-      req.params.id,
-      analysis.perServing.calories,
-      analysis.perServing.proteinG,
-      analysis.perServing.carbsG,
-      analysis.perServing.fatG,
-      analysis.perServing.satFatG,
-      analysis.perServing.sodiumMg,
-      analysis.perServing.potassiumMg,
-      analysis.perServing.phosphorusMg,
-      analysis.perServing.fiberG,
-      analysis.perServing.sugarG,
-    ])
+    await persistNutrition(client, req.params.id, analysis.perServing)
 
     await client.query('COMMIT')
     serverCache.invalidateTag('recipes')
@@ -369,6 +354,7 @@ recipesRouter.put('/:id', requireCapability('recipes.write'), async (req: AuthRe
       costProvenance: costBreakdownPut.provenance,
       costBreakdown: costBreakdownPut,
       nutrition: analysis.perServing,
+      nutritionProvenance: analysis.nutritionProvenance,
     })
   } catch (err) {
     try { await client.query('ROLLBACK') } catch { /* ignore rollback failure if tx not active */ }
@@ -394,6 +380,28 @@ recipesRouter.post('/:id/verify-clinical', requireCapability('residents.clinical
     if (!recipe) {
       await client.query('ROLLBACK')
       return res.status(404).json({ error: 'Recipe not found' })
+    }
+
+    if (!data.nutritionReview) {
+      const existingNutrition = await client.query('SELECT recipe_id FROM recipe_nutrients WHERE recipe_id = $1', [recipe.id])
+      if (!existingNutrition.rows[0]) {
+        await client.query('ROLLBACK')
+        return res.status(422).json({ error: 'Recipe nutrient breakdown is required before clinical verification' })
+      }
+    }
+
+    const provenance = DietaryNutritionalEngine.recipeNutritionProvenance(recipe.ingredients)
+    if (!provenance.available && !data.nutritionReview) {
+      await client.query('ROLLBACK')
+      return res.status(422).json({ error: 'NUTRITION_UNAVAILABLE', message: 'Provide clinician-reviewed nutrient values with a source reference, or supported ingredient profiles and explicit ingredient weights. No substitute nutrient values are used.', nutritionProvenance: provenance })
+    }
+
+    if (data.nutritionReview) {
+      await persistNutrition(client, recipe.id, data.nutritionReview.perServing, `clinical-review:${data.nutritionReview.sourceReference}`)
+    } else {
+      const ingredients = typeof recipe.ingredients === 'string' ? JSON.parse(recipe.ingredients) : recipe.ingredients
+      const analysis = DietaryNutritionalEngine.calculateRecipeNutrition(ingredients, Number(recipe.base_servings))
+      await persistNutrition(client, recipe.id, analysis.perServing)
     }
 
     const nutRows = await client.query('SELECT * FROM recipe_nutrients WHERE recipe_id = $1', [req.params.id])
@@ -456,6 +464,7 @@ recipesRouter.post('/:id/verify-clinical', requireCapability('residents.clinical
         req.params.id,
         JSON.stringify({
           recipeName: recipe.name,
+          nutritionSource: data.nutritionReview ? 'clinician-reviewed' : 'local-reference',
           approvedDiets: data.approvedDiets,
           fluidMlPerServing: data.fluidMlPerServing ?? null,
           canonicalAllergens: normalizedAllergens,
@@ -567,11 +576,14 @@ recipesRouter.post('/:id/scale', requireCapability('recipes.read'), async (req: 
 
 /**
  * POST /api/recipes/analyze-nutrition
- * Instant preview calculation of any ingredient list
+ * Local-reference estimate for supported weighed ingredients, with explicit provenance.
  */
 recipesRouter.post('/analyze-nutrition', requireCapability('recipes.read'), (req: Request, res: Response) => {
   try {
-    const { ingredients = [], baseServings = 1 } = req.body
+    const { ingredients, baseServings } = z.object({
+      ingredients: z.array(RecipeIngredientSchema).max(500),
+      baseServings: z.number().positive().default(1),
+    }).parse(req.body)
     const analysis = DietaryNutritionalEngine.calculateRecipeNutrition(ingredients, baseServings)
     res.json(analysis)
   } catch (err: any) {

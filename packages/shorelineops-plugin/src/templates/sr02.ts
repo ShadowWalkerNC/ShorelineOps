@@ -1,0 +1,8 @@
+import type { Menu } from "../schema/index.js";
+import { facilityHeading, escapeHtml, dayName, weekRange } from "./html.js";
+export function renderSR02(menu: Menu): string {
+  const rows = menu.days.map((day,index) => `<tr><td class="day-cell">${dayName(index)}<br>${escapeHtml(day.date.value)}</td>${Array.from({length:6}, () => '<td><span class="count-box">&nbsp;</span></td>').join("")}</tr>`).join("");
+  return `<div class="sheet-head"><div><p class="facility">${escapeHtml(facilityHeading(menu))}</p><p class="sheet-title">SR-02 - Weekly Meal Tally</p><p class="sheet-sub">Week ${menu.week} - ${escapeHtml(weekRange(menu))}</p></div></div>
+  <table class="grid weekly-tally" aria-label="Weekly counts"><colgroup><col style="width:1.1in">${'<col>'.repeat(6)}</colgroup><thead><tr><th rowspan="2">Day / Date</th><th colspan="2" class="meal-breakfast">Breakfast</th><th colspan="2" class="meal-lunch">Lunch</th><th colspan="2" class="meal-dinner">Dinner</th></tr><tr>${['Breakfast','Lunch','Dinner'].map(meal => `<th class="meal-${meal.toLowerCase()}" aria-label="${meal} A">A</th><th class="meal-${meal.toLowerCase()}" aria-label="${meal} B">B</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+  <div class="footer"><div class="label band-specials">Missing selections</div><div class="blank blank-tall">&nbsp;</div><div class="label band-specials" style="margin-top:0.12in">Special requests / Notes</div><div class="blank blank-tall">&nbsp;</div><div class="write-row"><div class="write-cell">Tally initials <span class="blank-line">&nbsp;</span></div><div class="write-cell">Review initials <span class="blank-line">&nbsp;</span></div><div class="write-cell">Date <span class="blank-line">&nbsp;</span></div></div></div>`;
+}

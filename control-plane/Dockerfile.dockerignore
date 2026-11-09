@@ -1,0 +1,7 @@
+**
+!control-plane/
+!control-plane/**
+control-plane/node_modules/
+control-plane/dist/
+control-plane/.env*
+control-plane/*.log

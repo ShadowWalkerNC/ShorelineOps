@@ -1,0 +1,9 @@
+interface:
+  display_name: 'ShorelineOps'
+  icon_small: './assets/shorelineops-icon.png'
+  icon_large: './assets/shorelineops-icon.png'
+  brand_color: '#155E75'
+  short_description: 'Review menus and counts, then print or export to ShorelineOps'
+  default_prompt: 'Check this weekly menu for privacy and completeness, show me only what needs attention, then help me approve it and make the paperwork.'
+policy:
+  allow_implicit_invocation: true

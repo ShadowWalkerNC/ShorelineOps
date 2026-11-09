@@ -1,9 +1,9 @@
 /**
- * Stripe Per-Bed / Per-Census Metered Billing Engine
+ * Facility subscription pricing and Stripe event interpretation
  * Shoreline Care OS v6.2
  *
  * Implements:
- * - Dynamic per-bed / per-census tiered pricing ($1.50 - $2.50 per bed/month)
+ * - Monthly facility pricing aligned with the approved marketing plans
  * - Stripe webhook event processing (invoice.payment_succeeded, invoice.payment_failed)
  * - Non-intrusive clinical grace dunning: failed invoices trigger administrative warning banners
  *   without EVER locking kitchen staff out of resident meal service.
@@ -27,30 +27,17 @@ export interface DunningStatus {
 }
 
 export class StripeBillingEngine {
-  private static readonly BASE_RATE_PER_BED = 2.00 // $2.00 / bed / month
-  private static readonly ENTERPRISE_VOLUME_DISCOUNT_THRESHOLD = 150 // beds
-
   /**
-   * Calculates monthly SaaS subscription based on facility scale.
+   * Calculates the selected facility plan. Bed counts are descriptive only.
    */
-  static calculateMonthlyFee(licensedBeds: number, activeCensus?: number): PricingTierCalculation {
+  static calculateMonthlyFee(licensedBeds: number, activeCensus?: number, tier: PricingTierCalculation['tier'] = 'PRO_TIER'): PricingTierCalculation {
     const beds = Math.max(1, licensedBeds)
-    let rate = StripeBillingEngine.BASE_RATE_PER_BED
-    let tier: PricingTierCalculation['tier'] = 'PRO_TIER'
-
-    if (beds >= StripeBillingEngine.ENTERPRISE_VOLUME_DISCOUNT_THRESHOLD) {
-      rate = 1.65 // Volume discounted enterprise rate
-      tier = 'ENTERPRISE_TIER'
-    } else if (beds <= 25) {
-      rate = 2.50 // Small home tier
-    }
-
-    const monthlyTotal = Math.round(beds * rate * 100) / 100
+    const monthlyTotal = { COMMUNITY: 0, PRO_TIER: 199, ENTERPRISE_TIER: 399 }[tier]
 
     return {
       licensedBeds: beds,
-      activeCensus: activeCensus || beds,
-      ratePerBedMonth: rate,
+      activeCensus: activeCensus ?? beds,
+      ratePerBedMonth: 0, // Legacy response field. Facility plans have no per-bed charge.
       monthlyTotal,
       tier,
     }
@@ -97,7 +84,7 @@ export class StripeBillingEngine {
           gracePeriodEndsAt: graceEnd.toISOString(),
           clinicalLockoutAllowed: false, // Invariant: Meal service is never halted
         },
-        notificationDispatched: true, // Dispatch email to Executive Director & Finance Admin
+        notificationDispatched: false, // No notification transport is configured here.
       }
     }
 

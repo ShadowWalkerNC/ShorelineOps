@@ -9,7 +9,6 @@ import { Router, Request, Response, NextFunction } from 'express'
 import crypto from 'crypto'
 
 import { PointClickCareConnector } from '../integrations/pointclickcare'
-import { USDAFoodDataConnector } from '../integrations/usda'
 import { requireAuth, verifyAccessToken, API_ROLES } from '../middleware/requireAuth'
 import type { AuthRequest } from '../middleware/requireAuth'
 import { requireTier } from '../middleware/requireTier'
@@ -17,7 +16,6 @@ import { databaseDialect, pool } from '../db/pool'
 
 export const ehrRouter = Router()
 const pcc = new PointClickCareConnector()
-const usda = new USDAFoodDataConnector()
 
 // ---------------------------------------------------------------------------
 // EHR webhook security (A04) — HMAC-SHA256, fail-closed, audit-logged
@@ -322,28 +320,16 @@ ehrRouter.post('/webhook', requireEhrWebhookSignature, async (req: Request, res:
  * POST /api/ehr/nutrients/analyze
  * Computes therapeutic nutritional analysis for a planned meal & diet order
  */
-ehrRouter.post('/nutrients/analyze', requireAuth, (req: Request, res: Response) => {
-  try {
-    const { dietOrder = 'Regular', items = [] } = req.body
-    const breakdown = pcc.calculateNutrients(dietOrder, items)
-    res.json({ dietOrder, breakdown })
-  } catch (err: any) {
-    res.status(400).json({ error: err.message || 'Nutrient analysis failed' })
-  }
+ehrRouter.post('/nutrients/analyze', requireAuth, (_req: Request, res: Response) => {
+  res.status(503).json({ error: 'NUTRITION_PROVIDER_UNAVAILABLE', message: 'Live PCC nutrient analysis is not implemented. Use reviewed recipe data.' })
 })
 
 /**
  * POST /api/ehr/nutrients/usda
  * Comprehensive USDA FoodData Central meal breakdown & clinical compliance flags
  */
-ehrRouter.post('/nutrients/usda', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { dietOrder = 'Regular', items = [] } = req.body
-    const analysis = await usda.analyzeMeal(items, dietOrder)
-    res.json(analysis)
-  } catch (err: any) {
-    res.status(400).json({ error: err.message || 'USDA nutrient analysis failed' })
-  }
+ehrRouter.post('/nutrients/usda', requireAuth, (_req: Request, res: Response) => {
+  res.status(503).json({ error: 'NUTRITION_PROVIDER_UNAVAILABLE', message: 'Live USDA nutrient analysis is not implemented. Use reviewed recipe data.' })
 })
 
 /**

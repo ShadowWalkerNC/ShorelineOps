@@ -11,8 +11,8 @@ import path from 'node:path'
 const repoRoot = path.resolve(__dirname, '..', '..')
 
 const DISPLAY_SURFACES: Array<{ file: string; expect: string[] }> = [
-  { file: 'src/components/Layout.tsx', expect: ['/icon-192.png'] },
-  { file: 'src/features/auth/LoginPage.tsx', expect: ['/icon-192.png'] },
+  { file: 'src/components/Layout.tsx', expect: ['${import.meta.env.BASE_URL}icon-192.png'] },
+  { file: 'src/features/auth/LoginPage.tsx', expect: ['${import.meta.env.BASE_URL}icon-192.png'] },
   { file: 'src/features/offline/OfflinePage.tsx', expect: ['icon-192.png'] },
   { file: 'marketing/src/layouts/BaseLayout.astro', expect: ['/icon-192.png', '/logo.png'] },
 ]

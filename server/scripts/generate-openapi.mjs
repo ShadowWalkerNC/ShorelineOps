@@ -625,7 +625,8 @@ function cleanDescription(raw) {
 }
 
 function parseRouteFile(file, src) {
-  const routerVarMatch = src.match(/export\s+const\s+([A-Za-z_$][\w$]*)\s*=\s*Router\(\)/)
+  // Factories keep the same local router identifier for their route registrations.
+  const routerVarMatch = src.match(/export\s+const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:Router|create\w*Router)\(\)/)
   if (!routerVarMatch) { warn(`${file}: no exported Router found`); return [] }
   const routerVar = routerVarMatch[1]
 

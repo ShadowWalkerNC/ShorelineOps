@@ -1,0 +1,14 @@
+import {promises as fs} from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import {fileURLToPath} from 'node:url';
+const args=process.argv.slice(2),client=args[0],output=args[1];
+if(!['claude','vscode'].includes(client)||!output)throw new Error('Use: node scripts/configure-client.mjs claude|vscode <NEW configuration file> [dedicated import folder]');
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),imports=path.resolve(args[2]??path.join(os.homedir(),'ShorelineOps Imports'));
+if(imports===path.parse(imports).root||imports===path.resolve(os.homedir()))throw new Error('Choose a dedicated import folder');
+await fs.mkdir(imports,{recursive:true});
+const real=await fs.realpath(imports),home=await fs.realpath(os.homedir()),normalize=value=>process.platform==='win32'?value.toLowerCase():value;if(normalize(real)===normalize(path.parse(real).root)||normalize(real)===normalize(home))throw new Error('Choose a dedicated import folder, not an alias of home or the disk root');
+const server={command:process.execPath,args:[path.join(root,'plugin/server.mjs')],env:{SHORELINEOPS_IMPORT_DIR:imports}};
+const configuration=client==='vscode'?{servers:{shorelineops:{type:'stdio',...server}}}:{mcpServers:{shorelineops:server}};
+await fs.writeFile(path.resolve(output),JSON.stringify(configuration,null,2)+'\n',{flag:'wx'});
+console.log(`Created ${path.resolve(output)}. Existing settings were not changed. Import folder: ${imports}`);

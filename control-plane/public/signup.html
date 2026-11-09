@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create account — ShorelineOps</title>
+<link rel="stylesheet" href="/site.css">
+</head>
+<body data-page="signup">
+<main>
+<h1>Create account</h1>
+<form id="signup-form">
+<label for="email">Email address
+<input id="email" name="email" type="email" inputmode="email" autocomplete="email" required maxlength="254">
+</label>
+<label for="password">Password <span class="hint">(at least 12 characters)</span>
+<input id="password" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="200">
+</label>
+<button type="submit">Create account</button>
+</form>
+<p id="result" role="status" aria-live="polite"></p>
+<h2>Already signed up?</h2>
+<form id="resend-form">
+<label for="resend-email">Email address
+<input id="resend-email" name="email" type="email" inputmode="email" autocomplete="email" required maxlength="254">
+</label>
+<button type="submit">Resend verification link</button>
+</form>
+<p><a href="/">Back to start</a></p>
+</main>
+<script src="/portal.js" defer></script>
+</body>
+</html>

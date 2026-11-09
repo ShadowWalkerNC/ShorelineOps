@@ -1,8 +1,8 @@
-const { app, BrowserWindow, dialog } = require('electron')
+const { app, BrowserWindow, dialog, shell } = require('electron')
 const { launchBackend } = require('./desktop/backend.cjs')
 let backend, mainWindow
 let quitting = false
-async function createWindow() {
+async function createWindow(keyNoticeFile) {
   mainWindow = new BrowserWindow({ width:1280, height:800, show:false, title:'Shoreline Care OS',
     webPreferences:{nodeIntegration:false, contextIsolation:true, sandbox:true, webSecurity:true} })
   mainWindow.webContents.setWindowOpenHandler(() => ({action:'deny'}))
@@ -17,6 +17,18 @@ async function createWindow() {
   mainWindow.once('ready-to-show', () => mainWindow.show())
   mainWindow.on('closed', () => { mainWindow = null })
   await mainWindow.loadURL(`${backend.origin}/app/login`)
+  if (keyNoticeFile) {
+    const status = await fetch(`${backend.origin}/api/setup/status`).then(response => response.json())
+    if (status.isInitialized === false) {
+      const choice = await dialog.showMessageBox(mainWindow, {
+        type: 'info', title: 'First-time facility setup',
+        message: 'Your setup passphrase is ready.',
+        detail: `Copy the passphrase from this local file into the setup wizard.\n\n${keyNoticeFile}`,
+        buttons: ['Open passphrase file', 'Continue'], cancelId: 1,
+      })
+      if (choice.response === 0) await shell.openPath(keyNoticeFile)
+    }
+  }
 }
 function fail() {
   if (quitting) return
@@ -29,9 +41,10 @@ else {
     const { ensureWorkstationSecrets } = require('./desktop/workstation-provision.cjs')
     const userData = app.getPath('userData')
     const provisioned = ensureWorkstationSecrets(process.env, userData)
-    backend = await launchBackend({root:__dirname,userData,executable:process.execPath,env:provisioned.env})
+    const root = app.isPackaged ? `${process.resourcesPath}/workstation` : __dirname
+    backend = await launchBackend({root,userData,executable:process.execPath,env:provisioned.env})
     backend.child.once('exit', fail)
-    await createWindow()
+    await createWindow(process.env.SETUP_BOOTSTRAP_SECRET?.length >= 16 ? undefined : provisioned.keyNoticeFile)
   }).catch(fail)
   app.on('second-instance', () => { if(mainWindow) { mainWindow.restore(); mainWindow.focus() } })
   app.on('activate', () => { if(!mainWindow && backend) createWindow().catch(fail) })

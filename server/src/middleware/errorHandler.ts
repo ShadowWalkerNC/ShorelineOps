@@ -13,7 +13,7 @@ export function errorHandler(
       error: 'Validation failed',
       code: 'VALIDATION_ERROR',
       requestId: req.headers['x-request-id'],
-      details: err.errors.map((e) => ({ path: e.path.join('.'), message: e.message })),
+      details: err.issues.map((e) => ({ path: e.path.join('.'), message: e.message })),
     })
   }
 

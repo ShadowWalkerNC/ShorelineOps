@@ -45,6 +45,15 @@ test('EHR decisions apply atomically and retain unresolved work on failure', asy
   const state = async (id: string) => (await pool.query('SELECT status FROM ehr_reconciliation_queue WHERE id = $1', [id])).rows[0].status
   const profile = async () => (await pool.query('SELECT allergies, diet_type, texture, is_npo, profile_version FROM residents WHERE id = $1', [resident])).rows[0]
   try {
+    await t.test('unimplemented live nutrient providers return unavailable instead of synthetic verdicts', async () => {
+      for (const endpoint of ['analyze', 'usda']) {
+        const response = await fetch(`${base}/nutrients/${endpoint}`, { method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await credential('dietitian')}` },
+          body: JSON.stringify({ dietOrder: 'NAS', items: ['unknown fixture food'] }) })
+        assert.equal(response.status, 503)
+        assert.equal((await response.json() as any).error, 'NUTRITION_PROVIDER_UNAVAILABLE')
+      }
+    })
     await t.test('allergy approval merges, increments once, and records before/after evidence', async () => {
       const id = await add('NEW_ALLERGEN', { allergies: ['milk', 'Egg', 'egg'] })
       assert.equal((await resolve(id)).status, 200)

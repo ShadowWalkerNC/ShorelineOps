@@ -25,6 +25,27 @@ See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/ST
 
 ---
 
+## Desktop release candidate — November 8, 2026
+
+Windows NSIS, Linux AppImage and Debian packages now bundle the production app,
+private loopback server and per-user SQLite database. Build with
+`npm ci && npm run build:desktop` on the target x64 operating system. See
+[current release evidence and remaining acceptance](docs/DESKTOP_SAAS_RELEASE.md)
+before distributing or using the app for facility operations. Candidate binaries
+are local outputs under `release/desktop`; public release publication and signing
+remain open.
+
+The desktop includes Light/Dark/System appearance and authenticated paperwork
+printing from [the maintained plugin source](packages/shorelineops-plugin/README.md).
+[The REST SDK](sdk/README.md), [central cloud accounts](control-plane/README.md)
+and [Muse development tooling](tools/muse) have separate ownership. Cloud accounts
+use a separate PostgreSQL database; automated customer provisioning is still open
+and Stripe work is deferred. Provider fixtures and estimates are not evidence of
+live EHR, vendor or nutrition integrations.
+
+Future development uses short-lived `codex/feature-*` and `codex/fix-*` branches
+merged into `main` after the required checks. Existing worktrees are preserved.
+
 ## Platform Interface Tour
 
 ```
@@ -52,7 +73,7 @@ See [the URL contract](docs/URLS.md) and [Stitch design adoption](docs/design/ST
 ![Residents & Diets](docs/screenshots/residents_iddsi_triage.png)
 
 ### 4. Multi-Distributor Lowest-Cost Split MRP (`/purchasing`)
-*Compares live contract pricing line-by-line across Dennis Food Service, Sysco, and US Foods, generating optimal split purchase orders — the lowest-cost vendor wins each line.*
+*Compares supplied vendor pricing line-by-line to prepare split purchase orders. Live distributor feeds require configured, accepted provider integrations; fixture catalogs are not current contract prices.*
 
 ![Split MRP Purchasing Comparator](docs/screenshots/split_mrp_purchasing.jpg)
 

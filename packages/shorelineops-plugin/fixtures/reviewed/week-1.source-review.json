@@ -1,0 +1,511 @@
+{
+  "status": "machine-source-checked; NOT human-approved",
+  "source": {
+    "file": "fixtures/source/week-1-original-menu.jpg",
+    "sha256": "088a1192246675ca6607bd4a37ff15c0e8dbb0d266dbf6a4264e7a2fe6dcebef"
+  },
+  "options": [
+    {
+      "cell": "2026-10-25 BREAKFAST CHOICE 1",
+      "originalText": "BAKED EGG OMELET, EGG OF CHOICE, DANISH, TOAST",
+      "sha256": "ee68da5e0defb14a5594a55dceaf15630d1db4bb4b32ff1c4775624c13e1a043",
+      "components": [
+        "BAKED EGG OMELET",
+        "EGG OF CHOICE",
+        "DANISH",
+        "TOAST"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-25 BREAKFAST CHOICE 2",
+      "originalText": "COLD CEREAL, OATMEAL, FRUIT",
+      "sha256": "fc535e466aaf576c62dfd3000b04ba90b0c440bd06fd941bed8ae242ae5625d2",
+      "components": [
+        "COLD CEREAL",
+        "OATMEAL",
+        "FRUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-25 LUNCH CHOICE 1",
+      "originalText": "CORNFLAKE CHICKEN, MASHED POTATOES, BROCCOLI, ROLL, ICE CREAM SUNDAES",
+      "sha256": "279b90f8404ac3783596b8c08488cf72690537217a5f86a3bf98deb4d5895ec5",
+      "components": [
+        "CORNFLAKE CHICKEN",
+        "MASHED POTATOES",
+        "BROCCOLI",
+        "ROLL",
+        "ICE CREAM SUNDAES"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-25 LUNCH CHOICE 2",
+      "originalText": "BEEF TIPS W/GRAVY, BUTTERED NOODLES, CARROTS, ROLL",
+      "sha256": "666ab87a54ece70a4f84b4eed2a58c7b96f5583dbf8c7f7238bbc11bfd55c7d9",
+      "components": [
+        "BEEF TIPS W/GRAVY",
+        "BUTTERED NOODLES",
+        "CARROTS",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-25 DINNER CHOICE 1",
+      "originalText": "TOMATO BASIL SOUP, CRACKERS, TUNA SANDWICH, CHERRY CREAM CHEESE BAR",
+      "sha256": "869d1edf4edd456a8a8ce31b47b332ad734b8a30295360a122154e479ab85cea",
+      "components": [
+        "TOMATO BASIL SOUP",
+        "CRACKERS",
+        "TUNA SANDWICH",
+        "CHERRY CREAM CHEESE BAR"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-25 DINNER CHOICE 2",
+      "originalText": "STUFFED PASTA SHELLS, GARDEN SALAD, DRESSING, ROLL",
+      "sha256": "7b53a61ea050f6d8adb969f0d6c4d953fea715bbeb99941d59545f87a0157da5",
+      "components": [
+        "STUFFED PASTA SHELLS",
+        "GARDEN SALAD",
+        "DRESSING",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-26 BREAKFAST CHOICE 1",
+      "originalText": "SCRAMBLED EGGS, EGG OF CHOICE, SAUSAGE PATTY, BISCUIT",
+      "sha256": "14d79cb85b175ae3ca370831dee583daccf1ac1701b81b203a33d6166445e8d4",
+      "components": [
+        "SCRAMBLED EGGS",
+        "EGG OF CHOICE",
+        "SAUSAGE PATTY",
+        "BISCUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-26 BREAKFAST CHOICE 2",
+      "originalText": "COLD CEREAL, CREAM OF WHEAT, FRUIT",
+      "sha256": "ef74a80d9e9bd608050db27a8c344a53e80102dd2c91eed652ef28c40ab12a74",
+      "components": [
+        "COLD CEREAL",
+        "CREAM OF WHEAT",
+        "FRUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-26 LUNCH CHOICE 1",
+      "originalText": "MEATLOAF, MASHED POTATOES, BEETS, ROLL, STRAWBERRY SHORTCAKE",
+      "sha256": "dd1a7baf2e3d050b9bba8a77259329579cdfa1eb6535e9e3e8eec9557e96947a",
+      "components": [
+        "MEATLOAF",
+        "MASHED POTATOES",
+        "BEETS",
+        "ROLL",
+        "STRAWBERRY SHORTCAKE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-26 LUNCH CHOICE 2",
+      "originalText": "APPLE BUTTER PORK LOIN, RICE PILAF, ROLL, GREEN BEANS",
+      "sha256": "d9a2226d71e3615a902fe96f26d9d75d60c684fb871c887e7c94dafd5df24415",
+      "components": [
+        "APPLE BUTTER PORK LOIN",
+        "RICE PILAF",
+        "ROLL",
+        "GREEN BEANS"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-26 DINNER CHOICE 1",
+      "originalText": "CORN CHOWDER, CRACKERS, EGG SALAD SANDWICH, 4 BEAN SALAD, CHILLED PEACHES",
+      "sha256": "e500b967cb0e1ed41bd63c1a1e9fb7743910419c54bd9098ee90a4514153b0ec",
+      "components": [
+        "CORN CHOWDER",
+        "CRACKERS",
+        "EGG SALAD SANDWICH",
+        "4 BEAN SALAD",
+        "CHILLED PEACHES"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-26 DINNER CHOICE 2",
+      "originalText": "HONEY GLAZED MEATBALLS, BABY CARROTS, ROLL",
+      "sha256": "48dcac2ee9cde958b27d4d59942618ae879ce1801041c8e2801a05ef07fde860",
+      "components": [
+        "HONEY GLAZED MEATBALLS",
+        "BABY CARROTS",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-27 BREAKFAST CHOICE 1",
+      "originalText": "BOILED EGG, EGG OF CHOICE, BACON, APPLE SPICE MUFFIN",
+      "sha256": "1ff2284007c64fedeeab7bb933d3a03b0a421bbad215baf86f4a2ee17497305b",
+      "components": [
+        "BOILED EGG",
+        "EGG OF CHOICE",
+        "BACON",
+        "APPLE SPICE MUFFIN"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-27 BREAKFAST CHOICE 2",
+      "originalText": "COLD CEREAL, MAYPO, FRUIT",
+      "sha256": "7e438012e1cf1ee3aa8f63b1a62ed77a8ec2f12166a459b621de0679f90e2667",
+      "components": [
+        "COLD CEREAL",
+        "MAYPO",
+        "FRUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-27 LUNCH CHOICE 1",
+      "originalText": "CRUMB BAKED HADDOCK, HERBED ORZO, BRUSSEL SPROUTS, ROLL, CHOC CHIP COOKIE",
+      "sha256": "87fdd29d5b79d0aad52a92db26e58b3b95e622cfbe1ebbc42348f9ce93a20b04",
+      "components": [
+        "CRUMB BAKED HADDOCK",
+        "HERBED ORZO",
+        "BRUSSEL SPROUTS",
+        "ROLL",
+        "CHOC CHIP COOKIE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-27 LUNCH CHOICE 2",
+      "originalText": "BEEF & RICE CASSEROLE, GREEN PEAS, ROLL",
+      "sha256": "4f3b6c4f30566bb5f9b4cbaf9959b5de76325c39fefc473f1276ab1ed430ea9f",
+      "components": [
+        "BEEF & RICE CASSEROLE",
+        "GREEN PEAS",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-27 DINNER CHOICE 1",
+      "originalText": "CREAM OF ASPARAGUS SOUP, CRACKERS, BLT SANDWICH, ROLL, FRESH FRUIT CUP",
+      "sha256": "8fa1a9a8dc31374dd756f578805578424f2e163669bfb579ff15b1b84a58333a",
+      "components": [
+        "CREAM OF ASPARAGUS SOUP",
+        "CRACKERS",
+        "BLT SANDWICH",
+        "ROLL",
+        "FRESH FRUIT CUP"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-27 DINNER CHOICE 2",
+      "originalText": "CHICKEN TENDERS, CONDIMENTS, BAKED POTATO WEDGES, CORN",
+      "sha256": "fd1216bda88019a50b74d9db9beadeb0a8edf128abc0b1e35405d1159329eb6c",
+      "components": [
+        "CHICKEN TENDERS",
+        "CONDIMENTS",
+        "BAKED POTATO WEDGES",
+        "CORN"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-28 BREAKFAST CHOICE 1",
+      "originalText": "PANCAKES, SAUSAGE, EGG OF CHOICE, TOAST",
+      "sha256": "347b8a85c88db83e383db3949f2de73441a521713a6dde8b765cf683b860d2e0",
+      "components": [
+        "PANCAKES",
+        "SAUSAGE",
+        "EGG OF CHOICE",
+        "TOAST"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-28 BREAKFAST CHOICE 2",
+      "originalText": "COLD CEREAL OATMEAL, FRUIT",
+      "sha256": "cd54b13c2e6a09bea2ef2e9e5fcb010c0ff2baa3cfd22a61c1ccbd0b518d61f6",
+      "components": [
+        "COLD CEREAL",
+        "OATMEAL",
+        "FRUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-28 LUNCH CHOICE 1",
+      "originalText": "SPAGHETTI W/MEAT SAUCE, GREEN BEANS, GARLIC BREAD, PINEAPPLE UPSIDE DOWN CAKE,",
+      "sha256": "0fb4764878dfd0538a9ce55001e7dde8395583a1283e7d0b618a7a7f2e193de8",
+      "components": [
+        "SPAGHETTI W/MEAT SAUCE",
+        "GREEN BEANS",
+        "GARLIC BREAD",
+        "PINEAPPLE UPSIDE DOWN CAKE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-28 LUNCH CHOICE 2",
+      "originalText": "ROAST TURKEY, MASHED POTATOES, DILL CARROTS, ROLL",
+      "sha256": "5ba60730c4b42a75cc372a032ca426daeedc6c1b6983761a4bd0c7ed1afef9aa",
+      "components": [
+        "ROAST TURKEY",
+        "MASHED POTATOES",
+        "DILL CARROTS",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-28 DINNER CHOICE 1",
+      "originalText": "BEEF VEG SOUP, CRACKERS, FISH SANDWICH, SPINACH/TOM ORZO SALAD, ROLL",
+      "sha256": "13c3ef778277809fd72c43615c83924f84803febc774fa20e34a1278d47ce92c",
+      "components": [
+        "BEEF VEG SOUP",
+        "CRACKERS",
+        "FISH SANDWICH",
+        "SPINACH/TOM ORZO SALAD",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-28 DINNER CHOICE 2",
+      "originalText": "CHICKEN CAESAR SALAD, CUCUMBER SALAD, BLONDE BROWNIE",
+      "sha256": "376d15f148a0cf33c4cb704fc699ca35c0b1e70bca4faac447f4d44e9d81b684",
+      "components": [
+        "CHICKEN CAESAR SALAD",
+        "CUCUMBER SALAD",
+        "BLONDE BROWNIE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-29 BREAKFAST CHOICE 1",
+      "originalText": "BREAKFAST BOWL, EGG OF CHOICE, TOAST",
+      "sha256": "ef3e29011921fa19150d5efa779458b429a4881e68a390f1b8850594de1eb659",
+      "components": [
+        "BREAKFAST BOWL",
+        "EGG OF CHOICE",
+        "TOAST"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-29 BREAKFAST CHOICE 2",
+      "originalText": "COLD CEREAL, CREAM OF WHEAT, FRUIT",
+      "sha256": "ef74a80d9e9bd608050db27a8c344a53e80102dd2c91eed652ef28c40ab12a74",
+      "components": [
+        "COLD CEREAL",
+        "CREAM OF WHEAT",
+        "FRUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-29 LUNCH CHOICE 1",
+      "originalText": "CHICKEN CORDON BLEU, BROWN RICE, 5 WAY MIXED VEGS, ROLL, PEACH COBBLER A LA MODE",
+      "sha256": "7c39d6ed9883be8361cf08e7733523ff9806188d0fe36c12fda5451a19bd0f19",
+      "components": [
+        "CHICKEN CORDON BLEU",
+        "BROWN RICE",
+        "5 WAY MIXED VEGS",
+        "ROLL",
+        "PEACH COBBLER A LA MODE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-29 LUNCH CHOICE 2",
+      "originalText": "BEEF CACCIATORE, BUTTERED NOODLES, ROLL, SEASONED CABBAGE",
+      "sha256": "59f85e7e7ae2872b4e4e604a26af4ac6ac3acca0abce23d15438e2793255a6fb",
+      "components": [
+        "BEEF CACCIATORE",
+        "BUTTERED NOODLES",
+        "ROLL",
+        "SEASONED CABBAGE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-29 DINNER CHOICE 1",
+      "originalText": "TOMATO BARLEY SOUP, CRACKERS, CHICK SAL SANDWICH, VEG SALAD, ORANGE SLICES",
+      "sha256": "020c1ce4ecec52c31af6f1639144c401af89aef08b5a8873a7b06c54754843e9",
+      "components": [
+        "TOMATO BARLEY SOUP",
+        "CRACKERS",
+        "CHICK SAL SANDWICH",
+        "VEG SALAD",
+        "ORANGE SLICES"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-29 DINNER CHOICE 2",
+      "originalText": "STUFFED BELL PEPPER, BASIL ZUCCHINI SAUTE, ROLL",
+      "sha256": "95e099a6797cb95cd75550ea32731781243b3327c657badc49de041fa7b3c614",
+      "components": [
+        "STUFFED BELL PEPPER",
+        "BASIL ZUCCHINI SAUTE",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-30 BREAKFAST CHOICE 1",
+      "originalText": "FRENCH TOAST, BACON, EGG OF CHOICE",
+      "sha256": "a885cfbd55a39d9dd8c9eef040c89eaa03ee34636b969444e576ca9b71bc5beb",
+      "components": [
+        "FRENCH TOAST",
+        "BACON",
+        "EGG OF CHOICE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-30 BREAKFAST CHOICE 2",
+      "originalText": "COLD CEREAL, OATMEAL, FRUIT",
+      "sha256": "fc535e466aaf576c62dfd3000b04ba90b0c440bd06fd941bed8ae242ae5625d2",
+      "components": [
+        "COLD CEREAL",
+        "OATMEAL",
+        "FRUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-30 LUNCH CHOICE 1",
+      "originalText": "CRAB SALAD SANDWICH, VEG PASTA SALAD, ROLL, PICKLED BEETS, FRUITED GELATIN",
+      "sha256": "a78ebc8c4743ff4d537e6be2ffd889b37fb0b7d68182df52540768d2617a4703",
+      "components": [
+        "CRAB SALAD SANDWICH",
+        "VEG PASTA SALAD",
+        "ROLL",
+        "PICKLED BEETS",
+        "FRUITED GELATIN"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-30 LUNCH CHOICE 2",
+      "originalText": "BAKED ZITI & MEAT SAUCE, GARDEN SALAD, DRESSING, ROLL",
+      "sha256": "d01ffce5f4e9d74dfec47182564ba65baad01505f78aa0eabc10f9fed4d7977c",
+      "components": [
+        "BAKED ZITI & MEAT SAUCE",
+        "GARDEN SALAD",
+        "DRESSING",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-30 DINNER CHOICE 1",
+      "originalText": "CLAM CHOWDER, OYSTER CRACKERS, HAM SAL SANDWICH, APPLE CARROT SALAD, APPLESAUCE CAKE",
+      "sha256": "3321a13a92060c8f06163400bb42b2358dbd19586a25253b972d065e2b8fd3f1",
+      "components": [
+        "CLAM CHOWDER",
+        "OYSTER CRACKERS",
+        "HAM SAL SANDWICH",
+        "APPLE CARROT SALAD",
+        "APPLESAUCE CAKE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-30 DINNER CHOICE 2",
+      "originalText": "PORK SCHNITZEL W/DILL, WHIPPED POTATOES, ROASTED BROCCOLI SPEARS",
+      "sha256": "56449716c58c50c488874e05a0ea11e790f3b80160e6b9517774f07a6ae25160",
+      "components": [
+        "PORK SCHNITZEL W/DILL",
+        "WHIPPED POTATOES",
+        "ROASTED BROCCOLI SPEARS"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-31 BREAKFAST CHOICE 1",
+      "originalText": "CONFETTI EGGS, WAFFLE, EGG OF CHOICE, TOAST",
+      "sha256": "d9e3d86b2f3758511d4e45ef49323b6b39f775a664ebbeca464d41bd10bdfcda",
+      "components": [
+        "CONFETTI EGGS",
+        "WAFFLE",
+        "EGG OF CHOICE",
+        "TOAST"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-31 BREAKFAST CHOICE 2",
+      "originalText": "COLD CEREAL, MAYPO, FRUIT",
+      "sha256": "7e438012e1cf1ee3aa8f63b1a62ed77a8ec2f12166a459b621de0679f90e2667",
+      "components": [
+        "COLD CEREAL",
+        "MAYPO",
+        "FRUIT"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-31 LUNCH CHOICE 1",
+      "originalText": "BEANS & FRANKS, COLESLAW, BROWN BREAD, WAX BEANS, SILVER WHITE CAKE",
+      "sha256": "527a60fd8c10c0aebd542920638a1ecb70c6d7470385281a484b72ad63fecdee",
+      "components": [
+        "BEANS & FRANKS",
+        "COLESLAW",
+        "BROWN BREAD",
+        "WAX BEANS",
+        "SILVER WHITE CAKE"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-31 LUNCH CHOICE 2",
+      "originalText": "SALISBURY STEAK, BAKED POTATO W/SC, BRUSSEL SPROUTS, ROLL",
+      "sha256": "05e3263adefa1e9c33cadb26ce75790be6b61ac77749ce8aaf77e79e1e44a6e6",
+      "components": [
+        "SALISBURY STEAK",
+        "BAKED POTATO W/SC",
+        "BRUSSEL SPROUTS",
+        "ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-31 DINNER CHOICE 1",
+      "originalText": "CHICKEN RICE SOUP, CRACKERS, TURKEY SAL SAND, TOMATO SALAD, BALSAMIC STRAWBERRIES",
+      "sha256": "9d2738822bd92245f67b7fd7182b241ebce3deed05967fa46266280828809813",
+      "components": [
+        "CHICKEN RICE SOUP",
+        "CRACKERS",
+        "TURKEY SAL SAND",
+        "TOMATO SALAD",
+        "BALSAMIC STRAWBERRIES"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    },
+    {
+      "cell": "2026-10-31 DINNER CHOICE 2",
+      "originalText": "VEGETABLE PIZZA, GARDEN SALAD, DRESSING, GARLIC ROLL",
+      "sha256": "979e77a6a90762e7bf53a09fcdd6e0ef79ee28574f5571c0f5a2bfb8d4e0fae5",
+      "components": [
+        "VEGETABLE PIZZA",
+        "GARDEN SALAD",
+        "DRESSING",
+        "GARLIC ROLL"
+      ],
+      "sourceComparison": "Codex visual comparison; human approval pending"
+    }
+  ]
+}

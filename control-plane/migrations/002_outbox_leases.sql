@@ -1,0 +1,2 @@
+ALTER TABLE email_outbox ADD COLUMN IF NOT EXISTS claim_token UUID;
+ALTER TABLE email_outbox ADD COLUMN IF NOT EXISTS claimed_until TIMESTAMPTZ;

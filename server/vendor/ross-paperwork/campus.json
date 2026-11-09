@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "Facility setup required",
+  "status": "draft",
+  "confirmedBy": null,
+  "source": "Unconfigured installation. Ask the user for facility and service-area names; this placeholder is not a real facility.",
+  "residentAreas": [
+    {
+      "id": "setup_required",
+      "name": "Set up your facility",
+      "active": true
+    }
+  ],
+  "kitchens": [],
+  "workAreas": [],
+  "sharedMenus": []
+}

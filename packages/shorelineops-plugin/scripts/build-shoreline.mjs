@@ -1,0 +1,12 @@
+import { build } from 'esbuild';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { createHash } from 'node:crypto';
+const target=process.argv[2];
+if(!target)throw new Error('Specify ShorelineOps server/vendor/ross-paperwork directory');
+await fs.mkdir(target,{recursive:true});
+await build({entryPoints:['src/integration/engine.ts'],outfile:path.join(target,'engine.cjs'),bundle:true,platform:'node',format:'cjs',target:'node22',treeShaking:true,plugins:[{name:'no-browser-runtime',setup(builder){builder.onResolve({filter:/^playwright$/},()=>({path:'playwright',namespace:'disabled'}));builder.onLoad({filter:/.*/,namespace:'disabled'},()=>({contents:'export const chromium = { launch(){ throw new Error("Use browser Print / Save as PDF in ShorelineOps"); } };',loader:'js'}));}}]});
+await fs.copyFile('fixtures/default-campus.json',path.join(target,'campus.json'));
+const version=JSON.parse(await fs.readFile('package.json','utf8')).version;
+await fs.writeFile(path.join(target,'manifest.json'),JSON.stringify({name:'ross-paperwork-engine',version,source:'packages/shorelineops-plugin',sha256:createHash('sha256').update(await fs.readFile(path.join(target,'engine.cjs'))).digest('hex')},null,2)+'\n');
+console.log(`Vendored deterministic paperwork engine ${version}; no image, resident record or sample menu included.`);

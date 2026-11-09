@@ -8,6 +8,7 @@ import './index.css'
 import './styles/stitch-system.css'
 import App from './App'
 import AppErrorBoundary from './components/AppErrorBoundary'
+import { AppearanceProvider } from './state/appearance'
 import { installDemoNetworkBoundary } from './demo/networkBoundary'
 
 // Demo-only raw-fetch boundary (compile-time gated): install before React
@@ -30,6 +31,7 @@ const basename = rawBase.length > 1 && rawBase.endsWith('/') ? rawBase.slice(0, 
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <AppearanceProvider>
     <BrowserRouter basename={basename}>
       <AuthProvider>
         <DeviceProvider>
@@ -37,6 +39,7 @@ createRoot(document.getElementById('root')!).render(
         </DeviceProvider>
       </AuthProvider>
     </BrowserRouter>
+    </AppearanceProvider>
   </StrictMode>
 )
 

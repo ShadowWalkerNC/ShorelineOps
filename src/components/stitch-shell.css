@@ -84,4 +84,6 @@
 .stitch-shell-drawer-dialog .stitch-shell-brand{padding-right:30px}
 .stitch-shell-drawer-dialog .clinical-nav-item{min-height:48px;font-size:14px}
 .stitch-shell-drawer-dialog>button:last-child{min-width:48px;min-height:48px}
+.dark .stitch-shell-drawer-dialog{background:var(--bg-card)!important;color:var(--text-primary)}
+.dark .stitch-shell-brand strong span{color:var(--color-primary)}
 

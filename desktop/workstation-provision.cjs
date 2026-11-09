@@ -50,7 +50,7 @@ function ensureWorkstationSecrets(env = process.env, explicitUserData = null) {
       '',
       `  SETUP_BOOTSTRAP_SECRET: ${stored.setupBootstrapSecret}`,
       '',
-      `  Data Directory: ${path.join(dir, 'data')}`,
+      `  Workstation Directory: ${dir}`,
       '======================================================================',
       '',
     ].join(os.EOL)

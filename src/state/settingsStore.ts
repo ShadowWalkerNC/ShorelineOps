@@ -7,7 +7,7 @@ export interface FacilityProfile {
   organization: string
   npiNumber: string
   licenseNumber: string
-  facilityType: 'Assisted Living' | 'Skilled Nursing' | 'Memory Care' | 'Continuing Care' | 'Hospital'
+  facilityType: '' | 'Assisted Living' | 'Skilled Nursing' | 'Memory Care' | 'Continuing Care' | 'Hospital'
   address: string
   phone: string
   email: string
@@ -31,7 +31,7 @@ export interface OperationsConfig {
 }
 
 export interface IntegrationsConfig {
-  primaryDistributor: 'dennis' | 'sysco' | 'usfoods' | 'gordon' | 'pfg'
+  primaryDistributor: '' | 'dennis' | 'sysco' | 'usfoods' | 'gordon' | 'pfg'
   distributorCustomerNumber: string
   pccFacilityId: string
   autoSyncCensus: boolean
@@ -94,43 +94,43 @@ const DEFAULT_SETTINGS: {
   security: SecurityConfig
 } = {
   facility: {
-    name: 'Shoreline Healthcare & Rehabilitation',
-    organization: 'Shoreline Senior Living Group LLC',
-    npiNumber: '1942857102',
-    licenseNumber: 'SNF-ME-40891',
-    facilityType: 'Skilled Nursing',
-    address: '104 Shoreline Drive, Portland, ME 04101',
-    phone: '(207) 555-0199',
-    email: 'dietary.ops@shorelinecare.com',
-    directorOfDining: 'Chef Marcus Vance, CDM, CFPP',
-    registeredDietitian: 'Sarah Jenkins, MS, RDN, LD',
+    name: '',
+    organization: '',
+    npiNumber: '',
+    licenseNumber: '',
+    facilityType: '',
+    address: '',
+    phone: '',
+    email: '',
+    directorOfDining: '',
+    registeredDietitian: '',
   },
   operations: {
-    wings: ['Coastal Wing (Assisted Living)', 'Harbor View (Memory Care)', 'Atlantic Rehab Unit'],
-    diningRooms: ['Main Dining Hall', 'Harbor Bistro', 'In-Room Bedside Tray Service'],
-    targetCpd: 8.75,
+    wings: [],
+    diningRooms: [],
+    targetCpd: 0,
     mealTimes: {
-      breakfast: '07:30',
-      lunch: '12:00',
-      dinner: '17:30',
-      snack: '20:00',
+      breakfast: '',
+      lunch: '',
+      dinner: '',
+      snack: '',
     },
     temperatureUnit: 'F',
     iddsiStrictEnforcement: true,
     fourteenHourRuleCheck: true,
   },
   integrations: {
-    primaryDistributor: 'dennis',
-    distributorCustomerNumber: 'DEN-884910',
-    pccFacilityId: 'FAC-PORTLAND-01',
-    autoSyncCensus: true,
+    primaryDistributor: '',
+    distributorCustomerNumber: '',
+    pccFacilityId: '',
+    autoSyncCensus: false,
     invoiceOcrAutoApprove: false,
   },
   security: {
     sessionTimeoutMinutes: 30,
     hipaaAuditRetentionDays: 2555, // 7 years HIPAA compliance
-    baaSignedDate: '2026-01-15',
-    baaSignee: 'Marcus Vance (Executive Director)',
+    baaSignedDate: '',
+    baaSignee: '',
   },
 }
 

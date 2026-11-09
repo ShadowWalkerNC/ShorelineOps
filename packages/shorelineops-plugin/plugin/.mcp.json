@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "sylvia-ross": {
+      "command": "node",
+      "args": [
+        "${PLUGIN_ROOT}/server.mjs"
+      ],
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}

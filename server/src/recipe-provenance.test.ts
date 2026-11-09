@@ -6,6 +6,9 @@ import path from 'node:path'
 import crypto from 'crypto'
 import express from 'express'
 import bcrypt from 'bcryptjs'
+// The root test runner builds the SDK before running this integration test.
+// A runtime import keeps production server compilation independent of SDK artifacts.
+const { ShorelineClient } = require('../../sdk/dist')
 
 const directory = mkdtempSync(path.join(tmpdir(), 'shoreline-recipe-provenance-'))
 process.env.NODE_ENV = 'test'
@@ -23,6 +26,10 @@ void test('clinical recipe provenance, authorization, tamper-reset, cache invali
   const { adminRouter } = await import('./routes/admin')
   const { tvRouter } = await import('./routes/tv')
   const { errorHandler } = await import('./middleware/errorHandler')
+  const { residentsRouter } = await import('./routes/residents')
+  const { hardwareRouter } = await import('./routes/hardware')
+  const { trayrunsRouter } = await import('./routes/trayruns')
+  const { purchasingRouter } = await import('./routes/purchasing')
   const { signTray, verifyTray } = await import('./engine/traySafety')
 
   await runMigrations()
@@ -46,6 +53,10 @@ void test('clinical recipe provenance, authorization, tamper-reset, cache invali
   app.use('/api/tv', tvRouter)
   app.use('/api/admin', requireAuth, adminRouter)
   app.use('/api/recipes', requireAuth, httpCacheMiddleware(60, 'recipes'), recipesRouter)
+  app.use('/api/residents', requireAuth, residentsRouter)
+  app.use('/api/hardware', requireAuth, hardwareRouter)
+  app.use('/api/trayruns', requireAuth, trayrunsRouter)
+  app.use('/api/purchasing', requireAuth, purchasingRouter)
   app.use(errorHandler)
 
   const server = app.listen(0, '127.0.0.1')
@@ -96,8 +107,8 @@ void test('clinical recipe provenance, authorization, tamper-reset, cache invali
       haccpTempF: 165,
       iddsiLevel: 7,
       ingredients: [
-        { item: 'Rolled Oats', qty: '5 lb' },
-        { item: 'Water', qty: '2 gal' },
+        { item: 'chicken breast', qty: '5 lb' },
+        { item: 'white flour', qty: '250 g' },
       ],
       steps: [{ step: 1, instruction: 'Simmer oats until soft' }],
       notes: 'Standard therapeutic recipe',
@@ -112,6 +123,46 @@ void test('clinical recipe provenance, authorization, tamper-reset, cache invali
   }
 
   try {
+    await t.test('unknown nutrition stays unavailable until a clinician supplies reviewed values and a source', async () => {
+      const created = await request('/api/recipes', managerSession.accessToken, {
+        name: 'Synthetic Unknown Nutrition', ingredients: [{ item: 'Unknown fixture ingredient', qty: '2 cases' }], baseServings: 10,
+      })
+      assert.equal(created.status, 201)
+      const recipe = await created.json() as any
+      assert.equal(recipe.nutrition, null)
+      assert.equal(recipe.nutritionProvenance.available, false)
+      assert.deepEqual(recipe.nutritionProvenance.missingIngredients, ['Unknown fixture ingredient'])
+      assert.equal((await pool.query('SELECT * FROM recipe_nutrients WHERE recipe_id = $1', [recipe.id])).rows.length, 0)
+      const denied = await request(`/api/recipes/${recipe.id}/verify-clinical`, dietitianSession.accessToken, { approvedDiets: ['NAS'] })
+      assert.equal(denied.status, 422)
+
+      // A historical calculated row and old sign-off cannot manufacture source evidence.
+      await pool.query('INSERT INTO recipe_nutrients (recipe_id, calories, protein_g, sodium_mg) VALUES ($1, 999, 99, 1)', [recipe.id])
+      await pool.query('UPDATE recipes SET clinical_verified = true, verified_by = $1, approved_diets = $2 WHERE id = $3', [dietitian.id, JSON.stringify(['NAS']), recipe.id])
+      const legacy = await (await request(`/api/recipes/${recipe.id}`, dietitianSession.accessToken)).json() as any
+      assert.equal(legacy.clinicalVerified, false)
+      assert.equal(legacy.nutrition, null)
+      const residentId = crypto.randomUUID()
+      await pool.query(`INSERT INTO residents (id,name,room,status,profile_version,is_npo,allergies,texture,diet_type,liquid_consistency)
+        VALUES ($1,'Synthetic Nutrition Review','T1','Active',1,0,$2,'Regular','NAS','Thin')`, [residentId, JSON.stringify([])])
+      const ticket = signTray({ residentId, ticketId: 'synthetic-nutrition-review', version: 1, diet: 'NAS', texture: 'Regular', allergies: [], foods: [recipe.name], beverages: [], mealSlot: 'lunch', serviceDate: '2026-11-08' })
+      assert.equal((await verifyTray(ticket)).status, 'HOLD_TRAY_RD_SIGNOFF')
+
+      const perServing = { calories: 200, proteinG: 15, carbsG: 20, fatG: 5, satFatG: 1, sodiumMg: 120, potassiumMg: 100, phosphorusMg: 80, fiberG: 2, sugarG: 0 }
+      const review = await request(`/api/recipes/${recipe.id}/verify-clinical`, dietitianSession.accessToken, {
+        approvedDiets: ['NAS'], canonicalAllergens: [], nutritionReview: { sourceReference: 'Synthetic reviewed nutrition label for acceptance only', perServing },
+      })
+      assert.equal(review.status, 200)
+      const after = await (await request(`/api/recipes/${recipe.id}`, dietitianSession.accessToken)).json() as any
+      assert.equal(after.nutritionProvenance.source, 'clinician-reviewed')
+      assert.equal(after.nutritionProvenance.estimated, false)
+      assert.deepEqual(after.nutrition, perServing)
+      assert.equal((await verifyTray(ticket)).status, 'VALID')
+      const edit = await request(`/api/recipes/${recipe.id}`, managerSession.accessToken, { notes: 'Requires re-review' }, 'PUT')
+      assert.equal(edit.status, 200)
+      assert.equal((await verifyTray(ticket)).status, 'HOLD_TRAY_RD_SIGNOFF')
+    })
+
     await t.test('POST /api/recipes/:id/verify-clinical enforces strict role authorization', async () => {
       const recipe = await createBaseRecipe('Auth Check Oatmeal')
       const payload = {
@@ -325,6 +376,8 @@ void test('clinical recipe provenance, authorization, tamper-reset, cache invali
       const body3 = (await get3.json()) as any
       assert.equal(body3.name, 'Cache Invalidation Soup (Updated)')
       assert.equal(body3.clinicalVerified, false)
+      assert.equal(body3.ingredients.length, 2, 'name-only edits preserve saved ingredients instead of applying create defaults')
+      assert.equal(body3.ingredients[0].qty, '5 lb')
 
       // Cache is now warm again (HIT)
       const get4 = await request(`/api/recipes/${recipe.id}`, dietitianSession.accessToken)
@@ -460,6 +513,30 @@ void test('clinical recipe provenance, authorization, tamper-reset, cache invali
       const sched3 = await request('/api/tv/schedule-today', displayToken)
       const body3 = (await sched3.json()) as any
       assert.ok(!body3.shifts.some((s: any) => s.name === 'Robin Wood'))
+    })
+    await t.test('SDK talks to actual facility recipe, resident, HACCP and signed-tray routes', async () => {
+      const client = new ShorelineClient({ baseUrl: base, apiKey: managerSession.accessToken })
+      const clinical = new ShorelineClient({ baseUrl: base, apiKey: dietitianSession.accessToken })
+      const imported = await client.importCensusCsv('name,room,status,dietType,texture,liquidConsistency,isNpo\nSynthetic SDK Resident,SDK-1,Active,Regular,Regular,Thin,false')
+      assert.equal(imported.created, 1)
+      const census = await client.getCensus()
+      assert.equal(census.source, 'resident-list')
+      assert.ok(census.residents.some((resident: { name: string; dietType: string; isNpo: boolean }) => resident.name === 'Synthetic SDK Resident' && resident.dietType === 'Regular' && resident.isNpo === false))
+      const recipe = await createBaseRecipe('Synthetic SDK Known Recipe')
+      assert.equal((await client.getRecipe(recipe.id)).nutritionProvenance.source, 'local-reference')
+      const unavailable = await client.analyzeRecipeNutrition({ ingredients: [{ item: 'Unknown SDK ingredient', qty: '2 cases' }] })
+      assert.equal(unavailable.perServing, null)
+      assert.equal(unavailable.nutritionProvenance.available, false)
+      assert.equal((await clinical.verifyRecipeClinical(recipe.id, { approvedDiets: ['Regular'], canonicalAllergens: [] })).clinicalVerified, true)
+      const log = await client.logHaccpTemperature({ checkType: 'food', itemName: 'Synthetic SDK temperature check', tempF: 165 })
+      assert.equal(log.success, true)
+      assert.equal(Number(log.record.temp_f), 165)
+      assert.equal(typeof (await client.getHaccpSchedule()).generatedAt, 'string')
+      const runResponse = await request('/api/trayruns', managerSession.accessToken, { mealSlot: 'lunch', serviceDate: '2026-11-08' })
+      assert.equal(runResponse.status, 201)
+      const run = await runResponse.json() as { id: string }
+      assert.ok((await client.getTrayRuns('2026-11-08', 'lunch')).some((item: { id: string }) => item.id === run.id))
+      await assert.rejects(client.recordTrayEvent(run.id, { event: 'assembled', rawQrPayload: 'invalid-synthetic-card' }), (error: unknown) => (error as { status?: number }).status === 409)
     })
   } finally {
     server.close()

@@ -182,10 +182,11 @@ async function runAllTests() {
   const { DietaryNutritionalEngine } = await import('./engine/nutrition')
   const chickenRecipeNutrition = DietaryNutritionalEngine.calculateRecipeNutrition([
     { item: 'chicken breast', qty: '10 lbs' },
-    { item: 'butter', qty: '1 cup' },
-    { item: 'white flour', qty: '2 cups' },
+    { item: 'whole milk', qty: '200 g' },
+    { item: 'white flour', qty: '250 g' },
   ], 20)
 
+  if (!chickenRecipeNutrition.perServing) throw new Error('Known weighed reference ingredients must produce nutrition')
   assert(chickenRecipeNutrition.perServing.calories > 200, 'NutritionEngine: accurately computes recipe per-serving calories')
   assert(chickenRecipeNutrition.perServing.proteinG > 20, 'NutritionEngine: accurately computes per-serving protein')
   assert(chickenRecipeNutrition.allergens.includes('Dairy') && chickenRecipeNutrition.allergens.includes('Gluten'), 'NutritionEngine: auto-detects Dairy and Gluten allergens from ingredients')
@@ -856,13 +857,16 @@ async function runAllTests() {
   const { StripeBillingEngine } = await import('./billing/stripeEngine')
   const { HubAndSpokeSyndicationEngine } = await import('./engine/syndication')
 
-  // 1. Stripe Per-Bed Billing Solver
+  // 1. Approved monthly facility plans
   const smallHomeFee = StripeBillingEngine.calculateMonthlyFee(20)
-  assert(smallHomeFee.monthlyTotal === 50.00, 'StripeEngine: computes $50.00/mo ($2.50/bed) for 20-bed home')
+  assert(smallHomeFee.monthlyTotal === 199, 'StripeEngine: Pro Cloud costs $199 per facility')
   
-  const enterpriseFee = StripeBillingEngine.calculateMonthlyFee(200)
-  assert(enterpriseFee.tier === 'ENTERPRISE_TIER', 'StripeEngine: applies Enterprise volume tier for >= 150 beds')
-  assert(enterpriseFee.monthlyTotal === 330.00, 'StripeEngine: computes $330.00/mo ($1.65/bed) for 200-bed campus')
+  const enterpriseFee = StripeBillingEngine.calculateMonthlyFee(200, 0, 'ENTERPRISE_TIER')
+  assert(enterpriseFee.tier === 'ENTERPRISE_TIER', 'StripeEngine: uses the selected Enterprise plan')
+  assert(enterpriseFee.monthlyTotal === 399, 'StripeEngine: Enterprise costs $399 per facility')
+  assert(enterpriseFee.activeCensus === 0, 'StripeEngine: preserves an empty recorded census')
+  assert(StripeBillingEngine.calculateMonthlyFee(200).monthlyTotal === 199, 'StripeEngine: bed count never changes the selected plan')
+  assert(StripeBillingEngine.calculateMonthlyFee(20, 0, 'COMMUNITY').monthlyTotal === 0, 'StripeEngine: Community costs $0')
 
   // 2. Clinical Grace Dunning Safety Invariant
   const failedPaymentEvent = {
@@ -876,6 +880,7 @@ async function runAllTests() {
     },
   }
   const dunningResult = StripeBillingEngine.handleStripeWebhookEvent(failedPaymentEvent)
+  assert(dunningResult.notificationDispatched === false, 'StripeEngine: never claims an unsent notification was dispatched')
   assert(dunningResult.dunningStatus.clinicalLockoutAllowed === false, 'StripeEngine: INVARIANT holds - clinical meal service lockout is strictly prohibited on billing failure')
   assert(dunningResult.dunningStatus.status === 'PAST_DUE', 'StripeEngine: triggers administrative dunning warning status')
 
@@ -1183,7 +1188,7 @@ async function runAllTests() {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ success: true, mocked: true }),
+        json: async () => capturedUrl.endsWith('/api/residents') ? [] : ({ success: true, mocked: true }),
       } as any
     }) as typeof fetch
 
@@ -1222,8 +1227,8 @@ async function runAllTests() {
     assert(capturedUrl === 'https://demo.shorelineops.com/api/residents/import-csv', 'SDK: importCensusCsv hits import endpoint')
 
     // Test 7: getTrayRuns
-    await client.getTrayRuns('2026-09-18', 'Lunch')
-    assert(capturedUrl.includes('/api/trayruns?serviceDate=2026-09-18&mealSlot=Lunch'), 'SDK: getTrayRuns formats query parameters correctly')
+    await client.getTrayRuns('2026-09-18', 'lunch')
+    assert(capturedUrl.includes('/api/trayruns?serviceDate=2026-09-18&mealSlot=lunch'), 'SDK: getTrayRuns formats query parameters correctly')
 
     // Test 8: Error handling
     globalThis.fetch = (async () => {
@@ -1237,7 +1242,7 @@ async function runAllTests() {
 
     let caughtError: any = null
     try {
-      await client.getCmsSurveyBinder()
+      await client.getResidents()
     } catch (e) {
       caughtError = e
     }

@@ -27,6 +27,15 @@ export interface IngredientNutrientProfile extends NutrientValues {
   iddsiSuitableLevels: number[] // IDDSI levels 3-7
 }
 
+export interface NutritionProvenance {
+  source: 'local-reference'
+  available: boolean
+  estimated: true
+  missingIngredients: string[]
+  weightRequiredIngredients: string[]
+  requiresClinicalReview: true
+}
+
 export interface ClinicalConstraintRule {
   dietOrder: string
   minCaloriesPerMeal?: number
@@ -266,31 +275,32 @@ export class DietaryNutritionalEngine {
   /**
    * Find matching nutrient profile from internal database
    */
-  static lookupNutrientProfile(itemName: string): IngredientNutrientProfile {
+  static lookupNutrientProfile(itemName: string): IngredientNutrientProfile | null {
     const lower = itemName.toLowerCase().trim()
     for (const [key, profile] of Object.entries(INGREDIENT_NUTRIENT_LIBRARY)) {
-      if (lower.includes(key) || key.includes(lower)) {
+      if (lower === key || lower === profile.itemName.toLowerCase()) {
         return profile
       }
     }
 
-    // Default fallback approximation
-    return {
-      itemName,
-      referenceGrams: 100,
-      calories: 120,
-      proteinG: 5.0,
-      carbsG: 15.0,
-      fatG: 4.0,
-      satFatG: 1.0,
-      sodiumMg: 120,
-      potassiumMg: 150,
-      phosphorusMg: 100,
-      fiberG: 1.5,
-      sugarG: 2.0,
-      allergens: [],
-      iddsiSuitableLevels: [7],
-    }
+    return null
+  }
+
+  static recipeNutritionProvenance(raw: unknown): NutritionProvenance {
+    let ingredients: Array<{ item: string; qty: string }> = []
+    try {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+      if (Array.isArray(parsed) && parsed.every(item => item && typeof item.item === 'string' && typeof item.qty === 'string')) ingredients = parsed
+    } catch { /* Invalid stored ingredient records cannot establish nutrition. */ }
+    const missingIngredients = ingredients.filter(ingredient => !this.lookupNutrientProfile(ingredient.item)).map(ingredient => ingredient.item)
+    const weightRequiredIngredients = ingredients.filter(ingredient => {
+      // Counts, unknown units and density approximations cannot establish clinical nutrient quantities.
+      if (!/^(?:\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)\s*(?:g|grams?|kg|kilograms?|oz|ounces?|lb|lbs|pounds?)$/i.test(ingredient.qty.trim())) return true
+      const { amount } = UnitConversionEngine.parseQuantityString(ingredient.qty)
+      return !Number.isFinite(amount) || amount < 0
+    }).map(ingredient => ingredient.item)
+    return { source: 'local-reference', available: ingredients.length > 0 && missingIngredients.length === 0 && weightRequiredIngredients.length === 0,
+      estimated: true, missingIngredients, weightRequiredIngredients, requiresClinicalReview: true }
   }
 
   /**
@@ -300,8 +310,9 @@ export class DietaryNutritionalEngine {
     ingredients: Array<{ item: string; qty: string }>,
     baseServings: number
   ): {
-    perServing: NutrientValues
-    totalBatch: NutrientValues
+    perServing: NutrientValues | null
+    totalBatch: NutrientValues | null
+    nutritionProvenance: NutritionProvenance
     allergens: string[]
     ingredientContributions: Array<{
       item: string
@@ -312,7 +323,8 @@ export class DietaryNutritionalEngine {
     }>
   } {
     const servings = Math.max(1, baseServings)
-    let totalGrams = 0
+    const nutritionProvenance = this.recipeNutritionProvenance(ingredients)
+    if (!Number.isFinite(baseServings) || baseServings <= 0) nutritionProvenance.available = false
     const totalBatch: NutrientValues = {
       calories: 0,
       proteinG: 0,
@@ -338,9 +350,9 @@ export class DietaryNutritionalEngine {
       const parsed = UnitConversionEngine.parseQuantityString(ing.qty)
       const converted = UnitConversionEngine.convert(parsed.amount, parsed.unit, 'g', ing.item)
       const grams = converted.convertedAmount
-      totalGrams += grams
 
       const profile = this.lookupNutrientProfile(ing.item)
+      if (!profile || nutritionProvenance.weightRequiredIngredients.includes(ing.item)) continue
       const factor = grams / profile.referenceGrams
 
       const cals = profile.calories * factor
@@ -390,8 +402,9 @@ export class DietaryNutritionalEngine {
     const allergens = this.detectAllergens(ingredients)
 
     return {
-      perServing,
-      totalBatch,
+      perServing: nutritionProvenance.available ? perServing : null,
+      totalBatch: nutritionProvenance.available ? totalBatch : null,
+      nutritionProvenance,
       allergens,
       ingredientContributions: contributions,
     }

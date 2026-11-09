@@ -28,6 +28,7 @@ function run(args, cwd, childEnv = env, timeout = 600_000) {
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 run([path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', path.join(root, 'sdk', 'tsconfig.json')], root)
+run(['--test', path.join(root, 'sdk', 'test.cjs')], directory)
 run([path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', path.join(root, 'server', 'tsconfig.json')], root)
 if (process.argv.includes('--backup-diagnostics')) {
   env.SHORELINE_BACKUP_DIAGNOSTICS = 'true'
@@ -37,5 +38,7 @@ if (process.argv.includes('--backup-diagnostics')) {
 }
 run([path.join(dist, 'system.test.js')], directory)
 const cases = readdirSync(dist).filter(name => name.endsWith('.test.js') && !['system.test.js', 'compliance.test.js'].includes(name))
-run(['--test', '--test-concurrency=1', ...cases.map(name => path.join(dist, name))], directory)
+// Bound each isolated file, rather than the aggregate duration of the whole
+// suite. A busy workstation must not lose its remaining checks after 10 minutes.
+for (const name of cases) run(['--test', path.join(dist, name)], directory, env, 180_000)
 run(['--test', path.join(root, 'desktop', 'backend.test.cjs')], directory)

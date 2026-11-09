@@ -1,5 +1,7 @@
 # ShorelineOps Master Services & Software License Agreement (SaaS / On-Premise)
 
+**DRAFT — legal review required before execution.**
+
 **Effective Date:** ________________________  
 **Client / Facility Name:** ____________________________________________ ("Customer")  
 **Provider:** Shoreline Operations Platform ("Provider")  
@@ -15,7 +17,7 @@ This Master Services Agreement ("Agreement") governs Customer's access to and us
 ---
 
 ### 2. Fees, Billing & Term
-2.1 **Subscription Fees**: Customer agrees to pay the monthly or annual subscription fee associated with their selected tier (Starter $199/mo, Professional $399/mo, or Enterprise $699/mo) as set forth in the applicable Order Form.  
+2.1 **Subscription Fees**: Monthly pricing per facility is Community $0, Pro Cloud $199, or Enterprise $399, as selected in the applicable Order Form. Annual terms require a separately agreed Order Form.
 2.2 **Payment Terms**: Fees are billed in advance on a recurring monthly or annual cycle. Invoices are due net-30 days from date of issuance.  
 2.3 **Term & Termination**: Either party may terminate this Agreement without penalty by providing thirty (30) days written notice prior to the expiration of the current billing period. Upon termination, Customer retains full ownership and export rights to all resident records and purchasing history.
 

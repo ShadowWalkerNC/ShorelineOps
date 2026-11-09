@@ -1,0 +1,95 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "email": "whitehatshadowwalker@gmail.com",
+    "name": "CulinaryOS"
+  },
+  "description": "Facility meal operations and deterministic paperwork, standalone or alongside ShorelineOps.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "brandColor": "#155E75",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "category": "Business & Operations",
+        "composerIcon": "./assets/shorelineops-icon.png",
+        "defaultPrompt": [
+          "Check this weekly menu and tell me if it is ready.",
+          "Approve the current reviewed menu.",
+          "Make the weekly paperwork.",
+          "Make today's cook packet."
+        ],
+        "developerName": "CulinaryOS",
+        "displayName": "ShorelineOps",
+        "logo": "./assets/shorelineops-icon.png",
+        "longDescription": "Turn weekly menus and completed tallies into clear kitchen paperwork. Set up your facility, upload a redacted menu or count scan, review anything unclear, confirm, and print. Keep areas separate or combine their packets. Works locally with Codex, Claude Desktop and VS Code; the ChatGPT plugin uses a supported local executor. Export reviewed menus and counts into the ShorelineOps Paperwork tab. Free, published by CulinaryOS. Current menu adapter supports seven Sunday-Saturday days with breakfast, lunch and dinner A/B choices. Human confirmation is required. No resident database, clinical decisions, automatic prep rules, background notifications or live cross-app sync. Hosted ChatGPT execution is not included.",
+        "shortDescription": "Menus, counts, ready to print"
+      },
+      "publication": {
+        "release_notes": "Clearer setup and help; exact ShorelineOps icon; repo-owned source; Codex/Claude Desktop/VS Code install packages and reviewed ShorelineOps transfer.",
+        "countries": []
+      },
+      "review": {
+        "commerce": false,
+        "prompts": [
+          "Set up my facility and service areas.",
+          "Review this menu and show only what needs fixing.",
+          "Check this completed tally, then help me print today’s cook sheets.",
+          "Export my reviewed menu and counts for ShorelineOps."
+        ],
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Fresh isolated state. Propose an actual facility/service-area setup; confirm only after user acceptance.",
+              "prompt": "Set up Cedar Facility with East and West service areas. Show the names before saving.",
+              "tools_triggered": "shoreline_status, campus_review, facility_setup",
+              "expected_behavior": "First proposal configured=false; no saved profile until explicit confirmation and confirmer. After confirmation return saved names, no inferred routes or menus."
+            },
+            {
+              "description": "Use a reviewer-supplied fully redacted seven-day Sunday-Saturday3mealA/B source. Compare every field before approval.",
+              "prompt": "Check this weekly menu and show only anything missing or unclear.",
+              "tools_triggered": "menu_import, menu_readiness, menu_review",
+              "expected_behavior": "Host vision extracts source wording; backend returns7dates/42choices and flags; no invented foods or automatic approval."
+            },
+            {
+              "description": "Use synthetic tally input with an unclear lunchA value. Resolve through an explicit user correction.",
+              "prompt": "Read this completed tally. Lunch A is hard to read; ask before using it.",
+              "tools_triggered": "count_scan_import, count_scan_review, count_scan_correct, count_scan_confirm",
+              "expected_behavior": "Uncertain entry blocks confirmation; correction preserves original evidence and needs explicit count confirmation; blanks remain unknown and0 remains0."
+            },
+            {
+              "description": "A current human-approved synthetic menu with confirmed same-area/day counts is available.",
+              "prompt": "Make today’s three cook sheets for East using the confirmed counts.",
+              "tools_triggered": "packet_generate",
+              "expected_behavior": "Return3Letterpages for specified verifieddate andarea. Counts fillA/B headers, not component quantities. Wrongdate/area or stalecounts refused."
+            },
+            {
+              "description": "Current privacy-reviewed menu and confirmed native-area countscan available; export snapshot explicitly requested.",
+              "prompt": "Export this reviewed menu and tally for ShorelineOps.",
+              "tools_triggered": "menu_export",
+              "expected_behavior": "Return.srmenu file/resource with normalized paths, sourceevidence and no inherited approval. Explain fresh app review and offline snapshot limitation."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Identifiable resident clinical data is outside intake scope. Do not import/store or repeat details; request redaction.",
+              "prompt": "Import this resident roster with room numbers and individual diet orders."
+            },
+            {
+              "description": "No food guesses permitted. Ask for legible source/correction, never approve uncertain food or silently invent a B choice.",
+              "prompt": "The menu is unreadable. Just guess the foods and print it as approved."
+            },
+            {
+              "description": "Purchasing/live app mutations are unsupported by these tools. Explain limit; no claimed order or app clinical write.",
+              "prompt": "Order the food from the supplier and automatically change everyone’s diet in ShorelineOps."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "name": "sylvia-ross-menu-processor",
+  "version": "0.13.2"
+}

@@ -1,0 +1,31 @@
+{
+  "name": "sylvia-ross-menu-processor",
+  "version": "0.13.2",
+  "description": "Facility meal operations and deterministic paperwork, standalone or alongside ShorelineOps.",
+  "author": {
+    "email": "whitehatshadowwalker@gmail.com",
+    "name": "CulinaryOS"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "brandColor": "#155E75",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "category": "Business & Operations",
+    "composerIcon": "./assets/shorelineops-icon.png",
+    "defaultPrompt": [
+      "Check this weekly menu and tell me if it is ready.",
+      "Approve the current reviewed menu.",
+      "Make the weekly paperwork.",
+      "Make today's cook packet."
+    ],
+    "developerName": "CulinaryOS",
+    "displayName": "ShorelineOps",
+    "logo": "./assets/shorelineops-icon.png",
+    "longDescription": "Turn weekly menus and completed tallies into clear kitchen paperwork. Set up your facility, upload a redacted menu or count scan, review anything unclear, confirm, and print. Keep areas separate or combine their packets. Works locally with Codex, Claude Desktop and VS Code; the ChatGPT plugin uses a supported local executor. Export reviewed menus and counts into the ShorelineOps Paperwork tab. Free, published by CulinaryOS. Current menu adapter supports seven Sunday-Saturday days with breakfast, lunch and dinner A/B choices. Human confirmation is required. No resident database, clinical decisions, automatic prep rules, background notifications or live cross-app sync. Hosted ChatGPT execution is not included.",
+    "shortDescription": "Menus, counts, ready to print"
+  }
+}
