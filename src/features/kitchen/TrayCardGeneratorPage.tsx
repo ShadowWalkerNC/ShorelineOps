@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useResidentsStore } from '../../state/residentsStore'
 import { tokenManager } from '@/security/tokenManager'
 import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
-import { encodeQr, qrToSvg } from '../../lib/qrcode'
 import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from './KitchenModeContext'
 import ClinicalSafetyStrip from './ClinicalSafetyStrip'
 import {
@@ -43,39 +42,10 @@ interface TrayCard {
   npoReason?: string
   fluidRestrictionMl?: number
   profileVersion: number
-  qrToken: string
   selectedEntree: string
   selectedSides: string[]
   selectedBeverages: string[]
   specialNotes: string
-}
-
-/** Real scannable QR for the engine's signed ticketId:profileVersion:hash token. */
-function TrayQr({ token }: { token: string }) {
-  const svg = useMemo(() => {
-    try {
-      // qrToSvg renders the exact token the assembly scanner verifies.
-      return qrToSvg(encodeQr(token), 4, 2)
-    } catch {
-      return null
-    }
-  }, [token])
-  if (!svg) {
-    return (
-      <div className="p-1 rounded bg-red-50 border border-red-300 text-xs font-bold text-red-700 text-center">
-        QR UNAVAILABLE
-      </div>
-    )
-  }
-  return (
-    <div
-      className="p-1 rounded bg-white border border-slate-200"
-      // The token is engine-generated (alphanumeric + : hex); safe to inline.
-      dangerouslySetInnerHTML={{ __html: svg }}
-      role="img"
-      aria-label={`Tray ticket QR ${token}`}
-    />
-  )
 }
 
 function TrayCardGeneratorPageInner() {
@@ -141,7 +111,7 @@ function TrayCardGeneratorPageInner() {
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Point-of-service clinical meal verification tickets with IDDSI 2.0 textures, fluid consistencies, and allergen hard-blocks.
-            Every card carries the engine&apos;s signed, scannable verification token.
+            Check the printed version stamp, diet order, and allergy details when verifying each tray.
           </p>
         </div>
 
@@ -196,7 +166,7 @@ function TrayCardGeneratorPageInner() {
       {error && !loading && (
         <div className="no-print p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border-2 border-red-300 text-sm font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 shrink-0" />
-          <span>Could not load tray cards: {error}. Cards are not printed without a signed verification token.</span>
+          <span>Could not load tray cards: {error}. Printed cards include a version stamp, diet order, and allergy details for paper verification; confirm these against current orders before service.</span>
         </div>
       )}
 
@@ -238,9 +208,6 @@ function TrayCardGeneratorPageInner() {
                     <span className="text-sm font-black uppercase text-teal-700 dark:text-teal-300 font-mono px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">
                       {card.mealSlot}
                     </span>
-                    <div className="w-16 h-16">
-                      <TrayQr token={card.qrToken} />
-                    </div>
                   </div>
                 </div>
 
@@ -315,7 +282,7 @@ function TrayCardGeneratorPageInner() {
                   <HeartPulse className="w-3 h-3" />
                   <span>SIGNED v{card.profileVersion}</span>
                 </div>
-                <span className="truncate max-w-[55%]" title={card.qrToken}>{card.ticketId}</span>
+                <span className="truncate max-w-[55%]">{card.ticketId}</span>
               </div>
             </AppleCard>
           )
