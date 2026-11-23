@@ -1,5 +1,20 @@
 # ShorelineOps project cache
 
+## Standalone Rust product direction (2026-11-16)
+
+- The free self-hosted product is a Rust desktop client and facility-owned service with a versioned API and bundled SQLite. Start with Windows and Ubuntu x64. The facility must be able to operate offline and on its own LAN. Railway SaaS and optional CulinaryOS integrations are separate delivery tracks.
+- The paper workflow is finalized menu and diet-order revisions → printed meal tickets → paper return entry → dietitian verification → kitchen counts by exact portion and texture. `native-desktop/core` contains the print template and packet checks. Missing costs leave the per-meal average unavailable.
+- The Windows proof installer now bundles the worklist and the loopback-only facility host. Native tests cover reconciliation, print markup and SQLite initialization/restart. See [the standalone guide](docs/SHORELINEOPS_STANDALONE.md) for current behavior, operator workflows and pilot acceptance.
+- The host can initialize a named facility once via its local operator CLI and report initialization status on loopback. Schema v2 upgrades blank v1 hosts transactionally. The next release gate is desktop-managed startup and onboarding, audited staff access and clinical records, followed by the desktop-to-host paper workflow. LAN exposure requires authenticated transport, role enforcement and multi-workstation tests. Complete restore, physical printing and accessibility acceptance before use with real facility records.
+
+## Ownership and next acceptance gates (2026-11-15)
+
+- Codex owns integration and acceptance. Gemini's read-only review `SHORELINEOPS-9556` is recorded in `.ai/HANDOFF.md`. Direct Git and installer evidence correct its clean-tree and Linux install claims.
+- `main` tops out at `f728703` locally and `4e57c1b` on GitHub. The existing Windows and Linux Electron installers are the release baseline. Windows graphical and install checks and Ubuntu under WSL Debian install and uninstall pass. Complete Linux graphical, upgrade and restore acceptance before release. Then obtain signing credentials and publish the accepted artifacts with verified download links.
+- The existing Rust work is in untracked `native-desktop/` and `docs/NATIVE_REBUILD_PLAN.md`; keep the separate audit edit and worktrees intact. On Windows, `cargo test --locked --offline --manifest-path native-desktop/Cargo.toml --workspace` compiled both prototypes and ran zero tests. `cargo fmt --manifest-path native-desktop/Cargo.toml --all -- --check` passed. This proves a Windows build only.
+- Native work starts with the existing shared worklist on Windows and Linux, and an Android package on hardware. Record keyboard and screen-reader behavior, large text, touch, activity restart, printing and scanner feasibility. Then implement empty-facility onboarding and scoped access, followed by resident diet order, menu assignment and tray verification with regression fixtures and facility acceptance. Treat the current Android NativeActivity renderer as provisional until TalkBack is demonstrated.
+- Railway still reports the same staged account service and PostgreSQL patch with 43 changes. Build configuration, public origin, secrets, health and hosted account acceptance remain open. Customer activation stays owner-controlled and Stripe remains deferred.
+
 ## Active release work
 
 Desktop-first release assessment and packaging are in progress on `main`. Current evidence and acceptance gates live in `docs/DESKTOP_SAAS_RELEASE.md`. Historical production-ready labels and test counts require current verification.

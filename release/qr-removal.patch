@@ -1,0 +1,947 @@
+diff --git a/src/features/kitchen/TrayCardGeneratorPage.tsx b/src/features/kitchen/TrayCardGeneratorPage.tsx
+index 768041b..f2c5fb1 100644
+--- a/src/features/kitchen/TrayCardGeneratorPage.tsx
++++ b/src/features/kitchen/TrayCardGeneratorPage.tsx
+@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react'
+ import { useResidentsStore } from '../../state/residentsStore'
+ import { tokenManager } from '@/security/tokenManager'
+ import { AppleBadge, AppleButton, AppleCard } from '@/apple-ui'
+-import { encodeQr, qrToSvg } from '../../lib/qrcode'
+ import { KitchenModeProvider, KitchenFitShell, KitchenModeToggle } from './KitchenModeContext'
+ import ClinicalSafetyStrip from './ClinicalSafetyStrip'
+ import {
+@@ -43,41 +42,12 @@ interface TrayCard {
+   npoReason?: string
+   fluidRestrictionMl?: number
+   profileVersion: number
+-  qrToken: string
+   selectedEntree: string
+   selectedSides: string[]
+   selectedBeverages: string[]
+   specialNotes: string
+ }
+ 
+-/** Real scannable QR for the engine's signed ticketId:profileVersion:hash token. */
+-function TrayQr({ token }: { token: string }) {
+-  const svg = useMemo(() => {
+-    try {
+-      // qrToSvg renders the exact token the assembly scanner verifies.
+-      return qrToSvg(encodeQr(token), 4, 2)
+-    } catch {
+-      return null
+-    }
+-  }, [token])
+-  if (!svg) {
+-    return (
+-      <div className="p-1 rounded bg-red-50 border border-red-300 text-xs font-bold text-red-700 text-center">
+-        QR UNAVAILABLE
+-      </div>
+-    )
+-  }
+-  return (
+-    <div
+-      className="p-1 rounded bg-white border border-slate-200"
+-      // The token is engine-generated (alphanumeric + : hex); safe to inline.
+-      dangerouslySetInnerHTML={{ __html: svg }}
+-      role="img"
+-      aria-label={`Tray ticket QR ${token}`}
+-    />
+-  )
+-}
+-
+ function TrayCardGeneratorPageInner() {
+   const { residents } = useResidentsStore()
+   const [selectedWing, setSelectedWing] = useState<string>('all')
+@@ -141,7 +111,7 @@ function TrayCardGeneratorPageInner() {
+           </div>
+           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+             Point-of-service clinical meal verification tickets with IDDSI 2.0 textures, fluid consistencies, and allergen hard-blocks.
+-            Every card carries the engine&apos;s signed, scannable verification token.
++            Check the printed version stamp, diet order, and allergy details when verifying each tray.
+           </p>
+         </div>
+ 
+@@ -196,7 +166,7 @@ function TrayCardGeneratorPageInner() {
+       {error && !loading && (
+         <div className="no-print p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border-2 border-red-300 text-sm font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
+           <ShieldAlert className="w-5 h-5 shrink-0" />
+-          <span>Could not load tray cards: {error}. Cards are not printed without a signed verification token.</span>
++          <span>Could not load tray cards: {error}. Printed cards include a version stamp, diet order, and allergy details for paper verification; confirm these against current orders before service.</span>
+         </div>
+       )}
+ 
+@@ -238,9 +208,6 @@ function TrayCardGeneratorPageInner() {
+                     <span className="text-sm font-black uppercase text-teal-700 dark:text-teal-300 font-mono px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">
+                       {card.mealSlot}
+                     </span>
+-                    <div className="w-16 h-16">
+-                      <TrayQr token={card.qrToken} />
+-                    </div>
+                   </div>
+                 </div>
+ 
+@@ -315,7 +282,7 @@ function TrayCardGeneratorPageInner() {
+                   <HeartPulse className="w-3 h-3" />
+                   <span>SIGNED v{card.profileVersion}</span>
+                 </div>
+-                <span className="truncate max-w-[55%]" title={card.qrToken}>{card.ticketId}</span>
++                <span className="truncate max-w-[55%]">{card.ticketId}</span>
+               </div>
+             </AppleCard>
+           )
+diff --git a/src/features/kitchen/components/TrayAssemblyScanner.tsx b/src/features/kitchen/components/TrayAssemblyScanner.tsx
+deleted file mode 100644
+index 913336b..0000000
+--- a/src/features/kitchen/components/TrayAssemblyScanner.tsx
++++ /dev/null
+@@ -1,397 +0,0 @@
+-import React, { useState } from 'react'
+-import { AppleButton, AppleBadge } from '@/apple-ui'
+-import { tokenManager } from '../../../security/tokenManager'
+-
+-export interface ScanValidationResult {
+-  status: 'VALID' | 'SUPERSEDED' | 'INVALID_HASH' | 'NPO_ALERT' | 'HOLD_TRAY_RD_SIGNOFF'
+-  residentName?: string
+-  roomBed?: string
+-  currentProfileVersion?: number
+-  ticketProfileVersion?: number
+-  message?: string
+-  triageReason?: string
+-  // B14 demo-honesty: set when the result was fabricated client-side because the
+-  // validation service was unreachable — never present it as a real verification.
+-  simulated?: boolean
+-}
+-
+-export default function TrayAssemblyScanner() {
+-  const [scanInput, setScanInput] = useState('')
+-  const [loading, setLoading] = useState(false)
+-  const [scanResult, setScanResult] = useState<ScanValidationResult | null>(null)
+-  const [scanHistory, setScanHistory] = useState<Array<ScanValidationResult & { timestamp: string }>>([])
+-
+-  // Web Audio chime / buzzer synthesizer (zero external assets needed)
+-  const playFeedbackSound = (type: 'success' | 'alert') => {
+-    try {
+-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+-      if (!AudioCtx) return
+-      const ctx = new AudioCtx()
+-      const osc = ctx.createOscillator()
+-      const gain = ctx.createGain()
+-      osc.connect(gain)
+-      gain.connect(ctx.destination)
+-
+-      if (type === 'success') {
+-        osc.type = 'sine'
+-        osc.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
+-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1) // A5
+-        gain.gain.setValueAtTime(0.2, ctx.currentTime)
+-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
+-        osc.start()
+-        osc.stop(ctx.currentTime + 0.3)
+-      } else {
+-        // Harsh alert buzzer
+-        osc.type = 'sawtooth'
+-        osc.frequency.setValueAtTime(220, ctx.currentTime) // A3
+-        osc.frequency.setValueAtTime(164.81, ctx.currentTime + 0.15) // E3
+-        gain.gain.setValueAtTime(0.4, ctx.currentTime)
+-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+-        osc.start()
+-        osc.stop(ctx.currentTime + 0.5)
+-      }
+-    } catch {
+-      // AudioContext unavailable or blocked
+-    }
+-  }
+-
+-  const triggerHaptic = () => {
+-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+-      navigator.vibrate([200, 100, 200])
+-    }
+-  }
+-
+-  /**
+-   * B12 hook: on a VALID scan, also record the 'assembled' tray-tracking event
+-   * (fire-and-forget — assembly verification outcomes are never altered by this).
+-   */
+-  const recordAssembledEvent = async (rawQrPayload: string) => {
+-    try {
+-      const ticketId = rawQrPayload.split(':')[0] ?? ''
+-      if (!ticketId) return
+-      const token = tokenManager.getAccessToken() ?? localStorage.getItem('shoreline_auth_token')
+-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+-      if (token) headers['Authorization'] = `Bearer ${token}`
+-
+-      const h = new Date().getHours() + new Date().getMinutes() / 60
+-      const mealSlot = h < 10 ? 'breakfast' : h < 11 ? 'morningSnack' : h < 14 ? 'lunch' : h < 16 ? 'afternoonSnack' : h < 20.5 ? 'dinner' : 'breakfast'
+-
+-      const ensureRes = await fetch('/api/trayruns/ensure', {
+-        method: 'POST',
+-        headers,
+-        body: JSON.stringify({ mealSlot }),
+-      })
+-      if (!ensureRes.ok) return
+-      const { run } = await ensureRes.json()
+-      if (!run?.id) return
+-
+-      await fetch(`/api/trayruns/${run.id}/events`, {
+-        method: 'POST',
+-        headers,
+-        body: JSON.stringify({
+-          ticketId,
+-          event: 'assembled',
+-          note: 'Assembled at tray line — QR scan verified',
+-        }),
+-      })
+-    } catch {
+-      // Non-fatal: tracking must never break the assembly flow.
+-    }
+-  }
+-
+-  const handleScan = async (rawQrPayload: string) => {
+-    if (!rawQrPayload.trim()) return
+-    setLoading(true)
+-    try {
+-      const token = localStorage.getItem('shoreline_auth_token')
+-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+-      if (token) headers['Authorization'] = `Bearer ${token}`
+-
+-      const res = await fetch('/api/kitchen/verify-tray-scan', {
+-        method: 'POST',
+-        headers,
+-        body: JSON.stringify({ rawQrPayload: rawQrPayload.trim() }),
+-      })
+-
+-      let result: ScanValidationResult
+-      if (res.ok) {
+-        result = await res.json()
+-      } else {
+-        // Fallback simulation for offline testing — NEVER present as a real scan
+-        // verification. Labels itself simulated and uses no plausible fake room.
+-        const parts = rawQrPayload.split(':')
+-        const profileVer = parts[1] ? parseInt(parts[1], 10) : 1
+-        result = {
+-          status: profileVer < 2 ? 'SUPERSEDED' : 'VALID',
+-          residentName: 'Sample Resident (offline simulation)',
+-          roomBed: '—',
+-          currentProfileVersion: 2,
+-          ticketProfileVersion: profileVer,
+-          message: profileVer < 2
+-            ? 'Offline simulation — diet order may have changed. Re-scan when connected.'
+-            : 'Offline simulation — NOT a real verification. Re-scan when connected.',
+-          simulated: true,
+-        }
+-      }
+-
+-      setScanResult(result)
+-      setScanHistory(prev => [{ ...result, timestamp: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)])
+-
+-      if (result.status === 'VALID') {
+-        playFeedbackSound('success')
+-        void recordAssembledEvent(rawQrPayload.trim())
+-      } else {
+-        playFeedbackSound('alert')
+-        triggerHaptic()
+-      }
+-    } catch (err: any) {
+-      const errorResult: ScanValidationResult = {
+-        status: 'INVALID_HASH',
+-        message: `Scan verification network error: ${err.message}`,
+-      }
+-      setScanResult(errorResult)
+-      playFeedbackSound('alert')
+-    } finally {
+-      setLoading(false)
+-      setScanInput('')
+-    }
+-  }
+-
+-  const handleFormSubmit = (e: React.FormEvent) => {
+-    e.preventDefault()
+-    handleScan(scanInput)
+-  }
+-
+-  return (
+-    <div style={{
+-      background: 'var(--bg-card)',
+-      border: '1px solid var(--border-color)',
+-      borderRadius: 'var(--radius-lg)',
+-      padding: 20,
+-      marginBottom: 24,
+-      boxShadow: 'var(--shadow-sm)',
+-    }}>
+-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+-        <div>
+-          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+-            📸 Digital Tray Line Assembly Scanner
+-          </h2>
+-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+-            Scan signed QR tokens on physical tray cards to detect stale diet orders or NPO halts in real-time.
+-          </p>
+-        </div>
+-        <div style={{ display: 'flex', gap: 8 }}>
+-          <AppleButton
+-            type="button"
+-            variant="tinted"
+-            size="sm"
+-            onClick={() => handleScan('TKT-res101:1:validhash123')}
+-          >
+-            🧪 Test Valid Scan
+-          </AppleButton>
+-          <AppleButton
+-            type="button"
+-            variant="destructive"
+-            size="sm"
+-            onClick={() => handleScan('TKT-res102:1:stalehash999')}
+-          >
+-            🧪 Test Stale Ticket
+-          </AppleButton>
+-        </div>
+-      </div>
+-
+-      {/* Barcode / QR Input Box */}
+-      <form onSubmit={handleFormSubmit} style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+-        <input
+-          type="text"
+-          value={scanInput}
+-          onChange={e => setScanInput(e.target.value)}
+-          placeholder="Scan barcode or type ticket payload (e.g. TKT-res101:2:a9f3e)..."
+-          autoFocus
+-          style={{
+-            flex: 1,
+-            padding: '12px 16px',
+-            fontSize: 15,
+-            fontWeight: 600,
+-            borderRadius: 'var(--radius-md)',
+-            border: '2px solid var(--color-primary, #6366f1)',
+-            background: 'var(--bg-subtle, #f8fafc)',
+-            color: 'var(--text-primary)',
+-          }}
+-        />
+-        <AppleButton
+-          type="submit"
+-          variant="primary"
+-          size="md"
+-          disabled={loading || !scanInput.trim()}
+-        >
+-          {loading ? 'Verifying...' : '⚡ Verify Scan'}
+-        </AppleButton>
+-      </form>
+-
+-      {/* Live Scan Result Banner */}
+-      {scanResult && (
+-        <div style={{
+-          padding: 24,
+-          borderRadius: 'var(--radius-lg)',
+-          borderWidth: 4,
+-          borderStyle: 'solid',
+-          borderColor: scanResult.status === 'VALID' ? '#10b981' : '#ef4444',
+-          background: scanResult.status === 'VALID' ? '#f0fdf4' : '#fef2f2',
+-          marginBottom: 20,
+-          textAlign: 'center',
+-          animation: scanResult.status !== 'VALID' ? 'pulse 1s infinite' : 'none',
+-        }}>
+-          {scanResult.status === 'VALID' ? (
+-            <div>
+-              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+-              {scanResult.simulated && (
+-                <AppleBadge color="orange">SIMULATED — not a real scan verification</AppleBadge>
+-              )}
+-              <h3 style={{ fontSize: 22, fontWeight: 900, color: '#166534', margin: 0 }}>
+-                {scanResult.simulated ? 'TRAY SCAN SIMULATED (OFFLINE)' : 'TRAY APPROVED FOR SERVICE'}
+-              </h3>
+-              <p style={{ fontSize: 16, fontWeight: 700, color: '#15803d', margin: '8px 0 0' }}>
+-                {scanResult.residentName} (Room {scanResult.roomBed}) • Current Diet Profile (v{scanResult.currentProfileVersion})
+-              </p>
+-              <div style={{ fontSize: 13, color: '#166534', marginTop: 4 }}>
+-                {scanResult.message}
+-              </div>
+-            </div>
+-          ) : scanResult.status === 'SUPERSEDED' ? (
+-            <div>
+-              <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️ 🛑</div>
+-              {scanResult.simulated && (
+-                <AppleBadge color="orange">SIMULATED — not a real scan verification</AppleBadge>
+-              )}
+-              <h3 style={{ fontSize: 24, fontWeight: 900, color: '#991b1b', margin: 0, textTransform: 'uppercase' }}>
+-                HALT: DIET ORDER CHANGED
+-              </h3>
+-              <p style={{ fontSize: 17, fontWeight: 800, color: '#7f1d1d', margin: '8px 0 0' }}>
+-                Resident <strong>{scanResult.residentName}</strong> (Room {scanResult.roomBed}) has an updated diet order (v{scanResult.currentProfileVersion}).
+-              </p>
+-              <p style={{ fontSize: 14, fontWeight: 700, color: '#b91c1c', margin: '6px 0 0' }}>
+-                This physical tray card is version <strong>v{scanResult.ticketProfileVersion} (STALE)</strong> and must be discarded.
+-              </p>
+-              <div style={{ marginTop: 14 }}>
+-                <span style={{
+-                  padding: '6px 14px',
+-                  background: '#dc2626',
+-                  color: 'white',
+-                  borderRadius: 20,
+-                  fontSize: 13,
+-                  fontWeight: 800,
+-                  display: 'inline-block',
+-                }}>
+-                  🖨️ Reprint Fresh Tray Ticket (v{scanResult.currentProfileVersion})
+-                </span>
+-              </div>
+-            </div>
+-          ) : scanResult.status === 'NPO_ALERT' ? (
+-            <div>
+-              <div style={{ fontSize: 36, marginBottom: 8 }}>⛔ 🛑</div>
+-              <h3 style={{ fontSize: 24, fontWeight: 900, color: '#991b1b', margin: 0, textTransform: 'uppercase' }}>
+-                STRICT NPO - DO NOT SERVE MEAL
+-              </h3>
+-              <p style={{ fontSize: 17, fontWeight: 800, color: '#7f1d1d', margin: '8px 0 0' }}>
+-                {scanResult.residentName} (Room {scanResult.roomBed}) is designated <strong>NPO</strong>.
+-              </p>
+-              <div style={{ fontSize: 14, color: '#991b1b', marginTop: 4 }}>
+-                {scanResult.message}
+-              </div>
+-            </div>
+-          ) : scanResult.status === 'HOLD_TRAY_RD_SIGNOFF' ? (
+-            <div>
+-              <div style={{ fontSize: 38, marginBottom: 8 }}>🛑 🔒 📋</div>
+-              <h3 style={{ fontSize: 24, fontWeight: 900, color: '#991b1b', margin: 0, textTransform: 'uppercase' }}>
+-                CLINICAL HOLD: EHR DIET UPDATE PENDING RD SIGN-OFF
+-              </h3>
+-              <p style={{ fontSize: 17, fontWeight: 800, color: '#7f1d1d', margin: '8px 0 0' }}>
+-                {scanResult.residentName} (Room {scanResult.roomBed}) has an unverified clinical diet change received from PointClickCare.
+-              </p>
+-              <div style={{
+-                margin: '12px auto',
+-                maxWidth: 550,
+-                padding: '10px 14px',
+-                background: '#fee2e2',
+-                borderRadius: 8,
+-                border: '1px solid #f87171',
+-                fontSize: 13,
+-                fontWeight: 700,
+-                color: '#991b1b',
+-                textAlign: 'left'
+-              }}>
+-                <strong>Clinical Conflict Reason:</strong> {scanResult.triageReason || scanResult.message || 'Incoming EHR order conflicts with active tray profile.'}
+-              </div>
+-              <div style={{ marginTop: 14 }}>
+-                <span style={{
+-                  padding: '8px 18px',
+-                  background: '#991b1b',
+-                  color: 'white',
+-                  borderRadius: 20,
+-                  fontSize: 13,
+-                  fontWeight: 900,
+-                  display: 'inline-block',
+-                  letterSpacing: '0.05em'
+-                }}>
+-                  ⛔ HARD-BLOCK: TRAY HELD AT PASS UNTIL RD RECONCILIATION
+-                </span>
+-              </div>
+-            </div>
+-          ) : (
+-            <div>
+-              <div style={{ fontSize: 32, marginBottom: 8 }}>❓</div>
+-              <h3 style={{ fontSize: 20, fontWeight: 900, color: '#92400e', margin: 0 }}>
+-                UNRECOGNIZED TRAY CARD HASH
+-              </h3>
+-              <div style={{ fontSize: 13, color: '#b45309', marginTop: 4 }}>
+-                {scanResult.message}
+-              </div>
+-            </div>
+-          )}
+-        </div>
+-      )}
+-
+-      {/* Recent Scan History */}
+-      {scanHistory.length > 0 && (
+-        <div>
+-          <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+-            Recent Line Scans
+-          </div>
+-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+-            {scanHistory.map((h, idx) => (
+-              <div
+-                key={idx}
+-                style={{
+-                  display: 'flex',
+-                  justifyContent: 'space-between',
+-                  alignItems: 'center',
+-                  padding: '8px 12px',
+-                  borderRadius: 'var(--radius-md)',
+-                  background: h.status === 'VALID' ? '#f0fdf4' : '#fef2f2',
+-                  border: `1px solid ${h.status === 'VALID' ? '#bbf7d0' : '#fecaca'}`,
+-                  fontSize: 12,
+-                }}
+-              >
+-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+-                  <AppleBadge
+-                    color={h.status === 'VALID' ? 'green' : h.status === 'SUPERSEDED' ? 'orange' : 'red'}
+-                    dot
+-                  >
+-                    {h.status === 'VALID' ? 'VALID' : h.status === 'SUPERSEDED' ? 'STALE' : 'NPO'}
+-                  </AppleBadge>
+-                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+-                    {h.residentName || 'Card Scan'} ({h.roomBed || 'Room'})
+-                  </span>
+-                </div>
+-                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+-                  {h.timestamp}
+-                </span>
+-              </div>
+-            ))}
+-          </div>
+-        </div>
+-      )}
+-    </div>
+-  )
+-}
+diff --git a/src/lib/qrcode.ts b/src/lib/qrcode.ts
+deleted file mode 100644
+index 15d8b06..0000000
+--- a/src/lib/qrcode.ts
++++ /dev/null
+@@ -1,447 +0,0 @@
+-/**
+- * Minimal QR Code encoder — byte mode, error-correction level M, versions 1–9.
+- *
+- * Dependency-free and self-contained: encodes short ASCII payloads (e.g. the
+- * engine's signed tray-card tokens "ticketId:profileVersion:hash") into a
+- * scannable module matrix. Auto-selects the smallest version that fits.
+- *
+- * Implements ISO/IEC 18004 byte-mode encoding: Reed–Solomon error correction
+- * over GF(256), standard data placement, all 8 mask patterns with the four
+- * penalty rules, and BCH format/version information.
+- */
+-
+-/** Error-correction level M only (2 bits: 00). */
+-const EC_LEVEL_BITS = 0b00
+-
+-interface VersionInfo {
+-  /** Data codewords available for payload. */
+-  dataCodewords: number
+-  /** EC codewords per block. */
+-  ecPerBlock: number
+-  /** [group1Blocks, group1DataLen, group2Blocks, group2DataLen] */
+-  groups: [number, number, number, number]
+-  /** Alignment pattern centers (empty for version 1). */
+-  alignment: number[]
+-  /** Remainder bits appended after data. */
+-  remainderBits: number
+-}
+-
+-/** Versions 1–9, EC level M. Data codewords = total − blocks × ecPerBlock. */
+-const VERSIONS: VersionInfo[] = [
+-  { dataCodewords: 16,  ecPerBlock: 10, groups: [1, 16, 0, 0],  alignment: [],           remainderBits: 0 },
+-  { dataCodewords: 28,  ecPerBlock: 16, groups: [1, 28, 0, 0],  alignment: [6, 18],      remainderBits: 7 },
+-  { dataCodewords: 44,  ecPerBlock: 26, groups: [1, 44, 0, 0],  alignment: [6, 22],      remainderBits: 7 },
+-  { dataCodewords: 64,  ecPerBlock: 18, groups: [2, 32, 0, 0],  alignment: [6, 26],      remainderBits: 7 },
+-  { dataCodewords: 86,  ecPerBlock: 24, groups: [2, 43, 0, 0],  alignment: [6, 30],      remainderBits: 7 },
+-  { dataCodewords: 108, ecPerBlock: 16, groups: [4, 27, 0, 0],  alignment: [6, 34],      remainderBits: 7 },
+-  { dataCodewords: 124, ecPerBlock: 18, groups: [4, 31, 0, 0],  alignment: [6, 22, 38],  remainderBits: 0 },
+-  { dataCodewords: 154, ecPerBlock: 22, groups: [2, 38, 2, 39], alignment: [6, 24, 42],  remainderBits: 0 },
+-  { dataCodewords: 182, ecPerBlock: 22, groups: [3, 36, 2, 37], alignment: [6, 26, 46],  remainderBits: 0 },
+-]
+-
+-// ── GF(256) arithmetic (x^8 + x^4 + x^3 + x^2 + 1) ────────────────────────────
+-const GF_EXP = new Array<number>(512)
+-const GF_LOG = new Array<number>(256)
+-;(function initGaloisField() {
+-  let x = 1
+-  for (let i = 0; i < 255; i++) {
+-    GF_EXP[i] = x
+-    GF_LOG[x] = i
+-    x <<= 1
+-    if (x & 0x100) x ^= 0x11d
+-  }
+-  for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255]
+-})()
+-
+-function gfMul(a: number, b: number): number {
+-  return a === 0 || b === 0 ? 0 : GF_EXP[GF_LOG[a] + GF_LOG[b]]
+-}
+-
+-// ── Reed–Solomon ─────────────────────────────────────────────────────────────
+-/** Generator polynomial of the given degree; coefficients high-degree first.
+- * g(x) = (x + α^0)(x + α^1)…(x + α^{degree-1}); note subtraction = addition in GF(256). */
+-function rsGeneratorPolynomial(degree: number): number[] {
+-  let poly = [1]
+-  for (let i = 0; i < degree; i++) {
+-    const next = new Array<number>(poly.length + 1).fill(0)
+-    for (let j = 0; j < poly.length; j++) {
+-      next[j] ^= poly[j] // multiply by x
+-      next[j + 1] ^= gfMul(poly[j], GF_EXP[i]) // multiply by α^i
+-    }
+-    poly = next
+-  }
+-  return poly
+-}
+-
+-function rsRemainder(data: number[], degree: number): number[] {
+-  const gen = rsGeneratorPolynomial(degree)
+-  const result = [...data, ...new Array<number>(degree).fill(0)]
+-  for (let i = 0; i < data.length; i++) {
+-    const factor = result[i]
+-    if (factor !== 0) {
+-      for (let j = 1; j <= degree; j++) result[i + j] ^= gfMul(gen[j], factor)
+-    }
+-  }
+-  return result.slice(data.length)
+-}
+-
+-// ── Data encoding (byte mode) ────────────────────────────────────────────────
+-function encodeDataBytes(text: string, version: number): number[] {
+-  const info = VERSIONS[version - 1]
+-  const bytes = Array.from(new TextEncoder().encode(text))
+-  const capacityBits = info.dataCodewords * 8
+-  if (4 + 8 + bytes.length * 8 > capacityBits) {
+-    throw new Error(`Payload too long for QR version ${version} (level M)`)
+-  }
+-
+-  const bits: number[] = []
+-  const pushBits = (value: number, count: number) => {
+-    for (let i = count - 1; i >= 0; i--) bits.push((value >>> i) & 1)
+-  }
+-  pushBits(0b0100, 4) // byte mode indicator
+-  pushBits(bytes.length, 8) // character count (versions 1–9)
+-  for (const b of bytes) pushBits(b, 8)
+-
+-  // Terminator (up to 4 zero bits), then pad to a byte boundary.
+-  const terminator = Math.min(4, capacityBits - bits.length)
+-  for (let i = 0; i < terminator; i++) bits.push(0)
+-  while (bits.length % 8 !== 0) bits.push(0)
+-
+-  const codewords: number[] = []
+-  for (let i = 0; i < bits.length; i += 8) {
+-    let cw = 0
+-    for (let j = 0; j < 8; j++) cw = (cw << 1) | bits[i + j]
+-    codewords.push(cw)
+-  }
+-  // Pad codewords 0xEC, 0x11 alternating.
+-  for (let pad = 0xEC; codewords.length < info.dataCodewords; pad ^= 0xEC ^ 0x11) {
+-    codewords.push(pad)
+-  }
+-
+-  // Split into blocks, compute EC per block, then interleave.
+-  const [g1Count, g1Len, g2Count, g2Len] = info.groups
+-  const blocks: number[][] = []
+-  let offset = 0
+-  for (let i = 0; i < g1Count; i++) { blocks.push(codewords.slice(offset, offset + g1Len)); offset += g1Len }
+-  for (let i = 0; i < g2Count; i++) { blocks.push(codewords.slice(offset, offset + g2Len)); offset += g2Len }
+-  const ecBlocks = blocks.map(b => rsRemainder(b, info.ecPerBlock))
+-
+-  const interleaved: number[] = []
+-  const maxDataLen = Math.max(g1Len, g2Len)
+-  for (let i = 0; i < maxDataLen; i++) {
+-    for (const b of blocks) if (i < b.length) interleaved.push(b[i])
+-  }
+-  for (let i = 0; i < info.ecPerBlock; i++) {
+-    for (const e of ecBlocks) interleaved.push(e[i])
+-  }
+-  return interleaved
+-}
+-
+-// ── Format / version information (BCH) ──────────────────────────────────────
+-/** 15-bit format info: 5 data bits → BCH(15,5), XOR mask 0x5412. */
+-function formatInfoBits(mask: number): number {
+-  const data = (EC_LEVEL_BITS << 3) | mask
+-  let bits = data << 10
+-  const GEN = 0b10100110111
+-  while (bits >= 0b10000000000) {
+-    const shift = Math.floor(Math.log2(bits)) - 10
+-    bits ^= GEN << shift
+-  }
+-  return ((data << 10) | bits) ^ 0b101010000010010
+-}
+-
+-/** 18-bit version info for versions ≥ 7: BCH(18,6) with generator 0x1F25. */
+-function versionInfoBits(version: number): number {
+-  let bits = version << 12
+-  const GEN = 0b1111100100101
+-  while (bits >= 0b1000000000000) {
+-    const shift = Math.floor(Math.log2(bits)) - 12
+-    bits ^= GEN << shift
+-  }
+-  return (version << 12) | bits
+-}
+-
+-// ── Matrix construction ──────────────────────────────────────────────────────
+-function drawFinder(modules: boolean[][], isFunction: boolean[][], x: number, y: number) {
+-  for (let dy = -1; dy <= 7; dy++) {
+-    for (let dx = -1; dx <= 7; dx++) {
+-      const xx = x + dx
+-      const yy = y + dy
+-      if (xx < 0 || yy < 0 || xx >= modules.length || yy >= modules.length) continue
+-      const dark =
+-        (dx >= 0 && dx <= 6 && (dy === 0 || dy === 6)) ||
+-        (dy >= 0 && dy <= 6 && (dx === 0 || dx === 6)) ||
+-        (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4)
+-      modules[yy][xx] = dark
+-      isFunction[yy][xx] = true
+-    }
+-  }
+-}
+-
+-function drawAlignment(modules: boolean[][], isFunction: boolean[][], x: number, y: number) {
+-  for (let dy = -2; dy <= 2; dy++) {
+-    for (let dx = -2; dx <= 2; dx++) {
+-      const dark = Math.max(Math.abs(dx), Math.abs(dy)) !== 1
+-      modules[y + dy][x + dx] = dark
+-      isFunction[y + dy][x + dx] = true
+-    }
+-  }
+-}
+-
+-function drawFunctionPatterns(
+-  modules: boolean[][],
+-  isFunction: boolean[][],
+-  version: number,
+-  alignment: number[],
+-): void {
+-  const size = modules.length
+-  // Timing patterns
+-  for (let i = 0; i < size; i++) {
+-    const dark = i % 2 === 0
+-    if (!isFunction[6][i]) { modules[6][i] = dark; isFunction[6][i] = true }
+-    if (!isFunction[i][6]) { modules[i][6] = dark; isFunction[i][6] = true }
+-  }
+-  // Finder patterns (+ separators)
+-  drawFinder(modules, isFunction, 0, 0)
+-  drawFinder(modules, isFunction, size - 7, 0)
+-  drawFinder(modules, isFunction, 0, size - 7)
+-  // Alignment patterns (skip overlaps with finders)
+-  for (const ay of alignment) {
+-    for (const ax of alignment) {
+-      const overlapsFinder =
+-        (ax === 6 && ay === 6) ||
+-        (ax === 6 && ay === alignment[alignment.length - 1]) ||
+-        (ax === alignment[alignment.length - 1] && ay === 6)
+-      if (!overlapsFinder) drawAlignment(modules, isFunction, ax, ay)
+-    }
+-  }
+-  // Reserve format-info areas (both copies + dark module). modules[y][x].
+-  for (let i = 0; i <= 5; i++) isFunction[8][i] = true
+-  isFunction[8][7] = true
+-  isFunction[8][8] = true
+-  isFunction[7][8] = true
+-  for (let i = 9; i < 15; i++) isFunction[14 - i][8] = true
+-  for (let i = 0; i < 7; i++) isFunction[size - 1 - i][8] = true
+-  for (let i = 7; i < 15; i++) isFunction[8][size - 15 + i] = true
+-  isFunction[size - 8][8] = true // dark module
+-  // Reserve version-info areas (versions ≥ 7)
+-  if (version >= 7) {
+-    for (let i = 0; i < 6; i++) {
+-      for (let j = 0; j < 3; j++) {
+-        isFunction[i][size - 11 + j] = true
+-        isFunction[size - 11 + j][i] = true
+-      }
+-    }
+-  }
+-}
+-
+-function placeDataBits(
+-  modules: boolean[][],
+-  isFunction: boolean[][],
+-  codewords: number[],
+-  remainderBits: number,
+-): void {
+-  const size = modules.length
+-  const bits: number[] = []
+-  for (const cw of codewords) for (let i = 7; i >= 0; i--) bits.push((cw >>> i) & 1)
+-  for (let i = 0; i < remainderBits; i++) bits.push(0)
+-
+-  let bitIndex = 0
+-  for (let right = size - 1; right >= 1; right -= 2) {
+-    if (right === 6) right = 5 // vertical timing column carries no data
+-    for (let vert = 0; vert < size; vert++) {
+-      for (let j = 0; j < 2; j++) {
+-        const x = right - j
+-        const upward = ((right + 1) & 2) === 0
+-        const y = upward ? size - 1 - vert : vert
+-        if (!isFunction[y][x] && bitIndex < bits.length) {
+-          modules[y][x] = bits[bitIndex] === 1
+-          bitIndex++
+-        }
+-      }
+-    }
+-  }
+-}
+-
+-function maskCondition(mask: number, row: number, col: number): boolean {
+-  switch (mask) {
+-    case 0: return (row + col) % 2 === 0
+-    case 1: return row % 2 === 0
+-    case 2: return col % 3 === 0
+-    case 3: return (row + col) % 3 === 0
+-    case 4: return (Math.floor(row / 2) + Math.floor(col / 3)) % 2 === 0
+-    case 5: return ((row * col) % 2) + ((row * col) % 3) === 0
+-    case 6: return (((row * col) % 2) + ((row * col) % 3)) % 2 === 0
+-    default: return (((row + col) % 2) + ((row * col) % 3)) % 2 === 0
+-  }
+-}
+-
+-function applyMask(modules: boolean[][], isFunction: boolean[][], mask: number): void {
+-  const size = modules.length
+-  for (let y = 0; y < size; y++) {
+-    for (let x = 0; x < size; x++) {
+-      if (!isFunction[y][x] && maskCondition(mask, y, x)) modules[y][x] = !modules[y][x]
+-    }
+-  }
+-}
+-
+-/** Standard four penalty rules; lower is better. */
+-function maskPenalty(modules: boolean[][]): number {
+-  const size = modules.length
+-  let penalty = 0
+-
+-  // N1: runs of ≥5 same-color modules in rows/columns.
+-  for (let y = 0; y < size; y++) {
+-    let runColor = modules[y][0]
+-    let runLen = 1
+-    for (let x = 1; x <= size; x++) {
+-      const c = x < size ? modules[y][x] : !runColor
+-      if (c === runColor) runLen++
+-      else {
+-        if (runLen >= 5) penalty += 3 + (runLen - 5)
+-        runColor = c
+-        runLen = 1
+-      }
+-    }
+-  }
+-  for (let x = 0; x < size; x++) {
+-    let runColor = modules[0][x]
+-    let runLen = 1
+-    for (let y = 1; y <= size; y++) {
+-      const c = y < size ? modules[y][x] : !runColor
+-      if (c === runColor) runLen++
+-      else {
+-        if (runLen >= 5) penalty += 3 + (runLen - 5)
+-        runColor = c
+-        runLen = 1
+-      }
+-    }
+-  }
+-
+-  // N2: 2×2 blocks of the same color.
+-  for (let y = 0; y < size - 1; y++) {
+-    for (let x = 0; x < size - 1; x++) {
+-      const c = modules[y][x]
+-      if (c === modules[y][x + 1] && c === modules[y + 1][x] && c === modules[y + 1][x + 1]) penalty += 3
+-    }
+-  }
+-
+-  // N3: finder-like patterns 10111010000 / 00001011101 in rows/columns.
+-  const checkLine = (line: boolean[]) => {
+-    for (let i = 0; i <= line.length - 11; i++) {
+-      const seg = line.slice(i, i + 11).map(b => (b ? '1' : '0')).join('')
+-      if (seg === '10111010000' || seg === '00001011101') penalty += 40
+-    }
+-  }
+-  for (let y = 0; y < size; y++) checkLine(modules[y])
+-  for (let x = 0; x < size; x++) checkLine(modules.map(row => row[x]))
+-
+-  // N4: dark-module proportion.
+-  let dark = 0
+-  for (const row of modules) for (const b of row) if (b) dark++
+-  const total = size * size
+-  penalty += Math.floor(Math.abs(dark * 20 - total * 10) / total) * 10
+-
+-  return penalty
+-}
+-
+-function drawFormatInfo(modules: boolean[][], mask: number): void {
+-  const size = modules.length
+-  const info = formatInfoBits(mask)
+-  // Format bits are placed MSB first (bit 14 at position k=0 … bit 0 at k=14).
+-  const bit = (k: number): boolean => ((info >>> (14 - k)) & 1) === 1
+-  // Copy 1 snakes around the top-left finder.
+-  const copy1: Array<[number, number]> = []
+-  for (let i = 0; i <= 5; i++) copy1.push([8, i])
+-  copy1.push([8, 7], [8, 8], [7, 8])
+-  for (let i = 5; i >= 0; i--) copy1.push([i, 8])
+-  // Copy 2 runs down the left side and across the top-right.
+-  const copy2: Array<[number, number]> = []
+-  for (let i = 0; i < 7; i++) copy2.push([size - 1 - i, 8])
+-  for (let i = 0; i < 8; i++) copy2.push([8, size - 8 + i])
+-  for (let k = 0; k < 15; k++) {
+-    const [y1, x1] = copy1[k]
+-    const [y2, x2] = copy2[k]
+-    modules[y1][x1] = bit(k)
+-    modules[y2][x2] = bit(k)
+-  }
+-  // Dark module — always dark
+-  modules[size - 8][8] = true
+-}
+-
+-function drawVersionInfo(modules: boolean[][], version: number): void {
+-  const size = modules.length
+-  const info = versionInfoBits(version)
+-  for (let i = 0; i < 18; i++) {
+-    const bit = ((info >>> i) & 1) === 1
+-    const x = size - 11 + (i % 3)
+-    const y = Math.floor(i / 3)
+-    modules[y][x] = bit
+-    modules[x][y] = bit
+-  }
+-}
+-
+-// ── Public API ───────────────────────────────────────────────────────────────
+-export interface QrMatrix {
+-  /** Modules per side (without quiet zone). */
+-  size: number
+-  /** Version used (1–9). */
+-  version: number
+-  /** Row-major dark/light modules. */
+-  modules: boolean[][]
+-}
+-
+-/** Encode text as a QR matrix (byte mode, EC level M), auto-selecting version. */
+-export function encodeQr(text: string): QrMatrix {
+-  const bytes = new TextEncoder().encode(text).length
+-  let version = 1
+-  for (; version <= VERSIONS.length; version++) {
+-    const cap = VERSIONS[version - 1].dataCodewords
+-    if (4 + 8 + bytes * 8 <= cap * 8) break
+-  }
+-  if (version > VERSIONS.length) throw new Error('Payload too long for QR versions 1–9 (level M)')
+-
+-  const info = VERSIONS[version - 1]
+-  const size = version * 4 + 17
+-  const codewords = encodeDataBytes(text, version)
+-
+-  let bestPenalty = Infinity
+-  let bestModules: boolean[][] = []
+-  for (let mask = 0; mask < 8; mask++) {
+-    const modules: boolean[][] = Array.from({ length: size }, () => new Array<boolean>(size).fill(false))
+-    const isFunction: boolean[][] = Array.from({ length: size }, () => new Array<boolean>(size).fill(false))
+-    drawFunctionPatterns(modules, isFunction, version, info.alignment)
+-    placeDataBits(modules, isFunction, codewords, info.remainderBits)
+-    applyMask(modules, isFunction, mask)
+-    drawFormatInfo(modules, mask)
+-    if (version >= 7) drawVersionInfo(modules, version)
+-    const penalty = maskPenalty(modules)
+-    if (penalty < bestPenalty) {
+-      bestPenalty = penalty
+-      bestModules = modules
+-    }
+-  }
+-  return { size, version, modules: bestModules }
+-}
+-
+-/** Render a QR matrix as a standalone SVG string (includes quiet zone). */
+-export function qrToSvg(matrix: QrMatrix, pixelSize = 4, quietModules = 4): string {
+-  const total = matrix.size + quietModules * 2
+-  const dim = total * pixelSize
+-  let path = ''
+-  for (let y = 0; y < matrix.size; y++) {
+-    for (let x = 0; x < matrix.size; x++) {
+-      if (matrix.modules[y][x]) {
+-        const px = (x + quietModules) * pixelSize
+-        const py = (y + quietModules) * pixelSize
+-        path += `M${px},${py}h${pixelSize}v${pixelSize}h-${pixelSize}z`
+-      }
+-    }
+-  }
+-  return (
+-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" ` +
+-    `width="${dim}" height="${dim}" shape-rendering="crispEdges" role="img" aria-label="Tray card verification QR code">` +
+-    `<rect width="${dim}" height="${dim}" fill="#ffffff"/>` +
+-    `<path d="${path}" fill="#0f172a"/></svg>`
+-  )
+-}

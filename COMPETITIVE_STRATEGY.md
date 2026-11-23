@@ -1,4 +1,7 @@
 # ShorelineOps Competitive Strategy & Marketing Playbook
+
+> Historical strategy for the earlier product. The [standalone Rust product guide](docs/SHORELINEOPS_STANDALONE.md#design-and-market-references) carries the current market references and pilot measures. Treat pricing, competitor terms and projected outcomes below as historical assumptions pending verification.
+
 ## How to Win Against MealSuite, DiningRD (PlateFul), CBORD & PointClickCare
 
 ---

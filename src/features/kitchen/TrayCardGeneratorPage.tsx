@@ -44,7 +44,6 @@ interface TrayCard {
   npoReason?: string
   fluidRestrictionMl?: number
   profileVersion: number
-  qrToken: string
   selectedEntree: string
   selectedSides: string[]
   selectedBeverages: string[]
@@ -96,7 +95,6 @@ function TrayCardGeneratorPageInner() {
               }
 
               const ticketId = `TKT-${r.id.slice(0, 8)}-${selectedMeal.slice(0, 1)}`
-              const mockQr = `ST1.DEMO.${ticketId}:v${profileVersion}`
 
               return {
                 ticketId,
@@ -116,7 +114,6 @@ function TrayCardGeneratorPageInner() {
                 npoReason: r.npoReason || r.npo_reason || undefined,
                 fluidRestrictionMl: r.fluidRestrictionMl || r.fluid_restriction_ml || undefined,
                 profileVersion,
-                qrToken: mockQr,
                 selectedEntree: entree,
                 selectedSides: ['Steamed Broccoli', 'Mashed Potatoes'],
                 selectedBeverages: r.beverages || ['Water'],
@@ -158,7 +155,6 @@ function TrayCardGeneratorPageInner() {
                 }
 
                 const ticketId = `TKT-${r.id.slice(0, 8)}-${selectedMeal.slice(0, 1)}`
-                const mockQr = `ST1.DEMO.${ticketId}:v${profileVersion}`
 
                 return {
                   ticketId,
@@ -178,7 +174,6 @@ function TrayCardGeneratorPageInner() {
                   npoReason: r.npoReason || r.npo_reason || undefined,
                   fluidRestrictionMl: r.fluidRestrictionMl || r.fluid_restriction_ml || undefined,
                   profileVersion,
-                  qrToken: mockQr,
                   selectedEntree: entree,
                   selectedSides: ['Steamed Broccoli', 'Mashed Potatoes'],
                   selectedBeverages: r.beverages || ['Water'],
@@ -281,7 +276,7 @@ function TrayCardGeneratorPageInner() {
       {error && !loading && (
         <div className="no-print p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border-2 border-red-300 text-sm font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 shrink-0" />
-          <span>Could not load tray cards: {error}. Cards are not printed without a signed verification token.</span>
+          <span>Could not load tray cards: {error}. Confirm the printed version, diet order, and allergy details against current orders before service.</span>
         </div>
       )}
 
@@ -437,7 +432,7 @@ function TrayCardGeneratorPageInner() {
                   <HeartPulse className="w-3 h-3" />
                   <span>SIGNED v{card.profileVersion}</span>
                 </div>
-                <span className="truncate max-w-[55%]" title={card.qrToken}>{card.ticketId}</span>
+                <span className="truncate max-w-[55%]">{card.ticketId}</span>
               </div>
             </AppleCard>
           )

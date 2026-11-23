@@ -4,6 +4,14 @@ Welcome to the official technical wiki for **ShorelineOps** — the open-source 
 
 ---
 
+## Standalone Rust application
+
+- [Standalone architecture, paper workflow and release acceptance](SHORELINEOPS_STANDALONE.md)
+- [Native build and test commands](../native-desktop/README.md)
+- [Native rebuild and compatibility plan](NATIVE_REBUILD_PLAN.md)
+
+The references below describe the existing web and Electron application and its integrations.
+
 ## Table of Contents
 
 1. [System Architecture](Architecture.md) — High-level design, database schema, and micro-engine pipelines.

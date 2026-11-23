@@ -1,0 +1,74 @@
+name: Native desktop platform proof
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'native-desktop/**'
+      - '.github/workflows/native-platform-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt
+      - name: Check formatting
+        run: cargo +1.95.0 fmt --manifest-path native-desktop/Cargo.toml --all -- --check
+      - name: Test ticket reconciliation and costing
+        run: cargo +1.95.0 test --locked --manifest-path native-desktop/Cargo.toml -p shorelineops-core
+      - name: Check facility host formatting
+        run: cargo +1.95.0 fmt --manifest-path native-desktop/facility-host/Cargo.toml --all -- --check
+      - name: Test local facility host
+        run: cargo +1.95.0 test --locked --manifest-path native-desktop/facility-host/Cargo.toml
+      - name: Install Windows packaging tools
+        if: runner.os == 'Windows'
+        run: choco install nsis --yes --no-progress
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:RUSTUP_TOOLCHAIN = '1.95.0'
+          ./native-desktop/packaging/build-windows.ps1 -MakeNsis "${env:ProgramFiles(x86)}/NSIS/makensis.exe"
+      - name: Verify Windows installation and removal
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = (Resolve-Path native-desktop/target/platform-proof/ShorelineOps-Platform-Proof-windows-x64.exe).Path
+          $directory = Join-Path $env:LOCALAPPDATA 'Programs/ShorelineOps Platform Proof'
+          if (Test-Path -LiteralPath $directory) { throw 'Existing installation' }
+          $installed = Start-Process -FilePath $installer -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
+          if ($installed.ExitCode -ne 0) { throw "Install exit code $($installed.ExitCode)" }
+          $exe = Join-Path $directory 'shorelineops-worklist.exe'
+          if (!(Test-Path -LiteralPath $exe)) { throw 'Installed executable missing' }
+          $facilityHost = Join-Path $directory 'shorelineops-facility-host.exe'
+          ./native-desktop/packaging/test-facility-host.ps1 -Executable $facilityHost
+          $removed = Start-Process -FilePath (Join-Path $directory 'Uninstall.exe') -ArgumentList '/S' -WindowStyle Hidden -Wait -PassThru
+          if ($removed.ExitCode -ne 0 -or (Test-Path -LiteralPath $exe) -or (Test-Path -LiteralPath $facilityHost)) { throw 'Uninstall failed' }
+      - name: Install Linux build tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libwayland-dev libx11-dev
+      - name: Build Debian package
+        if: runner.os == 'Linux'
+        run: RUSTUP_TOOLCHAIN=1.95.0 sh native-desktop/packaging/build-debian.sh
+      - name: Verify Linux installation and removal
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y ./native-desktop/target/platform-proof/shorelineops-platform-proof_0.1.0_amd64.deb
+          test -x /usr/bin/shorelineops-worklist
+          pwsh -NoProfile -File ./native-desktop/packaging/test-facility-host.ps1 -Executable /usr/bin/shorelineops-facility-host
+          sudo dpkg -r shorelineops-platform-proof
+          test ! -e /usr/bin/shorelineops-worklist
+          test ! -e /usr/bin/shorelineops-facility-host
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-platform-proof-${{ matrix.os }}
+          path: native-desktop/target/platform-proof/*
+          if-no-files-found: error
